@@ -18,7 +18,7 @@ Platform:
 
 ---
 
-# 1\. Architecture Overview
+# 1. Architecture Overview
 
 SHIELD follows a modern modular architecture.
 
@@ -38,7 +38,7 @@ PostgreSQL \+ Object Storage
 
 ---
 
-# 2\. High-Level System Architecture
+# 2. High-Level System Architecture
 
 Flutter Application  
 (Android/Web/PWA)
@@ -69,7 +69,7 @@ Object Storage
 
 ---
 
-# 3\. Frontend Architecture
+# 3. Frontend Architecture
 
 Technology:
 
@@ -119,7 +119,7 @@ Flutter Secure Storage
 
 ---
 
-# 4\. Backend Architecture
+# 4. Backend Architecture
 
 Technology:
 
@@ -145,7 +145,7 @@ Can evolve into microservices.
 
 ---
 
-# 5\. Core Backend Modules
+# 5. Core Backend Modules
 
 ## Authentication Module
 
@@ -289,7 +289,7 @@ Responsibilities:
 
 ---
 
-# 6\. Security Architecture
+# 6. Security Architecture
 
 Authentication:
 
@@ -353,7 +353,7 @@ Dental Records
 
 ---
 
-# 7\. Database Architecture
+# 7. Database Architecture
 
 Database:
 
@@ -379,7 +379,7 @@ Primary Design Rules:
 
 ---
 
-# 8\. Financial Architecture
+# 8. Financial Architecture
 
 Wallet Type:
 
@@ -410,7 +410,7 @@ Never mixed with wallet transactions.
 
 ---
 
-# 9\. Document Intelligence Architecture
+# 9. Document Intelligence Architecture
 
 Purpose:
 
@@ -520,7 +520,7 @@ Extract:
 
 ---
 
-# 10\. File Storage Architecture
+# 10. File Storage Architecture
 
 Storage:
 
@@ -560,7 +560,7 @@ audit/
 
 ---
 
-# 11\. Notification Architecture
+# 11. Notification Architecture
 
 Channels:
 
@@ -584,7 +584,7 @@ Delivery Channel
 
 ---
 
-# 12\. API Architecture
+# 12. API Architecture
 
 Style:
 
@@ -608,7 +608,7 @@ Example:
 
 ---
 
-# 13\. Reporting Architecture
+# 13. Reporting Architecture
 
 Sources:
 
@@ -628,7 +628,7 @@ vw\_service\_usage
 
 ---
 
-# 14\. Audit Architecture
+# 14. Audit Architecture
 
 Every Critical Event:
 
@@ -660,7 +660,7 @@ No Delete
 
 ---
 
-# 15\. PWA Architecture
+# 15. PWA Architecture
 
 Capabilities:
 
@@ -684,7 +684,7 @@ Cache Layer
 
 ---
 
-# 16\. Deployment Architecture
+# 16. Deployment Architecture
 
 Production
 
@@ -704,7 +704,7 @@ MinIO
 
 ---
 
-# 17\. Scalability Strategy
+# 17. Scalability Strategy
 
 Phase 1
 
@@ -738,7 +738,7 @@ If required.
 
 ---
 
-# 18\. Technology Stack
+# 18. Technology Stack
 
 Frontend
 
@@ -782,7 +782,7 @@ Infrastructure
 
 ---
 
-# 19\. Architecture Principles
+# 19. Architecture Principles
 
 * Modular
 

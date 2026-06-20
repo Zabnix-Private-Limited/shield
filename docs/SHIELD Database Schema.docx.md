@@ -274,13 +274,13 @@ idx\_customer\_name
 
 ---
 
-# customer\_contacts
+# customer_contacts
 
-CREATE TABLE customer\_contacts (
+CREATE TABLE customer_contacts (
 
 id BIGSERIAL PRIMARY KEY,
 
-customer\_id BIGINT NOT NULL,
+customer_id BIGINT NOT NULL,
 
 name VARCHAR(255),
 
@@ -288,15 +288,53 @@ relation VARCHAR(100),
 
 mobile VARCHAR(20),
 
-is\_primary BOOLEAN DEFAULT FALSE,
+is_primary BOOLEAN DEFAULT FALSE,
 
-created\_at TIMESTAMPTZ DEFAULT NOW(),
+created_at TIMESTAMPTZ DEFAULT NOW(),
 
-FOREIGN KEY(customer\_id)
+FOREIGN KEY(customer_id)
 
 REFERENCES customers(id)
 
 );
+
+---
+
+# customer_status_history
+
+CREATE TABLE customer_status_history (
+
+id BIGSERIAL PRIMARY KEY,
+
+uuid UUID UNIQUE NOT NULL,
+
+customer_id BIGINT NOT NULL,
+
+old_status VARCHAR(50),
+
+new_status VARCHAR(50),
+
+changed_by BIGINT,
+
+remarks TEXT,
+
+created_at TIMESTAMPTZ DEFAULT NOW(),
+
+FOREIGN KEY(customer_id)
+
+REFERENCES customers(id),
+
+FOREIGN KEY(changed_by)
+
+REFERENCES users(id)
+
+);
+
+Indexes:
+
+idx_customer_status_history_customer
+
+idx_customer_status_history_date
 
 ---
 
@@ -640,27 +678,37 @@ id BIGSERIAL PRIMARY KEY,
 
 uuid UUID UNIQUE,
 
-customer\_id BIGINT,
+customer_id BIGINT,
 
-provider\_id BIGINT,
+provider_id BIGINT,
 
-appointment\_type VARCHAR(50),
+appointment_type VARCHAR(50),
 
-appointment\_date TIMESTAMPTZ,
+appointment_date TIMESTAMPTZ,
 
 status VARCHAR(50),
 
 remarks TEXT,
 
-FOREIGN KEY(customer\_id)
+FOREIGN KEY(customer_id)
 
 REFERENCES customers(id),
 
-FOREIGN KEY(provider\_id)
+FOREIGN KEY(provider_id)
 
-REFERENCES service\_providers(id)
+REFERENCES service_providers(id)
 
 );
+
+Indexes:
+
+idx_appointment_customer
+
+idx_appointment_provider
+
+idx_appointment_date
+
+idx_appointment_status
 
 ---
 

@@ -30,7 +30,7 @@ PWA
 
 ---
 
-# 1\. Purpose
+# 1. Purpose
 
 The SHIELD PWA provides:
 
@@ -50,7 +50,7 @@ The PWA must provide a near-native application experience without requiring inst
 
 ---
 
-# 2\. PWA Goals
+# 2. PWA Goals
 
 Primary Goals
 
@@ -74,7 +74,7 @@ Secondary Goals
 
 ---
 
-# 3\. Architecture Overview
+# 3. Architecture Overview
 
 \`\`\`text id=“xh2tb4” Flutter Web ↓
 
@@ -90,7 +90,7 @@ PostgreSQL
 
 \---
 
-\# 4\. PWA Components
+\# 4. PWA Components
 
 \#\# Flutter Web App
 
@@ -135,7 +135,7 @@ Responsible For:
 
 \---
 
-\# 5\. Manifest Configuration
+\# 5. Manifest Configuration
 
 File:
 
@@ -148,7 +148,7 @@ json id="m4i9x6" {   "name": "SHIELD",   "short\_name": "SHIELD",   "display": "
 
 ---
 
-# 6\. Install Experience
+# 6. Install Experience
 
 Supported Browsers
 
@@ -168,7 +168,7 @@ text id="abnsjv" Visit Website         ↓ Install Prompt         ↓ User Accep
 
 ---
 
-# 7\. Offline Architecture
+# 7. Offline Architecture
 
 ## Offline First Strategy
 
@@ -188,7 +188,7 @@ text id="sj4mha" User Request         ↓ Check Cache         ↓ Check Local St
 
 ---
 
-# 8\. Offline Supported Features
+# 8. Offline Supported Features
 
 Customer Profile
 
@@ -226,7 +226,7 @@ Cached
 
 ---
 
-# 9\. Offline Restricted Features
+# 9. Offline Restricted Features
 
 Cannot Perform
 
@@ -244,7 +244,7 @@ Until Connection Restored
 
 ---
 
-# 10\. Local Storage Architecture
+# 10. Local Storage Architecture
 
 Technology
 
@@ -268,7 +268,7 @@ offline\_queue
 
 \---
 
-\# 11\. Synchronization Engine
+\# 11. Synchronization Engine
 
 Purpose
 
@@ -293,7 +293,7 @@ Success
 
 ---
 
-# 12\. Offline Queue
+# 12. Offline Queue
 
 Stored Items
 
@@ -321,7 +321,7 @@ created\_at
 
 \---
 
-\# 13\. Conflict Resolution
+\# 13. Conflict Resolution
 
 When:
 
@@ -352,7 +352,7 @@ Audit Log
 
 ---
 
-# 14\. Cache Strategy
+# 14. Cache Strategy
 
 ## Static Assets
 
@@ -394,7 +394,7 @@ Cache On Demand
 
 \---
 
-\# 15\. Service Worker Design
+\# 15. Service Worker Design
 
 File
 
@@ -417,7 +417,7 @@ text id="zwb5bz" Install         ↓ Activate         ↓ Fetch         ↓ Sync
 
 ---
 
-# 16\. Push Notification Architecture
+# 16. Push Notification Architecture
 
 Provider
 
@@ -447,7 +447,7 @@ Report Available
 
 ---
 
-# 17\. Authentication Architecture
+# 17. Authentication Architecture
 
 Method
 
@@ -475,7 +475,7 @@ text id="1ahd1w" OTP Login         ↓ JWT Issued         ↓ Stored         ↓
 
 ---
 
-# 18\. Security Requirements
+# 18. Security Requirements
 
 HTTPS Mandatory
 
@@ -517,7 +517,7 @@ Enabled
 
 ---
 
-# 19\. Responsive Design Rules
+# 19. Responsive Design Rules
 
 ## Mobile
 
@@ -557,7 +557,7 @@ Sidebar Navigation
 
 ---
 
-# 20\. Performance Targets
+# 20. Performance Targets
 
 Initial Load
 
@@ -583,7 +583,7 @@ Offline Launch
 
 ---
 
-# 21\. Accessibility
+# 21. Accessibility
 
 WCAG 2.1
 
@@ -603,7 +603,7 @@ Scalable Fonts
 
 ---
 
-# 22\. SEO Requirements
+# 22. SEO Requirements
 
 Public Pages Only
 
@@ -629,7 +629,7 @@ Open Graph
 
 ---
 
-# 23\. Error Handling
+# 23. Error Handling
 
 Offline Error
 
@@ -651,7 +651,7 @@ text id="j0a7g6" Error         ↓ Log         ↓ User Feedback         ↓ Ret
 
 ---
 
-# 24\. Monitoring
+# 24. Monitoring
 
 Client Monitoring
 
@@ -671,7 +671,7 @@ Enabled
 
 ---
 
-# 25\. Deployment Architecture
+# 25. Deployment Architecture
 
 \`\`\`text id=“1m0kbe” Flutter Web Build ↓
 
@@ -683,7 +683,7 @@ User Browser
 
 \---
 
-\# 26\. Build Commands
+\# 26. Build Commands
 
 Production Build
 
@@ -698,7 +698,7 @@ bash id="w2azsv" flutter build web \--pwa-strategy=offline-first
 
 ---
 
-# 27\. Future Enhancements
+# 27. Future Enhancements
 
 Phase 2
 
@@ -720,7 +720,7 @@ Phase 3
 
 ---
 
-# 28\. Acceptance Criteria
+# 28. Acceptance Criteria
 
 The PWA is accepted when:
 

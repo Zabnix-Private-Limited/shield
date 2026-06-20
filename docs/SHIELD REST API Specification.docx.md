@@ -24,7 +24,7 @@ application/json
 
 ---
 
-# 1\. Authentication Module
+# 1. Authentication Module
 
 ## Request OTP
 
@@ -76,7 +76,7 @@ POST /auth/logout
 
 ---
 
-# 2\. Customer Module
+# 2. Customer Module
 
 ## Create Customer
 
@@ -131,7 +131,7 @@ POST /customers/{id}/suspend
 
 ---
 
-# 3\. Membership Module
+# 3. Membership Module
 
 ## Create Membership
 
@@ -163,7 +163,7 @@ POST /memberships/{id}/suspend
 
 ---
 
-# 4\. Shield Card Module
+# 4. Shield Card Module
 
 ## Get Card
 
@@ -177,7 +177,7 @@ POST /cards/{id}/regenerate-qr
 
 ---
 
-# 5\. Wallet Module
+# 5. Wallet Module
 
 ## Get Wallet
 
@@ -229,7 +229,7 @@ POST /wallets/reversal-request
 
 ---
 
-# 6\. Credit Module
+# 6. Credit Module
 
 ## Create Credit Account
 
@@ -255,7 +255,7 @@ GET /credit/accounts/{id}/transactions
 
 ---
 
-# 7\. Customer Verification Module
+# 7. Customer Verification Module
 
 ## Verify By OTP
 
@@ -275,7 +275,7 @@ POST /verification/membership
 
 ---
 
-# 8\. Document Module
+# 8. Document Module
 
 ## Upload Document
 
@@ -311,7 +311,7 @@ Soft Delete Only
 
 ---
 
-# 9\. Document Intelligence Module
+# 9. Document Intelligence Module
 
 ## Classify Document
 
@@ -337,7 +337,7 @@ GET /document-intelligence/logs/{documentId}
 
 ---
 
-# 10\. Pharmacy Module
+# 10. Pharmacy Module
 
 ## Upload Bill
 
@@ -368,7 +368,7 @@ Filters
 
 ---
 
-# 11\. Product Module
+# 11. Product Module
 
 ## Create Product
 
@@ -388,7 +388,7 @@ GET /products/search
 
 ---
 
-# 12\. Appointment Module
+# 12. Appointment Module
 
 ## Create Appointment
 
@@ -429,7 +429,7 @@ POST /appointments/{id}/confirm
 
 ---
 
-# 13\. Consultation Module
+# 13. Consultation Module
 
 ## Create Consultation
 
@@ -443,7 +443,7 @@ GET /consultations/{id}
 
 ---
 
-# 14\. Lab Reports Module
+# 14. Lab Reports Module
 
 ## Upload Lab Report
 
@@ -457,7 +457,7 @@ GET /lab-reports/{id}
 
 ---
 
-# 15\. Dental Module
+# 15. Dental Module
 
 ## Create Dental Record
 
@@ -471,7 +471,7 @@ GET /dental-records/{id}
 
 ---
 
-# 16\. Home Visit Module
+# 16. Home Visit Module
 
 ## Create Home Visit
 
@@ -485,7 +485,7 @@ POST /home-visits/{id}/complete
 
 ---
 
-# 17\. CRM Module
+# 17. CRM Module
 
 ## Create CRM Activity
 
@@ -517,7 +517,7 @@ GET /crm/followups
 
 ---
 
-# 18\. Complaint Module
+# 18. Complaint Module
 
 ## Create Complaint
 
@@ -537,7 +537,7 @@ POST /complaints/{id}/resolve
 
 ---
 
-# 19\. Notification Module
+# 19. Notification Module
 
 ## Get Notifications
 
@@ -559,7 +559,7 @@ Admin Only
 
 ---
 
-# 20\. Dashboard Module
+# 20. Dashboard Module
 
 ## Customer Dashboard
 
@@ -585,7 +585,7 @@ GET /dashboard/management
 
 ---
 
-# 21\. Reports Module
+# 21. Reports Module
 
 ## Membership Report
 
@@ -625,7 +625,7 @@ Export Formats
 
 ---
 
-# 22\. User Management Module
+# 22. User Management Module
 
 ## Create User
 
@@ -651,7 +651,7 @@ POST /users/{id}/disable
 
 ---
 
-# 23\. Role Management Module
+# 23. Role Management Module
 
 ## Create Role
 
@@ -671,7 +671,7 @@ GET /roles/{id}/permissions
 
 ---
 
-# 24\. Business Management Module
+# 24. Business Management Module
 
 ## Create Business
 
@@ -691,7 +691,7 @@ GET /businesses/{id}
 
 ---
 
-# 25\. Audit Module
+# 25. Audit Module
 
 ## Audit Logs
 
@@ -706,7 +706,7 @@ Filters
 
 ---
 
-# 26\. API Standards
+# 26. API Standards
 
 Success Response
 
@@ -737,7 +737,7 @@ Server Error
 
 ---
 
-# 27\. Security Requirements
+# 27. Security Requirements
 
 Every API Requires:
 
@@ -757,7 +757,7 @@ Except:
 
 ---
 
-# 28\. API Documentation
+# 28. API Documentation
 
 Documentation Tool
 

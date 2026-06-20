@@ -8,7 +8,7 @@ Document Type: End-to-End Application Workflow
 
 ---
 
-# 1\. System Workflow Overview
+# 1. System Workflow Overview
 
 SHIELD operates as a centralized healthcare ecosystem.
 
@@ -32,7 +32,7 @@ Analytics
 
 ---
 
-# 2\. Customer Onboarding Workflow
+# 2. Customer Onboarding Workflow
 
 ## New Customer Registration
 
@@ -64,7 +64,7 @@ Activation Complete
 
 ---
 
-# 3\. RC Customer Migration Workflow
+# 3. RC Customer Migration Workflow
 
 RC Customer Imported  
         ↓  
@@ -84,7 +84,7 @@ Customer Activated
 
 ---
 
-# 4\. Membership Enrollment Workflow
+# 4. Membership Enrollment Workflow
 
 ## Standard Member
 
@@ -116,7 +116,7 @@ Card Generated
 
 ---
 
-# 5\. Login Workflow
+# 5. Login Workflow
 
 Enter Mobile Number  
         ↓  
@@ -136,7 +136,7 @@ Dashboard Opened
 
 ---
 
-# 6\. Customer Identification Workflow
+# 6. Customer Identification Workflow
 
 Methods:
 
@@ -162,7 +162,7 @@ Transaction Allowed
 
 ---
 
-# 7\. Wallet Recharge Workflow
+# 7. Wallet Recharge Workflow
 
 Phase 1
 
@@ -196,7 +196,7 @@ Notification
 
 ---
 
-# 8\. Wallet Balance Calculation Workflow
+# 8. Wallet Balance Calculation Workflow
 
 Wallet Opened  
         ↓  
@@ -220,7 +220,7 @@ Credits \- Debits \= Balance
 
 ---
 
-# 9\. Medicine Purchase Workflow
+# 9. Medicine Purchase Workflow
 
 Customer Verification  
         ↓  
@@ -248,7 +248,7 @@ Notification Sent
 
 ---
 
-# 10\. Smart Clinic Appointment Workflow
+# 10. Smart Clinic Appointment Workflow
 
 Appointment Request  
         ↓  
@@ -268,7 +268,7 @@ History Updated
 
 ---
 
-# 11\. Home Visit Workflow
+# 11. Home Visit Workflow
 
 Request Created  
         ↓  
@@ -286,7 +286,7 @@ Customer History Updated
 
 ---
 
-# 12\. Lab Report Workflow
+# 12. Lab Report Workflow
 
 Lab Test Conducted  
         ↓  
@@ -304,7 +304,7 @@ Customer Notified
 
 ---
 
-# 13\. Dental Treatment Workflow
+# 13. Dental Treatment Workflow
 
 Appointment  
         ↓  
@@ -318,7 +318,7 @@ Customer History Updated
 
 ---
 
-# 14\. Prescription Workflow
+# 14. Prescription Workflow
 
 Prescription Uploaded  
         ↓  
@@ -334,7 +334,7 @@ Customer Timeline Updated
 
 ---
 
-# 15\. Document Intelligence Workflow
+# 15. Document Intelligence Workflow
 
 ## Digital PDF
 
@@ -374,7 +374,7 @@ Storage
 
 ---
 
-# 16\. CRM Workflow
+# 16. CRM Workflow
 
 Customer Identified  
         ↓  
@@ -392,7 +392,7 @@ Next Follow-Up Scheduled
 
 ---
 
-# 17\. Complaint Workflow
+# 17. Complaint Workflow
 
 Complaint Raised  
         ↓  
@@ -420,7 +420,7 @@ Statuses:
 
 ---
 
-# 18\. Credit Facility Workflow
+# 18. Credit Facility Workflow
 
 Customer Purchase  
         ↓  
@@ -438,7 +438,7 @@ Outstanding Updated
 
 ---
 
-# 19\. Transaction Reversal Workflow
+# 19. Transaction Reversal Workflow
 
 Reversal Requested  
         ↓  
@@ -456,7 +456,7 @@ No deletion allowed.
 
 ---
 
-# 20\. Customer Timeline Workflow
+# 20. Customer Timeline Workflow
 
 Every major event updates timeline.
 
@@ -489,7 +489,7 @@ Details
 
 ---
 
-# 21\. Notification Workflow
+# 21. Notification Workflow
 
 System Event  
         ↓  
@@ -505,7 +505,7 @@ Delivery Status Updated
 
 ---
 
-# 22\. Audit Workflow
+# 22. Audit Workflow
 
 Every action:
 
@@ -529,7 +529,7 @@ Examples:
 
 ---
 
-# 23\. Report Generation Workflow
+# 23. Report Generation Workflow
 
 Report Request  
         ↓  
@@ -551,7 +551,7 @@ Formats:
 
 ---
 
-# 24\. Admin Workflow
+# 24. Admin Workflow
 
 Admin Login  
         ↓  
@@ -569,7 +569,7 @@ Manage Rules
 
 ---
 
-# 25\. Dashboard Workflow
+# 25. Dashboard Workflow
 
 ## Customer Dashboard
 
@@ -615,7 +615,7 @@ Retention Metrics
 
 ---
 
-# 26\. Complete Customer Lifecycle
+# 26. Complete Customer Lifecycle
 
 Customer Identified  
         ↓  

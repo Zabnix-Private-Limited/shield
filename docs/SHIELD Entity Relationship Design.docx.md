@@ -222,15 +222,17 @@ Customer → Appointments
 
 Customer → CRM Activities
 
+Customer → Customer Status History
+
 ---
 
-## customer\_contacts
+## customer_contacts
 
 Fields:
 
 * id
 
-* customer\_id
+* customer_id
 
 * name
 
@@ -238,11 +240,43 @@ Fields:
 
 * mobile
 
-* is\_primary
+* is_primary
 
 Purpose:
 
 Emergency and family contacts.
+
+---
+
+## customer_status_history
+
+Fields:
+
+* id
+
+* uuid
+
+* customer_id
+
+* old_status
+
+* new_status
+
+* changed_by
+
+* remarks
+
+* created_at
+
+Purpose:
+
+Track all customer status changes (draft → pending approval → active → suspended → closed).
+
+Relationship:
+
+Customer Status History → Customer
+
+Customer Status History → User (changed_by)
 
 ---
 
@@ -842,9 +876,7 @@ No delete allowed.
 
 ---
 
-# ERD Relationship Summary
-
-Customer ├── Membership ├── Shield Card ├── Wallet │ └── Wallet Transactions ├── Credit Account │ └── Credit Transactions ├── Purchases │ └── Purchase Items ├── Appointments ├── Consultations ├── Prescriptions ├── Lab Reports ├── Dental Records ├── Home Visits ├── Documents │ ├── Processing Logs │ ├── Extractions │ └── Classifications ├── CRM Activities ├── CRM Tasks ├── Complaints └── Notifications
+# Customer ├── Membership ├── Shield Card ├── Wallet │ └── Wallet Transactions ├── Credit Account │ └── Credit Transactions ├── Purchases │ └── Purchase Items ├── Appointments ├── Consultations ├── Prescriptions ├── Lab Reports ├── Dental Records ├── Home Visits ├── Documents │ ├── Processing Logs │ ├── Extractions │ └── Classifications ├── CRM Activities ├── CRM Tasks ├── Complaints ├── Customer Status History └── Notifications
 
 Users ├── Roles ├── Permissions └── Departments
 

@@ -32,7 +32,7 @@ Design Philosophy:
 
 ---
 
-# 1\. Design System
+# 1. Design System
 
 ## Primary Colors
 
@@ -66,7 +66,7 @@ text id="n5v0yy" H1   32 H2   28 H3   24 H4   20 Body 16 Small 14 Tiny 12
 
 ---
 
-# 2\. Navigation Architecture
+# 2. Navigation Architecture
 
 ## Customer
 
@@ -131,7 +131,7 @@ System Settings
 
 \---
 
-\# 3\. Login Screens
+\# 3. Login Screens
 
 \#\# Screen 1
 
@@ -169,7 +169,7 @@ Components
 
 ---
 
-# 4\. Customer Dashboard
+# 4. Customer Dashboard
 
 Purpose
 
@@ -257,7 +257,7 @@ Notifications
 
 \---
 
-\# 5\. Wallet Module
+\# 5. Wallet Module
 
 \#\# Wallet Dashboard
 
@@ -291,7 +291,7 @@ Gateway Payment
 
 \---
 
-\# 6\. Customer Profile
+\# 6. Customer Profile
 
 Sections
 
@@ -314,7 +314,7 @@ Actions
 
 \---
 
-\# 7\. Documents Module
+\# 7. Documents Module
 
 \#\# Document Dashboard
 
@@ -345,7 +345,7 @@ Components
 
 \---
 
-\# 8\. Appointment Module
+\# 8. Appointment Module
 
 \#\# Appointment Dashboard
 
@@ -383,7 +383,7 @@ Notes
 
 \---
 
-\# 9\. Pharmacy Screens
+\# 9. Pharmacy Screens
 
 \#\# Pharmacy Dashboard
 
@@ -432,7 +432,7 @@ Submit
 
 ---
 
-# 10\. Clinic Screens
+# 10. Clinic Screens
 
 ## Clinic Dashboard
 
@@ -472,7 +472,7 @@ Components
 
 ---
 
-# 11\. Dental Screens
+# 11. Dental Screens
 
 ## Dental Dashboard
 
@@ -498,7 +498,7 @@ Fields
 
 ---
 
-# 12\. CRM Screens
+# 12. CRM Screens
 
 ## CRM Dashboard
 
@@ -536,7 +536,7 @@ Fields
 
 ---
 
-# 13\. Shield Team Screens
+# 13. Shield Team Screens
 
 ## Shield Dashboard
 
@@ -574,7 +574,7 @@ Actions
 
 ---
 
-# 14\. Management Dashboard
+# 14. Management Dashboard
 
 Purpose
 
@@ -618,7 +618,7 @@ Widgets
 
 ---
 
-# 15\. Admin Screens
+# 15. Admin Screens
 
 ## User Management
 
@@ -664,7 +664,7 @@ Review
 
 ---
 
-# 16\. Notification Center
+# 16. Notification Center
 
 Displays
 
@@ -684,7 +684,7 @@ Actions
 
 ---
 
-# 17\. Global Search
+# 17. Global Search
 
 Available To
 
@@ -712,7 +712,7 @@ Complaint
 
 ---
 
-# 18\. QR Components
+# 18. QR Components
 
 Customer Card
 
@@ -736,7 +736,7 @@ Supports
 
 ---
 
-# 19\. Tables
+# 19. Tables
 
 Standard Features
 
@@ -752,7 +752,7 @@ Filters
 
 ---
 
-# 20\. Forms
+# 20. Forms
 
 Standards
 
@@ -766,7 +766,7 @@ Field Help
 
 ---
 
-# 21\. Mobile Responsive Rules
+# 21. Mobile Responsive Rules
 
 Phone
 
@@ -788,7 +788,7 @@ Sidebar Navigation
 
 ---
 
-# 22\. Accessibility
+# 22. Accessibility
 
 Minimum Contrast Ratio
 
@@ -814,7 +814,7 @@ Supported
 
 ---
 
-# 23\. Empty States
+# 23. Empty States
 
 Examples
 
@@ -828,7 +828,7 @@ No Notifications
 
 ---
 
-# 24\. Loading States
+# 24. Loading States
 
 Skeleton Loaders
 
@@ -842,7 +842,7 @@ Required
 
 ---
 
-# 25\. Error States
+# 25. Error States
 
 Network Error
 
@@ -856,7 +856,7 @@ OTP Error
 
 ---
 
-# 26\. Design Components Library
+# 26. Design Components Library
 
 Buttons
 
@@ -886,7 +886,7 @@ QR Components
 
 ---
 
-# 27\. UI Principles
+# 27. UI Principles
 
 * Minimal Clicks
 

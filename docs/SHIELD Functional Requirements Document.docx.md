@@ -8,7 +8,7 @@ Document Type: Functional Requirements Document
 
 ---
 
-# 1\. Project Overview
+# 1. Project Overview
 
 SHIELD is a unified healthcare membership, customer relationship management, healthcare records, privilege card, and balance management platform for the Sahakar ecosystem.
 
@@ -26,7 +26,7 @@ The system will operate using a unified platform architecture with RBAC and ABAC
 
 ---
 
-# 2\. System Users
+# 2. System Users
 
 ## Customer
 
@@ -136,7 +136,7 @@ Access:
 
 ---
 
-# 3\. Identity & Access Module
+# 3. Identity & Access Module
 
 ## Features
 
@@ -174,7 +174,7 @@ System shall log all login activities.
 
 ---
 
-# 4\. Customer Management Module
+# 4. Customer Management Module
 
 ## Features
 
@@ -226,7 +226,7 @@ Statuses:
 
 ---
 
-# 5\. Membership Module
+# 5. Membership Module
 
 ## Features
 
@@ -264,7 +264,7 @@ System shall support configurable discounts.
 
 ---
 
-# 6\. SHIELD Balance Module
+# 6. SHIELD Balance Module
 
 ## Features
 
@@ -324,7 +324,7 @@ Transaction Types:
 
 ---
 
-# 7\. Credit Facility Module
+# 7. Credit Facility Module
 
 ## Features
 
@@ -352,7 +352,7 @@ System shall support manager approval workflows.
 
 ---
 
-# 8\. Customer Verification Module
+# 8. Customer Verification Module
 
 Methods:
 
@@ -376,7 +376,7 @@ System shall support card number verification.
 
 ---
 
-# 9\. Document Intelligence Engine
+# 9. Document Intelligence Engine
 
 Purpose:
 
@@ -432,7 +432,7 @@ System shall retain original files.
 
 ---
 
-# 10\. Pharmacy Module
+# 10. Pharmacy Module
 
 ## Features
 
@@ -464,7 +464,7 @@ System shall maintain purchase history.
 
 ---
 
-# 11\. Smart Clinic Module
+# 11. Smart Clinic Module
 
 ## Features
 
@@ -502,7 +502,7 @@ System shall maintain consultation history.
 
 ---
 
-# 12\. Dental Module
+# 12. Dental Module
 
 ## Features
 
@@ -526,7 +526,7 @@ System shall maintain dental history.
 
 ---
 
-# 13\. CRM Module
+# 13. CRM Module
 
 ## Features
 
@@ -560,7 +560,7 @@ System shall track complaint statuses.
 
 ---
 
-# 14\. Appointment Module
+# 14. Appointment Module
 
 FR-058
 
@@ -588,7 +588,7 @@ Statuses:
 
 ---
 
-# 15\. Notification Module
+# 15. Notification Module
 
 Channels:
 
@@ -620,7 +620,7 @@ System shall maintain notification history.
 
 ---
 
-# 16\. Audit Module
+# 16. Audit Module
 
 FR-066
 
@@ -640,7 +640,7 @@ System shall prevent deletion of audit logs.
 
 ---
 
-# 17\. Reporting Module
+# 17. Reporting Module
 
 Reports:
 
@@ -672,7 +672,7 @@ System shall support export to Excel.
 
 ---
 
-# 18\. Admin Module
+# 18. Admin Module
 
 Features:
 
@@ -712,7 +712,7 @@ System shall manage membership plans.
 
 ---
 
-# 19\. Dashboard Module
+# 19. Dashboard Module
 
 Customer Dashboard
 
@@ -750,7 +750,7 @@ System shall provide role-specific dashboards.
 
 ---
 
-# 20\. Security Requirements
+# 20. Security Requirements
 
 FR-080
 
@@ -778,7 +778,7 @@ System shall support device tracking.
 
 ---
 
-# 21\. MVP Deliverables
+# 21. MVP Deliverables
 
 Mandatory:
 
