@@ -11,6 +11,8 @@ import '../../features/membership/presentation/screens/membership_screen.dart';
 import '../../features/transactions/presentation/screens/transactions_screen.dart';
 import '../../features/settings/presentation/screens/settings_screen.dart';
 import '../../features/authentication/presentation/screens/login_screen.dart';
+import '../../features/role_demo/presentation/screens/role_demo_shell.dart';
+import '../../shared/models/shield_role.dart';
 
 final GoRouter router = GoRouter(
   initialLocation: '/login',
@@ -19,6 +21,23 @@ final GoRouter router = GoRouter(
       path: '/login',
       name: 'login',
       builder: (context, state) => const LoginScreen(),
+    ),
+    GoRoute(
+      path: '/demo/:role',
+      redirect: (context, state) {
+        final roleKey =
+            state.pathParameters['role'] ?? SHIELDRole.customer.routeKey;
+        return '/demo/$roleKey/dashboard';
+      },
+    ),
+    GoRoute(
+      path: '/demo/:role/:section',
+      name: 'role-demo',
+      builder: (context, state) {
+        final role = SHIELDRole.fromRouteKey(state.pathParameters['role']);
+        final section = state.pathParameters['section'];
+        return RoleDemoShell(role: role, sectionKey: section);
+      },
     ),
     GoRoute(
       path: '/documents',

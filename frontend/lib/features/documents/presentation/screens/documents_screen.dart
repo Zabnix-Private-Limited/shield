@@ -3,6 +3,8 @@ import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_typography.dart';
 import '../../../../shared/models/document.dart';
 import '../../../../shared/widgets/app_card.dart';
+import '../../../../shared/widgets/demo_support.dart';
+import 'package:go_router/go_router.dart';
 
 class DocumentsScreen extends StatelessWidget {
   const DocumentsScreen({super.key});
@@ -15,74 +17,115 @@ class DocumentsScreen extends StatelessWidget {
         actions: [
           IconButton(
             icon: const Icon(Icons.add),
-            onPressed: () {},
+            onPressed: () {
+              showDemoSnackBar(
+                context,
+                'Document upload is demonstrated in the customer documents and role-based review screens.',
+              );
+            },
           ),
         ],
       ),
-      body: ListView.builder(
-        padding: const EdgeInsets.all(16),
-        itemCount: dummyDocuments.length,
-        itemBuilder: (context, index) {
-          final document = dummyDocuments[index];
-          return Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: AppCard(
-              onTap: () {},
-              child: Row(
-                children: [
-                  Container(
-                    width: 48,
-                    height: 48,
-                    decoration: BoxDecoration(
-                      color: _getTypeColor(document.type).withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Icon(
-                      _getTypeIcon(document.type),
-                      color: _getTypeColor(document.type),
-                      size: 24,
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+      body: dummyDocuments.isEmpty
+          ? DemoEmptyState(
+              icon: Icons.description_outlined,
+              title: 'No documents yet',
+              description:
+                  'Uploaded prescriptions, reports, and invoices will appear here once the customer starts using SHIELD services.',
+              actionText: 'Open Documents Demo',
+              onAction: () => context.go('/demo/customer/documents'),
+            )
+          : ListView.builder(
+              padding: const EdgeInsets.all(16),
+              itemCount: dummyDocuments.length,
+              itemBuilder: (context, index) {
+                final document = dummyDocuments[index];
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: AppCard(
+                    onTap: () {
+                      showDemoDetailsSheet(
+                        context,
+                        title: document.fileName,
+                        subtitle:
+                            'This ${_getStatusText(document.status).toLowerCase()} file is shown in the customer archive with document-intelligence status visible.',
+                        meta:
+                            '${document.uploadedAt.day}/${document.uploadedAt.month}/${document.uploadedAt.year}',
+                        status: _getStatusText(document.status),
+                        highlights: [
+                          'Document type: ${document.type?.name ?? 'Other'}',
+                          'Uploaded by: ${document.uploadedBy ?? 'System'}',
+                          if (document.processedAt != null)
+                            'Processed on ${document.processedAt!.day}/${document.processedAt!.month}/${document.processedAt!.year}.',
+                        ],
+                      );
+                    },
+                    child: Row(
                       children: [
-                        Text(
-                          document.fileName,
-                          style: AppTypography.body.copyWith(fontWeight: FontWeight.w500),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                        Container(
+                          width: 48,
+                          height: 48,
+                          decoration: BoxDecoration(
+                            color: _getTypeColor(
+                              document.type,
+                            ).withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Icon(
+                            _getTypeIcon(document.type),
+                            color: _getTypeColor(document.type),
+                            size: 24,
+                          ),
                         ),
-                        const SizedBox(height: 4),
-                        Text(
-                          '${document.uploadedAt.day}/${document.uploadedAt.month}/${document.uploadedAt.year}',
-                          style: AppTypography.tiny.copyWith(color: AppColors.gray),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                document.fileName,
+                                style: AppTypography.body.copyWith(
+                                  fontWeight: FontWeight.w500,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                '${document.uploadedAt.day}/${document.uploadedAt.month}/${document.uploadedAt.year}',
+                                style: AppTypography.tiny.copyWith(
+                                  color: AppColors.gray,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: _getStatusColor(
+                              document.status,
+                            ).withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            _getStatusText(document.status),
+                            style: AppTypography.tiny.copyWith(
+                              fontWeight: FontWeight.w600,
+                              color: _getStatusColor(document.status),
+                            ),
+                          ),
                         ),
                       ],
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: _getStatusColor(document.status).withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Text(
-                      _getStatusText(document.status),
-                      style: AppTypography.tiny.copyWith(
-                        fontWeight: FontWeight.w600,
-                        color: _getStatusColor(document.status),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+                );
+              },
             ),
-          );
-        },
-      ),
     );
   }
 

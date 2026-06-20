@@ -19,18 +19,40 @@ class AppCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: width,
-        height: height,
-        padding: padding,
-        decoration: BoxDecoration(
-          color: AppColors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: AppColors.divider),
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 180),
+      width: width,
+      height: height,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(22),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.shieldNavy.withValues(alpha: 0.04),
+            blurRadius: 26,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Material(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(22),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(22),
+          hoverColor: AppColors.shieldBlue.withValues(alpha: 0.03),
+          splashColor: AppColors.shieldBlue.withValues(alpha: 0.06),
+          child: Ink(
+            width: width,
+            height: height,
+            padding: padding,
+            decoration: BoxDecoration(
+              color: AppColors.white,
+              borderRadius: BorderRadius.circular(22),
+              border: Border.all(color: AppColors.divider),
+            ),
+            child: child,
+          ),
         ),
-        child: child,
       ),
     );
   }

@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_typography.dart';
 import '../../../../shared/models/appointment.dart';
 import '../../../../shared/widgets/app_card.dart';
+import '../../../../shared/widgets/demo_support.dart';
 
 class AppointmentsScreen extends StatelessWidget {
   const AppointmentsScreen({super.key});
@@ -15,79 +17,125 @@ class AppointmentsScreen extends StatelessWidget {
         actions: [
           IconButton(
             icon: const Icon(Icons.add),
-            onPressed: () {},
+            onPressed: () {
+              context.go('/demo/customer/book-appointment');
+            },
           ),
         ],
       ),
-      body: ListView.builder(
-        padding: const EdgeInsets.all(16),
-        itemCount: dummyAppointments.length,
-        itemBuilder: (context, index) {
-          final appointment = dummyAppointments[index];
-          return Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: AppCard(
-              onTap: () {},
-              child: Row(
-                children: [
-                  Container(
-                    width: 56,
-                    height: 56,
-                    decoration: BoxDecoration(
-                      color: _getTypeColor(appointment.type).withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Icon(
-                      _getTypeIcon(appointment.type),
-                      color: _getTypeColor(appointment.type),
-                      size: 28,
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+      body: dummyAppointments.isEmpty
+          ? DemoEmptyState(
+              icon: Icons.event_busy_outlined,
+              title: 'No appointments booked',
+              description:
+                  'Clinic, dental, and home-visit bookings will appear here as soon as the customer confirms a slot.',
+              actionText: 'Book Demo Appointment',
+              onAction: () => context.go('/demo/customer/book-appointment'),
+            )
+          : ListView.builder(
+              padding: const EdgeInsets.all(16),
+              itemCount: dummyAppointments.length,
+              itemBuilder: (context, index) {
+                final appointment = dummyAppointments[index];
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: AppCard(
+                    onTap: () {
+                      showDemoDetailsSheet(
+                        context,
+                        title:
+                            appointment.doctorName ??
+                            appointment.department ??
+                            'Appointment',
+                        subtitle:
+                            appointment.notes ??
+                            'A scheduled care event is available in the member timeline.',
+                        meta:
+                            '${appointment.appointmentDate.day}/${appointment.appointmentDate.month}/${appointment.appointmentDate.year}',
+                        status: _getStatusText(appointment.status),
+                        highlights: [
+                          'Service: ${appointment.type.name}',
+                          if (appointment.department != null)
+                            'Department: ${appointment.department!}',
+                          'Created on ${appointment.createdAt.day}/${appointment.createdAt.month}/${appointment.createdAt.year}.',
+                        ],
+                      );
+                    },
+                    child: Row(
                       children: [
-                        Text(
-                          appointment.doctorName ?? appointment.department ?? 'Appointment',
-                          style: AppTypography.body.copyWith(fontWeight: FontWeight.w500),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                        Container(
+                          width: 56,
+                          height: 56,
+                          decoration: BoxDecoration(
+                            color: _getTypeColor(
+                              appointment.type,
+                            ).withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Icon(
+                            _getTypeIcon(appointment.type),
+                            color: _getTypeColor(appointment.type),
+                            size: 28,
+                          ),
                         ),
-                        const SizedBox(height: 4),
-                        Text(
-                          '${appointment.appointmentDate.day}/${appointment.appointmentDate.month}/${appointment.appointmentDate.year} • ${appointment.appointmentDate.hour}:${appointment.appointmentDate.minute.toString().padLeft(2, '0')}',
-                          style: AppTypography.tiny.copyWith(color: AppColors.gray),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                appointment.doctorName ??
+                                    appointment.department ??
+                                    'Appointment',
+                                style: AppTypography.body.copyWith(
+                                  fontWeight: FontWeight.w500,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                '${appointment.appointmentDate.day}/${appointment.appointmentDate.month}/${appointment.appointmentDate.year} • ${appointment.appointmentDate.hour}:${appointment.appointmentDate.minute.toString().padLeft(2, '0')}',
+                                style: AppTypography.tiny.copyWith(
+                                  color: AppColors.gray,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                appointment.department ?? '',
+                                style: AppTypography.small.copyWith(
+                                  color: AppColors.shieldNavy,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                        const SizedBox(height: 4),
-                        Text(
-                          appointment.department ?? '',
-                          style: AppTypography.small.copyWith(color: AppColors.shieldNavy),
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: _getStatusColor(
+                              appointment.status,
+                            ).withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            _getStatusText(appointment.status),
+                            style: AppTypography.tiny.copyWith(
+                              fontWeight: FontWeight.w600,
+                              color: _getStatusColor(appointment.status),
+                            ),
+                          ),
                         ),
                       ],
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: _getStatusColor(appointment.status).withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Text(
-                      _getStatusText(appointment.status),
-                      style: AppTypography.tiny.copyWith(
-                        fontWeight: FontWeight.w600,
-                        color: _getStatusColor(appointment.status),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+                );
+              },
             ),
-          );
-        },
-      ),
     );
   }
 

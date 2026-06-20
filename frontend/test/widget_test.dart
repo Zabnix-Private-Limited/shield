@@ -14,6 +14,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('SHIELD'), findsOneWidget);
-    expect(find.text('Enter Mobile Number'), findsOneWidget);
+    expect(find.text('Welcome to'), findsOneWidget);
+    expect(find.text('Demo preview'), findsOneWidget);
   });
 }

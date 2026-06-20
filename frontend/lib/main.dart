@@ -15,6 +15,10 @@ class MyApp extends StatelessWidget {
     return MaterialApp.router(
       title: 'SHIELD',
       debugShowCheckedModeBanner: false,
+      scrollBehavior: const MaterialScrollBehavior().copyWith(
+        scrollbars: true,
+        overscroll: false,
+      ),
       theme: AppTheme.lightTheme,
       routerConfig: router,
     );

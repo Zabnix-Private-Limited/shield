@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_typography.dart';
 import '../../../../shared/models/notification.dart';
 import '../../../../shared/widgets/app_card.dart';
+import '../../../../shared/widgets/demo_support.dart';
 
 class NotificationsScreen extends StatelessWidget {
   const NotificationsScreen({super.key});
@@ -14,92 +16,122 @@ class NotificationsScreen extends StatelessWidget {
         title: const Text('Notifications'),
         actions: [
           TextButton(
-            onPressed: () {},
+            onPressed: () {
+              showDemoSnackBar(
+                context,
+                'Notification history is shown in this list and in the role-based notification center demo.',
+              );
+            },
             child: const Text('Mark all read'),
           ),
         ],
       ),
-      body: ListView.builder(
-        padding: const EdgeInsets.all(16),
-        itemCount: dummyNotifications.length,
-        itemBuilder: (context, index) {
-          final notification = dummyNotifications[index];
-          return Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: AppCard(
+      body: dummyNotifications.isEmpty
+          ? DemoEmptyState(
+              icon: Icons.notifications_none,
+              title: 'No notifications right now',
+              description:
+                  'OTP, wallet, appointment, and document alerts will appear here as the member uses SHIELD services.',
+              actionText: 'Open Notification Demo',
+              onAction: () => context.go('/demo/customer/notifications'),
+            )
+          : ListView.builder(
               padding: const EdgeInsets.all(16),
-              onTap: () {},
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    width: 48,
-                    height: 48,
-                    decoration: BoxDecoration(
-                      color: _getTypeColor(notification.type).withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Icon(
-                      _getTypeIcon(notification.type),
-                      color: _getTypeColor(notification.type),
-                      size: 24,
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
+              itemCount: dummyNotifications.length,
+              itemBuilder: (context, index) {
+                final notification = dummyNotifications[index];
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: AppCard(
+                    padding: const EdgeInsets.all(16),
+                    onTap: () {
+                      showDemoDetailsSheet(
+                        context,
+                        title: notification.title,
+                        subtitle: notification.body,
+                        meta: _getTimeAgo(notification.createdAt),
+                        status: notification.isRead ? 'Read' : 'Unread',
+                        highlights: [
+                          'Channel type: ${notification.type.name}',
+                          'This alert is included to demonstrate the SHIELD notification history flow.',
+                        ],
+                      );
+                    },
+                    child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                notification.title,
-                                style: AppTypography.body.copyWith(
-                                  fontWeight: notification.isRead ? FontWeight.w500 : FontWeight.bold,
+                        Container(
+                          width: 48,
+                          height: 48,
+                          decoration: BoxDecoration(
+                            color: _getTypeColor(
+                              notification.type,
+                            ).withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Icon(
+                            _getTypeIcon(notification.type),
+                            color: _getTypeColor(notification.type),
+                            size: 24,
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      notification.title,
+                                      style: AppTypography.body.copyWith(
+                                        fontWeight: notification.isRead
+                                            ? FontWeight.w500
+                                            : FontWeight.bold,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                  if (!notification.isRead)
+                                    const SizedBox(
+                                      width: 8,
+                                      height: 8,
+                                      child: DecoratedBox(
+                                        decoration: BoxDecoration(
+                                          color: AppColors.shieldBlue,
+                                          shape: BoxShape.circle,
+                                        ),
+                                      ),
+                                    ),
+                                ],
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                notification.body,
+                                style: AppTypography.tiny.copyWith(
+                                  color: AppColors.gray,
                                 ),
-                                maxLines: 1,
+                                maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
                               ),
-                            ),
-                            if (!notification.isRead)
-                              const SizedBox(
-                                width: 8,
-                                height: 8,
-                                child: DecoratedBox(
-                                  decoration: BoxDecoration(
-                                    color: AppColors.shieldBlue,
-                                    shape: BoxShape.circle,
-                                  ),
+                              const SizedBox(height: 8),
+                              Text(
+                                _getTimeAgo(notification.createdAt),
+                                style: AppTypography.tiny.copyWith(
+                                  color: AppColors.gray.withValues(alpha: 0.7),
                                 ),
                               ),
-                          ],
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          notification.body,
-                          style: AppTypography.tiny.copyWith(
-                            color: AppColors.gray,
-                          ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          _getTimeAgo(notification.createdAt),
-                          style: AppTypography.tiny.copyWith(
-                            color: AppColors.gray.withValues(alpha: 0.7),
+                            ],
                           ),
                         ),
                       ],
                     ),
                   ),
-                ],
-              ),
+                );
+              },
             ),
-          );
-        },
-      ),
     );
   }
 

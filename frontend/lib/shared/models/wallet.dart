@@ -41,17 +41,17 @@ class WalletTransaction extends Equatable {
 
   @override
   List<Object?> get props => [
-        id,
-        uuid,
-        walletId,
-        transactionType,
-        amount,
-        referenceType,
-        referenceId,
-        remarks,
-        createdBy,
-        createdAt,
-      ];
+    id,
+    uuid,
+    walletId,
+    transactionType,
+    amount,
+    referenceType,
+    referenceId,
+    remarks,
+    createdBy,
+    createdAt,
+  ];
 }
 
 final List<WalletTransaction> dummyTransactions = [
@@ -63,7 +63,7 @@ final List<WalletTransaction> dummyTransactions = [
     amount: 5000.00,
     remarks: 'Wallet recharge',
     createdBy: 'user-1',
-    createdAt: DateTime(2024, 6, 1, 10, 30),
+    createdAt: DateTime(2026, 6, 1, 10, 30),
   ),
   WalletTransaction(
     id: '2',
@@ -75,7 +75,7 @@ final List<WalletTransaction> dummyTransactions = [
     referenceType: 'PURCHASE',
     referenceId: 'pur-001',
     createdBy: 'pharmacy-1',
-    createdAt: DateTime(2024, 6, 3, 14, 15),
+    createdAt: DateTime(2026, 6, 3, 14, 15),
   ),
   WalletTransaction(
     id: '3',
@@ -87,7 +87,7 @@ final List<WalletTransaction> dummyTransactions = [
     referenceType: 'APPOINTMENT',
     referenceId: 'appt-001',
     createdBy: 'clinic-1',
-    createdAt: DateTime(2024, 6, 5, 11, 20),
+    createdAt: DateTime(2026, 6, 5, 11, 20),
   ),
   WalletTransaction(
     id: '4',
@@ -97,7 +97,7 @@ final List<WalletTransaction> dummyTransactions = [
     amount: 2000.00,
     remarks: 'Bonus credit',
     createdBy: 'admin',
-    createdAt: DateTime(2024, 6, 10, 9, 0),
+    createdAt: DateTime(2026, 6, 10, 9, 0),
   ),
   WalletTransaction(
     id: '5',
@@ -109,7 +109,7 @@ final List<WalletTransaction> dummyTransactions = [
     referenceType: 'PURCHASE',
     referenceId: 'pur-002',
     createdBy: 'lab-1',
-    createdAt: DateTime(2024, 6, 12, 16, 45),
+    createdAt: DateTime(2026, 6, 12, 16, 45),
   ),
 ];
 
@@ -151,5 +151,5 @@ final dummyWallet = Wallet(
   uuid: 'wallet-uuid-001',
   customerId: '1',
   status: 'ACTIVE',
-  createdAt: DateTime(2024, 1, 10),
+  createdAt: DateTime(2026, 1, 10),
 );

@@ -1,12 +1,6 @@
 import 'package:equatable/equatable.dart';
 
-enum NotificationType {
-  wallet,
-  appointment,
-  document,
-  membership,
-  system,
-}
+enum NotificationType { wallet, appointment, document, membership, system }
 
 class Notification extends Equatable {
   final String id;
@@ -31,15 +25,15 @@ class Notification extends Equatable {
 
   @override
   List<Object?> get props => [
-        id,
-        uuid,
-        customerId,
-        type,
-        title,
-        body,
-        isRead,
-        createdAt,
-      ];
+    id,
+    uuid,
+    customerId,
+    type,
+    title,
+    body,
+    isRead,
+    createdAt,
+  ];
 }
 
 final List<Notification> dummyNotifications = [
@@ -48,20 +42,22 @@ final List<Notification> dummyNotifications = [
     uuid: 'notif-001',
     customerId: '1',
     type: NotificationType.wallet,
-    title: 'Wallet Credited!',
-    body: '₹500 credited to your wallet from SHIELD Hyper Pharmacy, Perinthalmanna',
+    title: 'Wallet Credited on June 20',
+    body:
+        '₹500 credited to your wallet from SHIELD Hyper Pharmacy, Perinthalmanna on June 20, 2026',
     isRead: false,
-    createdAt: DateTime.now().subtract(const Duration(minutes: 10)),
+    createdAt: DateTime(2026, 6, 20, 21, 20),
   ),
   Notification(
     id: '2',
     uuid: 'notif-002',
     customerId: '1',
     type: NotificationType.appointment,
-    title: 'Appointment Tomorrow!',
-    body: 'Your appointment with Dr. Haneefa P at Manjeri is tomorrow at 10:00 AM',
+    title: 'Appointment on June 21',
+    body:
+        'Your appointment with Dr. Haneefa P at Manjeri is on June 21, 2026 at 10:00 AM',
     isRead: false,
-    createdAt: DateTime.now().subtract(const Duration(hours: 2)),
+    createdAt: DateTime(2026, 6, 20, 19, 30),
   ),
   Notification(
     id: '3',
@@ -69,18 +65,19 @@ final List<Notification> dummyNotifications = [
     customerId: '1',
     type: NotificationType.document,
     title: 'Document Approved',
-    body: 'Your recent prescription upload has been approved',
+    body: 'Your June 18 prescription upload has been approved',
     isRead: true,
-    createdAt: DateTime.now().subtract(const Duration(days: 1)),
+    createdAt: DateTime(2026, 6, 19, 11, 0),
   ),
   Notification(
     id: '4',
     uuid: 'notif-004',
     customerId: '1',
     type: NotificationType.membership,
-    title: 'Membership Renewed!',
-    body: 'Your SHIELD membership for the Perinthalmanna cluster has been renewed',
+    title: 'Membership Renewed for June 2026',
+    body:
+        'Your SHIELD membership for the Perinthalmanna cluster was renewed on June 15, 2026',
     isRead: true,
-    createdAt: DateTime.now().subtract(const Duration(days: 5)),
+    createdAt: DateTime(2026, 6, 15, 9, 30),
   ),
 ];

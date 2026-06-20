@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_typography.dart';
 import '../../../../shared/models/membership.dart';
 import '../../../../shared/widgets/app_card.dart';
+import '../../../../shared/widgets/demo_support.dart';
 
 class MembershipScreen extends StatelessWidget {
   const MembershipScreen({super.key});
@@ -12,6 +14,14 @@ class MembershipScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('My Membership'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.qr_code_2),
+            onPressed: () {
+              context.go('/demo/customer/membership');
+            },
+          ),
+        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -59,6 +69,13 @@ class MembershipScreen extends StatelessWidget {
                       color: AppColors.white,
                       fontWeight: FontWeight.bold,
                       letterSpacing: 2,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Founding privileges with QR-ready digital card access',
+                    style: AppTypography.small.copyWith(
+                      color: AppColors.white.withValues(alpha: 0.82),
                     ),
                   ),
                   const SizedBox(height: 32),
@@ -117,31 +134,26 @@ class MembershipScreen extends StatelessWidget {
                       Expanded(
                         child: _StatItem(
                           label: 'Total Earned',
-                          value: '₹${dummyMembership.totalEarnedCredits.toStringAsFixed(0)}',
+                          value:
+                              '₹${dummyMembership.totalEarnedCredits.toStringAsFixed(0)}',
                           color: AppColors.shieldGreen,
                         ),
                       ),
-                      Container(
-                        width: 1,
-                        height: 40,
-                        color: AppColors.divider,
-                      ),
+                      Container(width: 1, height: 40, color: AppColors.divider),
                       Expanded(
                         child: _StatItem(
                           label: 'Total Redeemed',
-                          value: '₹${dummyMembership.totalRedeemedCredits.toStringAsFixed(0)}',
+                          value:
+                              '₹${dummyMembership.totalRedeemedCredits.toStringAsFixed(0)}',
                           color: AppColors.shieldBlue,
                         ),
                       ),
-                      Container(
-                        width: 1,
-                        height: 40,
-                        color: AppColors.divider,
-                      ),
+                      Container(width: 1, height: 40, color: AppColors.divider),
                       Expanded(
                         child: _StatItem(
                           label: 'Available',
-                          value: '₹${(dummyMembership.totalEarnedCredits - dummyMembership.totalRedeemedCredits).toStringAsFixed(0)}',
+                          value:
+                              '₹${(dummyMembership.totalEarnedCredits - dummyMembership.totalRedeemedCredits).toStringAsFixed(0)}',
                           color: AppColors.shieldNavy,
                         ),
                       ),
@@ -153,10 +165,7 @@ class MembershipScreen extends StatelessWidget {
             const SizedBox(height: 24),
 
             // Benefits
-            Text(
-              'Benefits',
-              style: AppTypography.h5,
-            ),
+            Text('Benefits', style: AppTypography.h5),
             const SizedBox(height: 12),
             ..._getTierBenefits(dummyMembership.tier).map((benefit) {
               return Padding(
@@ -170,16 +179,57 @@ class MembershipScreen extends StatelessWidget {
                       size: 20,
                     ),
                     const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        benefit,
-                        style: AppTypography.body,
-                      ),
-                    ),
+                    Expanded(child: Text(benefit, style: AppTypography.body)),
                   ],
                 ),
               );
             }),
+            const SizedBox(height: 24),
+            AppCard(
+              onTap: () {
+                showDemoDetailsSheet(
+                  context,
+                  title: 'Membership summary',
+                  subtitle:
+                      'This frontend-only view mirrors the SHIELD membership card, benefits, and renewal story without backend dependencies.',
+                  meta: dummyMembership.customerCode,
+                  status: dummyMembership.isActive ? 'Active' : 'Inactive',
+                  highlights: [
+                    'Membership type: ${_getTierName(dummyMembership.tier)}',
+                    'Valid until ${dummyMembership.endDate.day}/${dummyMembership.endDate.month}/${dummyMembership.endDate.year}',
+                    'The richer role-based membership page is also available from the multi-role demo.',
+                  ],
+                );
+              },
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Need the full card demo?',
+                          style: AppTypography.h5,
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          'Open the richer customer membership workspace with the digital privilege card and renewal flow.',
+                          style: AppTypography.small.copyWith(
+                            color: AppColors.gray,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  const Icon(
+                    Icons.arrow_forward_ios,
+                    size: 16,
+                    color: AppColors.gray,
+                  ),
+                ],
+              ),
+            ),
           ],
         ),
       ),
@@ -188,61 +238,37 @@ class MembershipScreen extends StatelessWidget {
 
   List<Color> _getTierColors(MembershipTier tier) {
     switch (tier) {
-      case MembershipTier.bronze:
-        return [const Color(0xFFCD7F32), const Color(0xFF8B4513)];
-      case MembershipTier.silver:
-        return [const Color(0xFFC0C0C0), const Color(0xFF808080)];
-      case MembershipTier.gold:
-        return [const Color(0xFFFFD700), const Color(0xFFB8860B)];
-      case MembershipTier.platinum:
-        return [const Color(0xFFE5E4E2), const Color(0xFF36454F)];
+      case MembershipTier.foundingMember:
+        return [AppColors.shieldBlue, AppColors.shieldNavy];
+      case MembershipTier.standardMember:
+        return [AppColors.shieldGreen, AppColors.shieldBlue];
     }
   }
 
   String _getTierName(MembershipTier tier) {
     switch (tier) {
-      case MembershipTier.bronze:
-        return 'Bronze';
-      case MembershipTier.silver:
-        return 'Silver';
-      case MembershipTier.gold:
-        return 'Gold';
-      case MembershipTier.platinum:
-        return 'Platinum';
+      case MembershipTier.foundingMember:
+        return 'Founding Member';
+      case MembershipTier.standardMember:
+        return 'Standard Member';
     }
   }
 
   List<String> _getTierBenefits(MembershipTier tier) {
     switch (tier) {
-      case MembershipTier.bronze:
+      case MembershipTier.foundingMember:
         return [
-          '5% cashback on all purchases',
-          'Free standard delivery',
-          'Priority customer support',
+          'Digital privilege card with QR verification',
+          'Founding-member pharmacy and healthcare benefits',
+          'Wallet-linked service access across SHIELD partner points',
+          'Priority support for onboarding and membership exceptions',
         ];
-      case MembershipTier.silver:
+      case MembershipTier.standardMember:
         return [
-          '7% cashback on all purchases',
-          'Free standard delivery',
-          'Priority customer support',
-          'Early access to sales',
-        ];
-      case MembershipTier.gold:
-        return [
-          '10% cashback on all purchases',
-          'Free express delivery',
-          'Dedicated account manager',
-          'Early access to sales',
-          'Exclusive offers',
-        ];
-      case MembershipTier.platinum:
-        return [
-          '15% cashback on all purchases',
-          'Free premium delivery',
-          'Dedicated account manager',
-          'Early access to sales',
-          'Exclusive offers',
-          'Free health checkups',
+          'Digital membership card with branch verification support',
+          'Wallet and appointment access across SHIELD services',
+          'Notification support for documents, reports, and visits',
+          'Eligibility for selected service-linked benefits',
         ];
     }
   }
@@ -270,10 +296,7 @@ class _StatItem extends StatelessWidget {
             style: AppTypography.tiny.copyWith(color: AppColors.gray),
           ),
           const SizedBox(height: 4),
-          Text(
-            value,
-            style: AppTypography.h5.copyWith(color: color),
-          ),
+          Text(value, style: AppTypography.h5.copyWith(color: color)),
         ],
       ),
     );

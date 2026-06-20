@@ -4,6 +4,7 @@ import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_typography.dart';
 import '../../../../shared/models/customer.dart';
 import '../../../../shared/widgets/app_card.dart';
+import '../../../../shared/widgets/app_page_frame.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -24,123 +25,138 @@ class ProfileScreen extends StatelessWidget {
         ],
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            AppCard(
-              padding: const EdgeInsets.all(24),
-              child: Center(
+        padding: EdgeInsets.zero,
+        physics: const BouncingScrollPhysics(),
+        child: AppPageFrame(
+          child: Column(
+            children: [
+              AppCard(
+                padding: const EdgeInsets.all(24),
+                child: Center(
+                  child: Column(
+                    children: [
+                      Container(
+                        width: 100,
+                        height: 100,
+                        decoration: BoxDecoration(
+                          color: AppColors.shieldBlue.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(50),
+                        ),
+                        child: const Icon(
+                          Icons.person,
+                          size: 48,
+                          color: AppColors.shieldBlue,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Text(customer.fullName, style: AppTypography.h3),
+                      const SizedBox(height: 4),
+                      Text(
+                        customer.customerCode,
+                        style: AppTypography.small.copyWith(
+                          color: AppColors.gray,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+              AppCard(
                 child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Container(
-                      width: 100,
-                      height: 100,
-                      decoration: BoxDecoration(
-                        color: AppColors.shieldBlue.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(50),
-                      ),
-                      child: const Icon(
-                        Icons.person,
-                        size: 48,
-                        color: AppColors.shieldBlue,
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 16),
+                      child: Text(
+                        'Personal Information',
+                        style: AppTypography.h4,
                       ),
                     ),
-                    const SizedBox(height: 16),
-                    Text(
-                      customer.fullName,
-                      style: AppTypography.h3,
+                    _InfoRow(label: 'Mobile', value: customer.mobile),
+                    const Divider(height: 32),
+                    _InfoRow(
+                      label: 'Email',
+                      value: customer.email ?? 'Not provided',
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      customer.customerCode,
-                      style: AppTypography.small.copyWith(color: AppColors.gray),
+                    const Divider(height: 32),
+                    _InfoRow(
+                      label: 'Date of Birth',
+                      value: customer.dob != null
+                          ? '${customer.dob!.day}/${customer.dob!.month}/${customer.dob!.year}'
+                          : 'Not provided',
+                    ),
+                    const Divider(height: 32),
+                    _InfoRow(
+                      label: 'Gender',
+                      value: customer.gender ?? 'Not provided',
+                    ),
+                    const Divider(height: 32),
+                    _InfoRow(
+                      label: 'Aadhaar',
+                      value:
+                          '****${customer.aadhaarNumber.substring(customer.aadhaarNumber.length - 4)}',
                     ),
                   ],
                 ),
               ),
-            ),
-            const SizedBox(height: 24),
-            AppCard(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 16),
-                    child: Text(
-                      'Personal Information',
-                      style: AppTypography.h4,
+              const SizedBox(height: 24),
+              AppCard(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 16),
+                      child: Text('Address', style: AppTypography.h4),
                     ),
-                  ),
-                  _InfoRow(label: 'Mobile', value: customer.mobile),
-                  const Divider(height: 32),
-                  _InfoRow(label: 'Email', value: customer.email ?? 'Not provided'),
-                  const Divider(height: 32),
-                  _InfoRow(label: 'Date of Birth', value: customer.dob != null ? '${customer.dob!.day}/${customer.dob!.month}/${customer.dob!.year}' : 'Not provided'),
-                  const Divider(height: 32),
-                  _InfoRow(label: 'Gender', value: customer.gender ?? 'Not provided'),
-                  const Divider(height: 32),
-                  _InfoRow(label: 'Aadhaar', value: '****${customer.aadhaarNumber.substring(customer.aadhaarNumber.length - 4)}'),
-                ],
-              ),
-            ),
-            const SizedBox(height: 24),
-            AppCard(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 16),
-                    child: Text(
-                      'Address',
-                      style: AppTypography.h4,
+                    Text(
+                      [
+                        customer.addressLine1,
+                        customer.addressLine2,
+                        customer.city,
+                        customer.district,
+                        customer.state,
+                        customer.pincode,
+                      ].where((e) => e != null && e.isNotEmpty).join(', '),
+                      style: AppTypography.body,
                     ),
-                  ),
-                  Text(
-                    [
-                      customer.addressLine1,
-                      customer.addressLine2,
-                      customer.city,
-                      customer.district,
-                      customer.state,
-                      customer.pincode,
-                    ].where((e) => e != null && e.isNotEmpty).join(', '),
-                    style: AppTypography.body,
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-            const SizedBox(height: 24),
-            AppCard(
-              onTap: () {
-                context.go('/membership');
-              },
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 16),
-                          child: Text(
-                            'Membership',
-                            style: AppTypography.h4,
+              const SizedBox(height: 24),
+              AppCard(
+                onTap: () {
+                  context.go('/membership');
+                },
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 16),
+                            child: Text('Membership', style: AppTypography.h4),
                           ),
-                        ),
-                        _InfoRow(label: 'Status', value: customer.status, isStatus: true),
-                      ],
+                          _InfoRow(
+                            label: 'Status',
+                            value: customer.status,
+                            isStatus: true,
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                  const Icon(
-                    Icons.arrow_forward_ios,
-                    size: 16,
-                    color: AppColors.gray,
-                  ),
-                ],
+                    const Icon(
+                      Icons.arrow_forward_ios,
+                      size: 16,
+                      color: AppColors.gray,
+                    ),
+                  ],
+                ),
               ),
-            ),
-            const SizedBox(height: 24),
-          ],
+              const SizedBox(height: 24),
+            ],
+          ),
         ),
       ),
     );
@@ -163,18 +179,15 @@ class _InfoRow extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(
-          label,
-          style: AppTypography.small.copyWith(color: AppColors.gray),
-        ),
+        Text(label, style: AppTypography.small.copyWith(color: AppColors.gray)),
         Text(
           value,
           style: AppTypography.body.copyWith(
             fontWeight: FontWeight.w500,
             color: isStatus
                 ? value == 'ACTIVE'
-                    ? AppColors.shieldGreen
-                    : AppColors.warning
+                      ? AppColors.shieldGreen
+                      : AppColors.warning
                 : null,
           ),
         ),
