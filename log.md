@@ -475,4 +475,20 @@ otifications_screen.dart with list view showing unread badge, time ago, type ico
 - frontend/lib/features/wallet/presentation/screens/wallet_screen.dart
 - frontend/lib/features/profile/presentation/screens/profile_screen.dart
 - frontend/lib/features/settings/presentation/screens/settings_screen.dart
+- log.md---
+2026-06-20 23:31:20 IST
+
+## 25. Vercel Flutter Web Deployment Fix
+**High-level description**: Reworked the frontend deployment path for Vercel so cloud builds no longer depend on a preinstalled Flutter binary and Flutter web routes resolve correctly after direct browser refreshes.
+- Replaced the bash-based Vercel install/build hooks with Node-based scripts so the project no longer depends on shell-specific behavior during deploys
+- Added a shared Vercel Flutter command resolver that uses the bundled SDK on Vercel and the local Flutter installation on Windows for easier local verification
+- Kept the Vercel output pinned to `build/web` and preserved a catch-all rewrite to `index.html` so GoRouter/Flutter web deep links continue working after navigation and refresh
+- Verified the deployment entrypoint locally with `node .\\scripts\\vercel-build.mjs`, and re-ran `flutter analyze` and `flutter test` to ensure the deploy fix did not regress the frontend demo
+
+### Files Modified/Created
+**Frontend Files (Modified)**:
+- frontend/vercel.json
+- frontend/scripts/vercel-shared.mjs
+- frontend/scripts/vercel-install.mjs
+- frontend/scripts/vercel-build.mjs
 - log.md
