@@ -70,597 +70,223 @@ text id="n5v0yy" H1   32 H2   28 H3   24 H4   20 Body 16 Small 14 Tiny 12
 
 ## Customer
 
-Bottom Navigation
+Bottom Navigation (Mobile first)
 
-\`\`\`text id=“9a2q6w” Home
+```text id="9a2q6w"
+Wallet (Cash, Points, Transactions)
+Services (Pharmacy, Lab, Homecare, Consultations)
+Profile (Personal Info, DOB/Age, Blood Group)
+```
 
-Wallet
+---
 
-Appointments
+## Service Providers (Staff)
 
-Documents
+Sidebar Navigation (Desktop locked)
 
-Profile
-
-\---
-
-\#\# Staff
-
-Sidebar Navigation
-
-\`\`\`text id="m7fymg"  
+```text id="m7fymg"
 Dashboard
-
-Customers
-
-Memberships
-
-Transactions
-
+Customer Card Utilisation (QR Scan / Manual verify)
 Appointments
-
-Documents
-
+Documents (Prescription/Bill upload)
 CRM
-
 Reports
-
 Settings
+```
 
 ---
 
 ## Admin
 
-Sidebar Navigation
+Sidebar Navigation (Desktop locked)
 
-\`\`\`text id=“uk7l3g” Dashboard
-
-Users
-
-Roles
-
-Permissions
-
-Businesses
-
-Membership Plans
-
-Reports
-
+```text id="uk7l3g"
+Dashboard
+Branch-wise IDs List
+IDs Service Utilization
+Users & Roles
 System Settings
-
-\---
-
-\# 3. Login Screens
-
-\#\# Screen 1
-
-Mobile Login
-
-Components
-
-\- Mobile Number Input  
-\- Continue Button
-
-Layout
-
-\`\`\`text id="q0zh6u"  
-Logo
-
-Welcome
-
-Mobile Number
-
-Continue
+Reports
+```
 
 ---
 
-## Screen 2
+# 3. Login Screens
 
-OTP Verification
+## Customer Login Screen (Mobile & OTP)
 
-Components
+### Screen 1.1: Mobile Number Entry
 
-* OTP Input
+Components:
+- Mobile Number Input Field
+- Continue / Send OTP Button
+- Sahakar Branding
 
-* Resend OTP
+Layout:
+```text id="q0zh6u"
+Logo
+Welcome Customers
+[Mobile Number Input]
+[Continue (Send OTP) Button]
+```
 
-* Verify Button
+### Screen 1.2: OTP Verification
+
+Components:
+- 6-digit OTP Input Fields
+- Resend OTP Link (with countdown)
+- Verify & Sign In Button
+
+Layout:
+```text
+Logo
+Verification Code Sent
+[ _ _ _ _ _ _ OTP Fields ]
+[Verify & Sign In Button]
+[Resend OTP Link (after 30s)]
+```
+
+---
+
+## Staff & Service Provider Login Screen (Email & Password)
+
+### Screen 2.1: Email Sign-In
+
+Components:
+- Email Input Field
+- Password Input Field
+- Sign In Button
+- Portal Select Dropdown (Pharmacy Portal, Clinic Portal, Dental Portal, Admin Portal, CRM Portal)
+
+Layout:
+```text
+Logo
+Welcome Staff & Service Providers
+[Email Address Input]
+[Password Input]
+[Select Portal Dropdown]
+[Sign In Button]
+```
 
 ---
 
 # 4. Customer Dashboard
 
-Purpose
+Purpose: Primary customer landing page (mobile-first).
 
-Primary customer landing page.
+## Layout & Components
 
----
-
-## Sections
-
-### Membership Card
-
-Displays
-
-* Customer Name
-
-* Membership Number
-
-* QR Code
-
-* Membership Type
-
----
-
-### Balance Card
-
-Displays
-
-* Current Balance
-
-* Credit Available
+```text id="x0jtw7"
+Header: Branding & Profile Avatar
+---------------------------------
+[Digital Membership Privilege Card]
+- Customer Name
+- Membership ID & QR Code
+- Local Store of Purchase/Registration
+---------------------------------
+[Wallet Summary Card]
+- Cash: $XXXX.XX  |  Points: XXX pts
+- [Recharge Button]
+---------------------------------
+[Services Quick Grid]
+[Pharmacy] [Lab] [Homecare]
+[Doctor]   [Dental] [Cosmetic] [Dietitian]
+---------------------------------
+[Recent Activity / Appointments]
+```
 
 ---
 
-### Quick Actions
+# 5. Wallet Module
 
-Buttons
+## Wallet Dashboard
 
-* Recharge
-
-* Appointments
-
-* Documents
-
-* Support
+Displays segregated sub-ledger cards:
+- **Cash Card**: Recharged or preloaded amount. Includes a button to request a manual recharge.
+- **Points Card**: Points earned from referring other customers (credited after successful registration of referred user with referral code).
+- **Transaction History List**: Immutable list of transactions.
+  - Filters: Date Range, Sub-ledger type (Cash / Points), Transaction Type (Recharge, Referral Credit, Purchase, Reversal).
 
 ---
 
-### Recent Activity
+# 6. Customer Profile
 
-Displays
+## Profile Screen
 
-* Purchases
-
-* Appointments
-
-* Reports
-
----
-
-### Notifications
-
-Displays
-
-* Alerts
-
-* Reminders
-
-* Updates
+Displays personal details and auto-calculated age:
+- **Full Name**
+- **Phone Number** (Verified)
+- **Email Address**
+- **Date of Birth** (Auto-calculates age dynamically e.g., "DOB: 1990-05-15 (Age: 36)")
+- **Blood Group** (Selectable dropdown of valid groups)
+- **Address Details**: Address Line 1, Address Line 2, City, District, State, Pincode
+- **Onboarding Agent Code**: The code of the agent who helped register the customer.
 
 ---
 
-Layout
-
-\`\`\`text id=“x0jtw7” Header
-
-Membership Card
-
-Balance
-
-Quick Actions
-
-Recent Activity
-
-Notifications
-
-\---
-
-\# 5. Wallet Module
-
-\#\# Wallet Dashboard
-
-Displays
-
-\- Current Balance  
-\- Available Credit  
-\- Last Transactions
-
-\---
-
-\#\# Transaction History
-
-Filters
-
-\- Date  
-\- Type  
-\- Amount
-
-\---
-
-\#\# Recharge Screen
-
-Phase 1
-
-Manual Request
-
-Phase 2
-
-Gateway Payment
-
-\---
-
-\# 6. Customer Profile
-
-Sections
-
-Personal Information
-
-Address
-
-Contacts
-
-Membership
-
-Documents
-
-\---
-
-Actions
-
-\- Edit Profile  
-\- Update Contact
-
-\---
-
-\# 7. Documents Module
-
-\#\# Document Dashboard
-
-Displays
-
-\- Prescriptions  
-\- Lab Reports  
-\- Dental Records  
-\- Invoices
-
-\---
-
-Filters
-
-\- Type  
-\- Date  
-\- Provider
-
-\---
-
-\#\# Upload Screen
-
-Components
-
-\- File Picker  
-\- Camera Upload  
-\- Upload Button
-
-\---
-
-\# 8. Appointment Module
-
-\#\# Appointment Dashboard
-
-Displays
-
-Upcoming
-
-Completed
-
-Cancelled
-
-\---
-
-Actions
-
-Book Appointment
-
-Reschedule
-
-Cancel
-
-\---
-
-\#\# Appointment Details
-
-Displays
-
-Provider
-
-Date
-
-Status
-
-Notes
-
-\---
-
-\# 9. Pharmacy Screens
-
-\#\# Pharmacy Dashboard
-
-Cards
-
-\- Customer Search  
-\- Upload Bill  
-\- Upload Prescription
-
-\---
-
-\#\# Customer Search
-
-Methods
-
-\- QR Scan  
-\- Mobile Number  
-\- Membership Number
-
-\---
-
-\#\# Bill Upload
-
-Components
-
-\- Customer Verification  
-\- PDF Upload  
-\- Extraction Results  
-\- Validation  
-\- Submit
-
-\---
-
-Workflow
-
-\`\`\`text id="a2c5eg"  
-Search  
-↓  
-Verify  
-↓  
-Upload  
-↓  
-Review  
-↓  
-Submit
+# 7. Customer Services Modules
+
+## Pharmacy Screen
+- **Prescription Upload Option**: Camera capture or file picker to upload doctor prescriptions.
+- **Regular Products Section**: Preloaded list of regularly bought products for fast repeat purchase.
+- **Suggestions Slider**: Product suggestions matching "other patients' products which they usually buy".
+
+## Laboratory Services Screen
+- **Lab Services List**: Searchable directory of lab tests (e.g., Blood Sugar, Thyroid Profile, Lipid Profile).
+- **Booking Form**: Date/time slot booking with home-collection option.
+
+## Homecare Services Screen
+- **Homecare Assistance List**: Searchable directory of home visits and homecare plans (e.g., Nursing care, Physiotherapy, Elderly care).
+
+## Consultations (Doctor / Dental / Cosmetic / Dietitian)
+- **Consultation Selection**: List of available consultants and doctors.
+- **Consultation Modes**: Select between In-Person appointment, Tele-consultation (Audio call), or Online Video consultation.
+- **Dietitian Presets**: Browse dietitian consultations and view the list of preset diet plans.
 
 ---
 
-# 10. Clinic Screens
+# 9. Service Provider & Card Utilization Screens
 
-## Clinic Dashboard
-
-Cards
-
-* Appointments
-
-* Reports
-
-* Consultations
-
-* Home Visits
+## Customer Card Utilisation Screen
+* **Verification Methods**: Scan QR Code using camera scanner or manually input Membership Number or Mobile Number.
+* **Store Rule Check Banner**:
+  - If card is used at a different Hyperpharmacy branch than the purchase branch: Display warning banner `[Error: Local store mismatch. Store-issued card cannot be utilized at other Hyperpharmacy branches.]`.
+  - If card is used at clinic, cosmetic, dental, dietitian, or homecare providers: Display success banner `[Success: Cross-compatible service provider. Access granted.]`.
+* **Details Panel**: Shows customer name, profile photo, DOB/Age, blood group, current Cash balance, and Points balance.
+* **Deduction Form**: Select service, enter bill amount, select sub-ledger (Cash or Points), and click "Process Transaction" to log the utilization.
 
 ---
 
-## Consultation Screen
+# 10. Service Provider Workplaces
 
-Fields
+## Pharmacy Staff Console
+* **Prescription Verification**: Viewer for customer-uploaded or clinic-shared prescriptions.
+* **Suggestive Selling Drawer**: Lists regularly bought items and similar customer suggestions.
+* **Bill Processing**: Invoice uploading and wallet balance processing.
 
-* Diagnosis
+## Clinician / Consultant Console
+* **Appointment Queue**: Lists daily appointments (In-Person, Tele-consultation, Video consultation).
+* **Consultation Workspace**: Input diagnosis, clinical notes, and prescribe medicine.
+* **Video / Tele Call Interface**: Integrates online audio/video session controls.
 
-* Notes
-
-* Attachments
-
----
-
-## Report Upload
-
-Components
-
-* Upload PDF
-
-* Review
-
-* Save
+## Dietitian Console
+* **Diet Plans Catalog**: Manage and select preset diet plans to assign to the customer profile.
 
 ---
 
-# 11. Dental Screens
-
-## Dental Dashboard
-
-Cards
-
-* Appointments
-
-* Treatments
-
-* Reports
-
----
-
-## Treatment Screen
-
-Fields
-
-* Procedure
-
-* Notes
-
-* Attachments
-
----
-
-# 12. CRM Screens
-
-## CRM Dashboard
-
-Widgets
-
-* Today’s Tasks
-
-* Pending Follow-Ups
-
-* Complaints
-
----
-
-## Follow-Up Screen
-
-Fields
-
-* Customer
-
-* Notes
-
-* Next Follow-Up Date
-
----
-
-## Complaint Screen
-
-Fields
-
-* Complaint Type
-
-* Description
-
-* Status
-
----
-
-# 13. Shield Team Screens
-
-## Shield Dashboard
-
-Widgets
-
-* Pending Approvals
-
-* Reversal Requests
-
-* Membership Requests
-
----
-
-## Customer Approval
-
-Actions
-
-* Approve
-
-* Reject
-
-* Request Changes
-
----
-
-## Membership Management
-
-Actions
-
-* Activate
-
-* Suspend
-
-* Cancel
-
----
-
-# 14. Management Dashboard
-
-Purpose
-
-Executive Overview
-
----
-
-Widgets
-
-### Membership Metrics
-
-* Active Members
-
-* New Members
-
----
-
-### Revenue Metrics
-
-* Daily Revenue
-
-* Monthly Revenue
-
----
-
-### Service Metrics
-
-* Pharmacy Usage
-
-* Clinic Usage
-
-* Dental Usage
-
----
-
-### Wallet Metrics
-
-* Total Balance
-
-* Credit Utilization
-
----
-
-# 15. Admin Screens
-
-## User Management
-
-Table
-
-* User
-
-* Role
-
-* Department
-
-* Status
-
-Actions
-
-* Add
-
-* Edit
-
-* Disable
-
----
-
-## Role Management
-
-Create
-
-Edit
-
-Delete
-
-Permissions
-
----
-
-## Permission Management
-
-Assign
-
-Remove
-
-Review
+# 11. Admin Screens
+
+## Branch-Wise IDs Directory
+* **Dashboard Filter**: Select branch location (e.g., Sahakar Hyperpharmacy - Branch A, Branch B).
+* **IDs Table**: Lists Customer ID, Name, Registration Date, Issuing Agent Code, and status.
+
+## IDs Service Utilization Table
+* **Dashboard Summary**: Searchable records of SHIELD card scans.
+* **Columns**: Transaction ID, Customer ID, Service Provider Name, Service Category, Amount Deducted, Ledger Type (Cash/Points), Date & Time.
+
+## System Reports
+* **Reports Generator**: Select from Membership Report, Revenue Report, Wallet Report, and Service Utilization Audits.
+* **Export Options**: PDF export layout, Excel export layout.
 
 ---
 
@@ -768,23 +394,9 @@ Field Help
 
 # 21. Mobile Responsive Rules
 
-Phone
+* **Customer-Facing Screens**: Mobile-first and fully responsive (collapsing smoothly on narrow viewports: 1 Column on Phone, 2 Columns on Tablet, 3 Columns on Desktop with Sidebar Navigation).
 
-1 Column Layout
-
----
-
-Tablet
-
-2 Column Layout
-
----
-
-Desktop
-
-3 Column Layout
-
-Sidebar Navigation
+* **Staff & Portal Screens**: Desktop-locked. To preserve dashboard visibility, multi-column metric grids, and side-by-side queues, these pages lock at a fixed width of `1300` pixels and scroll horizontally on smaller/mobile viewports instead of collapsing.
 
 ---
 

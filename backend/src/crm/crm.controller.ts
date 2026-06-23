@@ -6,14 +6,10 @@ import {
   Param,
   Body,
   Query,
-  UseGuards,
-  Request,
 } from '@nestjs/common';
 import { CrmService } from './crm.service';
-import { MockAuthGuard } from '../auth/mock-auth.guard';
 
 @Controller()
-@UseGuards(MockAuthGuard)
 export class CrmController {
   constructor(private crmService: CrmService) {}
 
@@ -30,8 +26,8 @@ export class CrmController {
   }
 
   @Post('crm/activities')
-  async createActivity(@Body() body: any, @Request() req: any) {
-    const staffId = req.user.isStaff ? BigInt(req.user.id) : BigInt(1);
+  async createActivity(@Body() body: any) {
+    const staffId = body.created_by ? BigInt(body.created_by) : BigInt(1);
     const act = await this.crmService.createActivity({
       customerId: BigInt(body.customer_id),
       activityType: body.activity_type,

@@ -5,7 +5,7 @@ import '../../../../shared/models/document.dart';
 import '../../../../shared/models/shield_role.dart';
 import '../../../../shared/widgets/app_card.dart';
 import '../../../../shared/widgets/app_button.dart';
-import '../../../../shared/widgets/demo_support.dart';
+import '../../../../shared/widgets/portal_support.dart';
 import '../../../../shared/services/api_service.dart';
 import 'package:go_router/go_router.dart';
 
@@ -40,9 +40,9 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
           IconButton(
             icon: const Icon(Icons.add),
             onPressed: () {
-              showDemoSnackBar(
+              showPortalSnackBar(
                 context,
-                'Document upload is demonstrated in the customer documents and role-based review screens.',
+                'Document upload is supported in the customer documents and role-based review screens.',
               );
             },
           ),
@@ -81,13 +81,13 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
           final documents = snapshot.data ?? [];
 
           if (documents.isEmpty) {
-            return DemoEmptyState(
+            return PortalEmptyState(
               icon: Icons.description_outlined,
               title: 'No documents yet',
               description:
                   'Uploaded prescriptions, reports, and invoices will appear here once the customer starts using SHIELD services.',
               actionText: 'Open Documents',
-              onAction: () => context.go('/workspace/customer/documents'),
+              onAction: () => context.go('/portal/customer/documents'),
             );
           }
 
@@ -102,7 +102,7 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
                   padding: const EdgeInsets.only(bottom: 12),
                   child: AppCard(
                     onTap: () {
-                      showDemoDetailsSheet(
+                      showPortalDetailsSheet(
                         context,
                         title: document.fileName,
                         subtitle:

@@ -26,6 +26,7 @@ model Business {
 
   departments   Department[]
   serviceProviders ServiceProvider[]
+  shieldCards   ShieldCard[]
 
   @@map("businesses")
 }
@@ -143,9 +144,17 @@ model Customer {
   createdAt     DateTime   @default(now()) @db.Timestamptz(6) @map("created_at")
   updatedAt     DateTime   @default(now()) @updatedAt @db.Timestamptz(6) @map("updated_at")
   deletedAt     DateTime?  @db.Timestamptz(6) @map("deleted_at")
+  
+  bloodGroup    String?    @db.VarChar(10) @map("blood_group")
+  agentCode     String     @db.VarChar(50) @map("agent_code")
+  referralCode  String?    @unique @db.VarChar(50) @map("referral_code")
+  referredById  BigInt?    @map("referred_by_id")
 
   createdByUser User?      @relation("CustomerCreatedBy", fields: [createdBy], references: [id])
   approvedByUser User?     @relation("CustomerApprovedBy", fields: [approvedBy], references: [id])
+  referredBy    Customer?  @relation("CustomerReferral", fields: [referredById], references: [id])
+  referredCustomers Customer[] @relation("CustomerReferral")
+  
   customerContacts CustomerContact[]
   customerStatusHistory CustomerStatusHistory[]
   membership    Membership?
@@ -242,9 +251,11 @@ model ShieldCard {
   cardNumber    String?    @unique @db.VarChar(100) @map("card_number")
   qrCode        String?    @db.Text @map("qr_code")
   status        String?    @db.VarChar(50)
+  issuedBusinessId BigInt? @map("issued_business_id")
   issuedAt      DateTime?  @db.Timestamptz(6) @map("issued_at")
 
   customer      Customer?  @relation(fields: [customerId], references: [id])
+  issuedBusiness Business? @relation(fields: [issuedBusinessId], references: [id])
 
   @@map("shield_cards")
 }
@@ -270,6 +281,7 @@ model WalletTransaction {
   uuid          String?    @unique @db.Uuid
   walletId      BigInt?    @map("wallet_id")
   transactionType String?  @db.VarChar(50) @map("transaction_type")
+  subLedgerType String?    @default("CASH") @db.VarChar(50) @map("sub_ledger_type")
   amount        Decimal?   @db.Decimal(15, 2)
   referenceType String?    @db.VarChar(100) @map("reference_type")
   referenceId   BigInt?    @map("reference_id")

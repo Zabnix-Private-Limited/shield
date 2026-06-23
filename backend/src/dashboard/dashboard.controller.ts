@@ -1,16 +1,14 @@
-import { Controller, Get, Param, UseGuards, Request } from '@nestjs/common';
+import { Controller, Get, Param, Query } from '@nestjs/common';
 import { DashboardService } from './dashboard.service';
-import { MockAuthGuard } from '../auth/mock-auth.guard';
 
 @Controller('dashboard')
-@UseGuards(MockAuthGuard)
 export class DashboardController {
   constructor(private dashboardService: DashboardService) {}
 
   @Get('customer')
-  async getCustomerDashboard(@Request() req: any) {
-    const customerId = BigInt(req.user.id);
-    const data = await this.dashboardService.getCustomerDashboard(customerId);
+  async getCustomerDashboard(@Query('customer_id') customerId?: string) {
+    const id = customerId ? BigInt(customerId) : BigInt(1);
+    const data = await this.dashboardService.getCustomerDashboard(id);
     return {
       success: true,
       message: 'Customer dashboard metrics retrieved',
@@ -52,14 +50,13 @@ export class DashboardController {
   async getRoleSectionDashboard(
     @Param('role') role: string,
     @Param('section') section: string,
-    @Request() req: any,
+    @Query('customer_id') customerId?: string,
   ) {
-    // Falls back to mock customer ID if not staff, or resolves the active user ID
-    const customerId = BigInt(req.user.id);
+    const id = customerId ? BigInt(customerId) : BigInt(1);
     const data = await this.dashboardService.getRoleSectionDashboard(
       role,
       section,
-      customerId,
+      id,
     );
     return {
       success: true,

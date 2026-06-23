@@ -8,7 +8,7 @@ import '../../../../shared/widgets/app_card.dart';
 import '../../../../shared/widgets/app_button.dart';
 import '../../../../shared/widgets/app_page_frame.dart';
 import '../../../../shared/widgets/app_responsive.dart';
-import '../../../../shared/widgets/demo_support.dart';
+import '../../../../shared/widgets/portal_support.dart';
 import '../../../../shared/services/api_service.dart';
 
 class CustomerDashboard extends StatefulWidget {
@@ -89,6 +89,17 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
           final txns = snapshot.data![2] as List<WalletTransaction>;
 
           final balance = double.tryParse(walletProfile['balance']?.toString() ?? '0') ?? 0.0;
+          final pointsBalance =
+              double.tryParse(walletProfile['pointsBalance']?.toString() ?? '0') ??
+              0.0;
+          final upcomingCount = txns.isEmpty
+              ? 0
+              : txns.where((txn) => txn.transactionType == 'DEBIT').length;
+          final recommendedServices = [
+            {'name': 'Pharmacy Reorder', 'subtitle': 'Frequently purchased medicines ready'},
+            {'name': 'Lab Follow-up', 'subtitle': 'HbA1c and CBC packages available'},
+            {'name': 'Dietitian Plan', 'subtitle': 'Nutrition programs with loyalty rewards'},
+          ];
 
           return RefreshIndicator(
             onRefresh: () async => _loadDashboardData(),
@@ -105,26 +116,85 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
                       'Welcome back',
                       style: AppTypography.small.copyWith(color: AppColors.gray),
                     ),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 18),
                     AppCard(
-                      padding: const EdgeInsets.all(20),
+                      padding: const EdgeInsets.all(16),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            'Wallet Balance',
-                            style: AppTypography.small.copyWith(
-                              color: AppColors.gray,
-                            ),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text('Membership Card', style: AppTypography.small.copyWith(color: AppColors.gray)),
+                                  const SizedBox(height: 4),
+                                  Text(customer.customerCode, style: AppTypography.h4),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    'Founding Member • Perinthalmanna cluster',
+                                    style: AppTypography.tiny.copyWith(color: AppColors.gray),
+                                  ),
+                                ],
+                              ),
+                              AppButton(
+                                text: 'View Card',
+                                height: 40,
+                                onPressed: () => context.go('/membership'),
+                              ),
+                            ],
                           ),
-                          const SizedBox(height: 8),
-                          Text(
-                            '₹${balance.toStringAsFixed(2)}',
-                            style: AppTypography.h2.copyWith(
-                              color: AppColors.shieldNavy,
-                            ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _DashboardSummaryCard(
+                            title: 'Wallet',
+                            value: '₹${balance.toStringAsFixed(0)}',
+                            subtitle: 'Available cash',
+                            icon: Icons.account_balance_wallet_outlined,
+                            color: AppColors.shieldNavy,
                           ),
-                          const SizedBox(height: 16),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _DashboardSummaryCard(
+                            title: 'Points',
+                            value: '${pointsBalance.toStringAsFixed(0)} pts',
+                            subtitle: 'Rewards balance',
+                            icon: Icons.stars_rounded,
+                            color: AppColors.shieldBlue,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    AppCard(
+                      padding: const EdgeInsets.all(14),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              const Icon(
+                                Icons.bolt_rounded,
+                                color: AppColors.shieldBlue,
+                                size: 18,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Quick wallet actions',
+                                style: AppTypography.body.copyWith(
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
                           Row(
                             children: [
                               Expanded(
@@ -132,9 +202,9 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
                                   text: 'Recharge',
                                   type: AppButtonType.outline,
                                   onPressed: () {
-                                    context.go('/workspace/customer/recharge');
+                                    context.go('/portal/customer/recharge');
                                   },
-                                  height: 48,
+                                  height: 42,
                                 ),
                               ),
                               const SizedBox(width: 12),
@@ -144,7 +214,7 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
                                   onPressed: () {
                                     context.go('/wallet');
                                   },
-                                  height: 48,
+                                  height: 42,
                                 ),
                               ),
                             ],
@@ -152,9 +222,71 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
                         ],
                       ),
                     ),
+              const SizedBox(height: 20),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('Upcoming & Highlights', style: AppTypography.h4),
+                  Text(
+                    '$upcomingCount active actions',
+                    style: AppTypography.tiny.copyWith(color: AppColors.gray),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              AppCard(
+                padding: const EdgeInsets.all(14),
+                child: Column(
+                  children: [
+                    _MiniInfoRow(
+                      icon: Icons.event_available,
+                      title: 'Upcoming Appointments',
+                      subtitle: 'Track booked visits and upcoming care reminders.',
+                      trailing: 'Open',
+                      onTap: () => context.go('/appointments'),
+                    ),
+                    const Divider(height: 20),
+                    _MiniInfoRow(
+                      icon: Icons.notifications_active_outlined,
+                      title: 'Notifications',
+                      subtitle: 'Wallet credits, reports, and appointment alerts.',
+                      trailing: 'View',
+                      onTap: () => context.go('/notifications'),
+                    ),
+                  ],
+                ),
+              ),
               const SizedBox(height: 24),
+              Text('Recommended Services', style: AppTypography.h4),
+              const SizedBox(height: 12),
+              ...recommendedServices.map((service) {
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: AppCard(
+                    onTap: () => context.go('/services'),
+                    padding: const EdgeInsets.all(14),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.local_hospital_outlined, color: AppColors.shieldBlue),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(service['name']!, style: AppTypography.body.copyWith(fontWeight: FontWeight.w700)),
+                              Text(service['subtitle']!, style: AppTypography.tiny.copyWith(color: AppColors.gray)),
+                            ],
+                          ),
+                        ),
+                        const Icon(Icons.chevron_right),
+                      ],
+                    ),
+                  ),
+                );
+              }),
+              const SizedBox(height: 10),
               Text('Quick Actions', style: AppTypography.h4),
-              const SizedBox(height: 16),
+              const SizedBox(height: 12),
               GridView.count(
                 crossAxisCount: AppResponsive.adaptiveGridCount(
                   context,
@@ -165,22 +297,22 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
                 ),
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
-                crossAxisSpacing: 16,
-                mainAxisSpacing: 16,
-                childAspectRatio: AppResponsive.isPhone(context) ? 1.1 : 1.2,
+                crossAxisSpacing: 12,
+                mainAxisSpacing: 12,
+                childAspectRatio: AppResponsive.isPhone(context) ? 1.45 : 1.35,
                 children: [
                   QuickActionCard(
                     icon: Icons.qr_code_scanner,
                     label: 'QR Card',
                     onTap: () {
-                      context.go('/workspace/customer/membership');
+                      context.go('/membership');
                     },
                   ),
                   QuickActionCard(
                     icon: Icons.receipt_long,
                     label: 'Recharge',
                     onTap: () {
-                      context.go('/workspace/customer/recharge');
+                      context.go('/portal/customer/recharge');
                     },
                   ),
                   QuickActionCard(
@@ -205,18 +337,25 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
                     },
                   ),
                   QuickActionCard(
+                    icon: Icons.grid_view_rounded,
+                    label: 'Services',
+                    onTap: () {
+                      context.go('/services');
+                    },
+                  ),
+                  QuickActionCard(
                     icon: Icons.support_agent,
                     label: 'Support',
                     onTap: () {
-                      showDemoSnackBar(
+                      showPortalSnackBar(
                         context,
-                        'Support is available in the customer settings and SHIELD support demo pages.',
+                        'Support is available in the customer settings and SHIELD support portal pages.',
                       );
                     },
                   ),
                 ],
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 20),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -303,7 +442,98 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
   },
 ),
 );
+  }
 }
+
+class _MiniInfoRow extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final String trailing;
+  final VoidCallback onTap;
+
+  const _MiniInfoRow({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.trailing,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      child: Row(
+        children: [
+          Icon(icon, color: AppColors.shieldBlue),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: AppTypography.body.copyWith(fontWeight: FontWeight.w700)),
+                Text(subtitle, style: AppTypography.tiny.copyWith(color: AppColors.gray)),
+              ],
+            ),
+          ),
+          Text(trailing, style: AppTypography.small.copyWith(color: AppColors.shieldBlue, fontWeight: FontWeight.w700)),
+        ],
+      ),
+    );
+  }
+}
+
+class _DashboardSummaryCard extends StatelessWidget {
+  final String title;
+  final String value;
+  final String subtitle;
+  final IconData icon;
+  final Color color;
+
+  const _DashboardSummaryCard({
+    required this.title,
+    required this.value,
+    required this.subtitle,
+    required this.icon,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return AppCard(
+      padding: const EdgeInsets.all(14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  title,
+                  style: AppTypography.tiny.copyWith(color: AppColors.gray),
+                ),
+              ),
+              Icon(icon, size: 18, color: color),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            value,
+            style: AppTypography.h4.copyWith(
+              color: color,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            subtitle,
+            style: AppTypography.tiny.copyWith(color: AppColors.gray),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class QuickActionCard extends StatelessWidget {
@@ -321,13 +551,14 @@ class QuickActionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AppCard(
-      padding: const EdgeInsets.symmetric(vertical: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
       onTap: onTap,
       child: Column(
         mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(icon, size: 32, color: AppColors.shieldBlue),
-          const SizedBox(height: 8),
+          Icon(icon, size: 24, color: AppColors.shieldBlue),
+          const SizedBox(height: 6),
           Text(label, style: AppTypography.tiny, textAlign: TextAlign.center),
         ],
       ),

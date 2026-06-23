@@ -4,13 +4,10 @@ import {
   Post,
   Param,
   Body,
-  UseGuards,
 } from '@nestjs/common';
 import { CreditService } from './credit.service';
-import { MockAuthGuard } from '../auth/mock-auth.guard';
 
 @Controller('credit/accounts')
-@UseGuards(MockAuthGuard)
 export class CreditController {
   constructor(private creditService: CreditService) {}
 

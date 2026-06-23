@@ -32,59 +32,21 @@ The system will operate using a unified platform architecture with RBAC and ABAC
 
 Access:
 
-* Profile
+* **Profile**: Name, Address, Pin Code, Phone Number, Date of Birth, Age, Blood Group
 
-* Membership
+* **Wallet**: Cash, Points, Transaction History
 
-* SHIELD Balance
+* **Services**: Pharmacy, Lab, Homecare, Dental Consultation, Doctor Consultation, Cosmetic Consultation, Dietitian Consultation
 
-* Transactions
-
-* Documents
-
-* Reports
-
-* Appointments
+* **Appointments**: Book appointments, Tele-consultation, Online Video consultation
 
 ---
 
-## Pharmacy Staff
+## Service Providers (Pharmacy, Clinic, Dental, Cosmetic, Homecare, Dietitian Staff)
 
 Access:
 
-* Customer Verification
-
-* Bill Upload
-
-* Prescription Upload
-
-* Purchase Management
-
----
-
-## Clinic Staff
-
-Access:
-
-* Appointments
-
-* Consultations
-
-* Reports
-
-* Home Visits
-
----
-
-## Dental Staff
-
-Access:
-
-* Dental Records
-
-* Treatments
-
-* Reports
+* **Customer Card Utilisation**: Scan QR/Card and record service utilization under local rules.
 
 ---
 
@@ -106,7 +68,7 @@ Access:
 
 Access:
 
-* Customer Approval
+* Customer Approval (validating agent_code)
 
 * Membership Management
 
@@ -128,11 +90,17 @@ Access:
 
 ---
 
-## Super Admin
+## Super Admin / Administrator
 
 Access:
 
-* Complete System
+* Branch-wise IDs list
+
+* IDs service utilization
+
+* System reports
+
+* Complete System configuration
 
 ---
 
@@ -140,11 +108,11 @@ Access:
 
 ## Features
 
-* Mobile OTP Login
+* Customer Mobile OTP Login
 
-* Role Assignment
+* Staff & Service Provider Email Login (Email/Password)
 
-* Permission Assignment
+* Role & Permission Assignment
 
 * Session Management
 
@@ -152,9 +120,13 @@ Access:
 
 ## Functional Requirements
 
-FR-001
+FR-001.1
 
-System shall authenticate users using OTP.
+System shall authenticate Customers using Mobile OTP.
+
+FR-001.2
+
+System shall authenticate Staff, Service Providers, and Admins using Email and Password credentials.
 
 FR-002
 
@@ -178,11 +150,13 @@ System shall log all login activities.
 
 ## Features
 
-* Customer Registration
+* Agent-driven Customer Registration
 
-* Customer Approval
+* Customer Approval Workflow
 
-* Profile Management
+* Profile Management (Name, Address, Pin Code, Phone Number, DOB, Blood Group)
+
+* Age Auto-Calculation
 
 * Customer Search
 
@@ -190,7 +164,15 @@ System shall log all login activities.
 
 FR-006
 
-System shall create customer records.
+System shall create customer records exclusively via Sahakar Group Agents, requiring a valid `agent_code` of the initiating or assisting agent.
+
+FR-006.1
+
+System shall record customer profile details: first_name, last_name, address_line1, address_line2, city, district, state, pincode, mobile, dob, and blood_group.
+
+FR-006.2
+
+System shall automatically calculate and display the customer's age based on the provided date of birth (dob).
 
 FR-007
 
@@ -268,9 +250,13 @@ System shall support configurable discounts.
 
 ## Features
 
-* Balance Creation
+* Ledger-Based Balance Creation
 
-* Recharge
+* Cash & Points Ledger Segregation
+
+* Customer Balance Recharge (Cash)
+
+* Referral Points Crediting
 
 * Balance Deduction
 
@@ -282,6 +268,14 @@ FR-017
 
 System shall maintain a ledger-based balance model.
 
+FR-017.1
+
+System shall track Cash balances separately (recharged or preloaded amounts).
+
+FR-017.2
+
+System shall track Points balances separately (referrals points credited after successful registration of a referred customer).
+
 FR-018
 
 System shall record every transaction.
@@ -292,15 +286,15 @@ System shall support recharge transactions.
 
 FR-020
 
-System shall support promotional credits.
+System shall support promotional/referral credits to the Points sub-ledger.
 
 FR-021
 
-System shall support manual adjustments.
+System shall support manual adjustments to either Cash or Points sub-ledgers.
 
 FR-022
 
-System shall calculate current balance dynamically.
+System shall calculate current Cash and Points balances dynamically.
 
 FR-023
 
@@ -310,9 +304,11 @@ Transaction Types:
 
 * Opening Balance
 
-* Recharge
+* Recharge (Cash)
 
-* Purchase
+* Referral Credits (Points)
+
+* Purchase (Debited from Cash or Points)
 
 * Discount
 
@@ -438,13 +434,21 @@ System shall retain original files.
 
 * Bill Upload
 
-* Prescription Upload
+* Prescription Upload (Staff & Customer Interface)
 
 * Purchase Tracking
+
+* Regularly Purchased Products Preloading
+
+* Patient Suggestions (Frequently bought together by similar patients)
 
 FR-039
 
 System shall allow pharmacy staff to upload bills.
+
+FR-039.1
+
+System shall allow customers to upload prescriptions directly from their mobile interface.
 
 FR-040
 
@@ -462,67 +466,87 @@ FR-043
 
 System shall maintain purchase history.
 
+FR-043.1
+
+System shall preload regularly used products in the customer's interface based on past purchase history.
+
+FR-043.2
+
+System shall display suggestions of other patients' products who usually buy the same regular items.
+
 ---
 
 # 11. Smart Clinic Module
 
 ## Features
 
-* Appointments
+* Doctor Appointments (In-Person booking)
+
+* Tele-Consultation (Audio appointments)
+
+* Online Video Consultation
+
+* Laboratory Services Directory Listing
+
+* Homecare Services Directory Listing
 
 * Consultations
 
-* Reports
-
-* Home Visits
+* Reports & Records
 
 FR-044
 
-System shall create appointments.
+System shall support booking doctor appointments, tele-consultations, and online video consultations.
 
 FR-045
 
-System shall manage appointment statuses.
+System shall manage appointment statuses (Pending, Confirmed, Completed, Cancelled, No Show).
 
 FR-046
 
-System shall upload consultation records.
+System shall upload and link consultation records.
 
 FR-047
 
-System shall upload reports.
+System shall retrieve and display the directory listing of available Laboratory Services.
 
 FR-048
 
-System shall create home visit records.
+System shall retrieve and display the directory listing of available Homecare Services.
 
 FR-049
 
-System shall maintain consultation history.
+System shall maintain consultation, video meeting, and home visit histories.
 
 ---
 
-# 12. Dental Module
+# 12. Dental & Special Consultation Module
 
 ## Features
 
-* Dental Treatments
+* Dental Consulting: Booking, Tele-consultation, Video consultation
 
-* Treatment Plans
+* Cosmetic Consulting: Booking, Tele-consultation, Video consultation
 
-* Dental Reports
+* Dietitian Services: Doctor Consultations and Preset Diet Plans Listing
+
+* Treatment Plans & Dental/Aesthetic Records
 
 FR-050
 
-System shall record dental procedures.
+System shall book dental and cosmetic consultations including tele-consultation and online video sessions.
+
+FR-050.1
+
+System shall retrieve and display dietitian consultations and the directory list of dietitian-prescribed preset plans.
 
 FR-051
 
-System shall upload dental reports.
+System shall upload dental and cosmetic reports.
 
 FR-052
 
-System shall maintain dental history.
+System shall maintain comprehensive dental, cosmetic, and dietitian consultation histories.
 
 ---
 

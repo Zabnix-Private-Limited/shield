@@ -6,21 +6,17 @@ import {
   Param,
   Body,
   Query,
-  UseGuards,
-  Request,
   HttpCode,
 } from '@nestjs/common';
 import { DocumentService } from './document.service';
-import { MockAuthGuard } from '../auth/mock-auth.guard';
 
 @Controller()
-@UseGuards(MockAuthGuard)
 export class DocumentController {
   constructor(private documentService: DocumentService) {}
 
   @Post('documents/upload')
-  async upload(@Body() body: any, @Request() req: any) {
-    const uploaderId = req.user.isStaff ? BigInt(req.user.id) : undefined;
+  async upload(@Body() body: any) {
+    const uploaderId = body.uploaded_by ? BigInt(body.uploaded_by) : undefined;
     const doc = await this.documentService.upload({
       customerId: BigInt(body.customer_id),
       fileName: body.file_name || 'prescription.pdf',
@@ -37,15 +33,8 @@ export class DocumentController {
   }
 
   @Get('documents')
-  async list(@Request() req: any, @Query('customer_id') customerId?: string) {
-    let targetCustomerId: bigint | undefined = undefined;
-
-    if (!req.user.isStaff) {
-      targetCustomerId = BigInt(req.user.id);
-    } else if (customerId) {
-      targetCustomerId = BigInt(customerId);
-    }
-
+  async list(@Query('customer_id') customerId?: string) {
+    const targetCustomerId = customerId ? BigInt(customerId) : undefined;
     const docs = await this.documentService.list(targetCustomerId);
     return {
       success: true,
@@ -107,8 +96,8 @@ export class DocumentController {
   }
 
   @Post('document-intelligence/validate')
-  async validate(@Body() body: any, @Request() req: any) {
-    const staffId = req.user.isStaff ? BigInt(req.user.id) : BigInt(1);
+  async validate(@Body() body: any) {
+    const staffId = body.staff_id ? BigInt(body.staff_id) : BigInt(1);
     const doc = await this.documentService.validate(
       BigInt(body.document_id),
       staffId,

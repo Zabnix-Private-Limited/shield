@@ -8,7 +8,13 @@
    - Implement audit logging for all critical operations
    - Never expose secrets in code
 4. **Ledger-Based Wallet**: Never store wallet balance directly - always calculate from transactions.
-5. **API First Design**: Define API schemas before implementing endpoints.
+   - Segregate balance into Cash sub-ledger (recharged/preloaded funds) and Points sub-ledger (referral loop rewards).
+5. **Segregated Authentication**:
+   - Customers authenticate using Mobile number OTP.
+   - Staff, service providers, and admins sign in using Email and Password credentials.
+6. **Agent-Mediated Customer Onboarding**: Customers can only be registered by Sahakar Group agents. Customer creation requires a valid `agent_code`.
+7. **Hyperpharmacy Card Restrictions**: Store-purchased cards cannot be utilized at other locations in the case of hyperpharmacies (to retain customers locally), but are cross-compatible across all general service providers regardless of location.
+8. **API First Design**: Define API schemas before implementing endpoints.
 
 ## Technology Stack Rules
 ### Frontend
@@ -17,6 +23,7 @@
 - **Navigation**: GoRouter
 - **Networking**: Dio
 - **Local Storage**: Hive + flutter_secure_storage
+- **Responsiveness**: Only customer-facing views are responsive/mobile-first. Staff/Admin portal screens are locked to a fixed 1300px width with horizontal scrolling.
 
 ### Backend
 - **Framework**: NestJS
@@ -27,7 +34,7 @@
 - **API Documentation**: Swagger/OpenAPI
 
 ### Infrastructure
-- **File Storage**: MinIO
+- **File Storage**: Cloudflare R2 (S3 API)
 - **Push Notifications**: Firebase Cloud Messaging
 - **Caching**: Redis
 

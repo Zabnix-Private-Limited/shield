@@ -6,23 +6,17 @@ import {
   Param,
   Body,
   Query,
-  UseGuards,
-  Request,
 } from '@nestjs/common';
 import { CustomerService } from './customer.service';
-import { MockAuthGuard } from '../auth/mock-auth.guard';
 
 @Controller('customers')
-@UseGuards(MockAuthGuard)
 export class CustomerController {
   constructor(private customerService: CustomerService) {}
 
   @Post()
-  async create(@Body() body: any, @Request() req: any) {
-    const customer = await this.customerService.create(
-      body,
-      req.user.isStaff ? BigInt(req.user.id) : undefined,
-    );
+  async create(@Body() body: any) {
+    const staffId = body.created_by ? BigInt(body.created_by) : undefined;
+    const customer = await this.customerService.create(body, staffId);
     return {
       success: true,
       message: 'Customer created successfully',
@@ -71,8 +65,8 @@ export class CustomerController {
   }
 
   @Post(':id/approve')
-  async approve(@Param('id') id: string, @Request() req: any) {
-    const staffId = req.user.isStaff ? BigInt(req.user.id) : BigInt(1); // fallback to ID 1 if not staff
+  async approve(@Param('id') id: string, @Body() body: any) {
+    const staffId = body.staff_id ? BigInt(body.staff_id) : BigInt(1);
     const customer = await this.customerService.approve(BigInt(id), staffId);
     return {
       success: true,
@@ -82,8 +76,8 @@ export class CustomerController {
   }
 
   @Post(':id/suspend')
-  async suspend(@Param('id') id: string, @Request() req: any) {
-    const staffId = req.user.isStaff ? BigInt(req.user.id) : BigInt(1);
+  async suspend(@Param('id') id: string, @Body() body: any) {
+    const staffId = body.staff_id ? BigInt(body.staff_id) : BigInt(1);
     const customer = await this.customerService.suspend(BigInt(id), staffId);
     return {
       success: true,

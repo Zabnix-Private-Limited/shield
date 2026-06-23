@@ -5,7 +5,7 @@ import '../../../../app/theme/app_typography.dart';
 import '../../../../shared/models/wallet.dart';
 import '../../../../shared/widgets/app_card.dart';
 import '../../../../shared/widgets/app_button.dart';
-import '../../../../shared/widgets/demo_support.dart';
+import '../../../../shared/widgets/portal_support.dart';
 import '../../../../shared/services/api_service.dart';
 
 class TransactionsScreen extends StatefulWidget {
@@ -72,13 +72,13 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
           final txns = snapshot.data![1] as List<WalletTransaction>;
 
           if (txns.isEmpty) {
-            return DemoEmptyState(
+            return PortalEmptyState(
               icon: Icons.receipt_long_outlined,
               title: 'No transactions available',
               description:
                   'Wallet credits, debits, and promotional entries will appear here once the member starts using the SHIELD wallet.',
               actionText: 'Open Wallet',
-              onAction: () => context.go('/workspace/customer/wallet'),
+              onAction: () => context.go('/portal/customer/wallet'),
             );
           }
 
@@ -104,7 +104,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
                   child: AppCard(
                     padding: const EdgeInsets.all(16),
                     onTap: () {
-                      showDemoDetailsSheet(
+                      showPortalDetailsSheet(
                         context,
                         title: txn.remarks ?? 'Transaction',
                         subtitle:

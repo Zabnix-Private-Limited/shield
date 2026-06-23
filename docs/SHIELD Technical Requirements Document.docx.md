@@ -40,9 +40,9 @@ Recommended
 
 Supported Form Factors
 
-* Mobile Phones
+* Mobile Phones (Customer-facing screens only are responsive/mobile-first; Staff portal screens are desktop-resolution locked)
 
-* Tablets
+* Tablets (Customer-facing screens only are responsive/mobile-first; Staff portal screens are desktop-resolution locked)
 
 ---
 

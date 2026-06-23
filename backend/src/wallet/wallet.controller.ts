@@ -5,14 +5,10 @@ import {
   Param,
   Body,
   Query,
-  UseGuards,
-  Request,
 } from '@nestjs/common';
 import { WalletService } from './wallet.service';
-import { MockAuthGuard } from '../auth/mock-auth.guard';
 
 @Controller('wallets')
-@UseGuards(MockAuthGuard)
 export class WalletController {
   constructor(private walletService: WalletService) {}
 
@@ -27,8 +23,8 @@ export class WalletController {
   }
 
   @Post('recharge')
-  async recharge(@Body() body: any, @Request() req: any) {
-    const staffId = req.user.isStaff ? BigInt(req.user.id) : undefined;
+  async recharge(@Body() body: any) {
+    const staffId = BigInt(1);
     const txn = await this.walletService.recharge(
       BigInt(body.customer_id),
       Number(body.amount),
@@ -43,8 +39,8 @@ export class WalletController {
   }
 
   @Post('adjustments')
-  async adjust(@Body() body: any, @Request() req: any) {
-    const staffId = req.user.isStaff ? BigInt(req.user.id) : undefined;
+  async adjust(@Body() body: any) {
+    const staffId = BigInt(1);
     const txn = await this.walletService.adjust(
       BigInt(body.customer_id),
       Number(body.amount),

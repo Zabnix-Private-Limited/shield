@@ -11,6 +11,17 @@ export class CustomerService {
     const customerCode = `CUST-${Math.floor(100000 + Math.random() * 900000)}`;
 
     return this.prisma.$transaction(async (tx) => {
+      // Look up referring customer if referred_by_code is provided
+      let referredById: bigint | null = null;
+      if (data.referred_by_code) {
+        const referrer = await tx.customer.findFirst({
+          where: { referralCode: data.referred_by_code },
+        });
+        if (referrer) {
+          referredById = referrer.id;
+        }
+      }
+
       // 1. Create Customer
       const customer = await tx.customer.create({
         data: {
@@ -31,6 +42,10 @@ export class CustomerService {
           pincode: data.pincode,
           status: 'PENDING',
           createdBy: staffUserId,
+          bloodGroup: data.blood_group || null,
+          agentCode: data.agent_code || 'AGT-SAHAKAR-DEFAULT',
+          referralCode: data.referral_code || `REF-${Math.floor(100000 + Math.random() * 900000)}`,
+          referredById: referredById,
         },
       });
 
@@ -148,6 +163,21 @@ export class CustomerService {
     const customer = await this.findOne(id);
 
     return this.prisma.$transaction(async (tx) => {
+      // Lookup the staff user's department's business or fall back to Perinthalmanna branch
+      const staffUser = await tx.user.findUnique({
+        where: { id: staffUserId },
+        include: { department: true }
+      });
+      let issuedBusinessId = staffUser?.department?.businessId || null;
+      if (!issuedBusinessId) {
+        const defaultBiz = await tx.business.findFirst({
+          where: { code: 'HYP-PERINTHALMANNA' }
+        });
+        if (defaultBiz) {
+          issuedBusinessId = defaultBiz.id;
+        }
+      }
+
       // Create shield card on approval
       await tx.shieldCard.create({
         data: {
@@ -156,6 +186,7 @@ export class CustomerService {
           cardNumber: `SHLD-CARD-${customer.customerCode?.split('-')[1]}`,
           qrCode: `SHLD-CARD-${customer.customerCode?.split('-')[1]}-TOKEN`,
           status: 'ACTIVE',
+          issuedBusinessId: issuedBusinessId,
           issuedAt: new Date(),
         },
       });
@@ -170,6 +201,26 @@ export class CustomerService {
             expiryDate: new Date(new Date().setFullYear(new Date().getFullYear() + 1)),
           },
         });
+      }
+
+      // Credit referral points if customer was referred by someone
+      if (customer.referredById) {
+        const referrerWallet = await tx.wallet.findFirst({
+          where: { customerId: customer.referredById }
+        });
+        if (referrerWallet) {
+          await tx.walletTransaction.create({
+            data: {
+              uuid: randomUUID(),
+              walletId: referrerWallet.id,
+              transactionType: 'CREDIT',
+              subLedgerType: 'POINTS',
+              amount: 100.00,
+              remarks: `Referral bonus for onboarding ${customer.firstName} ${customer.lastName}`,
+              createdBy: staffUserId,
+            }
+          });
+        }
       }
 
       // Create status history log

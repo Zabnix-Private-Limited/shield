@@ -6,7 +6,7 @@ import '../../../../shared/models/wallet.dart';
 import '../../../../shared/widgets/app_card.dart';
 import '../../../../shared/widgets/app_button.dart';
 import '../../../../shared/widgets/app_page_frame.dart';
-import '../../../../shared/widgets/demo_support.dart';
+import '../../../../shared/widgets/portal_support.dart';
 import '../../../../shared/services/api_service.dart';
 
 class WalletScreen extends StatefulWidget {
@@ -19,6 +19,9 @@ class WalletScreen extends StatefulWidget {
 class _WalletScreenState extends State<WalletScreen> {
   late Future<Map<String, dynamic>> _walletProfileFuture;
   late Future<List<WalletTransaction>> _transactionsFuture;
+  String _selectedFilter = 'ALL';
+  String _selectedType = 'ALL';
+  String _providerQuery = '';
 
   @override
   void initState() {
@@ -34,6 +37,33 @@ class _WalletScreenState extends State<WalletScreen> {
         return ApiService.getWalletTransactions(walletId);
       });
     });
+  }
+
+  Widget _buildFilterChip(String value, String label) {
+    final isSelected = _selectedFilter == value;
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _selectedFilter = value;
+        });
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? AppColors.shieldBlue
+              : AppColors.lightGray,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Text(
+          label,
+          style: AppTypography.small.copyWith(
+            color: isSelected ? AppColors.white : AppColors.darkGray,
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+          ),
+        ),
+      ),
+    );
   }
 
   @override
@@ -70,19 +100,44 @@ class _WalletScreenState extends State<WalletScreen> {
             );
           }
 
-          final profile = snapshot.data![0] as Map<String, dynamic>;
           final txns = snapshot.data![1] as List<WalletTransaction>;
 
-          final balance = double.tryParse(profile['balance']?.toString() ?? '0') ?? 0.0;
+          double cashBalance = 0.0;
+          double pointsBalance = 0.0;
           double totalCredits = 0.0;
           double totalDebits = 0.0;
+
           for (final txn in txns) {
-            if (txn.transactionType == 'CREDIT') {
-              totalCredits += txn.amount;
-            } else {
-              totalDebits += txn.amount;
+            if (txn.subLedgerType == 'CASH') {
+              if (txn.transactionType == 'CREDIT') {
+                cashBalance += txn.amount;
+                totalCredits += txn.amount;
+              } else {
+                cashBalance -= txn.amount;
+                totalDebits += txn.amount;
+              }
+            } else if (txn.subLedgerType == 'POINTS') {
+              if (txn.transactionType == 'CREDIT') {
+                pointsBalance += txn.amount;
+                totalCredits += txn.amount;
+              } else {
+                pointsBalance -= txn.amount;
+                totalDebits += txn.amount;
+              }
             }
           }
+
+          final filteredTxns = txns.where((txn) {
+            final matchesLedger =
+                _selectedFilter == 'ALL' || txn.subLedgerType == _selectedFilter;
+            final matchesType =
+                _selectedType == 'ALL' || txn.transactionType == _selectedType;
+            final matchesProvider = _providerQuery.trim().isEmpty ||
+                (txn.remarks ?? '').toLowerCase().contains(
+                  _providerQuery.trim().toLowerCase(),
+                );
+            return matchesLedger && matchesType && matchesProvider;
+          }).toList();
 
           return RefreshIndicator(
             onRefresh: () async => _loadWalletData(),
@@ -96,20 +151,82 @@ class _WalletScreenState extends State<WalletScreen> {
                     AppCard(
                       padding: const EdgeInsets.all(24),
                       child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            'Available Balance',
-                            style: AppTypography.small.copyWith(
-                              color: AppColors.gray,
-                            ),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'SHIELD Wallet Account',
+                                style: AppTypography.h4.copyWith(color: AppColors.shieldNavy),
+                              ),
+                              const Icon(Icons.account_balance_wallet_outlined, color: AppColors.shieldBlue),
+                            ],
                           ),
-                          const SizedBox(height: 8),
-                          Text(
-                            '₹${balance.toStringAsFixed(2)}',
-                            style: AppTypography.h1.copyWith(
-                              color: AppColors.shieldNavy,
-                            ),
+                          const Divider(height: 32),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'CASH LEDGER',
+                                      style: AppTypography.tiny.copyWith(
+                                        color: AppColors.gray,
+                                        fontWeight: FontWeight.bold,
+                                        letterSpacing: 1.1,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      '₹${cashBalance.toStringAsFixed(2)}',
+                                      style: AppTypography.h2.copyWith(
+                                        color: AppColors.shieldNavy,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    Text(
+                                      'Recharged funds',
+                                      style: AppTypography.tiny.copyWith(color: AppColors.gray),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Container(
+                                height: 60,
+                                width: 1,
+                                color: AppColors.divider,
+                              ),
+                              const SizedBox(width: 24),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'POINTS LEDGER',
+                                      style: AppTypography.tiny.copyWith(
+                                        color: AppColors.gray,
+                                        fontWeight: FontWeight.bold,
+                                        letterSpacing: 1.1,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      '${pointsBalance.toStringAsFixed(0)} PTS',
+                                      style: AppTypography.h2.copyWith(
+                                        color: AppColors.shieldBlue,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    Text(
+                                      'Promotional rewards',
+                                      style: AppTypography.tiny.copyWith(color: AppColors.gray),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
                           ),
                           const SizedBox(height: 24),
                           Row(
@@ -118,7 +235,7 @@ class _WalletScreenState extends State<WalletScreen> {
                                 child: AppButton(
                                   text: 'Recharge Wallet',
                                   onPressed: () {
-                                    context.go('/workspace/customer/recharge');
+                                    context.go('/portal/customer/recharge');
                                   },
                                 ),
                               ),
@@ -148,108 +265,176 @@ class _WalletScreenState extends State<WalletScreen> {
                       ],
                     ),
                     const SizedBox(height: 24),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text('Transaction History', style: AppTypography.h4),
-                        TextButton(
-                          onPressed: () {
-                            context.go('/transactions');
-                          },
-                          child: Text(
-                            'View All',
-                            style: AppTypography.small.copyWith(
-                              color: AppColors.shieldBlue,
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            _buildFilterChip('ALL', 'All'),
+                            const SizedBox(width: 8),
+                            _buildFilterChip('CASH', 'Cash'),
+                            const SizedBox(width: 8),
+                            _buildFilterChip('POINTS', 'Points'),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+                        Row(
+                          children: [
+                            _buildTypeChip('ALL', 'All Types'),
+                            const SizedBox(width: 8),
+                            _buildTypeChip('CREDIT', 'Credits'),
+                            const SizedBox(width: 8),
+                            _buildTypeChip('DEBIT', 'Debits'),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        TextField(
+                          onChanged: (value) => setState(() => _providerQuery = value),
+                          decoration: InputDecoration(
+                            hintText: 'Filter by service provider or remarks',
+                            prefixIcon: const Icon(Icons.search),
+                            filled: true,
+                            fillColor: AppColors.lightGray,
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(14),
+                              borderSide: BorderSide.none,
                             ),
                           ),
                         ),
                       ],
                     ),
                     const SizedBox(height: 16),
-                    ...txns.map((txn) {
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: AppCard(
-                    padding: const EdgeInsets.all(16),
-                    onTap: () {
-                      showDemoDetailsSheet(
-                        context,
-                        title: txn.remarks ?? 'Wallet transaction',
-                        subtitle:
-                            'A ${txn.transactionType.toLowerCase()} entry of ₹${txn.amount.toStringAsFixed(2)} was recorded in the demo ledger.',
-                        meta:
-                            '${txn.createdAt.day}/${txn.createdAt.month}/${txn.createdAt.year}',
-                        status: txn.transactionType,
-                        highlights: [
-                          'Running balance after this transaction is ₹${txn.postBalance.toStringAsFixed(2)}.',
-                          'This entry stays visible to demonstrate the ledger-based wallet model from the docs.',
-                        ],
-                      );
-                    },
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 48,
-                          height: 48,
-                          decoration: BoxDecoration(
-                            color: txn.transactionType == 'CREDIT'
-                                ? AppColors.shieldGreen.withValues(alpha: 0.1)
-                                : AppColors.error.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Icon(
-                            txn.transactionType == 'CREDIT'
-                                ? Icons.add
-                                : Icons.remove,
-                            color: txn.transactionType == 'CREDIT'
-                                ? AppColors.shieldGreen
-                                : AppColors.error,
-                            size: 24,
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                    ...filteredTxns.map((txn) {
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: AppCard(
+                          padding: const EdgeInsets.all(16),
+                          onTap: () {
+                            showPortalDetailsSheet(
+                              context,
+                              title: txn.remarks ?? 'Wallet transaction',
+                              subtitle:
+                                  'A ${txn.transactionType.toLowerCase()} entry of ₹${txn.amount.toStringAsFixed(2)} was recorded in the ${txn.subLedgerType} ledger.',
+                              meta:
+                                  '${txn.createdAt.day}/${txn.createdAt.month}/${txn.createdAt.year}',
+                              status: txn.transactionType,
+                              highlights: [
+                                'Running balance in ${txn.subLedgerType} sub-ledger after this transaction is ₹${txn.postBalance.toStringAsFixed(2)}.',
+                                'This entry stays visible to support the ledger-based wallet model from the docs.',
+                              ],
+                            );
+                          },
+                          child: Row(
                             children: [
-                              Text(
-                                txn.remarks ?? 'Transaction',
-                                style: AppTypography.body.copyWith(
-                                  fontWeight: FontWeight.w500,
+                              Container(
+                                width: 48,
+                                height: 48,
+                                decoration: BoxDecoration(
+                                  color: txn.transactionType == 'CREDIT'
+                                      ? AppColors.shieldGreen.withValues(alpha: 0.1)
+                                      : AppColors.error.withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Icon(
+                                  txn.transactionType == 'CREDIT'
+                                      ? Icons.add
+                                      : Icons.remove,
+                                  color: txn.transactionType == 'CREDIT'
+                                      ? AppColors.shieldGreen
+                                      : AppColors.error,
+                                  size: 24,
                                 ),
                               ),
-                              const SizedBox(height: 4),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      txn.remarks ?? 'Transaction',
+                                      style: AppTypography.body.copyWith(
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Row(
+                                      children: [
+                                        Text(
+                                          '${txn.createdAt.day}/${txn.createdAt.month}/${txn.createdAt.year} • ${txn.createdAt.hour}:${txn.createdAt.minute.toString().padLeft(2, '0')}',
+                                          style: AppTypography.tiny.copyWith(
+                                            color: AppColors.gray,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                          decoration: BoxDecoration(
+                                            color: txn.subLedgerType == 'CASH'
+                                                ? AppColors.shieldNavy.withValues(alpha: 0.08)
+                                                : AppColors.shieldBlue.withValues(alpha: 0.08),
+                                            borderRadius: BorderRadius.circular(4),
+                                          ),
+                                          child: Text(
+                                            txn.subLedgerType,
+                                            style: AppTypography.tiny.copyWith(
+                                              color: txn.subLedgerType == 'CASH'
+                                                  ? AppColors.shieldNavy
+                                                  : AppColors.shieldBlue,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
                               Text(
-                                '${txn.createdAt.day}/${txn.createdAt.month}/${txn.createdAt.year} • ${txn.createdAt.hour}:${txn.createdAt.minute.toString().padLeft(2, '0')}',
-                                style: AppTypography.tiny.copyWith(
-                                  color: AppColors.gray,
+                                '${txn.transactionType == 'CREDIT' ? '+' : '-'}₹${txn.amount.toStringAsFixed(2)}',
+                                style: AppTypography.h4.copyWith(
+                                  color: txn.transactionType == 'CREDIT'
+                                      ? AppColors.shieldGreen
+                                      : AppColors.error,
                                 ),
                               ),
                             ],
                           ),
                         ),
-                        Text(
-                          '${txn.transactionType == 'CREDIT' ? '+' : '-'}₹${txn.amount.toStringAsFixed(2)}',
-                          style: AppTypography.h4.copyWith(
-                            color: txn.transactionType == 'CREDIT'
-                                ? AppColors.shieldGreen
-                                : AppColors.error,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              }),
-            ],
+                      );
+                    }),
+                  ],
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildTypeChip(String value, String label) {
+    final isSelected = _selectedType == value;
+    return GestureDetector(
+      onTap: () => setState(() => _selectedType = value),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.shieldGreen : AppColors.lightGray,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Text(
+          label,
+          style: AppTypography.small.copyWith(
+            color: isSelected ? AppColors.white : AppColors.darkGray,
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
           ),
         ),
       ),
     );
-  },
-),
-);
-}
+  }
 }
 
 class _StatCard extends StatelessWidget {

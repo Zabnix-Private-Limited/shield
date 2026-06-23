@@ -30,6 +30,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
     });
   }
 
+  String _calculateAge(DateTime? dob) {
+    if (dob == null) return 'N/A';
+    final now = DateTime.now();
+    int age = now.year - dob.year;
+    if (now.month < dob.month || (now.month == dob.month && now.day < dob.day)) {
+      age--;
+    }
+    return '$age years';
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -135,7 +145,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     _InfoRow(
                       label: 'Date of Birth',
                       value: customer.dob != null
-                          ? '${customer.dob!.day}/${customer.dob!.month}/${customer.dob!.year}'
+                          ? '${customer.dob!.day}/${customer.dob!.month}/${customer.dob!.year} (${_calculateAge(customer.dob)})'
                           : 'Not provided',
                     ),
                     const Divider(height: 32),
@@ -145,9 +155,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                     const Divider(height: 32),
                     _InfoRow(
+                      label: 'Blood Group',
+                      value: customer.bloodGroup ?? 'Not provided',
+                    ),
+                    const Divider(height: 32),
+                    _InfoRow(
                       label: 'Aadhaar',
-                      value:
-                          '****${customer.aadhaarNumber.substring(customer.aadhaarNumber.length - 4)}',
+                      value: customer.aadhaarNumber.length >= 4
+                          ? '****${customer.aadhaarNumber.substring(customer.aadhaarNumber.length - 4)}'
+                          : customer.aadhaarNumber,
+                    ),
+                    const Divider(height: 32),
+                    _InfoRow(
+                      label: 'Onboarding Agent Code',
+                      value: customer.agentCode ?? 'Not provided',
                     ),
                   ],
                 ),

@@ -5,6 +5,7 @@ class AppResponsive {
   static const double tablet = 900;
   static const double desktop = 1200;
   static const double wide = 1440;
+  static const double customerPortalMaxWidth = 480;
 
   static bool isPhone(BuildContext context) =>
       MediaQuery.sizeOf(context).width < phone;
@@ -16,6 +17,11 @@ class AppResponsive {
 
   static bool isDesktop(BuildContext context) =>
       MediaQuery.sizeOf(context).width >= desktop;
+
+  static double customerViewportWidth(double availableWidth) {
+    if (availableWidth <= customerPortalMaxWidth) return availableWidth;
+    return customerPortalMaxWidth;
+  }
 
   static double horizontalPadding(BuildContext context) {
     final width = MediaQuery.sizeOf(context).width;

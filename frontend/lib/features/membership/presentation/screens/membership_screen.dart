@@ -4,7 +4,7 @@ import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_typography.dart';
 import '../../../../shared/models/membership.dart';
 import '../../../../shared/widgets/app_card.dart';
-import '../../../../shared/widgets/demo_support.dart';
+import '../../../../shared/widgets/portal_support.dart';
 import '../../../../shared/services/api_service.dart';
 
 class MembershipScreen extends StatefulWidget {
@@ -36,7 +36,7 @@ class _MembershipScreenState extends State<MembershipScreen> {
           IconButton(
             icon: const Icon(Icons.qr_code_2),
             onPressed: () {
-              context.go('/workspace/customer/membership');
+              context.go('/portal/customer/membership');
             },
           ),
         ],
@@ -267,7 +267,7 @@ class _MembershipScreenState extends State<MembershipScreen> {
                   const SizedBox(height: 24),
                   AppCard(
                     onTap: () {
-                      showDemoDetailsSheet(
+                      showPortalDetailsSheet(
                         context,
                         title: 'Membership details',
                         subtitle:
@@ -288,12 +288,12 @@ class _MembershipScreenState extends State<MembershipScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'Need the full card demo?',
+                                'Need the full card details?',
                                 style: AppTypography.h5,
                               ),
                               const SizedBox(height: 6),
                               Text(
-                                'Open the richer customer membership workspace with the digital privilege card and renewal flow.',
+                                'Open the richer customer membership portal with the digital privilege card and renewal flow.',
                                 style: AppTypography.small.copyWith(
                                   color: AppColors.gray,
                                 ),

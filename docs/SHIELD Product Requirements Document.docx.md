@@ -150,6 +150,12 @@ Manages platform configuration.
 
 ---
 
+## Sahakar Group Agent
+
+Registers customers and facilitates membership onboarding using agent codes.
+
+---
+
 # 6. Product Scope
 
 ## In Scope
@@ -274,11 +280,29 @@ Requires:
 
 ---
 
+## Registration Rules
+
+* **Agent-Mediated Signup**: Customer registration is strictly through Sahakar Group agents. Customer creation requires a valid `agent_code` of the agent who initiated or assisted with the creation.
+
+## Card Utilization Rules
+
+* **Hyperpharmacies Restriction**: Customers cannot use the card at another location if it was purchased from a store in the case of hyperpharmacies (retaining customers within their local branch).
+* **Cross-Provider Compatibility**: The card can be utilized at clinics, cosmetic consulting, dental consulting, homecare, and other general service providers regardless of their locations.
+* **Customer Retention Focus**: The card's primary business driver is to retain and engage customer spending within their local Sahakar hyperpharmacies.
+
+---
+
 # 9. Wallet Model
 
-The SHIELD Balance operates as a prepaid healthcare spending account.
+The SHIELD Balance operates as a prepaid healthcare spending account and contains segregated sub-ledgers.
 
-Characteristics:
+## Wallet Options
+
+* **Cash**: Customer's recharged or preloaded amount (real money loaded into the account).
+* **Points**: Promotional balance earned via the referral loop. Referral points are automatically added to the customer's wallet following the successful registration of a new customer who signs up using their referral code.
+* **Transaction History**: An immutable ledger of all wallet transactions (credits, debits, adjustments, and referrals).
+
+## Characteristics:
 
 * Customer-owned
 
@@ -430,7 +454,8 @@ Capabilities:
 
 ## Authentication
 
-OTP-based authentication.
+* **Customer Authentication**: Mobile OTP-based authentication (phone number login).
+* **Staff & Service Provider Authentication**: Email sign-in (email and password credentials).
 
 ---
 
@@ -458,29 +483,36 @@ No deletion permitted.
 
 ## Customer Dashboard
 
-Displays:
+Must support mobile-first layout. Sections:
 
-* Membership Card
-
-* Balance
-
-* Transactions
-
-* Documents
-
-* Notifications
+* **Wallet**: Separate Cash and Points ledger views, and Transaction History.
+* **Services**: 
+  * Pharmacy: Prescription Upload, regularly bought products, and similar patient suggestions.
+  * Lab: Directory of lab tests and booking.
+  * Homecare: Homecare assistance plan listings.
+  * Dental Consultation: Doctor booking, tele-consultation, and video consultation.
+  * Doctor Consultation: Doctor booking, tele-consultation, and video consultation.
+  * Cosmetic Consultation: Doctor booking, tele-consultation, and video consultation.
+  * Dietitian Consultation: Consultation booking and preset plans list.
+* **Profile**: Name, Address, Pincode, Phone number, DOB (with auto age calculation), Blood Group.
 
 ---
 
-## Staff Dashboard
+## Service Provider Dashboard
 
-Displays:
+Must support desktop-locked layout. Sections:
 
-* Pending Actions
+* **Customer Card Utilization**: Verify customer digital privilege cards, read QR codes, and record service utilization at clinics, dental centers, pharmacies, etc.
 
-* Customer Search
+---
 
-* Service Management
+## Admin Dashboard
+
+Must support desktop-locked layout. Sections:
+
+* **Branch-wise IDs List**: Directory of registered customer IDs grouped by hyperpharmacy branch and store of registration.
+* **IDs Service Utilization**: Track utilization statistics of SHIELD cards across various service providers.
+* **Reports**: System revenue, retention metrics, and utilization audits.
 
 ---
 

@@ -4,7 +4,7 @@ import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_typography.dart';
 import '../../../../shared/widgets/app_card.dart';
 import '../../../../shared/widgets/app_page_frame.dart';
-import '../../../../shared/widgets/demo_support.dart';
+import '../../../../shared/widgets/portal_support.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -26,7 +26,7 @@ class SettingsScreen extends StatelessWidget {
                   _SettingsItem(
                     icon: Icons.edit,
                     label: 'Edit Profile',
-                    onTap: () => showDemoSnackBar(
+                    onTap: () => showPortalSnackBar(
                       context,
                       'Profile editing is represented in the customer profile and role-based member screens.',
                     ),
@@ -34,17 +34,17 @@ class SettingsScreen extends StatelessWidget {
                   _SettingsItem(
                     icon: Icons.lock,
                     label: 'Change PIN',
-                    onTap: () => showDemoSnackBar(
+                    onTap: () => showPortalSnackBar(
                       context,
-                      'PIN and device-security settings are part of the frontend-only demo.',
+                      'PIN and device-security settings are part of the frontend-only portal.',
                     ),
                   ),
                   _SettingsItem(
                     icon: Icons.privacy_tip,
                     label: 'Privacy Settings',
-                    onTap: () => showDemoSnackBar(
+                    onTap: () => showPortalSnackBar(
                       context,
-                      'Privacy controls are demonstrated in the customer settings and super-admin system pages.',
+                      'Privacy controls are supported in the customer settings and super-admin system pages.',
                     ),
                   ),
                 ],
@@ -80,15 +80,15 @@ class SettingsScreen extends StatelessWidget {
                   _SettingsItem(
                     icon: Icons.help,
                     label: 'Help & Support',
-                    onTap: () => showDemoSnackBar(
+                    onTap: () => showPortalSnackBar(
                       context,
-                      'Support flows are represented in the customer settings and SHIELD support-case demo pages.',
+                      'Support flows are represented in the customer settings and SHIELD support-case portal pages.',
                     ),
                   ),
                   _SettingsItem(
                     icon: Icons.contact_support,
                     label: 'Contact Us',
-                    onTap: () => showDemoSnackBar(
+                    onTap: () => showPortalSnackBar(
                       context,
                       'Contact channels are kept dummy-only for this frontend review build.',
                     ),
@@ -96,7 +96,7 @@ class SettingsScreen extends StatelessWidget {
                   _SettingsItem(
                     icon: Icons.feedback,
                     label: 'Feedback',
-                    onTap: () => showDemoSnackBar(
+                    onTap: () => showPortalSnackBar(
                       context,
                       'Feedback capture is shown as a frontend placeholder without backend submission.',
                     ),
@@ -110,23 +110,23 @@ class SettingsScreen extends StatelessWidget {
                   _SettingsItem(
                     icon: Icons.info,
                     label: 'About SHIELD',
-                    onTap: () => showDemoSnackBar(
+                    onTap: () => showPortalSnackBar(
                       context,
-                      'SHIELD is presented here as the unified Sahakar healthcare platform demo.',
+                      'SHIELD is presented here as the unified Sahakar healthcare platform portal.',
                     ),
                   ),
                   _SettingsItem(
                     icon: Icons.description,
                     label: 'Terms & Conditions',
-                    onTap: () => showDemoSnackBar(
+                    onTap: () => showPortalSnackBar(
                       context,
-                      'Legal documents are intentionally represented as static frontend placeholders in this demo.',
+                      'Legal documents are intentionally represented as static frontend placeholders in this portal.',
                     ),
                   ),
                   _SettingsItem(
                     icon: Icons.policy,
                     label: 'Privacy Policy',
-                    onTap: () => showDemoSnackBar(
+                    onTap: () => showPortalSnackBar(
                       context,
                       'Privacy policy content will be wired later when backend/content services are introduced.',
                     ),
@@ -134,9 +134,9 @@ class SettingsScreen extends StatelessWidget {
                   _SettingsItem(
                     icon: Icons.update,
                     label: 'Check for Updates',
-                    onTap: () => showDemoSnackBar(
+                    onTap: () => showPortalSnackBar(
                       context,
-                      'This demo build is already on the latest local frontend version.',
+                      'This portal build is already on the latest local frontend version.',
                     ),
                   ),
                 ],
@@ -145,7 +145,7 @@ class SettingsScreen extends StatelessWidget {
               Center(
                 child: TextButton(
                   onPressed: () {
-                    context.go('/login');
+                    context.go('/portal/customer/dashboard');
                   },
                   child: Text(
                     'Logout',

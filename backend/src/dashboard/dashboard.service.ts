@@ -298,6 +298,18 @@ export class DashboardService {
           meta: n.sentAt?.toLocaleDateString() || '',
           status: n.status || 'UNREAD',
         }));
+      } else if (sectionKey === 'services') {
+        data.title = 'Services';
+        data.summary = 'Access pharmacy, lab, homecare, and clinical consultation services.';
+        data.metrics = [
+          { label: 'Active Services', value: '4', note: 'Pharmacy, Lab, Homecare, Clinic' },
+          { label: 'Pharmacy Invoices', value: '1', note: 'Preloaded purchases' },
+          { label: 'Scheduled Consults', value: '2', note: 'Dental + Doctor' },
+        ];
+        data.queueItems = [
+          { title: 'SHIELD Hyper Pharmacy', subtitle: 'Perinthalmanna - Open now', meta: 'Pharmacy', status: 'ACTIVE' },
+          { title: 'Smart Clinic', subtitle: 'Manjeri - Open now', meta: 'Doctor', status: 'ACTIVE' },
+        ];
       }
     } else if (roleKey === 'crm-executive') {
       if (sectionKey === 'tasks') {

@@ -43,23 +43,34 @@ async function main() {
     roles[roleInfo.code] = role;
   }
 
-  // 2. Seed Business
-  let business = await prisma.business.findUnique({
-    where: { code: 'SHG' },
-  });
+  // 2. Seed Businesses
+  const businessesData = [
+    { code: 'SHG', name: 'Sahakar Healthcare Group', type: 'HEALTHCARE_PROVIDER' },
+    { code: 'HYP-PERINTHALMANNA', name: 'SHIELD Hyper Pharmacy Perinthalmanna', type: 'PHARMACY' },
+    { code: 'HYP-MANJERI', name: 'SHIELD Hyper Pharmacy Manjeri', type: 'PHARMACY' },
+  ];
 
-  if (!business) {
-    business = await prisma.business.create({
-      data: {
-        uuid: randomUUID(),
-        code: 'SHG',
-        name: 'Sahakar Healthcare Group',
-        businessType: 'HEALTHCARE_PROVIDER',
-        status: 'ACTIVE',
-      },
+  const businesses: Record<string, any> = {};
+  for (const bizInfo of businessesData) {
+    let biz = await prisma.business.findUnique({
+      where: { code: bizInfo.code },
     });
-    console.log('Created business: SHG');
+
+    if (!biz) {
+      biz = await prisma.business.create({
+        data: {
+          uuid: randomUUID(),
+          code: bizInfo.code,
+          name: bizInfo.name,
+          businessType: bizInfo.type,
+          status: 'ACTIVE',
+        },
+      });
+      console.log(`Created business: ${bizInfo.code}`);
+    }
+    businesses[bizInfo.code] = biz;
   }
+  const business = businesses['SHG'];
 
   // 3. Seed Departments
   const departmentsData = [
@@ -120,7 +131,7 @@ async function main() {
     membershipTypes[typeInfo.code] = memType;
   }
 
-  // 5. Seed Staff Users (Mock Auth targets)
+  // 5. Seed Staff Users
   const staffData = [
     { email: 'admin@shield.com', mobile: '9000000001', roleCode: 'super-admin', deptCode: 'ADMIN', first: 'Super', last: 'Admin' },
     { email: 'manager@shield.com', mobile: '9000000002', roleCode: 'manager', deptCode: 'ADMIN', first: 'Branch', last: 'Manager' },
@@ -166,24 +177,26 @@ async function main() {
 
   // 6. Seed Service Providers
   const providersData = [
-    { code: 'clinic-1', name: 'Smart Clinic Manjeri', type: 'CLINIC' },
-    { code: 'clinic-2', name: 'Home Care Alanallur', type: 'HOME_VISIT' },
-    { code: 'dental-1', name: 'Dentistry Melattur', type: 'DENTAL' },
-    { code: 'lab-1', name: 'Laboratory Tirur', type: 'LABORATORY' },
-    { code: 'pharmacy-1', name: 'SHIELD Hyper Pharmacy Perinthalmanna', type: 'PHARMACY' },
+    { code: 'clinic-1', name: 'Smart Clinic Manjeri', type: 'CLINIC', bizCode: 'SHG' },
+    { code: 'clinic-2', name: 'Home Care Alanallur', type: 'HOME_VISIT', bizCode: 'SHG' },
+    { code: 'dental-1', name: 'Dentistry Melattur', type: 'DENTAL', bizCode: 'SHG' },
+    { code: 'lab-1', name: 'Laboratory Tirur', type: 'LABORATORY', bizCode: 'SHG' },
+    { code: 'pharmacy-1', name: 'SHIELD Hyper Pharmacy Perinthalmanna', type: 'PHARMACY', bizCode: 'HYP-PERINTHALMANNA' },
+    { code: 'pharmacy-2', name: 'SHIELD Hyper Pharmacy Manjeri', type: 'PHARMACY', bizCode: 'HYP-MANJERI' },
   ];
 
   const providers: Record<string, any> = {};
   for (const provInfo of providersData) {
+    const targetBizId = businesses[provInfo.bizCode].id;
     let provider = await prisma.serviceProvider.findFirst({
-      where: { providerName: provInfo.name, businessId: business.id },
+      where: { providerName: provInfo.name, businessId: targetBizId },
     });
 
     if (!provider) {
       provider = await prisma.serviceProvider.create({
         data: {
           uuid: randomUUID(),
-          businessId: business.id,
+          businessId: targetBizId,
           providerName: provInfo.name,
           providerType: provInfo.type,
           status: 'ACTIVE',
@@ -194,9 +207,9 @@ async function main() {
     providers[provInfo.code] = provider;
   }
 
-  // 7. Seed Mock Customer (Nihal Rahman)
+  // 7. Seed Customer (Nihal Rahman)
   let customer = await prisma.customer.findUnique({
-    where: { mobile: '9876543210' },
+    where: { customerCode: 'CUST-123456' },
   });
 
   if (!customer) {
@@ -208,8 +221,11 @@ async function main() {
         firstName: 'Nihal',
         lastName: 'Rahman',
         dob: new Date('1990-05-15'),
+        bloodGroup: 'O+',
+        agentCode: 'AGT-SAHAKAR-101',
+        referralCode: 'REF-NIHAL-100',
         gender: 'MALE',
-        mobile: '9876543210',
+        mobile: '7034479800',
         email: 'Zabnixprivatelimited@gmail.com',
         addressLine1: 'Nihal Villa, Melattur Road',
         city: 'Perinthalmanna',
@@ -219,7 +235,7 @@ async function main() {
         status: 'ACTIVE',
       },
     });
-    console.log('Created mock customer: Nihal Rahman');
+    console.log('Created customer: Nihal Rahman');
 
     // Create Membership
     await prisma.membership.create({
@@ -244,6 +260,7 @@ async function main() {
         cardNumber: 'SHLD-CARD-123456',
         qrCode: 'SHLD-CARD-123456-TOKEN',
         status: 'ACTIVE',
+        issuedBusinessId: businesses['HYP-PERINTHALMANNA'].id,
         issuedAt: new Date('2026-01-01T10:00:00Z'),
       },
     });
@@ -259,13 +276,14 @@ async function main() {
     });
     console.log('Created Wallet for Nihal Rahman');
 
-    // Create Wallet transactions matching ledger list
+    // Create Wallet transactions matching ledger list (Cash and Points sub-ledgers)
     const transactionsData = [
-      { uuid: 'a0000000-0000-0000-0000-000000000001', type: 'CREDIT', amount: 5500.00, remarks: 'Wallet recharge', createdBy: staffUsers['super-admin'].id, date: new Date('2026-06-01T10:30:00Z') },
-      { uuid: 'a0000000-0000-0000-0000-000000000002', type: 'DEBIT', amount: 1200.00, remarks: 'Pharmacy purchase - SHIELD Hyper Pharmacy, Perinthalmanna', createdBy: staffUsers['pharmacy-staff'].id, date: new Date('2026-06-03T14:15:00Z') },
-      { uuid: 'a0000000-0000-0000-0000-000000000003', type: 'DEBIT', amount: 500.00, remarks: 'Consultation fee - Dr. Haneefa, Manjeri', createdBy: staffUsers['clinic-staff'].id, date: new Date('2026-06-05T11:20:00Z') },
-      { uuid: 'a0000000-0000-0000-0000-000000000004', type: 'CREDIT', amount: 2000.00, remarks: 'Bonus credit', createdBy: staffUsers['super-admin'].id, date: new Date('2026-06-10T09:00:00Z') },
-      { uuid: 'a0000000-0000-0000-0000-000000000005', type: 'DEBIT', amount: 350.00, remarks: 'Lab test - CBC, Makkaraparamba', createdBy: staffUsers['clinic-staff'].id, date: new Date('2026-06-12T16:45:00Z') },
+      { uuid: 'a0000000-0000-0000-0000-000000000001', type: 'CREDIT', subLedger: 'CASH', amount: 5500.00, remarks: 'Wallet recharge', createdBy: staffUsers['super-admin'].id, date: new Date('2026-06-01T10:30:00Z') },
+      { uuid: 'a0000000-0000-0000-0000-000000000002', type: 'DEBIT', subLedger: 'CASH', amount: 1200.00, remarks: 'Pharmacy purchase - SHIELD Hyper Pharmacy, Perinthalmanna', createdBy: staffUsers['pharmacy-staff'].id, date: new Date('2026-06-03T14:15:00Z') },
+      { uuid: 'a0000000-0000-0000-0000-000000000003', type: 'DEBIT', subLedger: 'CASH', amount: 500.00, remarks: 'Consultation fee - Dr. Haneefa, Manjeri', createdBy: staffUsers['clinic-staff'].id, date: new Date('2026-06-05T11:20:00Z') },
+      { uuid: 'a0000000-0000-0000-0000-000000000004', type: 'CREDIT', subLedger: 'CASH', amount: 2000.00, remarks: 'Bonus credit', createdBy: staffUsers['super-admin'].id, date: new Date('2026-06-10T09:00:00Z') },
+      { uuid: 'a0000000-0000-0000-0000-000000000005', type: 'DEBIT', subLedger: 'CASH', amount: 350.00, remarks: 'Lab test - CBC, Makkaraparamba', createdBy: staffUsers['clinic-staff'].id, date: new Date('2026-06-12T16:45:00Z') },
+      { uuid: 'a0000000-0000-0000-0000-000000000006', type: 'CREDIT', subLedger: 'POINTS', amount: 150.00, remarks: 'Referral bonus: registered customer Suneer K', createdBy: staffUsers['crm-executive'].id, date: new Date('2026-06-18T10:00:00Z') },
     ];
 
     for (const txn of transactionsData) {
@@ -274,6 +292,7 @@ async function main() {
           uuid: txn.uuid,
           walletId: wallet.id,
           transactionType: txn.type,
+          subLedgerType: txn.subLedger,
           amount: txn.amount,
           remarks: txn.remarks,
           createdBy: txn.createdBy,
@@ -296,13 +315,14 @@ async function main() {
     });
     console.log('Created Credit Account for Nihal Rahman');
   } else {
-    await prisma.customer.update({
+    customer = await prisma.customer.update({
       where: { id: customer.id },
       data: {
+        mobile: '7034479800',
         email: 'Zabnixprivatelimited@gmail.com',
       },
     });
-    console.log('Updated existing mock customer Nihal Rahman email');
+    console.log('Updated existing customer Nihal Rahman (mobile + email)');
   }
 
   // 8. Seed Appointments

@@ -224,11 +224,13 @@ first\_name VARCHAR(255),
 
 last\_name VARCHAR(255),
 
-dob DATE,
+dob DATE NOT NULL,
 
-gender VARCHAR(20),
+age INT GENERATED ALWAYS AS (EXTRACT(YEAR FROM AGE(CURRENT_DATE, dob))) STORED,
 
-mobile VARCHAR(20) UNIQUE,
+blood_group VARCHAR(10),
+
+mobile VARCHAR(20) UNIQUE NOT NULL,
 
 email VARCHAR(255),
 
@@ -243,6 +245,12 @@ district VARCHAR(100),
 state VARCHAR(100),
 
 pincode VARCHAR(20),
+
+agent_code VARCHAR(50) NOT NULL,
+
+referral_code VARCHAR(50) UNIQUE,
+
+referred_by_id BIGINT NULL,
 
 status VARCHAR(50),
 
@@ -260,7 +268,11 @@ REFERENCES users(id),
 
 FOREIGN KEY(approved\_by)
 
-REFERENCES users(id)
+REFERENCES users(id),
+
+FOREIGN KEY(referred_by_id)
+
+REFERENCES customers(id)
 
 );
 
@@ -398,8 +410,6 @@ REFERENCES membership\_types(id)
 
 );
 
----
-
 # shield\_cards
 
 CREATE TABLE shield\_cards (
@@ -416,11 +426,17 @@ qr\_code TEXT,
 
 status VARCHAR(50),
 
+issued_business_id BIGINT NULL, -- references the business/store where the card was purchased
+
 issued\_at TIMESTAMPTZ,
 
 FOREIGN KEY(customer\_id)
 
-REFERENCES customers(id)
+REFERENCES customers(id),
+
+FOREIGN KEY(issued_business_id)
+
+REFERENCES businesses(id)
 
 );
 
@@ -465,6 +481,8 @@ uuid UUID UNIQUE,
 wallet\_id BIGINT,
 
 transaction\_type VARCHAR(50),
+
+sub_ledger_type VARCHAR(50) DEFAULT 'CASH', -- 'CASH' or 'POINTS'
 
 amount NUMERIC(15,2),
 

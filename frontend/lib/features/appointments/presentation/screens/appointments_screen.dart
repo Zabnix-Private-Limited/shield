@@ -6,7 +6,7 @@ import '../../../../shared/models/appointment.dart';
 import '../../../../shared/models/shield_role.dart';
 import '../../../../shared/widgets/app_card.dart';
 import '../../../../shared/widgets/app_button.dart';
-import '../../../../shared/widgets/demo_support.dart';
+import '../../../../shared/widgets/portal_support.dart';
 import '../../../../shared/services/api_service.dart';
 
 class AppointmentsScreen extends StatefulWidget {
@@ -40,7 +40,7 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
           IconButton(
             icon: const Icon(Icons.add),
             onPressed: () {
-              context.go('/workspace/customer/book-appointment');
+              context.go('/portal/customer/book-appointment');
             },
           ),
         ],
@@ -78,13 +78,13 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
           final appointments = snapshot.data ?? [];
 
           if (appointments.isEmpty) {
-            return DemoEmptyState(
+            return PortalEmptyState(
               icon: Icons.event_busy_outlined,
               title: 'No appointments booked',
               description:
                   'Clinic, dental, and home-visit bookings will appear here as soon as the customer confirms a slot.',
               actionText: 'Book Appointment',
-              onAction: () => context.go('/workspace/customer/book-appointment'),
+              onAction: () => context.go('/portal/customer/book-appointment'),
             );
           }
 
@@ -99,7 +99,7 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
                   padding: const EdgeInsets.only(bottom: 12),
                   child: AppCard(
                     onTap: () {
-                      showDemoDetailsSheet(
+                      showPortalDetailsSheet(
                         context,
                         title:
                             appointment.doctorName ??

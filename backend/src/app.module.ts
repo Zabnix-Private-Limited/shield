@@ -3,7 +3,6 @@ import { APP_INTERCEPTOR } from '@nestjs/core';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { PrismaModule } from './prisma/prisma.module';
-import { AuthModule } from './auth/auth.module';
 import { CustomerModule } from './customer/customer.module';
 import { WalletModule } from './wallet/wallet.module';
 import { CreditModule } from './credit/credit.module';
@@ -18,7 +17,6 @@ import { BigIntInterceptor } from './common/interceptors/bigint.interceptor';
 @Module({
   imports: [
     PrismaModule,
-    AuthModule,
     CustomerModule,
     WalletModule,
     CreditModule,

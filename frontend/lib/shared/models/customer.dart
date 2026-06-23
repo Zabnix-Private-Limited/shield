@@ -22,6 +22,8 @@ class Customer extends Equatable {
   final String? approvedBy;
   final DateTime createdAt;
   final DateTime updatedAt;
+  final String? bloodGroup;
+  final String? agentCode;
 
   const Customer({
     required this.id,
@@ -45,6 +47,8 @@ class Customer extends Equatable {
     this.approvedBy,
     required this.createdAt,
     required this.updatedAt,
+    this.bloodGroup,
+    this.agentCode,
   });
 
   String get fullName => '$firstName $lastName';
@@ -72,6 +76,8 @@ class Customer extends Equatable {
     approvedBy,
     createdAt,
     updatedAt,
+    bloodGroup,
+    agentCode,
   ];
 }
 

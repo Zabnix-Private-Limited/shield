@@ -5,14 +5,10 @@ import {
   Param,
   Body,
   Query,
-  UseGuards,
-  Request,
 } from '@nestjs/common';
 import { PharmacyService } from './pharmacy.service';
-import { MockAuthGuard } from '../auth/mock-auth.guard';
 
 @Controller()
-@UseGuards(MockAuthGuard)
 export class PharmacyController {
   constructor(private pharmacyService: PharmacyService) {}
 
@@ -47,8 +43,8 @@ export class PharmacyController {
   }
 
   @Post('pharmacy/purchases')
-  async createPurchase(@Body() body: any, @Request() req: any) {
-    const staffId = req.user.isStaff ? BigInt(req.user.id) : undefined;
+  async createPurchase(@Body() body: any) {
+    const staffId = body.staff_user_id ? BigInt(body.staff_user_id) : undefined;
     const itemsMapped = (body.items || []).map((i: any) => ({
       productId: BigInt(i.product_id),
       quantity: Number(i.quantity || 1),
@@ -71,15 +67,8 @@ export class PharmacyController {
   }
 
   @Get('pharmacy/purchases')
-  async listPurchases(@Request() req: any, @Query('customer_id') customerId?: string) {
-    let targetCustomerId: bigint | undefined = undefined;
-
-    if (!req.user.isStaff) {
-      targetCustomerId = BigInt(req.user.id);
-    } else if (customerId) {
-      targetCustomerId = BigInt(customerId);
-    }
-
+  async listPurchases(@Query('customer_id') customerId?: string) {
+    const targetCustomerId = customerId ? BigInt(customerId) : undefined;
     const purchases = await this.pharmacyService.listPurchases(targetCustomerId);
     return {
       success: true,

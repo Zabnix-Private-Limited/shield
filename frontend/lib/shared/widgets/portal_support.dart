@@ -4,14 +4,14 @@ import '../../app/theme/app_typography.dart';
 import 'app_button.dart';
 import 'app_card.dart';
 
-void showDemoSnackBar(BuildContext context, String message) {
+void showPortalSnackBar(BuildContext context, String message) {
   ScaffoldMessenger.of(context).hideCurrentSnackBar();
   ScaffoldMessenger.of(context).showSnackBar(
     SnackBar(content: Text(message), behavior: SnackBarBehavior.floating),
   );
 }
 
-Future<void> showDemoDetailsSheet(
+Future<void> showPortalDetailsSheet(
   BuildContext context, {
   required String title,
   required String subtitle,
@@ -67,7 +67,7 @@ Future<void> showDemoDetailsSheet(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Demo Notes',
+                        'Portal Notes',
                         style: AppTypography.small.copyWith(
                           fontWeight: FontWeight.w700,
                         ),
@@ -114,14 +114,14 @@ Future<void> showDemoDetailsSheet(
   );
 }
 
-class DemoEmptyState extends StatelessWidget {
+class PortalEmptyState extends StatelessWidget {
   final IconData icon;
   final String title;
   final String description;
   final String actionText;
   final VoidCallback onAction;
 
-  const DemoEmptyState({
+  const PortalEmptyState({
     super.key,
     required this.icon,
     required this.title,

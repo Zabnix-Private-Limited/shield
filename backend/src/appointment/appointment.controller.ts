@@ -5,27 +5,16 @@ import {
   Param,
   Body,
   Query,
-  UseGuards,
-  Request,
 } from '@nestjs/common';
 import { AppointmentService } from './appointment.service';
-import { MockAuthGuard } from '../auth/mock-auth.guard';
 
 @Controller('appointments')
-@UseGuards(MockAuthGuard)
 export class AppointmentController {
   constructor(private appointmentService: AppointmentService) {}
 
   @Get()
-  async list(@Request() req: any, @Query('customer_id') customerId?: string) {
-    let targetCustomerId: bigint | undefined = undefined;
-
-    if (!req.user.isStaff) {
-      targetCustomerId = BigInt(req.user.id);
-    } else if (customerId) {
-      targetCustomerId = BigInt(customerId);
-    }
-
+  async list(@Query('customer_id') customerId?: string) {
+    const targetCustomerId = customerId ? BigInt(customerId) : undefined;
     const appts = await this.appointmentService.list(targetCustomerId);
     return {
       success: true,

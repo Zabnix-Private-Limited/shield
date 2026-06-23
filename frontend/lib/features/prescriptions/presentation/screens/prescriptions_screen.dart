@@ -6,7 +6,7 @@ import '../../../../shared/models/document.dart';
 import '../../../../shared/models/shield_role.dart';
 import '../../../../shared/widgets/app_card.dart';
 import '../../../../shared/widgets/app_button.dart';
-import '../../../../shared/widgets/demo_support.dart';
+import '../../../../shared/widgets/portal_support.dart';
 import '../../../../shared/services/api_service.dart';
 
 class PrescriptionsScreen extends StatefulWidget {
@@ -42,7 +42,7 @@ class _PrescriptionsScreenState extends State<PrescriptionsScreen> {
           IconButton(
             icon: const Icon(Icons.add),
             onPressed: () {
-              context.go('/workspace/customer/prescriptions');
+              context.go('/portal/customer/prescriptions');
             },
           ),
         ],
@@ -80,13 +80,13 @@ class _PrescriptionsScreenState extends State<PrescriptionsScreen> {
           final prescriptions = snapshot.data ?? [];
 
           if (prescriptions.isEmpty) {
-            return DemoEmptyState(
+            return PortalEmptyState(
               icon: Icons.medication_outlined,
               title: 'No prescriptions yet',
               description:
                   'Once prescriptions are uploaded or issued by clinics and pharmacies, they will appear in this list.',
               actionText: 'Open Prescriptions',
-              onAction: () => context.go('/workspace/customer/prescriptions'),
+              onAction: () => context.go('/portal/customer/prescriptions'),
             );
           }
 
@@ -101,7 +101,7 @@ class _PrescriptionsScreenState extends State<PrescriptionsScreen> {
                   padding: const EdgeInsets.only(bottom: 12),
                   child: AppCard(
                     onTap: () {
-                      showDemoDetailsSheet(
+                      showPortalDetailsSheet(
                         context,
                         title: prescription.fileName,
                         subtitle:

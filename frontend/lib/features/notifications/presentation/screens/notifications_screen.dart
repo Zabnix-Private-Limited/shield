@@ -6,7 +6,7 @@ import '../../../../shared/models/notification.dart';
 import '../../../../shared/models/shield_role.dart';
 import '../../../../shared/widgets/app_card.dart';
 import '../../../../shared/widgets/app_button.dart';
-import '../../../../shared/widgets/demo_support.dart';
+import '../../../../shared/widgets/portal_support.dart';
 import '../../../../shared/services/api_service.dart';
 
 class NotificationsScreen extends StatefulWidget {
@@ -39,9 +39,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         actions: [
           TextButton(
             onPressed: () {
-              showDemoSnackBar(
+              showPortalSnackBar(
                 context,
-                'Notification history is shown in this list and in the role-based notification center demo.',
+                'Notification history is shown in this list and in the role-based notification center portal.',
               );
             },
             child: const Text('Mark all read'),
@@ -81,13 +81,13 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           final notifications = snapshot.data ?? [];
 
           if (notifications.isEmpty) {
-            return DemoEmptyState(
+            return PortalEmptyState(
               icon: Icons.notifications_none,
               title: 'No notifications right now',
               description:
                   'OTP, wallet, appointment, and document alerts will appear here as the member uses SHIELD services.',
               actionText: 'Open Notifications',
-              onAction: () => context.go('/workspace/customer/notifications'),
+              onAction: () => context.go('/portal/customer/notifications'),
             );
           }
 
@@ -103,7 +103,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                   child: AppCard(
                     padding: const EdgeInsets.all(16),
                     onTap: () {
-                      showDemoDetailsSheet(
+                      showPortalDetailsSheet(
                         context,
                         title: notification.title,
                         subtitle: notification.body,
@@ -111,7 +111,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                         status: notification.isRead ? 'Read' : 'Unread',
                         highlights: [
                           'Channel type: ${notification.type.name}',
-                          'This alert is included to demonstrate the SHIELD notification history flow.',
+                          'This alert is included to support the SHIELD notification history flow.',
                         ],
                       );
                     },

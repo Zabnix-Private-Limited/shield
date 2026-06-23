@@ -23,7 +23,7 @@
 - Language: TypeScript
 - ORM: Prisma
 - Database: PostgreSQL 16+
-- Auth: OTP + JWT
+- Auth: Customers use Mobile OTP login; Staff/Providers/Admins use Email/Password + JWT
 - API Documentation: Swagger/OpenAPI
 - Caching: Redis
 - Logging: Winston
@@ -47,7 +47,9 @@
 ## Database Rules
 - Use UUIDs for public identifiers
 - Use BIGSERIAL for internal primary keys
-- **NO STORED BALANCE IN WALLET TABLE**: Always calculate from transactions (ledger-based)
+- **NO STORED BALANCE IN WALLET TABLE**: Always calculate dynamically from transactions.
+- Wallet balances are segregated via `sub_ledger_type` ('CASH' vs 'POINTS') in `wallet_transactions` table.
+- Enforce location constraint check using `issued_business_id` in `shield_cards`.
 - Soft delete support (deleted_at column)
 - Append-only audit logs
 - Index frequently queried columns
@@ -55,22 +57,22 @@
 
 ## Security Rules
 1. RBAC + ABAC authorization
-2. OTP + JWT authentication
-3. Encrypt sensitive data at rest
-4. HTTPS only (TLS 1.3)
-5. Audit all critical actions
-6. Rate limiting for APIs
-7. Input validation and sanitization
+2. OTP verification (Customers) and Email Credentials verification (Staff / Service Providers)
+3. Mandatory `agent_code` check for Customer registration (onboarding agent who initiated creation)
+4. Enforce branch restriction rules on SHIELD card utilization (Hyperpharmacy store cards are locked to their issuing branch, general service providers are cross-compatible)
+5. Encrypt sensitive data at rest
+6. HTTPS only (TLS 1.3)
+7. Audit all critical actions
+8. Rate limiting for APIs
+9. Input validation and sanitization
 
 ## User Roles
-1. **CUSTOMER**: View profile, wallet, transactions, documents, appointments
-2. **PHARMACY_STAFF**: Verify customers, upload bills/prescriptions
-3. **CLINIC_STAFF**: Manage appointments, consultations, reports
-4. **DENTAL_STAFF**: Manage dental appointments, records
-5. **CRM_EXECUTIVE**: View customers, create tasks/follow-ups/complaints
-6. **SHIELD_EXECUTIVE**: Approve customers, manage memberships, wallet adjustments
-7. **MANAGER**: View reports/analytics, approve overrides/credit requests
-8. **SUPER_ADMIN**: Full system access
+1. **CUSTOMER**: Access Profile (Name, Address, Pin Code, Phone, DOB/Age, Blood Group), Wallet (Cash, Points, Transactions), Services (Pharmacy, Lab, Homecare, Dental, Doctor, Cosmetic, Dietitian), and Appointments.
+2. **SERVICE_PROVIDER (PHARMACY_STAFF, CLINIC_STAFF, DENTAL_STAFF, etc.)**: Verify customer digital privilege cards, enforce hyperpharmacy local store rules, upload prescriptions/bills, and log card utilization.
+3. **CRM_EXECUTIVE**: View customers, create tasks/follow-ups/complaints
+4. **SHIELD_EXECUTIVE**: Approve customers (validating agent_code), manage memberships, wallet adjustments
+5. **MANAGER**: View reports/analytics, approve overrides/credit requests
+6. **SUPER_ADMIN / ADMINISTRATOR**: View Branch-wise IDs list, IDs service utilization, reports, configure roles/users/permissions.
 
 ## Document Intelligence Pipeline
 1. Upload
