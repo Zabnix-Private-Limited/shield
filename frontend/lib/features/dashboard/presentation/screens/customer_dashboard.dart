@@ -9,13 +9,39 @@ import '../../../../shared/widgets/app_button.dart';
 import '../../../../shared/widgets/app_page_frame.dart';
 import '../../../../shared/widgets/app_responsive.dart';
 import '../../../../shared/widgets/demo_support.dart';
+import '../../../../shared/services/api_service.dart';
 
-class CustomerDashboard extends StatelessWidget {
+class CustomerDashboard extends StatefulWidget {
   const CustomerDashboard({super.key});
 
   @override
+  State<CustomerDashboard> createState() => _CustomerDashboardState();
+}
+
+class _CustomerDashboardState extends State<CustomerDashboard> {
+  late Future<Customer> _customerFuture;
+  late Future<Map<String, dynamic>> _walletProfileFuture;
+  late Future<List<WalletTransaction>> _transactionsFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadDashboardData();
+  }
+
+  void _loadDashboardData() {
+    setState(() {
+      _customerFuture = ApiService.getCustomerProfile('1');
+      _walletProfileFuture = ApiService.getWalletProfile('1');
+      _transactionsFuture = _walletProfileFuture.then((profile) {
+        final walletId = profile['walletId'].toString();
+        return ApiService.getWalletTransactions(walletId);
+      });
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final customer = dummyCustomers.first;
     return Scaffold(
       appBar: AppBar(
         title: const Text('SHIELD'),
@@ -28,66 +54,104 @@ class CustomerDashboard extends StatelessWidget {
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        padding: EdgeInsets.zero,
-        physics: const BouncingScrollPhysics(),
-        child: AppPageFrame(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Hello, ${customer.firstName}!', style: AppTypography.h3),
-              const SizedBox(height: 4),
-              Text(
-                'Welcome back',
-                style: AppTypography.small.copyWith(color: AppColors.gray),
-              ),
-              const SizedBox(height: 24),
-              AppCard(
-                padding: const EdgeInsets.all(20),
+      body: FutureBuilder<List<dynamic>>(
+        future: Future.wait([_customerFuture, _walletProfileFuture, _transactionsFuture]),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          if (snapshot.hasError) {
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24.0),
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Text(
-                      'Wallet Balance',
-                      style: AppTypography.small.copyWith(
-                        color: AppColors.gray,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      '₹${dummyWallet.currentBalance.toStringAsFixed(2)}',
-                      style: AppTypography.h2.copyWith(
-                        color: AppColors.shieldNavy,
-                      ),
-                    ),
+                    const Icon(Icons.error_outline, size: 64, color: AppColors.error),
                     const SizedBox(height: 16),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: AppButton(
-                            text: 'Recharge',
-                            type: AppButtonType.outline,
-                            onPressed: () {
-                              context.go('/demo/customer/recharge');
-                            },
-                            height: 48,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: AppButton(
-                            text: 'View Wallet',
-                            onPressed: () {
-                              context.go('/wallet');
-                            },
-                            height: 48,
-                          ),
-                        ),
-                      ],
+                    Text('Failed to load dashboard', style: AppTypography.h3),
+                    const SizedBox(height: 8),
+                    Text(snapshot.error.toString(), textAlign: TextAlign.center, style: AppTypography.body),
+                    const SizedBox(height: 16),
+                    AppButton(
+                      text: 'Retry',
+                      onPressed: _loadDashboardData,
                     ),
                   ],
                 ),
               ),
+            );
+          }
+
+          final customer = snapshot.data![0] as Customer;
+          final walletProfile = snapshot.data![1] as Map<String, dynamic>;
+          final txns = snapshot.data![2] as List<WalletTransaction>;
+
+          final balance = double.tryParse(walletProfile['balance']?.toString() ?? '0') ?? 0.0;
+
+          return RefreshIndicator(
+            onRefresh: () async => _loadDashboardData(),
+            child: SingleChildScrollView(
+              padding: EdgeInsets.zero,
+              physics: const BouncingScrollPhysics(),
+              child: AppPageFrame(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Hello, ${customer.firstName}!', style: AppTypography.h3),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Welcome back',
+                      style: AppTypography.small.copyWith(color: AppColors.gray),
+                    ),
+                    const SizedBox(height: 24),
+                    AppCard(
+                      padding: const EdgeInsets.all(20),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Wallet Balance',
+                            style: AppTypography.small.copyWith(
+                              color: AppColors.gray,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            '₹${balance.toStringAsFixed(2)}',
+                            style: AppTypography.h2.copyWith(
+                              color: AppColors.shieldNavy,
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: AppButton(
+                                  text: 'Recharge',
+                                  type: AppButtonType.outline,
+                                  onPressed: () {
+                                    context.go('/workspace/customer/recharge');
+                                  },
+                                  height: 48,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: AppButton(
+                                  text: 'View Wallet',
+                                  onPressed: () {
+                                    context.go('/wallet');
+                                  },
+                                  height: 48,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
               const SizedBox(height: 24),
               Text('Quick Actions', style: AppTypography.h4),
               const SizedBox(height: 16),
@@ -109,14 +173,14 @@ class CustomerDashboard extends StatelessWidget {
                     icon: Icons.qr_code_scanner,
                     label: 'QR Card',
                     onTap: () {
-                      context.go('/demo/customer/membership');
+                      context.go('/workspace/customer/membership');
                     },
                   ),
                   QuickActionCard(
                     icon: Icons.receipt_long,
                     label: 'Recharge',
                     onTap: () {
-                      context.go('/demo/customer/recharge');
+                      context.go('/workspace/customer/recharge');
                     },
                   ),
                   QuickActionCard(
@@ -171,7 +235,7 @@ class CustomerDashboard extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 16),
-              ...dummyTransactions.take(3).map((txn) {
+              ...txns.take(3).map((txn) {
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 12),
                   child: AppCard(
@@ -236,7 +300,10 @@ class CustomerDashboard extends StatelessWidget {
         ),
       ),
     );
-  }
+  },
+),
+);
+}
 }
 
 class QuickActionCard extends StatelessWidget {

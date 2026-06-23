@@ -2,12 +2,34 @@ import 'package:flutter/material.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_typography.dart';
 import '../../../../shared/models/document.dart';
+import '../../../../shared/models/shield_role.dart';
 import '../../../../shared/widgets/app_card.dart';
+import '../../../../shared/widgets/app_button.dart';
 import '../../../../shared/widgets/demo_support.dart';
+import '../../../../shared/services/api_service.dart';
 import 'package:go_router/go_router.dart';
 
-class DocumentsScreen extends StatelessWidget {
+class DocumentsScreen extends StatefulWidget {
   const DocumentsScreen({super.key});
+
+  @override
+  State<DocumentsScreen> createState() => _DocumentsScreenState();
+}
+
+class _DocumentsScreenState extends State<DocumentsScreen> {
+  late Future<List<Document>> _documentsFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadDocuments();
+  }
+
+  void _loadDocuments() {
+    setState(() {
+      _documentsFuture = ApiService.getDocuments(SHIELDRole.customer);
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -26,20 +48,56 @@ class DocumentsScreen extends StatelessWidget {
           ),
         ],
       ),
-      body: dummyDocuments.isEmpty
-          ? DemoEmptyState(
+      body: FutureBuilder<List<Document>>(
+        future: _documentsFuture,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          if (snapshot.hasError) {
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.error_outline, size: 64, color: AppColors.error),
+                    const SizedBox(height: 16),
+                    Text('Failed to load documents', style: AppTypography.h3),
+                    const SizedBox(height: 8),
+                    Text(snapshot.error.toString(), textAlign: TextAlign.center, style: AppTypography.body),
+                    const SizedBox(height: 16),
+                    AppButton(
+                      text: 'Retry',
+                      onPressed: _loadDocuments,
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }
+
+          final documents = snapshot.data ?? [];
+
+          if (documents.isEmpty) {
+            return DemoEmptyState(
               icon: Icons.description_outlined,
               title: 'No documents yet',
               description:
                   'Uploaded prescriptions, reports, and invoices will appear here once the customer starts using SHIELD services.',
-              actionText: 'Open Documents Demo',
-              onAction: () => context.go('/demo/customer/documents'),
-            )
-          : ListView.builder(
+              actionText: 'Open Documents',
+              onAction: () => context.go('/workspace/customer/documents'),
+            );
+          }
+
+          return RefreshIndicator(
+            onRefresh: () async => _loadDocuments(),
+            child: ListView.builder(
               padding: const EdgeInsets.all(16),
-              itemCount: dummyDocuments.length,
+              itemCount: documents.length,
               itemBuilder: (context, index) {
-                final document = dummyDocuments[index];
+                final document = documents[index];
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 12),
                   child: AppCard(
@@ -126,6 +184,9 @@ class DocumentsScreen extends StatelessWidget {
                 );
               },
             ),
+          );
+        },
+      ),
     );
   }
 

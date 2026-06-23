@@ -23,16 +23,16 @@ final GoRouter router = GoRouter(
       builder: (context, state) => const LoginScreen(),
     ),
     GoRoute(
-      path: '/demo/:role',
+      path: '/workspace/:role',
       redirect: (context, state) {
         final roleKey =
             state.pathParameters['role'] ?? SHIELDRole.customer.routeKey;
-        return '/demo/$roleKey/dashboard';
+        return '/workspace/$roleKey/dashboard';
       },
     ),
     GoRoute(
-      path: '/demo/:role/:section',
-      name: 'role-demo',
+      path: '/workspace/:role/:section',
+      name: 'role-workspace',
       builder: (context, state) {
         final role = SHIELDRole.fromRouteKey(state.pathParameters['role']);
         final section = state.pathParameters['section'];

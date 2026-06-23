@@ -4,13 +4,11 @@
 // Get a free hosted Postgres database in seconds: `npx create-db`
 
 generator client {
-  provider = "prisma-client"
-  output   = "../generated/prisma"
+  provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 }
 
 // ------------------------------
@@ -111,6 +109,7 @@ model User {
   crmActivities CrmActivity[]
   crmTasks CrmTask[]
   auditLogs AuditLog[]
+  documents Document[]
 
   @@index([mobile], map: "idx_user_mobile")
   @@index([email], map: "idx_user_email")
@@ -239,7 +238,7 @@ model Membership {
 model ShieldCard {
   id            BigInt     @id @default(autoincrement())
   uuid          String?    @unique @db.Uuid
-  customerId    BigInt?    @map("customer_id")
+  customerId    BigInt?    @unique @map("customer_id")
   cardNumber    String?    @unique @db.VarChar(100) @map("card_number")
   qrCode        String?    @db.Text @map("qr_code")
   status        String?    @db.VarChar(50)
@@ -606,8 +605,8 @@ model AuditLog {
   action        String?    @db.VarChar(255)
   entityType    String?    @db.VarChar(100) @map("entity_type")
   entityId      BigInt?    @map("entity_id")
-  oldData       Json?      @db.Jsonb @map("old_data")
-  newData       Json?      @db.Jsonb @map("new_data")
+  oldData       Json?      @map("old_data")
+  newData       Json?      @map("new_data")
   ipAddress     String?    @db.VarChar(100) @map("ip_address")
   deviceInfo    String?    @db.Text @map("device_info")
   createdAt     DateTime   @default(now()) @db.Timestamptz(6) @map("created_at")

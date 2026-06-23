@@ -2,7 +2,7 @@ import 'package:equatable/equatable.dart';
 
 enum NotificationType { wallet, appointment, document, membership, system }
 
-class Notification extends Equatable {
+class NotificationModel extends Equatable {
   final String id;
   final String uuid;
   final String customerId;
@@ -12,7 +12,7 @@ class Notification extends Equatable {
   final bool isRead;
   final DateTime createdAt;
 
-  const Notification({
+  const NotificationModel({
     required this.id,
     required this.uuid,
     required this.customerId,
@@ -36,8 +36,8 @@ class Notification extends Equatable {
   ];
 }
 
-final List<Notification> dummyNotifications = [
-  Notification(
+final List<NotificationModel> dummyNotifications = [
+  NotificationModel(
     id: '1',
     uuid: 'notif-001',
     customerId: '1',
@@ -48,7 +48,7 @@ final List<Notification> dummyNotifications = [
     isRead: false,
     createdAt: DateTime(2026, 6, 20, 21, 20),
   ),
-  Notification(
+  NotificationModel(
     id: '2',
     uuid: 'notif-002',
     customerId: '1',
@@ -59,7 +59,7 @@ final List<Notification> dummyNotifications = [
     isRead: false,
     createdAt: DateTime(2026, 6, 20, 19, 30),
   ),
-  Notification(
+  NotificationModel(
     id: '3',
     uuid: 'notif-003',
     customerId: '1',
@@ -69,7 +69,7 @@ final List<Notification> dummyNotifications = [
     isRead: true,
     createdAt: DateTime(2026, 6, 19, 11, 0),
   ),
-  Notification(
+  NotificationModel(
     id: '4',
     uuid: 'notif-004',
     customerId: '1',

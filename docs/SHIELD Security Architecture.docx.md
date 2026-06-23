@@ -217,7 +217,7 @@ All critical operations must be logged:
 - **Allowed File Types:** PDF, PNG, JPG, JPEG
 - **Maximum File Size:** 20 MB
 - **Virus Scanning:** Scan all uploaded files for viruses
-- **Storage:** Store files in MinIO with private buckets
+- **Storage:** Store files in Cloudflare R2 with private buckets
 - **Access:** Use signed URLs for file access
 
 ---

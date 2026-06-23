@@ -8,6 +8,7 @@ import '../../../../shared/widgets/app_card.dart';
 import '../../../../shared/widgets/app_page_frame.dart';
 import '../../../../shared/widgets/app_responsive.dart';
 import '../../../../shared/widgets/app_skeleton.dart';
+import '../../../../shared/services/api_service.dart';
 import '../demo_role_data.dart';
 
 class RoleDemoShell extends StatefulWidget {
@@ -26,30 +27,87 @@ class RoleDemoShell extends StatefulWidget {
 
 class _RoleDemoShellState extends State<RoleDemoShell> {
   bool _isLoading = true;
+  DemoSectionData? _sectionData;
+  String? _error;
 
   @override
   void initState() {
     super.initState();
-    Future<void>.delayed(const Duration(milliseconds: 220), () {
+    _loadData();
+  }
+
+  @override
+  void didUpdateWidget(covariant RoleDemoShell oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.role != widget.role || oldWidget.sectionKey != widget.sectionKey) {
+      _loadData();
+    }
+  }
+
+  Future<void> _loadData() async {
+    if (!mounted) return;
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+
+    try {
+      final sectionKey = widget.sectionKey ?? 'dashboard';
+      final data = await ApiService.getRoleSectionData(widget.role, sectionKey);
       if (!mounted) return;
       setState(() {
+        _sectionData = data;
         _isLoading = false;
       });
-    });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _error = e.toString();
+        _isLoading = false;
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final demo = demoDataForRole(widget.role);
-    final section = demo.sectionFor(widget.sectionKey);
+    final activeKey = widget.sectionKey ?? 'dashboard';
 
     if (_isLoading) {
       return AppPageSkeleton(showSidebar: AppResponsive.isDesktop(context));
     }
 
+    if (_error != null || _sectionData == null) {
+      return Scaffold(
+        appBar: AppBar(title: Text(demo.role.label)),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.error_outline, size: 64, color: AppColors.error),
+                const SizedBox(height: 16),
+                Text('Error loading dashboard data', style: AppTypography.h3),
+                const SizedBox(height: 8),
+                Text(_error ?? 'Unknown error occurred', textAlign: TextAlign.center, style: AppTypography.body),
+                const SizedBox(height: 16),
+                AppButton(
+                  text: 'Retry',
+                  onPressed: _loadData,
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    final section = _sectionData!;
+
     return Scaffold(
       backgroundColor: AppColors.lightGray,
-      drawer: _RoleDrawer(demo: demo, activeSectionKey: section.key),
+      drawer: _RoleDrawer(demo: demo, activeSectionKey: activeKey),
       body: SafeArea(
         child: LayoutBuilder(
           builder: (context, constraints) {
@@ -58,7 +116,7 @@ class _RoleDemoShellState extends State<RoleDemoShell> {
             if (isWide) {
               return Row(
                 children: [
-                  _RoleSidebar(demo: demo, activeSectionKey: section.key),
+                  _RoleSidebar(demo: demo, activeSectionKey: activeKey),
                   Expanded(
                     child: _RoleContent(demo: demo, section: section),
                   ),
@@ -120,7 +178,7 @@ class _RoleContent extends StatelessWidget {
                           fontWeight: FontWeight.w600,
                         ),
                         onSelected: (_) => context.go(
-                          '/demo/${demo.role.routeKey}/${item.key}',
+                          '/workspace/${demo.role.routeKey}/${item.key}',
                         ),
                       );
                     },
@@ -242,7 +300,7 @@ class _RoleSidebar extends StatelessWidget {
                   child: InkWell(
                     borderRadius: BorderRadius.circular(14),
                     onTap: () => context.go(
-                      '/demo/${demo.role.routeKey}/${section.key}',
+                      '/workspace/${demo.role.routeKey}/${section.key}',
                     ),
                     child: Container(
                       padding: const EdgeInsets.symmetric(
@@ -352,7 +410,7 @@ class _RoleDrawer extends StatelessWidget {
                     ),
                     onTap: () {
                       Navigator.pop(context);
-                      context.go('/demo/${demo.role.routeKey}/${section.key}');
+                      context.go('/workspace/${demo.role.routeKey}/${section.key}');
                     },
                   );
                 }).toList(),
@@ -455,7 +513,7 @@ class _RoleSwitcher extends StatelessWidget {
           }).toList(),
           onChanged: (value) {
             if (value != null) {
-              context.go('/demo/${value.routeKey}/dashboard');
+              context.go('/workspace/${value.routeKey}/dashboard');
             }
           },
         ),

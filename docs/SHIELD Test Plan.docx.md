@@ -77,7 +77,7 @@ This document outlines the testing strategy for the SHIELD platform.
 - Staging database (copy of production with anonymized data)
 - Staging backend
 - Staging frontend
-- Staging MinIO
+- Staging Cloudflare R2
 - Staging Firebase (for push notifications)
 
 ---

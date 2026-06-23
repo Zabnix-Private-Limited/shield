@@ -14,7 +14,7 @@ Technology Stack:
 
 * PostgreSQL
 
-* MinIO
+* Cloudflare R2 (S3 API)
 
 * Firebase Cloud Messaging
 
@@ -241,7 +241,7 @@ where applicable.
 
 Storage Engine
 
-MinIO
+Cloudflare R2 (S3 API)
 
 Alternative
 

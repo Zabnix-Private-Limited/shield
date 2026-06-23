@@ -530,11 +530,11 @@ Options:
 
 * Supabase Storage
 
-* MinIO
+* Cloudflare R2 (S3 API)
 
 Recommended:
 
-MinIO
+Cloudflare R2 (S3 API)
 
 Reason:
 
@@ -700,7 +700,7 @@ NestJS
 PostgreSQL  
       ↓
 
-MinIO
+Cloudflare R2 (S3 API)
 
 ---
 
@@ -762,7 +762,7 @@ Database
 
 Storage
 
-* MinIO
+* Cloudflare R2 (S3 API)
 
 Notifications
 

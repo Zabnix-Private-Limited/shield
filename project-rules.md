@@ -27,7 +27,7 @@
 - **API Documentation**: Swagger/OpenAPI
 
 ### Infrastructure
-- **File Storage**: MinIO
+- **File Storage**: Cloudflare R2 (S3 API)
 - **Push Notifications**: Firebase Cloud Messaging
 - **Caching**: Redis
 

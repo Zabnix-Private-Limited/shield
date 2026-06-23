@@ -7,95 +7,166 @@ import '../../../../shared/widgets/app_card.dart';
 import '../../../../shared/widgets/app_button.dart';
 import '../../../../shared/widgets/app_page_frame.dart';
 import '../../../../shared/widgets/demo_support.dart';
+import '../../../../shared/services/api_service.dart';
 
-class WalletScreen extends StatelessWidget {
+class WalletScreen extends StatefulWidget {
   const WalletScreen({super.key});
+
+  @override
+  State<WalletScreen> createState() => _WalletScreenState();
+}
+
+class _WalletScreenState extends State<WalletScreen> {
+  late Future<Map<String, dynamic>> _walletProfileFuture;
+  late Future<List<WalletTransaction>> _transactionsFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadWalletData();
+  }
+
+  void _loadWalletData() {
+    setState(() {
+      _walletProfileFuture = ApiService.getWalletProfile('1');
+      _transactionsFuture = _walletProfileFuture.then((profile) {
+        final walletId = profile['walletId'].toString();
+        return ApiService.getWalletTransactions(walletId);
+      });
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Wallet')),
-      body: SingleChildScrollView(
-        padding: EdgeInsets.zero,
-        physics: const BouncingScrollPhysics(),
-        child: AppPageFrame(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              AppCard(
-                padding: const EdgeInsets.all(24),
+      body: FutureBuilder<List<dynamic>>(
+        future: Future.wait([_walletProfileFuture, _transactionsFuture]),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          if (snapshot.hasError) {
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24.0),
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.center,
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Text(
-                      'Available Balance',
-                      style: AppTypography.small.copyWith(
-                        color: AppColors.gray,
-                      ),
-                    ),
+                    const Icon(Icons.error_outline, size: 64, color: AppColors.error),
+                    const SizedBox(height: 16),
+                    Text('Failed to load wallet', style: AppTypography.h3),
                     const SizedBox(height: 8),
-                    Text(
-                      '₹${dummyWallet.currentBalance.toStringAsFixed(2)}',
-                      style: AppTypography.h1.copyWith(
-                        color: AppColors.shieldNavy,
+                    Text(snapshot.error.toString(), textAlign: TextAlign.center, style: AppTypography.body),
+                    const SizedBox(height: 16),
+                    AppButton(
+                      text: 'Retry',
+                      onPressed: _loadWalletData,
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }
+
+          final profile = snapshot.data![0] as Map<String, dynamic>;
+          final txns = snapshot.data![1] as List<WalletTransaction>;
+
+          final balance = double.tryParse(profile['balance']?.toString() ?? '0') ?? 0.0;
+          double totalCredits = 0.0;
+          double totalDebits = 0.0;
+          for (final txn in txns) {
+            if (txn.transactionType == 'CREDIT') {
+              totalCredits += txn.amount;
+            } else {
+              totalDebits += txn.amount;
+            }
+          }
+
+          return RefreshIndicator(
+            onRefresh: () async => _loadWalletData(),
+            child: SingleChildScrollView(
+              padding: EdgeInsets.zero,
+              physics: const BouncingScrollPhysics(),
+              child: AppPageFrame(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    AppCard(
+                      padding: const EdgeInsets.all(24),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Text(
+                            'Available Balance',
+                            style: AppTypography.small.copyWith(
+                              color: AppColors.gray,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            '₹${balance.toStringAsFixed(2)}',
+                            style: AppTypography.h1.copyWith(
+                              color: AppColors.shieldNavy,
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: AppButton(
+                                  text: 'Recharge Wallet',
+                                  onPressed: () {
+                                    context.go('/workspace/customer/recharge');
+                                  },
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
                       ),
                     ),
                     const SizedBox(height: 24),
                     Row(
                       children: [
                         Expanded(
-                          child: AppButton(
-                            text: 'Recharge Wallet',
-                            onPressed: () {
-                              context.go('/demo/customer/recharge');
-                            },
+                          child: _StatCard(
+                            title: 'Total Credits',
+                            amount: '₹${totalCredits.toStringAsFixed(2)}',
+                            color: AppColors.shieldGreen,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _StatCard(
+                            title: 'Total Debits',
+                            amount: '₹${totalDebits.toStringAsFixed(2)}',
+                            color: AppColors.error,
                           ),
                         ),
                       ],
                     ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 24),
-              const Row(
-                children: [
-                  Expanded(
-                    child: _StatCard(
-                      title: 'Total Credits',
-                      amount: '₹7,000.00',
-                      color: AppColors.shieldGreen,
+                    const SizedBox(height: 24),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text('Transaction History', style: AppTypography.h4),
+                        TextButton(
+                          onPressed: () {
+                            context.go('/transactions');
+                          },
+                          child: Text(
+                            'View All',
+                            style: AppTypography.small.copyWith(
+                              color: AppColors.shieldBlue,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
-                  SizedBox(width: 12),
-                  Expanded(
-                    child: _StatCard(
-                      title: 'Total Debits',
-                      amount: '₹2,050.00',
-                      color: AppColors.error,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 24),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text('Transaction History', style: AppTypography.h4),
-                  TextButton(
-                    onPressed: () {
-                      context.go('/transactions');
-                    },
-                    child: Text(
-                      'View All',
-                      style: AppTypography.small.copyWith(
-                        color: AppColors.shieldBlue,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              ...dummyTransactions.map((txn) {
+                    const SizedBox(height: 16),
+                    ...txns.map((txn) {
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 12),
                   child: AppCard(
@@ -175,7 +246,10 @@ class WalletScreen extends StatelessWidget {
         ),
       ),
     );
-  }
+  },
+),
+);
+}
 }
 
 class _StatCard extends StatelessWidget {

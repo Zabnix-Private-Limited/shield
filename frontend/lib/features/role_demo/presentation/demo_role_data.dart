@@ -12,6 +12,14 @@ class DemoMetric {
     required this.value,
     required this.note,
   });
+
+  factory DemoMetric.fromJson(Map<String, dynamic> json) {
+    return DemoMetric(
+      label: (json['label'] ?? '').toString(),
+      value: (json['value'] ?? '').toString(),
+      note: (json['note'] ?? '').toString(),
+    );
+  }
 }
 
 class DemoListItem {
@@ -26,6 +34,15 @@ class DemoListItem {
     required this.meta,
     required this.status,
   });
+
+  factory DemoListItem.fromJson(Map<String, dynamic> json) {
+    return DemoListItem(
+      title: (json['title'] ?? '').toString(),
+      subtitle: (json['subtitle'] ?? '').toString(),
+      meta: (json['meta'] ?? '').toString(),
+      status: (json['status'] ?? '').toString(),
+    );
+  }
 }
 
 class DemoSectionData {
@@ -48,6 +65,27 @@ class DemoSectionData {
     required this.recentItems,
     required this.insightItems,
   });
+
+  factory DemoSectionData.fromJson(Map<String, dynamic> json) {
+    return DemoSectionData(
+      key: (json['key'] ?? '').toString(),
+      title: (json['title'] ?? '').toString(),
+      summary: (json['summary'] ?? '').toString(),
+      actions: List<String>.from(json['actions'] ?? []),
+      metrics: (json['metrics'] as List? ?? [])
+          .map((m) => DemoMetric.fromJson(m as Map<String, dynamic>))
+          .toList(),
+      queueItems: (json['queueItems'] as List? ?? [])
+          .map((q) => DemoListItem.fromJson(q as Map<String, dynamic>))
+          .toList(),
+      recentItems: (json['recentItems'] as List? ?? [])
+          .map((r) => DemoListItem.fromJson(r as Map<String, dynamic>))
+          .toList(),
+      insightItems: (json['insightItems'] as List? ?? [])
+          .map((i) => DemoListItem.fromJson(i as Map<String, dynamic>))
+          .toList(),
+    );
+  }
 }
 
 class DemoRoleData {

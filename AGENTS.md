@@ -29,7 +29,7 @@
 - Logging: Winston
 
 ### Infrastructure
-- File Storage: MinIO
+- File Storage: Cloudflare R2 (S3 API)
 - Push Notifications: Firebase Cloud Messaging
 - Web Server: Nginx
 - Containerization: Docker

@@ -506,3 +506,136 @@ otifications_screen.dart with list view showing unread badge, time ago, type ico
 **Frontend Files (Modified)**:
 - frontend/lib/app/theme/app_theme.dart
 - log.md
+
+
+## 27. Neon PostgreSQL Database Integration & Development Mock Authentication
+**High-level description**: Integrated the live Neon PostgreSQL database instance, updated Prisma 7 client generator configurations, seeded the database tables, and implemented a request-based development mock auth switcher in NestJS.
+- Configured `DATABASE_URL` inside [backend/.env](file:///e:/K4NN4N/shield/backend/.env) to connect directly to the Neon PostgreSQL database.
+- Fixed Prisma 7 schema validation errors by removing the `url` property from `schema.prisma`'s datasource (moving it to `prisma.config.ts`) and utilizing standard `prisma-client-js` drivers.
+- Resolved database model constraints (unique keys on 1-to-1 mappings, User-Document relations, and jsonb typings).
+- Pushed tables to the database via `npx prisma db push`.
+- Installed and set up PostgreSQL driver adapters (`pg`, `@prisma/adapter-pg`) to initialize the client in [prisma.service.ts](file:///e:/K4NN4N/shield/backend/src/prisma/prisma.service.ts).
+- Wrote and executed [seed.ts](file:///e:/K4NN4N/shield/backend/prisma/seed.ts) to populate Neon DB with 8 roles, 5 departments, 2 membership types, 7 staff accounts, and a default customer account complete with wallet ledgers and credit accounts.
+- Implemented [mock-auth.guard.ts](file:///e:/K4NN4N/shield/backend/src/auth/mock-auth.guard.ts) to intercept incoming requests and inject verified mock customer/staff contexts depending on the `x-role` header.
+- Added [auth.controller.ts](file:///e:/K4NN4N/shield/backend/src/auth/auth.controller.ts) with BigInt serialization logic to expose the `/auth/profile` check endpoint.
+- Verified compiler stability and validated correct customer and staff role-switching behavior via curl REST calls.
+
+### Files Modified/Created
+**Backend Files (New)**:
+- backend/prisma/seed.ts
+- backend/src/prisma/prisma.service.ts
+- backend/src/prisma/prisma.module.ts
+- backend/src/auth/mock-auth.guard.ts
+- backend/src/auth/auth.module.ts
+- backend/src/auth/auth.controller.ts
+
+**Backend Files (Modified)**:
+- backend/.env
+- backend/package.json
+- backend/prisma.config.ts
+- backend/prisma/schema.prisma
+- backend/src/app.module.ts
+
+---
+2026-06-22 21:05:00 IST
+
+
+## 28. Configuration of Mock User Credentials
+**High-level description**: Configured default developer credentials (Zabnixprivatelimited@gmail.com / Zabnix@2025) across all backend database seed profiles, mock authentication guards, and frontend customer models.
+- Set the default email address for the seeded customer to `Zabnixprivatelimited@gmail.com` and initialized `passwordHash` values for staff users to `Zabnix@2025` in [seed.ts](file:///e:/K4NN4N/shield/backend/prisma/seed.ts).
+- Modified [mock-auth.guard.ts](file:///e:/K4NN4N/shield/backend/src/auth/mock-auth.guard.ts) to intercept resolved user/customer objects in active sessions and override the email property with `Zabnixprivatelimited@gmail.com`, ensuring consistent representation across all Views and API endpoints.
+- Updated the frontend dummy data structure in [customer.dart](file:///e:/K4NN4N/shield/frontend/lib/shared/models/customer.dart) to display `Zabnixprivatelimited@gmail.com` as the email address for all mock customers.
+- Re-ran the database seeding operation successfully against the Neon PostgreSQL database.
+
+### Files Modified/Created
+**Frontend Files (Modified)**:
+- frontend/lib/shared/models/customer.dart
+
+**Backend Files (Modified)**:
+- backend/prisma/seed.ts
+- backend/src/auth/mock-auth.guard.ts
+
+---
+2026-06-22 21:12:00 IST
+
+
+## 29. PostgreSQL UUID Compliance, Seeding, and Backend Build
+**High-level description**: Resolved Postgres UUID schema validation conflicts in the database seed, executed full seeding of Kerala-localized demo timeline data, and verified backend compilation and server execution.
+- Replaced mock identifier strings (e.g., `txn-00x`, `appt-00x`, `doc-00x`) with valid, structured UUIDs for the Postgres `@db.Uuid` columns.
+- Implemented logical key mapping within `seed.ts` to preserve references for dependent tables (like linking prescriptions/lab reports/treatments to documents and appointments).
+- Seeded a robust set of mock entities: 4 Appointments, 4 Documents (Prescriptions/Reports/Invoices), 4 Notifications, 1 Complaint (Resolved), 1 CRM Activity (Call Log), and 1 CRM Task (Pending).
+- Successfully executed the Prisma DB seed task (`npx prisma db seed`) against the remote Neon PostgreSQL instance.
+- Built the NestJS backend cleanly with `npm run build` and started the NestJS server.
+
+### Files Modified/Created
+**Backend Files (Modified)**:
+- [seed.ts](file:///e:/K4NN4N/shield/backend/prisma/seed.ts)
+
+---
+2026-06-22 21:15:00 IST
+
+
+## 30. Dynamic Membership Details & Real-Time Wallet Ledger Credits Calculation
+**High-level description**: Implemented dynamic frontend customer membership profile integration, mapping nested NestJS backend membership objects to local model tiers and resolving real-time earned/redeemed credits directly from wallet transactions.
+- Created `getCustomerMembership` inside [api_service.dart](file:///e:/K4NN4N/shield/frontend/lib/shared/services/api_service.dart) which queries `/customers/:id`, parses the customer's active membership, maps the code (`FOUNDING` vs `STANDARD`) to the correct `MembershipTier` enum, retrieves all associated wallet ledger transactions, and dynamically sums total credits earned and redeemed.
+- Refactored [membership_screen.dart](file:///e:/K4NN4N/shield/frontend/lib/features/membership/presentation/screens/membership_screen.dart) from a `StatelessWidget` to a `StatefulWidget`. Integrated a `FutureBuilder` pipeline to query Nihal Rahman's live membership details (customer ID `1`), rendering real-time validation dates, tier benefits, and available balances.
+- Implemented a pull-to-refresh action on the membership view using a `RefreshIndicator` linked directly to the asynchronous API reload future.
+- Verified that all changes compile successfully with `flutter analyze` returning zero warnings or errors.
+
+### Files Modified/Created
+**Frontend Files (Modified)**:
+- [api_service.dart](file:///e:/K4NN4N/shield/frontend/lib/shared/services/api_service.dart)
+- [membership_screen.dart](file:///e:/K4NN4N/shield/frontend/lib/features/membership/presentation/screens/membership_screen.dart)
+
+---
+2026-06-23 08:50:00 IST
+
+
+## 31. Workspace URL Renaming and Navigation Alignment
+**High-level description**: Renamed all routing paths and context navigation endpoints in GoRouter and pages to replace the word "demo" with "workspace" for a production-ready feel, ensuring all screens and dashboards pull real database-seeded records.
+- Updated [app_router.dart](file:///e:/K4NN4N/shield/frontend/lib/app/routes/app_router.dart) to define `/workspace/:role` and `/workspace/:role/:section` routes, replacing the previous `/demo/...` path declarations.
+- Refactored GoRouter navigation calls (`context.go`) in all frontend views, including [wallet_screen.dart](file:///e:/K4NN4N/shield/frontend/lib/features/wallet/presentation/screens/wallet_screen.dart), [transactions_screen.dart](file:///e:/K4NN4N/shield/frontend/lib/features/transactions/presentation/screens/transactions_screen.dart), [role_demo_shell.dart](file:///e:/K4NN4N/shield/frontend/lib/features/role_demo/presentation/screens/role_demo_shell.dart), [prescriptions_screen.dart](file:///e:/K4NN4N/shield/frontend/lib/features/prescriptions/presentation/screens/prescriptions_screen.dart), [notifications_screen.dart](file:///e:/K4NN4N/shield/frontend/lib/features/notifications/presentation/screens/notifications_screen.dart), [membership_screen.dart](file:///e:/K4NN4N/shield/frontend/lib/features/membership/presentation/screens/membership_screen.dart), [documents_screen.dart](file:///e:/K4NN4N/shield/frontend/lib/features/documents/presentation/screens/documents_screen.dart), [customer_dashboard.dart](file:///e:/K4NN4N/shield/frontend/lib/features/dashboard/presentation/screens/customer_dashboard.dart), [login_screen.dart](file:///e:/K4NN4N/shield/frontend/lib/features/authentication/presentation/screens/login_screen.dart), and [appointments_screen.dart](file:///e:/K4NN4N/shield/frontend/lib/features/appointments/presentation/screens/appointments_screen.dart) to use the new `/workspace` prefix.
+- Verified that all pages utilize live dynamic database-seeded data retrieved from the NestJS REST API endpoints.
+- Ran `flutter analyze` compilation checks which successfully passed with zero issues found.
+
+### Files Modified/Created
+**Frontend Files (Modified)**:
+- [app_router.dart](file:///e:/K4NN4N/shield/frontend/lib/app/routes/app_router.dart)
+- [wallet_screen.dart](file:///e:/K4NN4N/shield/frontend/lib/features/wallet/presentation/screens/wallet_screen.dart)
+- [transactions_screen.dart](file:///e:/K4NN4N/shield/frontend/lib/features/transactions/presentation/screens/transactions_screen.dart)
+- [role_demo_shell.dart](file:///e:/K4NN4N/shield/frontend/lib/features/role_demo/presentation/screens/role_demo_shell.dart)
+- [prescriptions_screen.dart](file:///e:/K4NN4N/shield/frontend/lib/features/prescriptions/presentation/screens/prescriptions_screen.dart)
+- [notifications_screen.dart](file:///e:/K4NN4N/shield/frontend/lib/features/notifications/presentation/screens/notifications_screen.dart)
+- [membership_screen.dart](file:///e:/K4NN4N/shield/frontend/lib/features/membership/presentation/screens/membership_screen.dart)
+- [documents_screen.dart](file:///e:/K4NN4N/shield/frontend/lib/features/documents/presentation/screens/documents_screen.dart)
+- [customer_dashboard.dart](file:///e:/K4NN4N/shield/frontend/lib/features/dashboard/presentation/screens/customer_dashboard.dart)
+- [login_screen.dart](file:///e:/K4NN4N/shield/frontend/lib/features/authentication/presentation/screens/login_screen.dart)
+- [appointments_screen.dart](file:///e:/K4NN4N/shield/frontend/lib/features/appointments/presentation/screens/appointments_screen.dart)
+
+---
+2026-06-23 08:55:00 IST
+
+
+## 32. Secure Login Screen Integration with NestJS Backend
+**High-level description**: Connected the frontend Login Screen to the real NestJS backend `/auth/login` endpoint, enabling dynamic authentication checks against Neon PostgreSQL customer and staff database records using unique mobile numbers.
+- Added a constructor and a `POST /auth/login` endpoint to `AuthController` in [auth.controller.ts](file:///e:/K4NN4N/shield/backend/src/auth/auth.controller.ts) which accepts mobile numbers and roles, validating them directly against the database and returning correct profile payloads.
+- Fixed TypeScript type constraints in [dashboard.service.ts](file:///e:/K4NN4N/shield/backend/src/dashboard/dashboard.service.ts) by adding null checks for nullable `appointmentDate` fields.
+- Registered the `login` endpoint in `ApiService` inside [api_service.dart](file:///e:/K4NN4N/shield/frontend/lib/shared/services/api_service.dart) to hit the backend route.
+- Refactored [login_screen.dart](file:///e:/K4NN4N/shield/frontend/lib/features/authentication/presentation/screens/login_screen.dart) to use this login service:
+  - Enabled mobile number length and numeric format validation on client-side.
+  - Linked "Send OTP" to invoke the backend `ApiService.login` call, verifying the database record exists before transitioning states.
+  - Passed `isLoading` states directly to `AppButton` widgets to show loading spinners during asynchronous requests.
+  - Removed outdated "demo" or "dummy" text labels from the login interface.
+- Verified that all NestJS and Flutter codebases compile cleanly and run without issues.
+
+### Files Modified/Created
+**Frontend Files (Modified)**:
+- [api_service.dart](file:///e:/K4NN4N/shield/frontend/lib/shared/services/api_service.dart)
+- [login_screen.dart](file:///e:/K4NN4N/shield/frontend/lib/features/authentication/presentation/screens/login_screen.dart)
+
+**Backend Files (Modified)**:
+- [auth.controller.ts](file:///e:/K4NN4N/shield/backend/src/auth/auth.controller.ts)
+- [dashboard.service.ts](file:///e:/K4NN4N/shield/backend/src/dashboard/dashboard.service.ts)
+
+---
+2026-06-23 11:00:00 IST

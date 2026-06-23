@@ -97,7 +97,7 @@ PostgreSQL
 
 Storage  
 \---------  
-MinIO
+Cloudflare R2 (S3 API)
 
 Notifications  
 \---------  

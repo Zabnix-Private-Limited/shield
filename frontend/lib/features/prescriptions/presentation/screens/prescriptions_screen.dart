@@ -3,18 +3,38 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_typography.dart';
 import '../../../../shared/models/document.dart';
+import '../../../../shared/models/shield_role.dart';
 import '../../../../shared/widgets/app_card.dart';
+import '../../../../shared/widgets/app_button.dart';
 import '../../../../shared/widgets/demo_support.dart';
+import '../../../../shared/services/api_service.dart';
 
-class PrescriptionsScreen extends StatelessWidget {
+class PrescriptionsScreen extends StatefulWidget {
   const PrescriptionsScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final prescriptions = dummyDocuments
-        .where((doc) => doc.type == DocumentType.prescription)
-        .toList();
+  State<PrescriptionsScreen> createState() => _PrescriptionsScreenState();
+}
 
+class _PrescriptionsScreenState extends State<PrescriptionsScreen> {
+  late Future<List<Document>> _prescriptionsFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPrescriptions();
+  }
+
+  void _loadPrescriptions() {
+    setState(() {
+      _prescriptionsFuture = ApiService.getDocuments(SHIELDRole.customer).then(
+        (docs) => docs.where((doc) => doc.type == DocumentType.prescription).toList(),
+      );
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('My Prescriptions'),
@@ -22,21 +42,57 @@ class PrescriptionsScreen extends StatelessWidget {
           IconButton(
             icon: const Icon(Icons.add),
             onPressed: () {
-              context.go('/demo/customer/prescriptions');
+              context.go('/workspace/customer/prescriptions');
             },
           ),
         ],
       ),
-      body: prescriptions.isEmpty
-          ? DemoEmptyState(
+      body: FutureBuilder<List<Document>>(
+        future: _prescriptionsFuture,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          if (snapshot.hasError) {
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.error_outline, size: 64, color: AppColors.error),
+                    const SizedBox(height: 16),
+                    Text('Failed to load prescriptions', style: AppTypography.h3),
+                    const SizedBox(height: 8),
+                    Text(snapshot.error.toString(), textAlign: TextAlign.center, style: AppTypography.body),
+                    const SizedBox(height: 16),
+                    AppButton(
+                      text: 'Retry',
+                      onPressed: _loadPrescriptions,
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }
+
+          final prescriptions = snapshot.data ?? [];
+
+          if (prescriptions.isEmpty) {
+            return DemoEmptyState(
               icon: Icons.medication_outlined,
               title: 'No prescriptions yet',
               description:
                   'Once prescriptions are uploaded or issued by clinics and pharmacies, they will appear in this list.',
-              actionText: 'Open Prescription Demo',
-              onAction: () => context.go('/demo/customer/prescriptions'),
-            )
-          : ListView.builder(
+              actionText: 'Open Prescriptions',
+              onAction: () => context.go('/workspace/customer/prescriptions'),
+            );
+          }
+
+          return RefreshIndicator(
+            onRefresh: () async => _loadPrescriptions(),
+            child: ListView.builder(
               padding: const EdgeInsets.all(16),
               itemCount: prescriptions.length,
               itemBuilder: (context, index) {
@@ -124,6 +180,9 @@ class PrescriptionsScreen extends StatelessWidget {
                 );
               },
             ),
+          );
+        },
+      ),
     );
   }
 
