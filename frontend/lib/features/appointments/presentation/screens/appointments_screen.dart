@@ -6,6 +6,7 @@ import '../../../../shared/models/appointment.dart';
 import '../../../../shared/models/shield_role.dart';
 import '../../../../shared/widgets/app_card.dart';
 import '../../../../shared/widgets/app_button.dart';
+import '../../../../shared/widgets/app_skeleton.dart';
 import '../../../../shared/widgets/portal_support.dart';
 import '../../../../shared/services/api_service.dart';
 
@@ -49,7 +50,12 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
         future: _appointmentsFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+            return const AppCustomerSectionSkeleton(
+              showHero: true,
+              showActionRow: true,
+              statCards: 2,
+              listItems: 4,
+            );
           }
 
           if (snapshot.hasError) {
@@ -59,16 +65,24 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(Icons.error_outline, size: 64, color: AppColors.error),
-                    const SizedBox(height: 16),
-                    Text('Failed to load appointments', style: AppTypography.h3),
-                    const SizedBox(height: 8),
-                    Text(snapshot.error.toString(), textAlign: TextAlign.center, style: AppTypography.body),
-                    const SizedBox(height: 16),
-                    AppButton(
-                      text: 'Retry',
-                      onPressed: _loadAppointments,
+                    const Icon(
+                      Icons.error_outline,
+                      size: 64,
+                      color: AppColors.error,
                     ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Failed to load appointments',
+                      style: AppTypography.h3,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      snapshot.error.toString(),
+                      textAlign: TextAlign.center,
+                      style: AppTypography.body,
+                    ),
+                    const SizedBox(height: 16),
+                    AppButton(text: 'Retry', onPressed: _loadAppointments),
                   ],
                 ),
               ),

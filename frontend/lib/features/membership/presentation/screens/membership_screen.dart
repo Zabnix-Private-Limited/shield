@@ -4,6 +4,7 @@ import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_typography.dart';
 import '../../../../shared/models/membership.dart';
 import '../../../../shared/widgets/app_card.dart';
+import '../../../../shared/widgets/app_skeleton.dart';
 import '../../../../shared/widgets/portal_support.dart';
 import '../../../../shared/services/api_service.dart';
 
@@ -45,8 +46,11 @@ class _MembershipScreenState extends State<MembershipScreen> {
         future: _membershipFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(
-              child: CircularProgressIndicator(),
+            return const AppCustomerSectionSkeleton(
+              showHero: true,
+              showActionRow: false,
+              statCards: 3,
+              listItems: 4,
             );
           } else if (snapshot.hasError) {
             return Center(
@@ -86,9 +90,7 @@ class _MembershipScreenState extends State<MembershipScreen> {
               ),
             );
           } else if (!snapshot.hasData) {
-            return const Center(
-              child: Text('No membership details found'),
-            );
+            return const Center(child: Text('No membership details found'));
           }
 
           final membership = snapshot.data!;
@@ -168,7 +170,9 @@ class _MembershipScreenState extends State<MembershipScreen> {
                                 Text(
                                   'Valid From',
                                   style: AppTypography.tiny.copyWith(
-                                    color: AppColors.white.withValues(alpha: 0.7),
+                                    color: AppColors.white.withValues(
+                                      alpha: 0.7,
+                                    ),
                                   ),
                                 ),
                                 Text(
@@ -186,7 +190,9 @@ class _MembershipScreenState extends State<MembershipScreen> {
                                 Text(
                                   'Valid Until',
                                   style: AppTypography.tiny.copyWith(
-                                    color: AppColors.white.withValues(alpha: 0.7),
+                                    color: AppColors.white.withValues(
+                                      alpha: 0.7,
+                                    ),
                                   ),
                                 ),
                                 Text(
@@ -219,7 +225,11 @@ class _MembershipScreenState extends State<MembershipScreen> {
                                 color: AppColors.shieldGreen,
                               ),
                             ),
-                            Container(width: 1, height: 40, color: AppColors.divider),
+                            Container(
+                              width: 1,
+                              height: 40,
+                              color: AppColors.divider,
+                            ),
                             Expanded(
                               child: _StatItem(
                                 label: 'Total Redeemed',
@@ -228,7 +238,11 @@ class _MembershipScreenState extends State<MembershipScreen> {
                                 color: AppColors.shieldBlue,
                               ),
                             ),
-                            Container(width: 1, height: 40, color: AppColors.divider),
+                            Container(
+                              width: 1,
+                              height: 40,
+                              color: AppColors.divider,
+                            ),
                             Expanded(
                               child: _StatItem(
                                 label: 'Available',
@@ -259,7 +273,9 @@ class _MembershipScreenState extends State<MembershipScreen> {
                             size: 20,
                           ),
                           const SizedBox(width: 12),
-                          Expanded(child: Text(benefit, style: AppTypography.body)),
+                          Expanded(
+                            child: Text(benefit, style: AppTypography.body),
+                          ),
                         ],
                       ),
                     );

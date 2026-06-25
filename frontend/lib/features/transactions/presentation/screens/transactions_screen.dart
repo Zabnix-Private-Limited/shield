@@ -5,6 +5,7 @@ import '../../../../app/theme/app_typography.dart';
 import '../../../../shared/models/wallet.dart';
 import '../../../../shared/widgets/app_card.dart';
 import '../../../../shared/widgets/app_button.dart';
+import '../../../../shared/widgets/app_skeleton.dart';
 import '../../../../shared/widgets/portal_support.dart';
 import '../../../../shared/services/api_service.dart';
 
@@ -43,7 +44,12 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
         future: Future.wait([_walletProfileFuture, _transactionsFuture]),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+            return const AppCustomerSectionSkeleton(
+              showHero: false,
+              showActionRow: false,
+              statCards: 0,
+              listItems: 6,
+            );
           }
 
           if (snapshot.hasError) {
@@ -53,16 +59,24 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(Icons.error_outline, size: 64, color: AppColors.error),
-                    const SizedBox(height: 16),
-                    Text('Failed to load transactions', style: AppTypography.h3),
-                    const SizedBox(height: 8),
-                    Text(snapshot.error.toString(), textAlign: TextAlign.center, style: AppTypography.body),
-                    const SizedBox(height: 16),
-                    AppButton(
-                      text: 'Retry',
-                      onPressed: _loadTransactions,
+                    const Icon(
+                      Icons.error_outline,
+                      size: 64,
+                      color: AppColors.error,
                     ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Failed to load transactions',
+                      style: AppTypography.h3,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      snapshot.error.toString(),
+                      textAlign: TextAlign.center,
+                      style: AppTypography.body,
+                    ),
+                    const SizedBox(height: 16),
+                    AppButton(text: 'Retry', onPressed: _loadTransactions),
                   ],
                 ),
               ),
@@ -87,7 +101,9 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
           final Map<String, double> postBalances = {};
           double runningBalance = 0.0;
           for (final t in chronologicalTxns) {
-            runningBalance += t.transactionType == 'CREDIT' ? t.amount : -t.amount;
+            runningBalance += t.transactionType == 'CREDIT'
+                ? t.amount
+                : -t.amount;
             postBalances[t.id] = runningBalance;
           }
 

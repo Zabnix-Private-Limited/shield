@@ -6,6 +6,7 @@ import '../../../../shared/models/document.dart';
 import '../../../../shared/models/shield_role.dart';
 import '../../../../shared/widgets/app_card.dart';
 import '../../../../shared/widgets/app_button.dart';
+import '../../../../shared/widgets/app_skeleton.dart';
 import '../../../../shared/widgets/portal_support.dart';
 import '../../../../shared/services/api_service.dart';
 
@@ -28,7 +29,8 @@ class _PrescriptionsScreenState extends State<PrescriptionsScreen> {
   void _loadPrescriptions() {
     setState(() {
       _prescriptionsFuture = ApiService.getDocuments(SHIELDRole.customer).then(
-        (docs) => docs.where((doc) => doc.type == DocumentType.prescription).toList(),
+        (docs) =>
+            docs.where((doc) => doc.type == DocumentType.prescription).toList(),
       );
     });
   }
@@ -51,7 +53,12 @@ class _PrescriptionsScreenState extends State<PrescriptionsScreen> {
         future: _prescriptionsFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+            return const AppCustomerSectionSkeleton(
+              showHero: false,
+              showActionRow: true,
+              statCards: 0,
+              listItems: 5,
+            );
           }
 
           if (snapshot.hasError) {
@@ -61,16 +68,24 @@ class _PrescriptionsScreenState extends State<PrescriptionsScreen> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(Icons.error_outline, size: 64, color: AppColors.error),
-                    const SizedBox(height: 16),
-                    Text('Failed to load prescriptions', style: AppTypography.h3),
-                    const SizedBox(height: 8),
-                    Text(snapshot.error.toString(), textAlign: TextAlign.center, style: AppTypography.body),
-                    const SizedBox(height: 16),
-                    AppButton(
-                      text: 'Retry',
-                      onPressed: _loadPrescriptions,
+                    const Icon(
+                      Icons.error_outline,
+                      size: 64,
+                      color: AppColors.error,
                     ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Failed to load prescriptions',
+                      style: AppTypography.h3,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      snapshot.error.toString(),
+                      textAlign: TextAlign.center,
+                      style: AppTypography.body,
+                    ),
+                    const SizedBox(height: 16),
+                    AppButton(text: 'Retry', onPressed: _loadPrescriptions),
                   ],
                 ),
               ),

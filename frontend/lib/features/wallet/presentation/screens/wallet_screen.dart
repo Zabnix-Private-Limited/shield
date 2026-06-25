@@ -6,6 +6,7 @@ import '../../../../shared/models/wallet.dart';
 import '../../../../shared/widgets/app_card.dart';
 import '../../../../shared/widgets/app_button.dart';
 import '../../../../shared/widgets/app_page_frame.dart';
+import '../../../../shared/widgets/app_skeleton.dart';
 import '../../../../shared/widgets/portal_support.dart';
 import '../../../../shared/services/api_service.dart';
 
@@ -50,9 +51,7 @@ class _WalletScreenState extends State<WalletScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
         decoration: BoxDecoration(
-          color: isSelected
-              ? AppColors.shieldBlue
-              : AppColors.lightGray,
+          color: isSelected ? AppColors.shieldBlue : AppColors.lightGray,
           borderRadius: BorderRadius.circular(20),
         ),
         child: Text(
@@ -74,7 +73,12 @@ class _WalletScreenState extends State<WalletScreen> {
         future: Future.wait([_walletProfileFuture, _transactionsFuture]),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+            return const AppCustomerSectionSkeleton(
+              showHero: true,
+              showActionRow: true,
+              statCards: 4,
+              listItems: 5,
+            );
           }
 
           if (snapshot.hasError) {
@@ -84,16 +88,21 @@ class _WalletScreenState extends State<WalletScreen> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(Icons.error_outline, size: 64, color: AppColors.error),
+                    const Icon(
+                      Icons.error_outline,
+                      size: 64,
+                      color: AppColors.error,
+                    ),
                     const SizedBox(height: 16),
                     Text('Failed to load wallet', style: AppTypography.h3),
                     const SizedBox(height: 8),
-                    Text(snapshot.error.toString(), textAlign: TextAlign.center, style: AppTypography.body),
-                    const SizedBox(height: 16),
-                    AppButton(
-                      text: 'Retry',
-                      onPressed: _loadWalletData,
+                    Text(
+                      snapshot.error.toString(),
+                      textAlign: TextAlign.center,
+                      style: AppTypography.body,
                     ),
+                    const SizedBox(height: 16),
+                    AppButton(text: 'Retry', onPressed: _loadWalletData),
                   ],
                 ),
               ),
@@ -129,10 +138,12 @@ class _WalletScreenState extends State<WalletScreen> {
 
           final filteredTxns = txns.where((txn) {
             final matchesLedger =
-                _selectedFilter == 'ALL' || txn.subLedgerType == _selectedFilter;
+                _selectedFilter == 'ALL' ||
+                txn.subLedgerType == _selectedFilter;
             final matchesType =
                 _selectedType == 'ALL' || txn.transactionType == _selectedType;
-            final matchesProvider = _providerQuery.trim().isEmpty ||
+            final matchesProvider =
+                _providerQuery.trim().isEmpty ||
                 (txn.remarks ?? '').toLowerCase().contains(
                   _providerQuery.trim().toLowerCase(),
                 );
@@ -158,9 +169,14 @@ class _WalletScreenState extends State<WalletScreen> {
                             children: [
                               Text(
                                 'SHIELD Wallet Account',
-                                style: AppTypography.h4.copyWith(color: AppColors.shieldNavy),
+                                style: AppTypography.h4.copyWith(
+                                  color: AppColors.shieldNavy,
+                                ),
                               ),
-                              const Icon(Icons.account_balance_wallet_outlined, color: AppColors.shieldBlue),
+                              const Icon(
+                                Icons.account_balance_wallet_outlined,
+                                color: AppColors.shieldBlue,
+                              ),
                             ],
                           ),
                           const Divider(height: 32),
@@ -188,7 +204,9 @@ class _WalletScreenState extends State<WalletScreen> {
                                     ),
                                     Text(
                                       'Recharged funds',
-                                      style: AppTypography.tiny.copyWith(color: AppColors.gray),
+                                      style: AppTypography.tiny.copyWith(
+                                        color: AppColors.gray,
+                                      ),
                                     ),
                                   ],
                                 ),
@@ -221,7 +239,9 @@ class _WalletScreenState extends State<WalletScreen> {
                                     ),
                                     Text(
                                       'Promotional rewards',
-                                      style: AppTypography.tiny.copyWith(color: AppColors.gray),
+                                      style: AppTypography.tiny.copyWith(
+                                        color: AppColors.gray,
+                                      ),
                                     ),
                                   ],
                                 ),
@@ -291,13 +311,17 @@ class _WalletScreenState extends State<WalletScreen> {
                         ),
                         const SizedBox(height: 12),
                         TextField(
-                          onChanged: (value) => setState(() => _providerQuery = value),
+                          onChanged: (value) =>
+                              setState(() => _providerQuery = value),
                           decoration: InputDecoration(
                             hintText: 'Filter by service provider or remarks',
                             prefixIcon: const Icon(Icons.search),
                             filled: true,
                             fillColor: AppColors.lightGray,
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 14,
+                              vertical: 12,
+                            ),
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(14),
                               borderSide: BorderSide.none,
@@ -334,7 +358,9 @@ class _WalletScreenState extends State<WalletScreen> {
                                 height: 48,
                                 decoration: BoxDecoration(
                                   color: txn.transactionType == 'CREDIT'
-                                      ? AppColors.shieldGreen.withValues(alpha: 0.1)
+                                      ? AppColors.shieldGreen.withValues(
+                                          alpha: 0.1,
+                                        )
                                       : AppColors.error.withValues(alpha: 0.1),
                                   borderRadius: BorderRadius.circular(12),
                                 ),
@@ -370,12 +396,19 @@ class _WalletScreenState extends State<WalletScreen> {
                                         ),
                                         const SizedBox(width: 8),
                                         Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 6,
+                                            vertical: 2,
+                                          ),
                                           decoration: BoxDecoration(
                                             color: txn.subLedgerType == 'CASH'
-                                                ? AppColors.shieldNavy.withValues(alpha: 0.08)
-                                                : AppColors.shieldBlue.withValues(alpha: 0.08),
-                                            borderRadius: BorderRadius.circular(4),
+                                                ? AppColors.shieldNavy
+                                                      .withValues(alpha: 0.08)
+                                                : AppColors.shieldBlue
+                                                      .withValues(alpha: 0.08),
+                                            borderRadius: BorderRadius.circular(
+                                              4,
+                                            ),
                                           ),
                                           child: Text(
                                             txn.subLedgerType,

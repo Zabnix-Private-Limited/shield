@@ -6,6 +6,7 @@ import '../../../../shared/models/notification.dart';
 import '../../../../shared/models/shield_role.dart';
 import '../../../../shared/widgets/app_card.dart';
 import '../../../../shared/widgets/app_button.dart';
+import '../../../../shared/widgets/app_skeleton.dart';
 import '../../../../shared/widgets/portal_support.dart';
 import '../../../../shared/services/api_service.dart';
 
@@ -52,7 +53,12 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         future: _notificationsFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+            return const AppCustomerSectionSkeleton(
+              showHero: true,
+              showActionRow: true,
+              statCards: 3,
+              listItems: 5,
+            );
           }
 
           if (snapshot.hasError) {
@@ -62,16 +68,24 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(Icons.error_outline, size: 64, color: AppColors.error),
-                    const SizedBox(height: 16),
-                    Text('Failed to load notifications', style: AppTypography.h3),
-                    const SizedBox(height: 8),
-                    Text(snapshot.error.toString(), textAlign: TextAlign.center, style: AppTypography.body),
-                    const SizedBox(height: 16),
-                    AppButton(
-                      text: 'Retry',
-                      onPressed: _loadNotifications,
+                    const Icon(
+                      Icons.error_outline,
+                      size: 64,
+                      color: AppColors.error,
                     ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Failed to load notifications',
+                      style: AppTypography.h3,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      snapshot.error.toString(),
+                      textAlign: TextAlign.center,
+                      style: AppTypography.body,
+                    ),
+                    const SizedBox(height: 16),
+                    AppButton(text: 'Retry', onPressed: _loadNotifications),
                   ],
                 ),
               ),

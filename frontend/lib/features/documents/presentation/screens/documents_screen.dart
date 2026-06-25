@@ -5,6 +5,7 @@ import '../../../../shared/models/document.dart';
 import '../../../../shared/models/shield_role.dart';
 import '../../../../shared/widgets/app_card.dart';
 import '../../../../shared/widgets/app_button.dart';
+import '../../../../shared/widgets/app_skeleton.dart';
 import '../../../../shared/widgets/portal_support.dart';
 import '../../../../shared/services/api_service.dart';
 import 'package:go_router/go_router.dart';
@@ -52,7 +53,12 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
         future: _documentsFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+            return const AppCustomerSectionSkeleton(
+              showHero: false,
+              showActionRow: true,
+              statCards: 0,
+              listItems: 6,
+            );
           }
 
           if (snapshot.hasError) {
@@ -62,16 +68,21 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(Icons.error_outline, size: 64, color: AppColors.error),
+                    const Icon(
+                      Icons.error_outline,
+                      size: 64,
+                      color: AppColors.error,
+                    ),
                     const SizedBox(height: 16),
                     Text('Failed to load documents', style: AppTypography.h3),
                     const SizedBox(height: 8),
-                    Text(snapshot.error.toString(), textAlign: TextAlign.center, style: AppTypography.body),
-                    const SizedBox(height: 16),
-                    AppButton(
-                      text: 'Retry',
-                      onPressed: _loadDocuments,
+                    Text(
+                      snapshot.error.toString(),
+                      textAlign: TextAlign.center,
+                      style: AppTypography.body,
                     ),
+                    const SizedBox(height: 16),
+                    AppButton(text: 'Retry', onPressed: _loadDocuments),
                   ],
                 ),
               ),

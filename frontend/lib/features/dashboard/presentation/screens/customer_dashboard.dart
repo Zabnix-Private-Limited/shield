@@ -8,6 +8,7 @@ import '../../../../shared/widgets/app_card.dart';
 import '../../../../shared/widgets/app_button.dart';
 import '../../../../shared/widgets/app_page_frame.dart';
 import '../../../../shared/widgets/app_responsive.dart';
+import '../../../../shared/widgets/app_skeleton.dart';
 import '../../../../shared/widgets/portal_support.dart';
 import '../../../../shared/services/api_service.dart';
 
@@ -55,10 +56,19 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
         ],
       ),
       body: FutureBuilder<List<dynamic>>(
-        future: Future.wait([_customerFuture, _walletProfileFuture, _transactionsFuture]),
+        future: Future.wait([
+          _customerFuture,
+          _walletProfileFuture,
+          _transactionsFuture,
+        ]),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+            return const AppCustomerSectionSkeleton(
+              showHero: true,
+              showActionRow: true,
+              statCards: 2,
+              listItems: 5,
+            );
           }
 
           if (snapshot.hasError) {
@@ -68,16 +78,21 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(Icons.error_outline, size: 64, color: AppColors.error),
+                    const Icon(
+                      Icons.error_outline,
+                      size: 64,
+                      color: AppColors.error,
+                    ),
                     const SizedBox(height: 16),
                     Text('Failed to load dashboard', style: AppTypography.h3),
                     const SizedBox(height: 8),
-                    Text(snapshot.error.toString(), textAlign: TextAlign.center, style: AppTypography.body),
-                    const SizedBox(height: 16),
-                    AppButton(
-                      text: 'Retry',
-                      onPressed: _loadDashboardData,
+                    Text(
+                      snapshot.error.toString(),
+                      textAlign: TextAlign.center,
+                      style: AppTypography.body,
                     ),
+                    const SizedBox(height: 16),
+                    AppButton(text: 'Retry', onPressed: _loadDashboardData),
                   ],
                 ),
               ),
@@ -88,17 +103,30 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
           final walletProfile = snapshot.data![1] as Map<String, dynamic>;
           final txns = snapshot.data![2] as List<WalletTransaction>;
 
-          final balance = double.tryParse(walletProfile['balance']?.toString() ?? '0') ?? 0.0;
+          final balance =
+              double.tryParse(walletProfile['balance']?.toString() ?? '0') ??
+              0.0;
           final pointsBalance =
-              double.tryParse(walletProfile['pointsBalance']?.toString() ?? '0') ??
+              double.tryParse(
+                walletProfile['pointsBalance']?.toString() ?? '0',
+              ) ??
               0.0;
           final upcomingCount = txns.isEmpty
               ? 0
               : txns.where((txn) => txn.transactionType == 'DEBIT').length;
           final recommendedServices = [
-            {'name': 'Pharmacy Reorder', 'subtitle': 'Frequently purchased medicines ready'},
-            {'name': 'Lab Follow-up', 'subtitle': 'HbA1c and CBC packages available'},
-            {'name': 'Dietitian Plan', 'subtitle': 'Nutrition programs with loyalty rewards'},
+            {
+              'name': 'Pharmacy Reorder',
+              'subtitle': 'Frequently purchased medicines ready',
+            },
+            {
+              'name': 'Lab Follow-up',
+              'subtitle': 'HbA1c and CBC packages available',
+            },
+            {
+              'name': 'Dietitian Plan',
+              'subtitle': 'Nutrition programs with loyalty rewards',
+            },
           ];
 
           return RefreshIndicator(
@@ -110,11 +138,16 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Hello, ${customer.firstName}!', style: AppTypography.h3),
+                    Text(
+                      'Hello, ${customer.firstName}!',
+                      style: AppTypography.h3,
+                    ),
                     const SizedBox(height: 4),
                     Text(
                       'Welcome back',
-                      style: AppTypography.small.copyWith(color: AppColors.gray),
+                      style: AppTypography.small.copyWith(
+                        color: AppColors.gray,
+                      ),
                     ),
                     const SizedBox(height: 18),
                     AppCard(
@@ -128,13 +161,23 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
                               Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text('Membership Card', style: AppTypography.small.copyWith(color: AppColors.gray)),
+                                  Text(
+                                    'Membership Card',
+                                    style: AppTypography.small.copyWith(
+                                      color: AppColors.gray,
+                                    ),
+                                  ),
                                   const SizedBox(height: 4),
-                                  Text(customer.customerCode, style: AppTypography.h4),
+                                  Text(
+                                    customer.customerCode,
+                                    style: AppTypography.h4,
+                                  ),
                                   const SizedBox(height: 2),
                                   Text(
                                     'Founding Member • Perinthalmanna cluster',
-                                    style: AppTypography.tiny.copyWith(color: AppColors.gray),
+                                    style: AppTypography.tiny.copyWith(
+                                      color: AppColors.gray,
+                                    ),
                                   ),
                                 ],
                               ),
@@ -222,226 +265,247 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
                         ],
                       ),
                     ),
-              const SizedBox(height: 20),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text('Upcoming & Highlights', style: AppTypography.h4),
-                  Text(
-                    '$upcomingCount active actions',
-                    style: AppTypography.tiny.copyWith(color: AppColors.gray),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              AppCard(
-                padding: const EdgeInsets.all(14),
-                child: Column(
-                  children: [
-                    _MiniInfoRow(
-                      icon: Icons.event_available,
-                      title: 'Upcoming Appointments',
-                      subtitle: 'Track booked visits and upcoming care reminders.',
-                      trailing: 'Open',
-                      onTap: () => context.go('/appointments'),
+                    const SizedBox(height: 20),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text('Upcoming & Highlights', style: AppTypography.h4),
+                        Text(
+                          '$upcomingCount active actions',
+                          style: AppTypography.tiny.copyWith(
+                            color: AppColors.gray,
+                          ),
+                        ),
+                      ],
                     ),
-                    const Divider(height: 20),
-                    _MiniInfoRow(
-                      icon: Icons.notifications_active_outlined,
-                      title: 'Notifications',
-                      subtitle: 'Wallet credits, reports, and appointment alerts.',
-                      trailing: 'View',
-                      onTap: () => context.go('/notifications'),
+                    const SizedBox(height: 12),
+                    AppCard(
+                      padding: const EdgeInsets.all(14),
+                      child: Column(
+                        children: [
+                          _MiniInfoRow(
+                            icon: Icons.event_available,
+                            title: 'Upcoming Appointments',
+                            subtitle:
+                                'Track booked visits and upcoming care reminders.',
+                            trailing: 'Open',
+                            onTap: () => context.go('/appointments'),
+                          ),
+                          const Divider(height: 20),
+                          _MiniInfoRow(
+                            icon: Icons.notifications_active_outlined,
+                            title: 'Notifications',
+                            subtitle:
+                                'Wallet credits, reports, and appointment alerts.',
+                            trailing: 'View',
+                            onTap: () => context.go('/notifications'),
+                          ),
+                        ],
+                      ),
                     ),
+                    const SizedBox(height: 24),
+                    Text('Recommended Services', style: AppTypography.h4),
+                    const SizedBox(height: 12),
+                    ...recommendedServices.map((service) {
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 10),
+                        child: AppCard(
+                          onTap: () => context.go('/services'),
+                          padding: const EdgeInsets.all(14),
+                          child: Row(
+                            children: [
+                              const Icon(
+                                Icons.local_hospital_outlined,
+                                color: AppColors.shieldBlue,
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      service['name']!,
+                                      style: AppTypography.body.copyWith(
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                    Text(
+                                      service['subtitle']!,
+                                      style: AppTypography.tiny.copyWith(
+                                        color: AppColors.gray,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const Icon(Icons.chevron_right),
+                            ],
+                          ),
+                        ),
+                      );
+                    }),
+                    const SizedBox(height: 10),
+                    Text('Quick Actions', style: AppTypography.h4),
+                    const SizedBox(height: 12),
+                    GridView.count(
+                      crossAxisCount: AppResponsive.adaptiveGridCount(
+                        context,
+                        phoneCount: 2,
+                        tabletCount: 3,
+                        desktopCount: 3,
+                        wideCount: 6,
+                      ),
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      crossAxisSpacing: 12,
+                      mainAxisSpacing: 12,
+                      childAspectRatio: AppResponsive.isPhone(context)
+                          ? 1.45
+                          : 1.35,
+                      children: [
+                        QuickActionCard(
+                          icon: Icons.qr_code_scanner,
+                          label: 'QR Card',
+                          onTap: () {
+                            context.go('/membership');
+                          },
+                        ),
+                        QuickActionCard(
+                          icon: Icons.receipt_long,
+                          label: 'Recharge',
+                          onTap: () {
+                            context.go('/portal/customer/recharge');
+                          },
+                        ),
+                        QuickActionCard(
+                          icon: Icons.event_available,
+                          label: 'Appointments',
+                          onTap: () {
+                            context.go('/appointments');
+                          },
+                        ),
+                        QuickActionCard(
+                          icon: Icons.description,
+                          label: 'Documents',
+                          onTap: () {
+                            context.go('/documents');
+                          },
+                        ),
+                        QuickActionCard(
+                          icon: Icons.medical_services,
+                          label: 'Prescriptions',
+                          onTap: () {
+                            context.go('/prescriptions');
+                          },
+                        ),
+                        QuickActionCard(
+                          icon: Icons.grid_view_rounded,
+                          label: 'Services',
+                          onTap: () {
+                            context.go('/services');
+                          },
+                        ),
+                        QuickActionCard(
+                          icon: Icons.support_agent,
+                          label: 'Support',
+                          onTap: () {
+                            showPortalSnackBar(
+                              context,
+                              'Support is available in the customer settings and SHIELD support portal pages.',
+                            );
+                          },
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text('Recent Transactions', style: AppTypography.h5),
+                        TextButton(
+                          onPressed: () {
+                            context.go('/transactions');
+                          },
+                          child: Text(
+                            'View All',
+                            style: AppTypography.small.copyWith(
+                              color: AppColors.shieldBlue,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    ...txns.take(3).map((txn) {
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: AppCard(
+                          padding: const EdgeInsets.all(12),
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 40,
+                                height: 40,
+                                decoration: BoxDecoration(
+                                  color: txn.transactionType == 'CREDIT'
+                                      ? AppColors.shieldGreen.withValues(
+                                          alpha: 0.1,
+                                        )
+                                      : AppColors.error.withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Icon(
+                                  txn.transactionType == 'CREDIT'
+                                      ? Icons.add
+                                      : Icons.remove,
+                                  color: txn.transactionType == 'CREDIT'
+                                      ? AppColors.shieldGreen
+                                      : AppColors.error,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      txn.remarks ?? 'Transaction',
+                                      style: AppTypography.body.copyWith(
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      '${txn.createdAt.day}/${txn.createdAt.month}/${txn.createdAt.year}',
+                                      style: AppTypography.tiny.copyWith(
+                                        color: AppColors.gray,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Text(
+                                '${txn.transactionType == 'CREDIT' ? '+' : '-'}₹${txn.amount.toStringAsFixed(2)}',
+                                style: AppTypography.body.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                  color: txn.transactionType == 'CREDIT'
+                                      ? AppColors.shieldGreen
+                                      : AppColors.error,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    }),
                   ],
                 ),
               ),
-              const SizedBox(height: 24),
-              Text('Recommended Services', style: AppTypography.h4),
-              const SizedBox(height: 12),
-              ...recommendedServices.map((service) {
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 10),
-                  child: AppCard(
-                    onTap: () => context.go('/services'),
-                    padding: const EdgeInsets.all(14),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.local_hospital_outlined, color: AppColors.shieldBlue),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(service['name']!, style: AppTypography.body.copyWith(fontWeight: FontWeight.w700)),
-                              Text(service['subtitle']!, style: AppTypography.tiny.copyWith(color: AppColors.gray)),
-                            ],
-                          ),
-                        ),
-                        const Icon(Icons.chevron_right),
-                      ],
-                    ),
-                  ),
-                );
-              }),
-              const SizedBox(height: 10),
-              Text('Quick Actions', style: AppTypography.h4),
-              const SizedBox(height: 12),
-              GridView.count(
-                crossAxisCount: AppResponsive.adaptiveGridCount(
-                  context,
-                  phoneCount: 2,
-                  tabletCount: 3,
-                  desktopCount: 3,
-                  wideCount: 6,
-                ),
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                crossAxisSpacing: 12,
-                mainAxisSpacing: 12,
-                childAspectRatio: AppResponsive.isPhone(context) ? 1.45 : 1.35,
-                children: [
-                  QuickActionCard(
-                    icon: Icons.qr_code_scanner,
-                    label: 'QR Card',
-                    onTap: () {
-                      context.go('/membership');
-                    },
-                  ),
-                  QuickActionCard(
-                    icon: Icons.receipt_long,
-                    label: 'Recharge',
-                    onTap: () {
-                      context.go('/portal/customer/recharge');
-                    },
-                  ),
-                  QuickActionCard(
-                    icon: Icons.event_available,
-                    label: 'Appointments',
-                    onTap: () {
-                      context.go('/appointments');
-                    },
-                  ),
-                  QuickActionCard(
-                    icon: Icons.description,
-                    label: 'Documents',
-                    onTap: () {
-                      context.go('/documents');
-                    },
-                  ),
-                  QuickActionCard(
-                    icon: Icons.medical_services,
-                    label: 'Prescriptions',
-                    onTap: () {
-                      context.go('/prescriptions');
-                    },
-                  ),
-                  QuickActionCard(
-                    icon: Icons.grid_view_rounded,
-                    label: 'Services',
-                    onTap: () {
-                      context.go('/services');
-                    },
-                  ),
-                  QuickActionCard(
-                    icon: Icons.support_agent,
-                    label: 'Support',
-                    onTap: () {
-                      showPortalSnackBar(
-                        context,
-                        'Support is available in the customer settings and SHIELD support portal pages.',
-                      );
-                    },
-                  ),
-                ],
-              ),
-              const SizedBox(height: 20),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text('Recent Transactions', style: AppTypography.h5),
-                  TextButton(
-                    onPressed: () {
-                      context.go('/transactions');
-                    },
-                    child: Text(
-                      'View All',
-                      style: AppTypography.small.copyWith(
-                        color: AppColors.shieldBlue,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              ...txns.take(3).map((txn) {
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: AppCard(
-                    padding: const EdgeInsets.all(12),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 40,
-                          height: 40,
-                          decoration: BoxDecoration(
-                            color: txn.transactionType == 'CREDIT'
-                                ? AppColors.shieldGreen.withValues(alpha: 0.1)
-                                : AppColors.error.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Icon(
-                            txn.transactionType == 'CREDIT'
-                                ? Icons.add
-                                : Icons.remove,
-                            color: txn.transactionType == 'CREDIT'
-                                ? AppColors.shieldGreen
-                                : AppColors.error,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                txn.remarks ?? 'Transaction',
-                                style: AppTypography.body.copyWith(
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                '${txn.createdAt.day}/${txn.createdAt.month}/${txn.createdAt.year}',
-                                style: AppTypography.tiny.copyWith(
-                                  color: AppColors.gray,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        Text(
-                          '${txn.transactionType == 'CREDIT' ? '+' : '-'}₹${txn.amount.toStringAsFixed(2)}',
-                          style: AppTypography.body.copyWith(
-                            fontWeight: FontWeight.w600,
-                            color: txn.transactionType == 'CREDIT'
-                                ? AppColors.shieldGreen
-                                : AppColors.error,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              }),
-            ],
-          ),
-        ),
+            ),
+          );
+        },
       ),
     );
-  },
-),
-);
   }
 }
 
@@ -472,12 +536,26 @@ class _MiniInfoRow extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: AppTypography.body.copyWith(fontWeight: FontWeight.w700)),
-                Text(subtitle, style: AppTypography.tiny.copyWith(color: AppColors.gray)),
+                Text(
+                  title,
+                  style: AppTypography.body.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                Text(
+                  subtitle,
+                  style: AppTypography.tiny.copyWith(color: AppColors.gray),
+                ),
               ],
             ),
           ),
-          Text(trailing, style: AppTypography.small.copyWith(color: AppColors.shieldBlue, fontWeight: FontWeight.w700)),
+          Text(
+            trailing,
+            style: AppTypography.small.copyWith(
+              color: AppColors.shieldBlue,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
         ],
       ),
     );

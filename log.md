@@ -996,3 +996,135 @@ otifications_screen.dart with list view showing unread badge, time ago, type ico
 - `flutter analyze`
 - `flutter test test/widget_test.dart test/app_responsive_test.dart`
 
+## 40. Customer Portal Mobile Polish: Dedicated Appointments and Notifications Views, Plus Portal-Only Customer Actions
+**High-level description**: Continued the customer-portal cleanup by replacing the remaining generic customer appointment and notification screens with compact mobile-first views, while also removing the last customer-facing action shortcuts that still hopped through legacy non-portal routes.
+- Added dedicated customer-specific rendering for ppointments and 
+otifications inside rontend/lib/features/portal/presentation/screens/portal_shell.dart:
+  - Before this pass, those two customer sections still fell back to the generic shared portal composition that was designed more like a role dashboard than a contained customer app screen.
+  - Added _CustomerAppointmentsView with a compact next-visit summary, count badges, action pills, and dense timeline cards for upcoming and recent visit activity.
+  - Added _CustomerNotificationsView with a focused unread summary, compact metric badges, in-app actions, and mobile-friendly inbox/history cards.
+  - This keeps those routes visually aligned with the already-polished customer dashboard, wallet, membership, services, and settings views.
+- Removed remaining customer action handlers that relied on old short-path redirects instead of direct portal destinations:
+  - Updated dashboard hero actions to navigate directly to /portal/customer/membership, /portal/customer/appointments, and /portal/customer/wallet.
+  - Updated customer notification and prescription actions to route directly into /portal/customer/settings and /portal/customer/services.
+  - Updated customer settings profile access to route directly into /portal/customer/profile.
+  - Replaced the wallet statement shortcut redirect with an in-flow details sheet so the interaction stays inside the customer wallet experience without reviving old standalone route behavior.
+- Added compact helper primitives to support the new mobile customer screens:
+  - Introduced lightweight metric badges and reusable compact timeline tiles in portal_shell.dart.
+  - These helpers intentionally preserve the dense, app-like card rhythm requested by the user instead of reusing the roomier shared portal list blocks.
+- Why this approach was chosen:
+  - The customer app already had dedicated views for several sections, so appointments and notifications were the clearest remaining mismatch against the mobile-only product direction.
+  - Fixing the last direct customer action shortcuts at the same time closes the routing consistency gap and reduces the chance of accidentally normalizing old non-portal customer flows again.
+- Verification completed after the customer portal consistency pass:
+  - lutter analyze returned No issues found!.
+  - lutter test test/widget_test.dart test/app_responsive_test.dart passed.
+  - lutter build web succeeded and produced uild/web.
+  - Existing Wasm dry-run warnings from lutter_secure_storage_web remained informational during the web build and were not introduced by this UI/routing patch.
+
+### Files Modified/Created
+**Frontend Files (Modified)**:
+- [portal_shell.dart](file:///e:/K4NN4N/shield/frontend/lib/features/portal/presentation/screens/portal_shell.dart)
+
+**Verification Commands**:
+- lutter analyze
+- lutter test test/widget_test.dart test/app_responsive_test.dart
+- lutter build web
+---
+2026-06-25 16:06:35 IST## 41. Correction Note for Entry 40 Log Formatting
+**High-level description**: Entry 40 was appended successfully but shell escaping corrupted a few visible characters in the prose; this correction note preserves append-only log discipline while restating the intended scope in clean text.
+- Corrected human-readable summary for the prior portal cleanup entry:
+  - Customer `appointments` and `notifications` now render through dedicated compact mobile-first views in `frontend/lib/features/portal/presentation/screens/portal_shell.dart`.
+  - Customer hero and action flows now navigate directly to `/portal/customer/...` destinations for membership, appointments, wallet, services, settings, and profile where applicable.
+  - The wallet statement shortcut now stays inside the customer wallet flow through a details sheet instead of relying on a legacy standalone redirect.
+- Why this correction was appended instead of editing the prior lines:
+  - `log.md` is append-only by project rule.
+  - The code change itself is correct and verified; only the log prose formatting was affected by shell escaping during append.
+- Verification state for the code patch remains unchanged:
+  - `flutter analyze` returned `No issues found!`.
+  - `flutter test test/widget_test.dart test/app_responsive_test.dart` passed.
+  - `flutter build web` succeeded and produced `build/web`.
+
+### Files Modified/Created
+**Frontend Files (Modified)**:
+- [portal_shell.dart](file:///e:/K4NN4N/shield/frontend/lib/features/portal/presentation/screens/portal_shell.dart)
+- [log.md](file:///e:/K4NN4N/shield/log.md)
+
+**Verification Commands**:
+- `flutter analyze`
+- `flutter test test/widget_test.dart test/app_responsive_test.dart`
+- `flutter build web`
+---
+2026-06-25 16:06:35 IST
+## 42. Clean Log Boundary for Customer Portal Consistency Pass
+**High-level description**: Added a clean append-only boundary after the previous timestamp join so the latest customer portal cleanup is restated in a properly separated log section.
+- Confirmed scope of the verified UI pass:
+  - Customer `appointments` and `notifications` have dedicated compact portal views.
+  - Customer actions now stay on explicit `/portal/customer/...` routes where applicable.
+  - The wallet statement interaction remains inside the customer wallet flow.
+- This entry exists only to restore readable log structure without rewriting prior content.
+
+### Files Modified/Created
+**Frontend Files (Modified)**:
+- [portal_shell.dart](file:///e:/K4NN4N/shield/frontend/lib/features/portal/presentation/screens/portal_shell.dart)
+- [log.md](file:///e:/K4NN4N/shield/log.md)
+
+**Verification Commands**:
+- `flutter analyze`
+- `flutter test test/widget_test.dart test/app_responsive_test.dart`
+- `flutter build web`
+---
+2026-06-25 16:06:35 IST
+## 43. Customer Loading States: Replaced Screen Spinners with Shared Skeletonizers
+**High-level description**: Replaced the remaining customer-screen loading spinners with shared shimmer-based skeleton layouts so loading states feel consistent with the mobile-first customer app instead of dropping to generic centered progress indicators.
+- Expanded the shared loading system in `frontend/lib/shared/widgets/app_skeleton.dart`:
+  - Added `AppCustomerSectionSkeleton` for standalone customer screens that still use `FutureBuilder`-driven loading.
+  - Added `AppPortalSectionSkeleton` for customer portal section bodies inside `portal_shell.dart`.
+  - Kept the implementation aligned with the repo’s existing shimmer-based skeleton pattern instead of introducing a second loading style.
+- Replaced raw loading spinners across customer-facing screens:
+  - Updated standalone customer screens for dashboard, membership, wallet, appointments, notifications, profile, documents, prescriptions, and transactions.
+  - Updated customer portal section loading states in `frontend/lib/features/portal/presentation/screens/portal_shell.dart` so dashboard, membership, and wallet no longer flash centered spinners while data resolves.
+- Why this approach was chosen:
+  - The user asked for skeletonizers globally, so the fix was applied through shared primitives rather than one-off screen patches.
+  - A shared customer skeleton language keeps future section-by-section work consistent as we continue refining the customer app.
+  - Button-level loading indicators were intentionally left alone because they represent in-progress actions, not initial page-loading states.
+- Verification completed after the loading-state pass:
+  - `flutter analyze` returned `No issues found!`.
+  - `flutter test test/widget_test.dart test/app_responsive_test.dart` passed.
+
+### Files Modified/Created
+**Frontend Files (Modified)**:
+- [app_skeleton.dart](file:///e:/K4NN4N/shield/frontend/lib/shared/widgets/app_skeleton.dart)
+- [customer_dashboard.dart](file:///e:/K4NN4N/shield/frontend/lib/features/dashboard/presentation/screens/customer_dashboard.dart)
+- [membership_screen.dart](file:///e:/K4NN4N/shield/frontend/lib/features/membership/presentation/screens/membership_screen.dart)
+- [wallet_screen.dart](file:///e:/K4NN4N/shield/frontend/lib/features/wallet/presentation/screens/wallet_screen.dart)
+- [appointments_screen.dart](file:///e:/K4NN4N/shield/frontend/lib/features/appointments/presentation/screens/appointments_screen.dart)
+- [notifications_screen.dart](file:///e:/K4NN4N/shield/frontend/lib/features/notifications/presentation/screens/notifications_screen.dart)
+- [profile_screen.dart](file:///e:/K4NN4N/shield/frontend/lib/features/profile/presentation/screens/profile_screen.dart)
+- [documents_screen.dart](file:///e:/K4NN4N/shield/frontend/lib/features/documents/presentation/screens/documents_screen.dart)
+- [prescriptions_screen.dart](file:///e:/K4NN4N/shield/frontend/lib/features/prescriptions/presentation/screens/prescriptions_screen.dart)
+- [transactions_screen.dart](file:///e:/K4NN4N/shield/frontend/lib/features/transactions/presentation/screens/transactions_screen.dart)
+- [portal_shell.dart](file:///e:/K4NN4N/shield/frontend/lib/features/portal/presentation/screens/portal_shell.dart)
+
+**Verification Commands**:
+- `flutter analyze`
+- `flutter test test/widget_test.dart test/app_responsive_test.dart`
+---
+2026-06-25 17:05:05 IST
+## 44. Customer Dashboard Count Clarification: Upcoming Visits and Documents Are Still Placeholder Values
+**High-level description**: Recorded that the customer portal dashboard hero counts for upcoming visits and documents are currently static placeholder values in the frontend, not live counts derived from appointments or document APIs.
+- Current implementation detail:
+  - In `frontend/lib/features/portal/presentation/screens/portal_shell.dart`, the customer dashboard still uses `const upcomingVisits = 3;` and `const documentCount = 12;`.
+  - These values currently act as demo content for the customer hero and KPI cards.
+- Why this note matters:
+  - The UI visually suggests real totals, so future customer-dashboard work should either wire them to actual customer appointments/documents data or relabel them to avoid implying live accuracy.
+  - Capturing this now prevents later confusion during section-by-section customer-app polish.
+- No code behavior changed in this log-only note.
+
+### Files Modified/Created
+**Frontend Files (Modified)**:
+- [log.md](file:///e:/K4NN4N/shield/log.md)
+
+**Verification Commands**:
+- Not applicable (log-only update)
+---
+2026-06-25 17:55:50 IST

@@ -21,11 +21,7 @@ class PortalShell extends StatefulWidget {
   final SHIELDRole role;
   final String? sectionKey;
 
-  const PortalShell({
-    super.key,
-    required this.role,
-    required this.sectionKey,
-  });
+  const PortalShell({super.key, required this.role, required this.sectionKey});
 
   @override
   State<PortalShell> createState() => _PortalShellState();
@@ -45,7 +41,8 @@ class _PortalShellState extends State<PortalShell> {
   @override
   void didUpdateWidget(covariant PortalShell oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.role != widget.role || oldWidget.sectionKey != widget.sectionKey) {
+    if (oldWidget.role != widget.role ||
+        oldWidget.sectionKey != widget.sectionKey) {
       _loadData();
     }
   }
@@ -81,7 +78,9 @@ class _PortalShellState extends State<PortalShell> {
     final isCustomer = widget.role == SHIELDRole.customer;
 
     if (_isLoading) {
-      return AppPageSkeleton(showSidebar: !isCustomer && AppResponsive.isDesktop(context));
+      return AppPageSkeleton(
+        showSidebar: !isCustomer && AppResponsive.isDesktop(context),
+      );
     }
 
     if (_error != null || _sectionData == null) {
@@ -93,16 +92,21 @@ class _PortalShellState extends State<PortalShell> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(Icons.error_outline, size: 64, color: AppColors.error),
+                const Icon(
+                  Icons.error_outline,
+                  size: 64,
+                  color: AppColors.error,
+                ),
                 const SizedBox(height: 16),
                 Text('Error loading dashboard data', style: AppTypography.h3),
                 const SizedBox(height: 8),
-                Text(_error ?? 'Unknown error occurred', textAlign: TextAlign.center, style: AppTypography.body),
-                const SizedBox(height: 16),
-                AppButton(
-                  text: 'Retry',
-                  onPressed: _loadData,
+                Text(
+                  _error ?? 'Unknown error occurred',
+                  textAlign: TextAlign.center,
+                  style: AppTypography.body,
                 ),
+                const SizedBox(height: 16),
+                AppButton(text: 'Retry', onPressed: _loadData),
               ],
             ),
           ),
@@ -170,17 +174,32 @@ class _RoleContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isCustomerDashboard = portal.role == SHIELDRole.customer && section.key == 'dashboard';
-    final isCustomerMembership = portal.role == SHIELDRole.customer && section.key == 'membership';
-    final isCustomerServices = portal.role == SHIELDRole.customer && section.key == 'services';
-    final isCustomerWallet = portal.role == SHIELDRole.customer && section.key == 'wallet';
-    final isCustomerSettings = portal.role == SHIELDRole.customer && section.key == 'settings';
-    final isCardUtilization = (portal.role == SHIELDRole.pharmacyStaff && section.key == 'qr-scan') ||
-                              (portal.role == SHIELDRole.clinicStaff && section.key == 'patients') ||
-                              (portal.role == SHIELDRole.dentalStaff && section.key == 'patients');
-    final isAdminBusinesses = portal.role == SHIELDRole.superAdmin && section.key == 'businesses';
-    final isAdminAudit = portal.role == SHIELDRole.superAdmin && section.key == 'audit';
-    final isReportsSection = (portal.role == SHIELDRole.superAdmin || portal.role == SHIELDRole.manager) && section.key == 'reports';
+    final isCustomerDashboard =
+        portal.role == SHIELDRole.customer && section.key == 'dashboard';
+    final isCustomerMembership =
+        portal.role == SHIELDRole.customer && section.key == 'membership';
+    final isCustomerServices =
+        portal.role == SHIELDRole.customer && section.key == 'services';
+    final isCustomerAppointments =
+        portal.role == SHIELDRole.customer && section.key == 'appointments';
+    final isCustomerNotifications =
+        portal.role == SHIELDRole.customer && section.key == 'notifications';
+    final isCustomerWallet =
+        portal.role == SHIELDRole.customer && section.key == 'wallet';
+    final isCustomerSettings =
+        portal.role == SHIELDRole.customer && section.key == 'settings';
+    final isCardUtilization =
+        (portal.role == SHIELDRole.pharmacyStaff && section.key == 'qr-scan') ||
+        (portal.role == SHIELDRole.clinicStaff && section.key == 'patients') ||
+        (portal.role == SHIELDRole.dentalStaff && section.key == 'patients');
+    final isAdminBusinesses =
+        portal.role == SHIELDRole.superAdmin && section.key == 'businesses';
+    final isAdminAudit =
+        portal.role == SHIELDRole.superAdmin && section.key == 'audit';
+    final isReportsSection =
+        (portal.role == SHIELDRole.superAdmin ||
+            portal.role == SHIELDRole.manager) &&
+        section.key == 'reports';
 
     return CustomScrollView(
       physics: const BouncingScrollPhysics(),
@@ -205,6 +224,10 @@ class _RoleContent extends StatelessWidget {
                   const _CustomerMembershipPortalView()
                 else if (isCustomerServices)
                   const _CustomerServicesView()
+                else if (isCustomerAppointments)
+                  _CustomerAppointmentsView(section: section)
+                else if (isCustomerNotifications)
+                  _CustomerNotificationsView(section: section)
                 else if (isCustomerWallet)
                   const _CustomerWalletView()
                 else if (isCustomerSettings)
@@ -230,7 +253,8 @@ class _RoleContent extends StatelessWidget {
                       final stack = constraints.maxWidth < 900;
                       final priorityPanel = _ListPanel(
                         title: 'Priority Queue',
-                        subtitle: 'What needs attention first in this role view.',
+                        subtitle:
+                            'What needs attention first in this role view.',
                         items: section.queueItems,
                         accentColor: portal.accentColor,
                       );
@@ -438,7 +462,9 @@ class _RoleDrawer extends StatelessWidget {
                   final isActive = section.key == activeSectionKey;
                   return ListTile(
                     selected: isActive,
-                    selectedTileColor: portal.accentColor.withValues(alpha: 0.12),
+                    selectedTileColor: portal.accentColor.withValues(
+                      alpha: 0.12,
+                    ),
                     title: Text(section.title),
                     subtitle: Text(
                       section.summary,
@@ -447,7 +473,9 @@ class _RoleDrawer extends StatelessWidget {
                     ),
                     onTap: () {
                       Navigator.pop(context);
-                      context.go('/portal/${portal.role.routeKey}/${section.key}');
+                      context.go(
+                        '/portal/${portal.role.routeKey}/${section.key}',
+                      );
                     },
                   );
                 }).toList(),
@@ -537,7 +565,8 @@ class _CustomerPortalNav extends StatelessWidget {
       future: ApiService.getWalletProfile('1'),
       builder: (context, snapshot) {
         final balance = snapshot.hasData
-            ? (double.tryParse(snapshot.data!['balance']?.toString() ?? '0') ?? 0.0)
+            ? (double.tryParse(snapshot.data!['balance']?.toString() ?? '0') ??
+                  0.0)
             : 0.0;
 
         return Container(
@@ -558,7 +587,9 @@ class _CustomerPortalNav extends StatelessWidget {
                   children: [
                     Text(
                       'SHIELD',
-                      style: AppTypography.h3.copyWith(color: portal.accentColor),
+                      style: AppTypography.h3.copyWith(
+                        color: portal.accentColor,
+                      ),
                     ),
                     const SizedBox(height: 16),
                     Text(
@@ -772,7 +803,11 @@ class _HeroPanel extends StatelessWidget {
                         color: AppColors.white.withValues(alpha: 0.16),
                         borderRadius: BorderRadius.circular(16),
                       ),
-                      child: Icon(portal.icon, color: AppColors.white, size: 28),
+                      child: Icon(
+                        portal.icon,
+                        color: AppColors.white,
+                        size: 28,
+                      ),
                     ),
                     const SizedBox(width: 12),
                     Column(
@@ -855,13 +890,13 @@ void _handleHeroAction(
       case 'dashboard':
         switch (action) {
           case 'View card':
-            context.go('/membership');
+            context.go('/portal/customer/membership');
             return;
           case 'Book visit':
-            context.go('/appointments');
+            context.go('/portal/customer/appointments');
             return;
           case 'Open wallet':
-            context.go('/wallet');
+            context.go('/portal/customer/wallet');
             return;
         }
       case 'membership':
@@ -897,7 +932,7 @@ void _handleHeroAction(
             _showPrescriptionUploadPicker(context);
             return;
           case 'Open pharmacy mapping':
-            context.go('/services');
+            context.go('/portal/customer/services');
             return;
           case 'Share PDF':
             _showSharePdfSheet(context);
@@ -939,7 +974,7 @@ void _handleHeroAction(
             _showNotificationFilterSheet(context);
             return;
           case 'Notification settings':
-            context.go('/settings');
+            context.go('/portal/customer/settings');
             return;
         }
     }
@@ -1062,7 +1097,10 @@ void _showPrescriptionUploadPicker(BuildContext context) {
                 subtitle: 'Upload a stored doctor prescription PDF',
                 onTap: () {
                   Navigator.pop(context);
-                  showPortalSnackBar(context, 'PDF picker opened in frontend flow.');
+                  showPortalSnackBar(
+                    context,
+                    'PDF picker opened in frontend flow.',
+                  );
                 },
               ),
               _BottomActionTile(
@@ -1071,7 +1109,10 @@ void _showPrescriptionUploadPicker(BuildContext context) {
                 subtitle: 'Pick a prescription image from the device',
                 onTap: () {
                   Navigator.pop(context);
-                  showPortalSnackBar(context, 'Image picker opened in frontend flow.');
+                  showPortalSnackBar(
+                    context,
+                    'Image picker opened in frontend flow.',
+                  );
                 },
               ),
               _BottomActionTile(
@@ -1080,7 +1121,10 @@ void _showPrescriptionUploadPicker(BuildContext context) {
                 subtitle: 'Capture a prescription photo using the camera',
                 onTap: () {
                   Navigator.pop(context);
-                  showPortalSnackBar(context, 'Camera capture opened in frontend flow.');
+                  showPortalSnackBar(
+                    context,
+                    'Camera capture opened in frontend flow.',
+                  );
                 },
               ),
             ],
@@ -1162,7 +1206,10 @@ void _showRechargeRequestSheet(BuildContext context) {
                 text: 'Submit Request',
                 onPressed: () {
                   Navigator.pop(context);
-                  showPortalSnackBar(context, 'Recharge request submitted in frontend flow.');
+                  showPortalSnackBar(
+                    context,
+                    'Recharge request submitted in frontend flow.',
+                  );
                 },
               ),
             ],
@@ -1226,7 +1273,10 @@ void _showNotificationFilterSheet(BuildContext context) {
                 text: 'Apply Filters',
                 onPressed: () {
                   Navigator.pop(context);
-                  showPortalSnackBar(context, 'Notification filters applied in frontend flow.');
+                  showPortalSnackBar(
+                    context,
+                    'Notification filters applied in frontend flow.',
+                  );
                 },
               ),
             ],
@@ -1445,10 +1495,12 @@ class _CustomerDashboardPortalView extends StatefulWidget {
   const _CustomerDashboardPortalView();
 
   @override
-  State<_CustomerDashboardPortalView> createState() => _CustomerDashboardPortalViewState();
+  State<_CustomerDashboardPortalView> createState() =>
+      _CustomerDashboardPortalViewState();
 }
 
-class _CustomerDashboardPortalViewState extends State<_CustomerDashboardPortalView> {
+class _CustomerDashboardPortalViewState
+    extends State<_CustomerDashboardPortalView> {
   late Future<Customer> _customerFuture;
   late Future<Map<String, dynamic>> _walletFuture;
   late Future<List<WalletTransaction>> _transactionsFuture;
@@ -1459,19 +1511,25 @@ class _CustomerDashboardPortalViewState extends State<_CustomerDashboardPortalVi
     _customerFuture = ApiService.getCustomerProfile('1');
     _walletFuture = ApiService.getWalletProfile('1');
     _transactionsFuture = _walletFuture.then(
-      (wallet) => ApiService.getWalletTransactions(wallet['walletId'].toString()),
+      (wallet) =>
+          ApiService.getWalletTransactions(wallet['walletId'].toString()),
     );
   }
 
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<List<dynamic>>(
-      future: Future.wait([_customerFuture, _walletFuture, _transactionsFuture]),
+      future: Future.wait([
+        _customerFuture,
+        _walletFuture,
+        _transactionsFuture,
+      ]),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Padding(
-            padding: EdgeInsets.symmetric(vertical: 48),
-            child: Center(child: CircularProgressIndicator()),
+          return const AppPortalSectionSkeleton(
+            showHero: true,
+            statCards: 4,
+            listItems: 4,
           );
         }
 
@@ -1542,7 +1600,9 @@ class _CustomerDashboardPortalViewState extends State<_CustomerDashboardPortalVi
                         const SizedBox(height: 18),
                         Text(
                           'Wallet ₹${walletBalance.toStringAsFixed(0)}',
-                          style: AppTypography.h4.copyWith(color: AppColors.white),
+                          style: AppTypography.h4.copyWith(
+                            color: AppColors.white,
+                          ),
                         ),
                         const SizedBox(height: 4),
                         Text(
@@ -1562,7 +1622,9 @@ class _CustomerDashboardPortalViewState extends State<_CustomerDashboardPortalVi
                       children: [
                         Text(
                           '$upcomingVisits Upcoming Visits',
-                          style: AppTypography.h5.copyWith(color: AppColors.white),
+                          style: AppTypography.h5.copyWith(
+                            color: AppColors.white,
+                          ),
                         ),
                         const SizedBox(height: 6),
                         Text(
@@ -1578,15 +1640,18 @@ class _CustomerDashboardPortalViewState extends State<_CustomerDashboardPortalVi
                           children: [
                             _HeroActionButton(
                               label: 'View card',
-                              onTap: () => context.go('/portal/customer/membership'),
+                              onTap: () =>
+                                  context.go('/portal/customer/membership'),
                             ),
                             _HeroActionButton(
                               label: 'Book visit',
-                              onTap: () => context.go('/portal/customer/appointments'),
+                              onTap: () =>
+                                  context.go('/portal/customer/appointments'),
                             ),
                             _HeroActionButton(
                               label: 'Open wallet',
-                              onTap: () => context.go('/portal/customer/wallet'),
+                              onTap: () =>
+                                  context.go('/portal/customer/wallet'),
                             ),
                           ],
                         ),
@@ -1647,91 +1712,114 @@ class _CustomerDashboardPortalViewState extends State<_CustomerDashboardPortalVi
                 'date': '26 Jun 2026',
                 'subtitle': 'Melattur branch follow-up',
               },
-            ].map((item) => Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: AppCard(
-                padding: const EdgeInsets.all(14),
-                child: Row(
-                  children: [
-                    const Icon(Icons.calendar_today_outlined, color: AppColors.shieldBlue),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(item['title']!, style: AppTypography.body.copyWith(fontWeight: FontWeight.w700)),
-                          const SizedBox(height: 4),
-                          Text(
-                            '${item['date']} • ${item['subtitle']}',
-                            style: AppTypography.small.copyWith(color: AppColors.gray),
-                          ),
-                        ],
+            ].map(
+              (item) => Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: AppCard(
+                  padding: const EdgeInsets.all(14),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.calendar_today_outlined,
+                        color: AppColors.shieldBlue,
                       ),
-                    ),
-                  ],
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              item['title']!,
+                              style: AppTypography.body.copyWith(
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              '${item['date']} • ${item['subtitle']}',
+                              style: AppTypography.small.copyWith(
+                                color: AppColors.gray,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            )),
+            ),
             const SizedBox(height: 14),
             Text('Recent Activity', style: AppTypography.h4),
             const SizedBox(height: 12),
-            ...transactions.take(4).map((txn) => Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: AppCard(
-                padding: const EdgeInsets.all(14),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        color: (txn.transactionType == 'CREDIT'
-                                ? AppColors.shieldGreen
-                                : AppColors.error)
-                            .withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                      child: Icon(
-                        txn.transactionType == 'CREDIT'
-                            ? Icons.south_west_rounded
-                            : Icons.north_east_rounded,
-                        color: txn.transactionType == 'CREDIT'
-                            ? AppColors.shieldGreen
-                            : AppColors.error,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+            ...transactions
+                .take(4)
+                .map(
+                  (txn) => Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: AppCard(
+                      padding: const EdgeInsets.all(14),
+                      child: Row(
                         children: [
-                          Text(
-                            txn.remarks ?? 'Activity',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: AppTypography.body.copyWith(fontWeight: FontWeight.w700),
+                          Container(
+                            width: 40,
+                            height: 40,
+                            decoration: BoxDecoration(
+                              color:
+                                  (txn.transactionType == 'CREDIT'
+                                          ? AppColors.shieldGreen
+                                          : AppColors.error)
+                                      .withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                            child: Icon(
+                              txn.transactionType == 'CREDIT'
+                                  ? Icons.south_west_rounded
+                                  : Icons.north_east_rounded,
+                              color: txn.transactionType == 'CREDIT'
+                                  ? AppColors.shieldGreen
+                                  : AppColors.error,
+                            ),
                           ),
-                          const SizedBox(height: 4),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  txn.remarks ?? 'Activity',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: AppTypography.body.copyWith(
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  DateFormat(
+                                    'dd MMM yyyy • hh:mm a',
+                                  ).format(txn.createdAt),
+                                  style: AppTypography.tiny.copyWith(
+                                    color: AppColors.gray,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                           Text(
-                            DateFormat('dd MMM yyyy • hh:mm a').format(txn.createdAt),
-                            style: AppTypography.tiny.copyWith(color: AppColors.gray),
+                            '${txn.transactionType == 'CREDIT' ? '+' : '-'}₹${txn.amount.toStringAsFixed(0)}',
+                            style: AppTypography.body.copyWith(
+                              color: txn.transactionType == 'CREDIT'
+                                  ? AppColors.shieldGreen
+                                  : AppColors.error,
+                              fontWeight: FontWeight.w700,
+                            ),
                           ),
                         ],
                       ),
                     ),
-                    Text(
-                      '${txn.transactionType == 'CREDIT' ? '+' : '-'}₹${txn.amount.toStringAsFixed(0)}',
-                      style: AppTypography.body.copyWith(
-                        color: txn.transactionType == 'CREDIT'
-                            ? AppColors.shieldGreen
-                            : AppColors.error,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
-              ),
-            )),
           ],
         );
       },
@@ -1743,10 +1831,12 @@ class _CustomerMembershipPortalView extends StatefulWidget {
   const _CustomerMembershipPortalView();
 
   @override
-  State<_CustomerMembershipPortalView> createState() => _CustomerMembershipPortalViewState();
+  State<_CustomerMembershipPortalView> createState() =>
+      _CustomerMembershipPortalViewState();
 }
 
-class _CustomerMembershipPortalViewState extends State<_CustomerMembershipPortalView> {
+class _CustomerMembershipPortalViewState
+    extends State<_CustomerMembershipPortalView> {
   late Future<List<dynamic>> _dataFuture;
 
   @override
@@ -1764,15 +1854,19 @@ class _CustomerMembershipPortalViewState extends State<_CustomerMembershipPortal
       future: _dataFuture,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Padding(
-            padding: EdgeInsets.symmetric(vertical: 48),
-            child: Center(child: CircularProgressIndicator()),
+          return const AppPortalSectionSkeleton(
+            showHero: true,
+            statCards: 3,
+            listItems: 4,
           );
         }
 
         if (snapshot.hasError || !snapshot.hasData) {
           return AppCard(
-            child: Text('Membership preview unavailable', style: AppTypography.h4),
+            child: Text(
+              'Membership preview unavailable',
+              style: AppTypography.h4,
+            ),
           );
         }
 
@@ -1835,7 +1929,9 @@ class _CustomerMembershipPortalViewState extends State<_CustomerMembershipPortal
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    DateFormat('dd MMM yyyy').format(membership.endDate).toUpperCase(),
+                    DateFormat(
+                      'dd MMM yyyy',
+                    ).format(membership.endDate).toUpperCase(),
                     style: AppTypography.body.copyWith(
                       color: AppColors.white,
                       fontWeight: FontWeight.w700,
@@ -1862,13 +1958,15 @@ class _CustomerMembershipPortalViewState extends State<_CustomerMembershipPortal
                   ),
                   _KpiTile(
                     title: 'Earned',
-                    value: '₹${membership.totalEarnedCredits.toStringAsFixed(0)}',
+                    value:
+                        '₹${membership.totalEarnedCredits.toStringAsFixed(0)}',
                     icon: Icons.savings_outlined,
                     color: AppColors.shieldGreen,
                   ),
                   _KpiTile(
                     title: 'Redeemed',
-                    value: '₹${membership.totalRedeemedCredits.toStringAsFixed(0)}',
+                    value:
+                        '₹${membership.totalRedeemedCredits.toStringAsFixed(0)}',
                     icon: Icons.redeem_outlined,
                     color: AppColors.warning,
                   ),
@@ -1883,25 +1981,32 @@ class _CustomerMembershipPortalViewState extends State<_CustomerMembershipPortal
               'Founding-member pharmacy and healthcare benefits',
               'Wallet-linked service access across SHIELD service points',
               'Priority support for onboarding and membership exceptions',
-            ].map((benefit) => Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: AppCard(
-                padding: const EdgeInsets.all(14),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Icon(Icons.check_circle_outline, color: AppColors.shieldGreen),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        benefit,
-                        style: AppTypography.body.copyWith(color: AppColors.darkGray),
+            ].map(
+              (benefit) => Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: AppCard(
+                  padding: const EdgeInsets.all(14),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Icon(
+                        Icons.check_circle_outline,
+                        color: AppColors.shieldGreen,
                       ),
-                    ),
-                  ],
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          benefit,
+                          style: AppTypography.body.copyWith(
+                            color: AppColors.darkGray,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            )),
+            ),
           ],
         );
       },
@@ -1910,10 +2015,7 @@ class _CustomerMembershipPortalViewState extends State<_CustomerMembershipPortal
 }
 
 class _HeroActionButton extends StatelessWidget {
-  const _HeroActionButton({
-    required this.label,
-    required this.onTap,
-  });
+  const _HeroActionButton({required this.label, required this.onTap});
 
   final String label;
   final VoidCallback onTap;
@@ -2031,9 +2133,10 @@ class _CustomerWalletViewState extends State<_CustomerWalletView> {
       future: Future.wait([_walletProfileFuture, _transactionsFuture]),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Padding(
-            padding: EdgeInsets.symmetric(vertical: 48),
-            child: Center(child: CircularProgressIndicator()),
+          return const AppPortalSectionSkeleton(
+            showHero: true,
+            statCards: 4,
+            listItems: 5,
           );
         }
 
@@ -2067,7 +2170,9 @@ class _CustomerWalletViewState extends State<_CustomerWalletView> {
         double rewardCredits = 0;
 
         for (final txn in transactions) {
-          final delta = txn.transactionType == 'CREDIT' ? txn.amount : -txn.amount;
+          final delta = txn.transactionType == 'CREDIT'
+              ? txn.amount
+              : -txn.amount;
           if (txn.subLedgerType == 'POINTS') {
             pointsBalance += delta;
             if (txn.transactionType == 'CREDIT') {
@@ -2082,7 +2187,8 @@ class _CustomerWalletViewState extends State<_CustomerWalletView> {
         }
 
         final visibleTransactions = transactions.where((txn) {
-          return _selectedLedger == 'ALL' || txn.subLedgerType == _selectedLedger;
+          return _selectedLedger == 'ALL' ||
+              txn.subLedgerType == _selectedLedger;
         }).toList();
 
         return Column(
@@ -2116,7 +2222,9 @@ class _CustomerWalletViewState extends State<_CustomerWalletView> {
                             const SizedBox(height: 4),
                             Text(
                               'Cash, points, and recent ledger movement in one place.',
-                              style: AppTypography.small.copyWith(color: AppColors.gray),
+                              style: AppTypography.small.copyWith(
+                                color: AppColors.gray,
+                              ),
                             ),
                           ],
                         ),
@@ -2182,14 +2290,26 @@ class _CustomerWalletViewState extends State<_CustomerWalletView> {
                       ),
                       _ActionPill(
                         label: 'Open statement',
-                        onTap: () => context.go('/transactions'),
+                        onTap: () => showPortalDetailsSheet(
+                          context,
+                          title: 'Wallet statement preview',
+                          subtitle:
+                              'Detailed statements stay grouped inside the customer wallet flow until export APIs are wired.',
+                          meta: 'Customer wallet',
+                          status: 'Frontend flow',
+                          highlights: const [
+                            'Cash and points entries remain separated by sub-ledger type.',
+                            'Statement export can later connect here without changing the customer route structure.',
+                          ],
+                        ),
                       ),
                       _ActionPill(
                         label: 'Points rules',
                         onTap: () => showPortalDetailsSheet(
                           context,
                           title: 'Points wallet rules',
-                          subtitle: 'Referral, loyalty, and promotional points stay separate from cash.',
+                          subtitle:
+                              'Referral, loyalty, and promotional points stay separate from cash.',
                           meta: 'Customer wallet',
                           status: 'Frontend flow',
                           highlights: const [
@@ -2243,7 +2363,9 @@ class _CustomerWalletViewState extends State<_CustomerWalletView> {
                     title: txn.remarks ?? 'Wallet transaction',
                     subtitle:
                         '${txn.subLedgerType} ${txn.transactionType.toLowerCase()} entry for ${txn.amount.toStringAsFixed(0)}.',
-                    meta: DateFormat('dd MMM yyyy, hh:mm a').format(txn.createdAt),
+                    meta: DateFormat(
+                      'dd MMM yyyy, hh:mm a',
+                    ).format(txn.createdAt),
                     status: txn.transactionType,
                     highlights: [
                       'Post-transaction balance in ${txn.subLedgerType} ledger is ${txn.postBalance.toStringAsFixed(0)}.',
@@ -2260,7 +2382,9 @@ class _CustomerWalletViewState extends State<_CustomerWalletView> {
                           borderRadius: BorderRadius.circular(14),
                         ),
                         child: Icon(
-                          isCredit ? Icons.arrow_downward_rounded : Icons.arrow_upward_rounded,
+                          isCredit
+                              ? Icons.arrow_downward_rounded
+                              : Icons.arrow_upward_rounded,
                           color: accent,
                           size: 20,
                         ),
@@ -2274,12 +2398,18 @@ class _CustomerWalletViewState extends State<_CustomerWalletView> {
                               txn.remarks ?? 'Wallet transaction',
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: AppTypography.body.copyWith(fontWeight: FontWeight.w700),
+                              style: AppTypography.body.copyWith(
+                                fontWeight: FontWeight.w700,
+                              ),
                             ),
                             const SizedBox(height: 3),
                             Text(
-                              DateFormat('dd MMM • hh:mm a').format(txn.createdAt),
-                              style: AppTypography.tiny.copyWith(color: AppColors.gray),
+                              DateFormat(
+                                'dd MMM • hh:mm a',
+                              ).format(txn.createdAt),
+                              style: AppTypography.tiny.copyWith(
+                                color: AppColors.gray,
+                              ),
                             ),
                           ],
                         ),
@@ -2343,7 +2473,10 @@ class _CustomerSettingsViewState extends State<_CustomerSettingsView> {
                       color: AppColors.shieldBlue.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(16),
                     ),
-                    child: const Icon(Icons.tune_rounded, color: AppColors.shieldBlue),
+                    child: const Icon(
+                      Icons.tune_rounded,
+                      color: AppColors.shieldBlue,
+                    ),
                   ),
                   const SizedBox(width: 14),
                   Expanded(
@@ -2354,7 +2487,9 @@ class _CustomerSettingsViewState extends State<_CustomerSettingsView> {
                         const SizedBox(height: 4),
                         Text(
                           'Control alerts, privacy, support, and device preferences.',
-                          style: AppTypography.small.copyWith(color: AppColors.gray),
+                          style: AppTypography.small.copyWith(
+                            color: AppColors.gray,
+                          ),
                         ),
                       ],
                     ),
@@ -2371,8 +2506,12 @@ class _CustomerSettingsViewState extends State<_CustomerSettingsView> {
                     color: _pushAlerts ? AppColors.shieldBlue : AppColors.gray,
                   ),
                   _StatusPill(
-                    label: _sharedCare ? 'Shared care enabled' : 'Private profile',
-                    color: _sharedCare ? AppColors.shieldGreen : AppColors.error,
+                    label: _sharedCare
+                        ? 'Shared care enabled'
+                        : 'Private profile',
+                    color: _sharedCare
+                        ? AppColors.shieldGreen
+                        : AppColors.error,
                   ),
                   const _StatusPill(
                     label: 'Device secured',
@@ -2436,7 +2575,7 @@ class _CustomerSettingsViewState extends State<_CustomerSettingsView> {
               icon: Icons.badge_outlined,
               title: 'Manage member identity',
               subtitle: 'Review profile, address, and membership details',
-              onTap: () => context.go('/profile'),
+              onTap: () => context.go('/portal/customer/profile'),
             ),
           ],
         ),
@@ -2461,7 +2600,8 @@ class _CustomerSettingsViewState extends State<_CustomerSettingsView> {
               onTap: () => showPortalDetailsSheet(
                 context,
                 title: 'Privacy policy preview',
-                subtitle: 'This preview summarizes customer-facing data usage until policy content is wired from backend content services.',
+                subtitle:
+                    'This preview summarizes customer-facing data usage until policy content is wired from backend content services.',
                 meta: 'Settings',
                 status: 'Frontend flow',
                 highlights: const [
@@ -2478,6 +2618,403 @@ class _CustomerSettingsViewState extends State<_CustomerSettingsView> {
               onTap: () => context.go('/portal/customer/dashboard'),
             ),
           ],
+        ),
+      ],
+    );
+  }
+}
+
+class _CustomerAppointmentsView extends StatelessWidget {
+  final PortalSectionData section;
+
+  const _CustomerAppointmentsView({required this.section});
+
+  @override
+  Widget build(BuildContext context) {
+    final nextVisit = section.queueItems.isNotEmpty
+        ? section.queueItems.first
+        : null;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        AppCard(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 48,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      color: AppColors.shieldBlue.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: const Icon(
+                      Icons.calendar_month_rounded,
+                      color: AppColors.shieldBlue,
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Appointments', style: AppTypography.h4),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Keep upcoming visits, pending requests, and reminders in one mobile timeline.',
+                          style: AppTypography.small.copyWith(
+                            color: AppColors.gray,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              if (nextVisit != null) ...[
+                const SizedBox(height: 16),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: AppColors.lightGray,
+                    borderRadius: BorderRadius.circular(18),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Next visit',
+                        style: AppTypography.tiny.copyWith(
+                          color: AppColors.gray,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        nextVisit.title,
+                        style: AppTypography.body.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '${nextVisit.meta} • ${nextVisit.status}',
+                        style: AppTypography.small.copyWith(
+                          color: AppColors.shieldBlue,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        nextVisit.subtitle,
+                        style: AppTypography.small.copyWith(
+                          color: AppColors.darkGray,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+              const SizedBox(height: 14),
+              Wrap(
+                spacing: 10,
+                runSpacing: 10,
+                children: [
+                  _SectionMetricBadge(
+                    metric: section.metrics[0],
+                    icon: Icons.event_available_rounded,
+                  ),
+                  _SectionMetricBadge(
+                    metric: section.metrics[1],
+                    icon: Icons.pending_actions_rounded,
+                  ),
+                  _SectionMetricBadge(
+                    metric: section.metrics[2],
+                    icon: Icons.history_rounded,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 14),
+              Wrap(
+                spacing: 10,
+                runSpacing: 10,
+                children: [
+                  _ActionPill(
+                    label: 'Book consultation',
+                    onTap: () => context.go('/portal/customer/services'),
+                  ),
+                  _ActionPill(
+                    label: 'Reschedule',
+                    onTap: () => showPortalSnackBar(
+                      context,
+                      'Reschedule flow is available as a frontend-only appointment action.',
+                    ),
+                  ),
+                  _ActionPill(
+                    label: 'Share slot',
+                    onTap: () => showPortalSnackBar(
+                      context,
+                      'Slot details shared in the customer appointment preview.',
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 20),
+        Text('Upcoming and pending', style: AppTypography.h4),
+        const SizedBox(height: 12),
+        ...section.queueItems.map(
+          (item) => Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: _CustomerTimelineTile(
+              icon: item.status == 'Pending'
+                  ? Icons.schedule_send_outlined
+                  : Icons.event_note_rounded,
+              accentColor: item.status == 'Pending'
+                  ? AppColors.warning
+                  : AppColors.shieldBlue,
+              title: item.title,
+              subtitle: item.subtitle,
+              meta: '${item.meta} • ${item.status}',
+              onTap: () => showPortalDetailsSheet(
+                context,
+                title: item.title,
+                subtitle: item.subtitle,
+                meta: item.meta,
+                status: item.status,
+                highlights: [
+                  'This appointment stays inside the customer portal flow.',
+                  'Reminder and status updates will continue to surface in notifications and wallet-linked care history.',
+                ],
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 14),
+        Text('Recent activity', style: AppTypography.h4),
+        const SizedBox(height: 12),
+        ...section.recentItems.map(
+          (item) => Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: _CustomerTimelineTile(
+              icon: Icons.check_circle_outline_rounded,
+              accentColor: AppColors.shieldGreen,
+              title: item.title,
+              subtitle: item.subtitle,
+              meta: '${item.meta} • ${item.status}',
+              onTap: () => showPortalDetailsSheet(
+                context,
+                title: item.title,
+                subtitle: item.subtitle,
+                meta: item.meta,
+                status: item.status,
+                highlights: const [
+                  'Completed and delivered events remain visible for continuity.',
+                  'This customer preview is tuned for compact mobile review instead of a wide portal dashboard.',
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _CustomerNotificationsView extends StatelessWidget {
+  final PortalSectionData section;
+
+  const _CustomerNotificationsView({required this.section});
+
+  @override
+  Widget build(BuildContext context) {
+    final unreadCount = section.queueItems.length;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        AppCard(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 48,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      color: AppColors.shieldBlue.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: const Icon(
+                      Icons.notifications_active_outlined,
+                      color: AppColors.shieldBlue,
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Notifications', style: AppTypography.h4),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Appointment reminders, wallet alerts, and document updates in one focused inbox.',
+                          style: AppTypography.small.copyWith(
+                            color: AppColors.gray,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [AppColors.shieldBlue, AppColors.shieldNavy],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(18),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '$unreadCount unread right now',
+                            style: AppTypography.h5.copyWith(
+                              color: AppColors.white,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'High-priority customer updates stay at the top of the mobile inbox.',
+                            style: AppTypography.small.copyWith(
+                              color: AppColors.white.withValues(alpha: 0.84),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    const Icon(
+                      Icons.mark_email_unread_outlined,
+                      color: AppColors.white,
+                      size: 28,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 14),
+              Wrap(
+                spacing: 10,
+                runSpacing: 10,
+                children: [
+                  _SectionMetricBadge(
+                    metric: section.metrics[0],
+                    icon: Icons.mark_email_unread_outlined,
+                  ),
+                  _SectionMetricBadge(
+                    metric: section.metrics[1],
+                    icon: Icons.calendar_view_week_outlined,
+                  ),
+                  _SectionMetricBadge(
+                    metric: section.metrics[2],
+                    icon: Icons.verified_outlined,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 14),
+              Wrap(
+                spacing: 10,
+                runSpacing: 10,
+                children: [
+                  _ActionPill(
+                    label: 'Mark all read',
+                    onTap: () => showPortalSnackBar(
+                      context,
+                      'All local notification previews marked as read.',
+                    ),
+                  ),
+                  _ActionPill(
+                    label: 'Filter alerts',
+                    onTap: () => _showNotificationFilterSheet(context),
+                  ),
+                  _ActionPill(
+                    label: 'Notification settings',
+                    onTap: () => context.go('/portal/customer/settings'),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 20),
+        Text('Unread first', style: AppTypography.h4),
+        const SizedBox(height: 12),
+        ...section.queueItems.map(
+          (item) => Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: _CustomerTimelineTile(
+              icon: Icons.notifications_active_outlined,
+              accentColor: AppColors.shieldBlue,
+              title: item.title,
+              subtitle: item.subtitle,
+              meta: '${item.meta} • ${item.status}',
+              highlightUnread: true,
+              onTap: () => showPortalDetailsSheet(
+                context,
+                title: item.title,
+                subtitle: item.subtitle,
+                meta: item.meta,
+                status: item.status,
+                highlights: const [
+                  'Unread customer alerts stay promoted above the activity history.',
+                  'Notification actions keep routing inside the portal customer app.',
+                ],
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 14),
+        Text('Earlier updates', style: AppTypography.h4),
+        const SizedBox(height: 12),
+        ...section.recentItems.map(
+          (item) => Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: _CustomerTimelineTile(
+              icon: Icons.done_all_rounded,
+              accentColor: AppColors.shieldGreen,
+              title: item.title,
+              subtitle: item.subtitle,
+              meta: '${item.meta} • ${item.status}',
+              onTap: () => showPortalDetailsSheet(
+                context,
+                title: item.title,
+                subtitle: item.subtitle,
+                meta: item.meta,
+                status: item.status,
+                highlights: const [
+                  'Read items remain available as lightweight history instead of a heavy desktop feed.',
+                  'Settings and reminder behavior continue to live in the same customer app shell.',
+                ],
+              ),
+            ),
+          ),
         ),
       ],
     );
@@ -2536,14 +3073,46 @@ class _CompactValueCard extends StatelessWidget {
   }
 }
 
+class _SectionMetricBadge extends StatelessWidget {
+  final PortalMetric metric;
+  final IconData icon;
+
+  const _SectionMetricBadge({required this.metric, required this.icon});
+
+  @override
+  Widget build(BuildContext context) {
+    return AppCard(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: AppColors.shieldBlue, size: 18),
+          const SizedBox(width: 10),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                metric.label,
+                style: AppTypography.tiny.copyWith(color: AppColors.gray),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                metric.value,
+                style: AppTypography.body.copyWith(fontWeight: FontWeight.w700),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _ActionPill extends StatelessWidget {
   final String label;
   final VoidCallback onTap;
 
-  const _ActionPill({
-    required this.label,
-    required this.onTap,
-  });
+  const _ActionPill({required this.label, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -2563,6 +3132,89 @@ class _ActionPill extends StatelessWidget {
             fontWeight: FontWeight.w700,
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _CustomerTimelineTile extends StatelessWidget {
+  final IconData icon;
+  final Color accentColor;
+  final String title;
+  final String subtitle;
+  final String meta;
+  final VoidCallback onTap;
+  final bool highlightUnread;
+
+  const _CustomerTimelineTile({
+    required this.icon,
+    required this.accentColor,
+    required this.title,
+    required this.subtitle,
+    required this.meta,
+    required this.onTap,
+    this.highlightUnread = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return AppCard(
+      padding: const EdgeInsets.all(14),
+      onTap: onTap,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 42,
+            height: 42,
+            decoration: BoxDecoration(
+              color: accentColor.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Icon(icon, color: accentColor, size: 20),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        title,
+                        style: AppTypography.body.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                    if (highlightUnread)
+                      Container(
+                        width: 8,
+                        height: 8,
+                        decoration: const BoxDecoration(
+                          color: AppColors.shieldBlue,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  subtitle,
+                  style: AppTypography.small.copyWith(
+                    color: AppColors.darkGray,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  meta,
+                  style: AppTypography.tiny.copyWith(color: AppColors.gray),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -2632,10 +3284,7 @@ class _StatusPill extends StatelessWidget {
   final String label;
   final Color color;
 
-  const _StatusPill({
-    required this.label,
-    required this.color,
-  });
+  const _StatusPill({required this.label, required this.color});
 
   @override
   Widget build(BuildContext context) {
@@ -2685,7 +3334,9 @@ class _SettingsGroupCard extends StatelessWidget {
             final index = entry.key;
             final child = entry.value;
             return Padding(
-              padding: EdgeInsets.only(bottom: index == children.length - 1 ? 0 : 10),
+              padding: EdgeInsets.only(
+                bottom: index == children.length - 1 ? 0 : 10,
+              ),
               child: child,
             );
           }),
@@ -2734,7 +3385,12 @@ class _CompactSettingToggle extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: AppTypography.body.copyWith(fontWeight: FontWeight.w700)),
+                Text(
+                  title,
+                  style: AppTypography.body.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
                 const SizedBox(height: 3),
                 Text(
                   subtitle,
@@ -2825,10 +3481,7 @@ class _ConsultationModeOption extends StatelessWidget {
   final String value;
   final String label;
 
-  const _ConsultationModeOption({
-    required this.value,
-    required this.label,
-  });
+  const _ConsultationModeOption({required this.value, required this.label});
 
   @override
   Widget build(BuildContext context) {
@@ -2899,7 +3552,9 @@ class _BottomActionTile extends StatelessWidget {
                   children: [
                     Text(
                       title,
-                      style: AppTypography.body.copyWith(fontWeight: FontWeight.w700),
+                      style: AppTypography.body.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                     const SizedBox(height: 3),
                     Text(
@@ -2950,12 +3605,14 @@ class _CustomerServicesView extends StatefulWidget {
 }
 
 class _CustomerServicesViewState extends State<_CustomerServicesView> {
-  String _activeTab = 'PHARMACY'; // 'PHARMACY', 'LAB', 'HOMECARE', 'CONSULTATION'
+  String _activeTab =
+      'PHARMACY'; // 'PHARMACY', 'LAB', 'HOMECARE', 'CONSULTATION'
   String _uploadStatus = 'No files selected';
   bool _isUploading = false;
-  
+
   // Consultation booking fields
-  String _specialistType = 'DOCTOR'; // 'DOCTOR', 'DENTAL', 'COSMETIC', 'DIETITIAN'
+  String _specialistType =
+      'DOCTOR'; // 'DOCTOR', 'DENTAL', 'COSMETIC', 'DIETITIAN'
   String _consultationMode = 'IN_PERSON'; // 'IN_PERSON', 'TELE', 'VIDEO'
   DateTime _selectedDate = DateTime.now().add(const Duration(days: 1));
   String? _selectedDietPlan;
@@ -2972,7 +3629,9 @@ class _CustomerServicesViewState extends State<_CustomerServicesView> {
         _uploadStatus = 'Upload Success! Validation Pending by Pharmacist.';
       });
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Prescription uploaded successfully for review.')),
+        const SnackBar(
+          content: Text('Prescription uploaded successfully for review.'),
+        ),
       );
     });
   }
@@ -2994,7 +3653,9 @@ class _CustomerServicesViewState extends State<_CustomerServicesView> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
-          color: isActive ? AppColors.shieldBlue.withValues(alpha: 0.12) : Colors.transparent,
+          color: isActive
+              ? AppColors.shieldBlue.withValues(alpha: 0.12)
+              : Colors.transparent,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: isActive ? AppColors.shieldBlue : AppColors.divider,
@@ -3004,7 +3665,11 @@ class _CustomerServicesViewState extends State<_CustomerServicesView> {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, color: isActive ? AppColors.shieldBlue : AppColors.darkGray, size: 20),
+            Icon(
+              icon,
+              color: isActive ? AppColors.shieldBlue : AppColors.darkGray,
+              size: 20,
+            ),
             const SizedBox(width: 8),
             Text(
               label,
@@ -3030,18 +3695,26 @@ class _CustomerServicesViewState extends State<_CustomerServicesView> {
           physics: const BouncingScrollPhysics(),
           child: Row(
             children: [
-              _buildTabButton('PHARMACY', 'Pharmacy', Icons.local_pharmacy_outlined),
+              _buildTabButton(
+                'PHARMACY',
+                'Pharmacy',
+                Icons.local_pharmacy_outlined,
+              ),
               const SizedBox(width: 8),
               _buildTabButton('LAB', 'Laboratory', Icons.biotech_outlined),
               const SizedBox(width: 8),
               _buildTabButton('HOMECARE', 'Home Care', Icons.home_outlined),
               const SizedBox(width: 8),
-              _buildTabButton('CONSULTATION', 'Consultations', Icons.people_outline),
+              _buildTabButton(
+                'CONSULTATION',
+                'Consultations',
+                Icons.people_outline,
+              ),
             ],
           ),
         ),
         const SizedBox(height: 24),
-        
+
         // Tab Contents
         AnimatedSwitcher(
           duration: const Duration(milliseconds: 200),
@@ -3075,9 +3748,21 @@ class _CustomerServicesViewState extends State<_CustomerServicesView> {
     ];
 
     final recommendedProducts = [
-      {'name': 'Omega-3 Fish Oil', 'price': '₹650.00', 'desc': 'Heart and joint health'},
-      {'name': 'Vitamin D3 60K', 'price': '₹150.00', 'desc': 'Bone strength support'},
-      {'name': 'Probiotics Active', 'price': '₹380.00', 'desc': 'Digestive health boost'},
+      {
+        'name': 'Omega-3 Fish Oil',
+        'price': '₹650.00',
+        'desc': 'Heart and joint health',
+      },
+      {
+        'name': 'Vitamin D3 60K',
+        'price': '₹150.00',
+        'desc': 'Bone strength support',
+      },
+      {
+        'name': 'Probiotics Active',
+        'price': '₹380.00',
+        'desc': 'Digestive health boost',
+      },
     ];
 
     return Column(
@@ -3101,7 +3786,10 @@ class _CustomerServicesViewState extends State<_CustomerServicesView> {
                 children: [
                   Expanded(
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
                       decoration: BoxDecoration(
                         color: AppColors.lightGray,
                         borderRadius: BorderRadius.circular(12),
@@ -3109,14 +3797,21 @@ class _CustomerServicesViewState extends State<_CustomerServicesView> {
                       ),
                       child: Row(
                         children: [
-                          const Icon(Icons.file_present, color: AppColors.shieldBlue),
+                          const Icon(
+                            Icons.file_present,
+                            color: AppColors.shieldBlue,
+                          ),
                           const SizedBox(width: 12),
                           Expanded(
                             child: Text(
                               _uploadStatus,
                               style: AppTypography.small.copyWith(
-                                color: _uploadStatus.contains('Success') ? AppColors.shieldGreen : AppColors.darkGray,
-                                fontWeight: _uploadStatus.contains('Success') ? FontWeight.bold : FontWeight.normal,
+                                color: _uploadStatus.contains('Success')
+                                    ? AppColors.shieldGreen
+                                    : AppColors.darkGray,
+                                fontWeight: _uploadStatus.contains('Success')
+                                    ? FontWeight.bold
+                                    : FontWeight.normal,
                               ),
                               overflow: TextOverflow.ellipsis,
                             ),
@@ -3158,7 +3853,10 @@ class _CustomerServicesViewState extends State<_CustomerServicesView> {
               itemBuilder: (context, index) {
                 final prod = regularProducts[index];
                 return AppCard(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
                   child: Row(
                     children: [
                       Container(
@@ -3167,7 +3865,10 @@ class _CustomerServicesViewState extends State<_CustomerServicesView> {
                           color: AppColors.shieldBlue.withValues(alpha: 0.08),
                           borderRadius: BorderRadius.circular(8),
                         ),
-                        child: const Icon(Icons.medication_outlined, color: AppColors.shieldBlue),
+                        child: const Icon(
+                          Icons.medication_outlined,
+                          color: AppColors.shieldBlue,
+                        ),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
@@ -3177,21 +3878,31 @@ class _CustomerServicesViewState extends State<_CustomerServicesView> {
                           children: [
                             Text(
                               prod['name']!,
-                              style: AppTypography.small.copyWith(fontWeight: FontWeight.bold),
+                              style: AppTypography.small.copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
                               overflow: TextOverflow.ellipsis,
                             ),
                             Text(
                               '${prod['qty']} • ${prod['price']}',
-                              style: AppTypography.tiny.copyWith(color: AppColors.gray),
+                              style: AppTypography.tiny.copyWith(
+                                color: AppColors.gray,
+                              ),
                             ),
                           ],
                         ),
                       ),
                       IconButton(
-                        icon: const Icon(Icons.add_shopping_cart, color: AppColors.shieldGreen, size: 20),
+                        icon: const Icon(
+                          Icons.add_shopping_cart,
+                          color: AppColors.shieldGreen,
+                          size: 20,
+                        ),
                         onPressed: () {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Added ${prod['name']} to cart')),
+                            SnackBar(
+                              content: Text('Added ${prod['name']} to cart'),
+                            ),
                           );
                         },
                       ),
@@ -3229,7 +3940,9 @@ class _CustomerServicesViewState extends State<_CustomerServicesView> {
                   children: [
                     Text(
                       prod['name']!,
-                      style: AppTypography.body.copyWith(fontWeight: FontWeight.bold),
+                      style: AppTypography.body.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     const SizedBox(height: 4),
                     Text(
@@ -3242,18 +3955,28 @@ class _CustomerServicesViewState extends State<_CustomerServicesView> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(prod['price']!, style: AppTypography.small.copyWith(fontWeight: FontWeight.bold)),
+                        Text(
+                          prod['price']!,
+                          style: AppTypography.small.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                         ElevatedButton(
                           style: ElevatedButton.styleFrom(
                             backgroundColor: AppColors.shieldBlue,
                             foregroundColor: AppColors.white,
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 8,
+                            ),
                             minimumSize: Size.zero,
                             tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                           ),
                           onPressed: () {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('Added ${prod['name']} to cart')),
+                              SnackBar(
+                                content: Text('Added ${prod['name']} to cart'),
+                              ),
                             );
                           },
                           child: const Text('Add'),
@@ -3272,11 +3995,31 @@ class _CustomerServicesViewState extends State<_CustomerServicesView> {
 
   Widget _buildLabContent() {
     final labTests = [
-      {'name': 'Complete Blood Count (CBC)', 'price': '₹350.00', 'time': 'Reports in 12 hours'},
-      {'name': 'Lipid Profile (Cholesterol)', 'price': '₹600.00', 'time': 'Reports in 12 hours'},
-      {'name': 'HbA1c (Diabetic Sugar)', 'price': '₹450.00', 'time': 'Reports in 8 hours'},
-      {'name': 'Thyroid Profile (T3, T4, TSH)', 'price': '₹550.00', 'time': 'Reports in 24 hours'},
-      {'name': 'Renal/Kidney Function Test', 'price': '₹500.00', 'time': 'Reports in 12 hours'},
+      {
+        'name': 'Complete Blood Count (CBC)',
+        'price': '₹350.00',
+        'time': 'Reports in 12 hours',
+      },
+      {
+        'name': 'Lipid Profile (Cholesterol)',
+        'price': '₹600.00',
+        'time': 'Reports in 12 hours',
+      },
+      {
+        'name': 'HbA1c (Diabetic Sugar)',
+        'price': '₹450.00',
+        'time': 'Reports in 8 hours',
+      },
+      {
+        'name': 'Thyroid Profile (T3, T4, TSH)',
+        'price': '₹550.00',
+        'time': 'Reports in 24 hours',
+      },
+      {
+        'name': 'Renal/Kidney Function Test',
+        'price': '₹500.00',
+        'time': 'Reports in 12 hours',
+      },
     ];
 
     return Column(
@@ -3298,35 +4041,61 @@ class _CustomerServicesViewState extends State<_CustomerServicesView> {
                       color: AppColors.shieldBlue.withValues(alpha: 0.08),
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    child: const Icon(Icons.science_outlined, color: AppColors.shieldBlue),
+                    child: const Icon(
+                      Icons.science_outlined,
+                      color: AppColors.shieldBlue,
+                    ),
                   ),
                   const SizedBox(width: 16),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(test['name']!, style: AppTypography.body.copyWith(fontWeight: FontWeight.bold)),
+                        Text(
+                          test['name']!,
+                          style: AppTypography.body.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                         const SizedBox(height: 4),
-                        Text(test['time']!, style: AppTypography.tiny.copyWith(color: AppColors.gray)),
+                        Text(
+                          test['time']!,
+                          style: AppTypography.tiny.copyWith(
+                            color: AppColors.gray,
+                          ),
+                        ),
                       ],
                     ),
                   ),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
-                      Text(test['price']!, style: AppTypography.body.copyWith(fontWeight: FontWeight.bold, color: AppColors.shieldNavy)),
+                      Text(
+                        test['price']!,
+                        style: AppTypography.body.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.shieldNavy,
+                        ),
+                      ),
                       const SizedBox(height: 6),
                       ElevatedButton(
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.shieldBlue,
                           foregroundColor: AppColors.white,
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 8,
+                          ),
                           minimumSize: Size.zero,
                           tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                         ),
                         onPressed: () {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Requested ${test['name']}. Our lab coordinator will contact you.')),
+                            SnackBar(
+                              content: Text(
+                                'Requested ${test['name']}. Our lab coordinator will contact you.',
+                              ),
+                            ),
                           );
                         },
                         child: const Text('Book Test'),
@@ -3344,10 +4113,26 @@ class _CustomerServicesViewState extends State<_CustomerServicesView> {
 
   Widget _buildHomeCareContent() {
     final homeServices = [
-      {'name': 'Nursing Home Visit', 'desc': 'General nursing care, vital checks, injections', 'price': '₹500 / visit'},
-      {'name': 'Diabetic Wound Dressing', 'desc': 'Surgical dressing + blood glucose monitoring', 'price': '₹600 / visit'},
-      {'name': 'Physiotherapy Session', 'desc': 'Post-stroke, orthopaedic rehabilitation', 'price': '₹800 / session'},
-      {'name': 'Elderly Care Companion', 'desc': 'Assisted checkups and medicine management', 'price': '₹400 / visit'},
+      {
+        'name': 'Nursing Home Visit',
+        'desc': 'General nursing care, vital checks, injections',
+        'price': '₹500 / visit',
+      },
+      {
+        'name': 'Diabetic Wound Dressing',
+        'desc': 'Surgical dressing + blood glucose monitoring',
+        'price': '₹600 / visit',
+      },
+      {
+        'name': 'Physiotherapy Session',
+        'desc': 'Post-stroke, orthopaedic rehabilitation',
+        'price': '₹800 / session',
+      },
+      {
+        'name': 'Elderly Care Companion',
+        'desc': 'Assisted checkups and medicine management',
+        'price': '₹400 / visit',
+      },
     ];
 
     return Column(
@@ -3369,35 +4154,61 @@ class _CustomerServicesViewState extends State<_CustomerServicesView> {
                       color: AppColors.shieldGreen.withValues(alpha: 0.08),
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    child: const Icon(Icons.home_outlined, color: AppColors.shieldGreen),
+                    child: const Icon(
+                      Icons.home_outlined,
+                      color: AppColors.shieldGreen,
+                    ),
                   ),
                   const SizedBox(width: 16),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(srv['name']!, style: AppTypography.body.copyWith(fontWeight: FontWeight.bold)),
+                        Text(
+                          srv['name']!,
+                          style: AppTypography.body.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                         const SizedBox(height: 4),
-                        Text(srv['desc']!, style: AppTypography.small.copyWith(color: AppColors.gray)),
+                        Text(
+                          srv['desc']!,
+                          style: AppTypography.small.copyWith(
+                            color: AppColors.gray,
+                          ),
+                        ),
                       ],
                     ),
                   ),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
-                      Text(srv['price']!, style: AppTypography.body.copyWith(fontWeight: FontWeight.bold, color: AppColors.shieldNavy)),
+                      Text(
+                        srv['price']!,
+                        style: AppTypography.body.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.shieldNavy,
+                        ),
+                      ),
                       const SizedBox(height: 6),
                       ElevatedButton(
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.shieldGreen,
                           foregroundColor: AppColors.white,
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 8,
+                          ),
                           minimumSize: Size.zero,
                           tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                         ),
                         onPressed: () {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Requested ${srv['name']}. Home care team will schedule a visit.')),
+                            SnackBar(
+                              content: Text(
+                                'Requested ${srv['name']}. Home care team will schedule a visit.',
+                              ),
+                            ),
                           );
                         },
                         child: const Text('Request'),
@@ -3415,17 +4226,45 @@ class _CustomerServicesViewState extends State<_CustomerServicesView> {
 
   Widget _buildConsultationContent() {
     final specialistTypes = [
-      {'key': 'DOCTOR', 'label': 'Doctor Consultation', 'icon': Icons.medical_services_outlined},
+      {
+        'key': 'DOCTOR',
+        'label': 'Doctor Consultation',
+        'icon': Icons.medical_services_outlined,
+      },
       {'key': 'DENTAL', 'label': 'Dental Care', 'icon': Icons.mood_outlined},
-      {'key': 'COSMETIC', 'label': 'Cosmetic Care', 'icon': Icons.face_outlined},
-      {'key': 'DIETITIAN', 'label': 'Dietitian', 'icon': Icons.restaurant_menu_outlined},
+      {
+        'key': 'COSMETIC',
+        'label': 'Cosmetic Care',
+        'icon': Icons.face_outlined,
+      },
+      {
+        'key': 'DIETITIAN',
+        'label': 'Dietitian',
+        'icon': Icons.restaurant_menu_outlined,
+      },
     ];
 
     final dietPlans = [
-      {'name': 'Diabetic-Friendly Diet', 'cal': '1600 kcal', 'focus': 'Low Glycemic Index, fiber rich'},
-      {'name': 'Hypertension Management Plan', 'cal': '1800 kcal', 'focus': 'Low sodium, DASH-compliant'},
-      {'name': 'Weight Loss Plan', 'cal': '1400 kcal', 'focus': 'Caloric deficit, high protein'},
-      {'name': 'High-Protein Active Diet', 'cal': '2200 kcal', 'focus': 'Muscle recovery, complex carbs'},
+      {
+        'name': 'Diabetic-Friendly Diet',
+        'cal': '1600 kcal',
+        'focus': 'Low Glycemic Index, fiber rich',
+      },
+      {
+        'name': 'Hypertension Management Plan',
+        'cal': '1800 kcal',
+        'focus': 'Low sodium, DASH-compliant',
+      },
+      {
+        'name': 'Weight Loss Plan',
+        'cal': '1400 kcal',
+        'focus': 'Caloric deficit, high protein',
+      },
+      {
+        'name': 'High-Protein Active Diet',
+        'cal': '2200 kcal',
+        'focus': 'Muscle recovery, complex carbs',
+      },
     ];
 
     return Column(
@@ -3434,7 +4273,7 @@ class _CustomerServicesViewState extends State<_CustomerServicesView> {
       children: [
         Text('Book Specialist Consultation', style: AppTypography.h4),
         const SizedBox(height: 16),
-        
+
         // Specialist selector
         LayoutBuilder(
           builder: (context, constraints) {
@@ -3461,10 +4300,14 @@ class _CustomerServicesViewState extends State<_CustomerServicesView> {
                   child: Container(
                     padding: EdgeInsets.all(narrow ? 12 : 14),
                     decoration: BoxDecoration(
-                      color: isSelected ? AppColors.shieldBlue.withValues(alpha: 0.1) : AppColors.white,
+                      color: isSelected
+                          ? AppColors.shieldBlue.withValues(alpha: 0.1)
+                          : AppColors.white,
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(
-                        color: isSelected ? AppColors.shieldBlue : AppColors.divider,
+                        color: isSelected
+                            ? AppColors.shieldBlue
+                            : AppColors.divider,
                         width: isSelected ? 1.8 : 1,
                       ),
                     ),
@@ -3474,7 +4317,9 @@ class _CustomerServicesViewState extends State<_CustomerServicesView> {
                       children: [
                         Icon(
                           type['icon'] as IconData,
-                          color: isSelected ? AppColors.shieldBlue : AppColors.darkGray,
+                          color: isSelected
+                              ? AppColors.shieldBlue
+                              : AppColors.darkGray,
                           size: narrow ? 24 : 26,
                         ),
                         const SizedBox(height: 6),
@@ -3483,8 +4328,12 @@ class _CustomerServicesViewState extends State<_CustomerServicesView> {
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                           style: AppTypography.small.copyWith(
-                            fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                            color: isSelected ? AppColors.shieldBlue : AppColors.darkGray,
+                            fontWeight: isSelected
+                                ? FontWeight.bold
+                                : FontWeight.w500,
+                            color: isSelected
+                                ? AppColors.shieldBlue
+                                : AppColors.darkGray,
                             height: 1.15,
                           ),
                         ),
@@ -3504,51 +4353,59 @@ class _CustomerServicesViewState extends State<_CustomerServicesView> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('$_specialistType Appointment Booking Form', style: AppTypography.h5),
+              Text(
+                '$_specialistType Appointment Booking Form',
+                style: AppTypography.h5,
+              ),
               const SizedBox(height: 16),
 
-               ShieldDateInputField(
-                 label: 'Select Slot Date',
-                 initialDate: _selectedDate,
-                 minDate: DateTime.now(),
-                 maxDate: DateTime.now().add(const Duration(days: 30)),
-                 onChanged: (value) {
-                   setState(() {
-                     _selectedDate = value;
-                   });
-                 },
-               ),
-               const SizedBox(height: 16),
+              ShieldDateInputField(
+                label: 'Select Slot Date',
+                initialDate: _selectedDate,
+                minDate: DateTime.now(),
+                maxDate: DateTime.now().add(const Duration(days: 30)),
+                onChanged: (value) {
+                  setState(() {
+                    _selectedDate = value;
+                  });
+                },
+              ),
+              const SizedBox(height: 16),
 
               // Consultation Mode radio toggle
-              Text('Consultation Mode', style: AppTypography.small.copyWith(fontWeight: FontWeight.bold)),
+              Text(
+                'Consultation Mode',
+                style: AppTypography.small.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
               const SizedBox(height: 8),
-               RadioGroup<String>(
-                 groupValue: _consultationMode,
-                 onChanged: (val) {
-                   if (val != null) {
-                     setState(() => _consultationMode = val);
-                   }
-                 },
-                 child: const Wrap(
-                   spacing: 10,
-                   runSpacing: 8,
-                   children: [
-                     _ConsultationModeOption(
-                       value: 'IN_PERSON',
-                       label: 'In-Person',
-                     ),
-                     _ConsultationModeOption(
-                       value: 'TELE',
-                       label: 'Tele-Consult',
-                     ),
-                     _ConsultationModeOption(
-                       value: 'VIDEO',
-                       label: 'Online Video',
-                     ),
-                   ],
-                 ),
-               ),
+              RadioGroup<String>(
+                groupValue: _consultationMode,
+                onChanged: (val) {
+                  if (val != null) {
+                    setState(() => _consultationMode = val);
+                  }
+                },
+                child: const Wrap(
+                  spacing: 10,
+                  runSpacing: 8,
+                  children: [
+                    _ConsultationModeOption(
+                      value: 'IN_PERSON',
+                      label: 'In-Person',
+                    ),
+                    _ConsultationModeOption(
+                      value: 'TELE',
+                      label: 'Tele-Consult',
+                    ),
+                    _ConsultationModeOption(
+                      value: 'VIDEO',
+                      label: 'Online Video',
+                    ),
+                  ],
+                ),
+              ),
               const SizedBox(height: 20),
 
               // Book Slot Button
@@ -3584,22 +4441,37 @@ class _CustomerServicesViewState extends State<_CustomerServicesView> {
                         color: AppColors.shieldNavy.withValues(alpha: 0.08),
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      child: const Icon(Icons.restaurant_outlined, color: AppColors.shieldNavy),
+                      child: const Icon(
+                        Icons.restaurant_outlined,
+                        color: AppColors.shieldNavy,
+                      ),
                     ),
                     const SizedBox(width: 16),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(plan['name']!, style: AppTypography.body.copyWith(fontWeight: FontWeight.bold)),
+                          Text(
+                            plan['name']!,
+                            style: AppTypography.body.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                           const SizedBox(height: 4),
-                          Text('${plan['focus']} • Target: ${plan['cal']}', style: AppTypography.tiny.copyWith(color: AppColors.gray)),
+                          Text(
+                            '${plan['focus']} • Target: ${plan['cal']}',
+                            style: AppTypography.tiny.copyWith(
+                              color: AppColors.gray,
+                            ),
+                          ),
                         ],
                       ),
                     ),
                     Icon(
                       isSelected ? Icons.check_circle : Icons.circle_outlined,
-                      color: isSelected ? AppColors.shieldGreen : AppColors.divider,
+                      color: isSelected
+                          ? AppColors.shieldGreen
+                          : AppColors.divider,
                     ),
                   ],
                 ),
@@ -3621,11 +4493,36 @@ class _CardUtilizationView extends StatefulWidget {
 
 class _CardUtilizationViewState extends State<_CardUtilizationView> {
   final List<Map<String, String>> _providers = [
-    {'id': 'pharmacy-1', 'name': 'SHIELD Hyper Pharmacy Perinthalmanna', 'type': 'PHARMACY', 'issuedBusinessId': 'HYP-PERINTHALMANNA'},
-    {'id': 'pharmacy-2', 'name': 'SHIELD Hyper Pharmacy Manjeri', 'type': 'PHARMACY', 'issuedBusinessId': 'HYP-MANJERI'},
-    {'id': 'clinic-1', 'name': 'Smart Clinic Manjeri', 'type': 'CLINIC', 'issuedBusinessId': 'SHG'},
-    {'id': 'dental-1', 'name': 'Dentistry Melattur', 'type': 'DENTAL', 'issuedBusinessId': 'SHG'},
-    {'id': 'home-1', 'name': 'Home Care Alanallur', 'type': 'HOME_VISIT', 'issuedBusinessId': 'SHG'},
+    {
+      'id': 'pharmacy-1',
+      'name': 'SHIELD Hyper Pharmacy Perinthalmanna',
+      'type': 'PHARMACY',
+      'issuedBusinessId': 'HYP-PERINTHALMANNA',
+    },
+    {
+      'id': 'pharmacy-2',
+      'name': 'SHIELD Hyper Pharmacy Manjeri',
+      'type': 'PHARMACY',
+      'issuedBusinessId': 'HYP-MANJERI',
+    },
+    {
+      'id': 'clinic-1',
+      'name': 'Smart Clinic Manjeri',
+      'type': 'CLINIC',
+      'issuedBusinessId': 'SHG',
+    },
+    {
+      'id': 'dental-1',
+      'name': 'Dentistry Melattur',
+      'type': 'DENTAL',
+      'issuedBusinessId': 'SHG',
+    },
+    {
+      'id': 'home-1',
+      'name': 'Home Care Alanallur',
+      'type': 'HOME_VISIT',
+      'issuedBusinessId': 'SHG',
+    },
   ];
 
   final List<Map<String, dynamic>> _cards = [
@@ -3664,7 +4561,7 @@ class _CardUtilizationViewState extends State<_CardUtilizationView> {
       'pointsBalance': 0.00,
       'issuedBusinessId': 'HYP-MANJERI',
       'issuedBusinessName': 'SHIELD Hyper Pharmacy Manjeri',
-    }
+    },
   ];
 
   late Map<String, String> _selectedProvider;
@@ -3673,7 +4570,9 @@ class _CardUtilizationViewState extends State<_CardUtilizationView> {
   bool _validationSuccess = false;
   String _validationMessage = '';
   final List<String> _utilizationLogs = [];
-  final TextEditingController _amountController = TextEditingController(text: '450.00');
+  final TextEditingController _amountController = TextEditingController(
+    text: '450.00',
+  );
 
   @override
   void initState() {
@@ -3692,14 +4591,17 @@ class _CardUtilizationViewState extends State<_CardUtilizationView> {
       if (providerType == 'PHARMACY') {
         if (cardIssuedBiz == providerBiz) {
           _validationSuccess = true;
-          _validationMessage = 'Compatible: Card matches store location. Verification successful!';
+          _validationMessage =
+              'Compatible: Card matches store location. Verification successful!';
         } else {
           _validationSuccess = false;
-          _validationMessage = '[Error: Local store mismatch. Cards issued at other stores cannot be utilized here.]';
+          _validationMessage =
+              '[Error: Local store mismatch. Cards issued at other stores cannot be utilized here.]';
         }
       } else {
         _validationSuccess = true;
-        _validationMessage = 'Compatible: General service provider access granted across locations.';
+        _validationMessage =
+            'Compatible: General service provider access granted across locations.';
       }
     });
   }
@@ -3707,13 +4609,18 @@ class _CardUtilizationViewState extends State<_CardUtilizationView> {
   void _logUtilization() {
     final amount = double.tryParse(_amountController.text) ?? 0.0;
     setState(() {
-      _utilizationLogs.insert(0, 
+      _utilizationLogs.insert(
+        0,
         '${DateTime.now().hour.toString().padLeft(2, '0')}:${DateTime.now().minute.toString().padLeft(2, '0')}:${DateTime.now().second.toString().padLeft(2, '0')} - '
-        'Card ${_selectedCard['cardNumber']} (${_selectedCard['fullName']}) utilized at ${_selectedProvider['name']} for ₹${amount.toStringAsFixed(2)}'
+        'Card ${_selectedCard['cardNumber']} (${_selectedCard['fullName']}) utilized at ${_selectedProvider['name']} for ₹${amount.toStringAsFixed(2)}',
       );
     });
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Logged card utilization of ₹${amount.toStringAsFixed(2)} successfully!')),
+      SnackBar(
+        content: Text(
+          'Logged card utilization of ₹${amount.toStringAsFixed(2)} successfully!',
+        ),
+      ),
     );
   }
 
@@ -3733,9 +4640,17 @@ class _CardUtilizationViewState extends State<_CardUtilizationView> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Simulate QR Scanner & Card Reader', style: AppTypography.h4),
+                    Text(
+                      'Simulate QR Scanner & Card Reader',
+                      style: AppTypography.h4,
+                    ),
                     const SizedBox(height: 16),
-                    Text('Select Store / Provider Location:', style: AppTypography.small.copyWith(fontWeight: FontWeight.bold)),
+                    Text(
+                      'Select Store / Provider Location:',
+                      style: AppTypography.small.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                     const SizedBox(height: 8),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -3751,7 +4666,10 @@ class _CardUtilizationViewState extends State<_CardUtilizationView> {
                           items: _providers.map((p) {
                             return DropdownMenuItem(
                               value: p,
-                              child: Text(p['name']!, style: AppTypography.small),
+                              child: Text(
+                                p['name']!,
+                                style: AppTypography.small,
+                              ),
                             );
                           }).toList(),
                           onChanged: (val) {
@@ -3766,7 +4684,12 @@ class _CardUtilizationViewState extends State<_CardUtilizationView> {
                       ),
                     ),
                     const SizedBox(height: 16),
-                    Text('Simulate Card Scan / Code Entry:', style: AppTypography.small.copyWith(fontWeight: FontWeight.bold)),
+                    Text(
+                      'Simulate Card Scan / Code Entry:',
+                      style: AppTypography.small.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                     const SizedBox(height: 8),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -3782,7 +4705,10 @@ class _CardUtilizationViewState extends State<_CardUtilizationView> {
                           items: _cards.map((c) {
                             return DropdownMenuItem(
                               value: c,
-                              child: Text('${c['cardNumber']} - ${c['fullName']} (Issued: ${c['issuedBusinessId']})', style: AppTypography.small),
+                              child: Text(
+                                '${c['cardNumber']} - ${c['fullName']} (Issued: ${c['issuedBusinessId']})',
+                                style: AppTypography.small,
+                              ),
                             );
                           }).toList(),
                           onChanged: (val) {
@@ -3814,7 +4740,10 @@ class _CardUtilizationViewState extends State<_CardUtilizationView> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Verification Status & Details', style: AppTypography.h4),
+                    Text(
+                      'Verification Status & Details',
+                      style: AppTypography.h4,
+                    ),
                     const SizedBox(height: 16),
                     if (!_isValidated)
                       Container(
@@ -3827,11 +4756,17 @@ class _CardUtilizationViewState extends State<_CardUtilizationView> {
                         child: Center(
                           child: Column(
                             children: [
-                              const Icon(Icons.qr_code, size: 48, color: AppColors.gray),
+                              const Icon(
+                                Icons.qr_code,
+                                size: 48,
+                                color: AppColors.gray,
+                              ),
                               const SizedBox(height: 12),
                               Text(
                                 'Awaiting scan simulation. Select store and card details to begin verification.',
-                                style: AppTypography.small.copyWith(color: AppColors.gray),
+                                style: AppTypography.small.copyWith(
+                                  color: AppColors.gray,
+                                ),
                                 textAlign: TextAlign.center,
                               ),
                             ],
@@ -3844,12 +4779,14 @@ class _CardUtilizationViewState extends State<_CardUtilizationView> {
                         width: double.infinity,
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: _validationSuccess 
+                          color: _validationSuccess
                               ? AppColors.shieldGreen.withValues(alpha: 0.12)
                               : AppColors.error.withValues(alpha: 0.12),
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(
-                            color: _validationSuccess ? AppColors.shieldGreen : AppColors.error,
+                            color: _validationSuccess
+                                ? AppColors.shieldGreen
+                                : AppColors.error,
                             width: 1.5,
                           ),
                         ),
@@ -3857,8 +4794,12 @@ class _CardUtilizationViewState extends State<_CardUtilizationView> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Icon(
-                              _validationSuccess ? Icons.check_circle : Icons.error,
-                              color: _validationSuccess ? AppColors.shieldGreen : AppColors.error,
+                              _validationSuccess
+                                  ? Icons.check_circle
+                                  : Icons.error,
+                              color: _validationSuccess
+                                  ? AppColors.shieldGreen
+                                  : AppColors.error,
                             ),
                             const SizedBox(width: 12),
                             Expanded(
@@ -3866,17 +4807,23 @@ class _CardUtilizationViewState extends State<_CardUtilizationView> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    _validationSuccess ? 'CARD COMPATIBLE' : 'STORE MISMATCH ERROR',
+                                    _validationSuccess
+                                        ? 'CARD COMPATIBLE'
+                                        : 'STORE MISMATCH ERROR',
                                     style: AppTypography.body.copyWith(
                                       fontWeight: FontWeight.bold,
-                                      color: _validationSuccess ? AppColors.shieldGreen : AppColors.error,
+                                      color: _validationSuccess
+                                          ? AppColors.shieldGreen
+                                          : AppColors.error,
                                     ),
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
                                     _validationMessage,
                                     style: AppTypography.small.copyWith(
-                                      color: _validationSuccess ? AppColors.shieldNavy : AppColors.error,
+                                      color: _validationSuccess
+                                          ? AppColors.shieldNavy
+                                          : AppColors.error,
                                     ),
                                   ),
                                 ],
@@ -3887,37 +4834,84 @@ class _CardUtilizationViewState extends State<_CardUtilizationView> {
                       ),
                       const SizedBox(height: 16),
                       if (_validationSuccess) ...[
-                        Text('SHIELD PRIVILEGE MEMBER DETAILS', style: AppTypography.tiny.copyWith(fontWeight: FontWeight.bold, color: AppColors.gray)),
+                        Text(
+                          'SHIELD PRIVILEGE MEMBER DETAILS',
+                          style: AppTypography.tiny.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.gray,
+                          ),
+                        ),
                         const SizedBox(height: 12),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text('Member Name:', style: AppTypography.small.copyWith(color: AppColors.gray)),
-                            Text(_selectedCard['fullName']!, style: AppTypography.small.copyWith(fontWeight: FontWeight.bold)),
+                            Text(
+                              'Member Name:',
+                              style: AppTypography.small.copyWith(
+                                color: AppColors.gray,
+                              ),
+                            ),
+                            Text(
+                              _selectedCard['fullName']!,
+                              style: AppTypography.small.copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                           ],
                         ),
                         const Divider(height: 16),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text('Membership tier:', style: AppTypography.small.copyWith(color: AppColors.gray)),
-                            Text(_selectedCard['membership']!, style: AppTypography.small.copyWith(fontWeight: FontWeight.bold, color: AppColors.shieldBlue)),
+                            Text(
+                              'Membership tier:',
+                              style: AppTypography.small.copyWith(
+                                color: AppColors.gray,
+                              ),
+                            ),
+                            Text(
+                              _selectedCard['membership']!,
+                              style: AppTypography.small.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.shieldBlue,
+                              ),
+                            ),
                           ],
                         ),
                         const Divider(height: 16),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text('Card Number:', style: AppTypography.small.copyWith(color: AppColors.gray)),
-                            Text(_selectedCard['cardNumber']!, style: AppTypography.small),
+                            Text(
+                              'Card Number:',
+                              style: AppTypography.small.copyWith(
+                                color: AppColors.gray,
+                              ),
+                            ),
+                            Text(
+                              _selectedCard['cardNumber']!,
+                              style: AppTypography.small,
+                            ),
                           ],
                         ),
                         const Divider(height: 16),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text('Issued At Store:', style: AppTypography.small.copyWith(color: AppColors.gray)),
-                            Expanded(child: Text(_selectedCard['issuedBusinessName']!, style: AppTypography.small, textAlign: TextAlign.right, overflow: TextOverflow.ellipsis)),
+                            Text(
+                              'Issued At Store:',
+                              style: AppTypography.small.copyWith(
+                                color: AppColors.gray,
+                              ),
+                            ),
+                            Expanded(
+                              child: Text(
+                                _selectedCard['issuedBusinessName']!,
+                                style: AppTypography.small,
+                                textAlign: TextAlign.right,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
                           ],
                         ),
                         const Divider(height: 24),
@@ -3927,14 +4921,26 @@ class _CardUtilizationViewState extends State<_CardUtilizationView> {
                               child: Container(
                                 padding: const EdgeInsets.all(12),
                                 decoration: BoxDecoration(
-                                  color: AppColors.shieldNavy.withValues(alpha: 0.05),
+                                  color: AppColors.shieldNavy.withValues(
+                                    alpha: 0.05,
+                                  ),
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: Column(
                                   children: [
-                                    Text('CASH LEDGER', style: AppTypography.tiny.copyWith(color: AppColors.gray)),
+                                    Text(
+                                      'CASH LEDGER',
+                                      style: AppTypography.tiny.copyWith(
+                                        color: AppColors.gray,
+                                      ),
+                                    ),
                                     const SizedBox(height: 4),
-                                    Text('₹${(_selectedCard['cashBalance'] as double).toStringAsFixed(2)}', style: AppTypography.body.copyWith(fontWeight: FontWeight.bold)),
+                                    Text(
+                                      '₹${(_selectedCard['cashBalance'] as double).toStringAsFixed(2)}',
+                                      style: AppTypography.body.copyWith(
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
                                   ],
                                 ),
                               ),
@@ -3944,14 +4950,27 @@ class _CardUtilizationViewState extends State<_CardUtilizationView> {
                               child: Container(
                                 padding: const EdgeInsets.all(12),
                                 decoration: BoxDecoration(
-                                  color: AppColors.shieldBlue.withValues(alpha: 0.05),
+                                  color: AppColors.shieldBlue.withValues(
+                                    alpha: 0.05,
+                                  ),
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: Column(
                                   children: [
-                                    Text('POINTS LEDGER', style: AppTypography.tiny.copyWith(color: AppColors.gray)),
+                                    Text(
+                                      'POINTS LEDGER',
+                                      style: AppTypography.tiny.copyWith(
+                                        color: AppColors.gray,
+                                      ),
+                                    ),
                                     const SizedBox(height: 4),
-                                    Text('${(_selectedCard['pointsBalance'] as double).toStringAsFixed(0)} PTS', style: AppTypography.body.copyWith(fontWeight: FontWeight.bold, color: AppColors.shieldBlue)),
+                                    Text(
+                                      '${(_selectedCard['pointsBalance'] as double).toStringAsFixed(0)} PTS',
+                                      style: AppTypography.body.copyWith(
+                                        fontWeight: FontWeight.bold,
+                                        color: AppColors.shieldBlue,
+                                      ),
+                                    ),
                                   ],
                                 ),
                               ),
@@ -3963,7 +4982,9 @@ class _CardUtilizationViewState extends State<_CardUtilizationView> {
                           children: [
                             Expanded(
                               child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 12),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                ),
                                 decoration: BoxDecoration(
                                   borderRadius: BorderRadius.circular(8),
                                   border: Border.all(color: AppColors.divider),
@@ -3985,11 +5006,22 @@ class _CardUtilizationViewState extends State<_CardUtilizationView> {
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: AppColors.shieldGreen,
                                 foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 20,
+                                  vertical: 16,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
                               ),
                               onPressed: _logUtilization,
-                              child: Text('Log Card Use', style: AppTypography.body.copyWith(color: Colors.white, fontWeight: FontWeight.bold)),
+                              child: Text(
+                                'Log Card Use',
+                                style: AppTypography.body.copyWith(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
                             ),
                           ],
                         ),
@@ -4007,10 +5039,16 @@ class _CardUtilizationViewState extends State<_CardUtilizationView> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Recent Local Card Utilization logs', style: AppTypography.h4),
+              Text(
+                'Recent Local Card Utilization logs',
+                style: AppTypography.h4,
+              ),
               const SizedBox(height: 12),
               if (_utilizationLogs.isEmpty)
-                Text('No logs recorded in this session.', style: AppTypography.small.copyWith(color: AppColors.gray))
+                Text(
+                  'No logs recorded in this session.',
+                  style: AppTypography.small.copyWith(color: AppColors.gray),
+                )
               else
                 ListView.separated(
                   shrinkWrap: true,
@@ -4022,12 +5060,18 @@ class _CardUtilizationViewState extends State<_CardUtilizationView> {
                       padding: const EdgeInsets.symmetric(vertical: 4),
                       child: Row(
                         children: [
-                          const Icon(Icons.history_toggle_off, color: AppColors.shieldGreen, size: 20),
+                          const Icon(
+                            Icons.history_toggle_off,
+                            color: AppColors.shieldGreen,
+                            size: 20,
+                          ),
                           const SizedBox(width: 12),
                           Expanded(
                             child: Text(
                               _utilizationLogs[index],
-                              style: AppTypography.small.copyWith(fontFamily: 'monospace'),
+                              style: AppTypography.small.copyWith(
+                                fontFamily: 'monospace',
+                              ),
                             ),
                           ),
                         ],
@@ -4047,7 +5091,8 @@ class _BranchIdsDirectoryView extends StatefulWidget {
   const _BranchIdsDirectoryView();
 
   @override
-  State<_BranchIdsDirectoryView> createState() => _BranchIdsDirectoryViewState();
+  State<_BranchIdsDirectoryView> createState() =>
+      _BranchIdsDirectoryViewState();
 }
 
 class _BranchIdsDirectoryViewState extends State<_BranchIdsDirectoryView> {
@@ -4106,7 +5151,7 @@ class _BranchIdsDirectoryViewState extends State<_BranchIdsDirectoryView> {
       'status': 'ACTIVE',
       'membership': 'FOUNDING',
       'card': 'SHLD-CARD-987654',
-    }
+    },
   ];
 
   Widget _buildStoreChip(String storeVal, String label) {
@@ -4130,9 +5175,11 @@ class _BranchIdsDirectoryViewState extends State<_BranchIdsDirectoryView> {
   @override
   Widget build(BuildContext context) {
     final filtered = _members.where((m) {
-      final matchesStore = _selectedStore == 'ALL' || m['store'] == _selectedStore;
+      final matchesStore =
+          _selectedStore == 'ALL' || m['store'] == _selectedStore;
       final q = _searchQuery.toLowerCase();
-      final matchesSearch = q.isEmpty ||
+      final matchesSearch =
+          q.isEmpty ||
           m['fullName'].toLowerCase().contains(q) ||
           m['customerCode'].toLowerCase().contains(q) ||
           m['agentCode'].toLowerCase().contains(q) ||
@@ -4213,15 +5260,72 @@ class _BranchIdsDirectoryViewState extends State<_BranchIdsDirectoryView> {
               TableRow(
                 decoration: const BoxDecoration(
                   color: AppColors.lightGray,
-                  borderRadius: BorderRadius.only(topLeft: Radius.circular(16), topRight: Radius.circular(16)),
+                  borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(16),
+                    topRight: Radius.circular(16),
+                  ),
                 ),
                 children: [
-                  Padding(padding: const EdgeInsets.all(12), child: Text('ID Code', style: AppTypography.small.copyWith(fontWeight: FontWeight.bold, color: AppColors.shieldNavy))),
-                  Padding(padding: const EdgeInsets.all(12), child: Text('Full Name / Mobile', style: AppTypography.small.copyWith(fontWeight: FontWeight.bold, color: AppColors.shieldNavy))),
-                  Padding(padding: const EdgeInsets.all(12), child: Text('Registration Store', style: AppTypography.small.copyWith(fontWeight: FontWeight.bold, color: AppColors.shieldNavy))),
-                  Padding(padding: const EdgeInsets.all(12), child: Text('Agent Code', style: AppTypography.small.copyWith(fontWeight: FontWeight.bold, color: AppColors.shieldNavy))),
-                  Padding(padding: const EdgeInsets.all(12), child: Text('Age', style: AppTypography.small.copyWith(fontWeight: FontWeight.bold, color: AppColors.shieldNavy))),
-                  Padding(padding: const EdgeInsets.all(12), child: Text('Status', style: AppTypography.small.copyWith(fontWeight: FontWeight.bold, color: AppColors.shieldNavy))),
+                  Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Text(
+                      'ID Code',
+                      style: AppTypography.small.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.shieldNavy,
+                      ),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Text(
+                      'Full Name / Mobile',
+                      style: AppTypography.small.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.shieldNavy,
+                      ),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Text(
+                      'Registration Store',
+                      style: AppTypography.small.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.shieldNavy,
+                      ),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Text(
+                      'Agent Code',
+                      style: AppTypography.small.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.shieldNavy,
+                      ),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Text(
+                      'Age',
+                      style: AppTypography.small.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.shieldNavy,
+                      ),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Text(
+                      'Status',
+                      style: AppTypography.small.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.shieldNavy,
+                      ),
+                    ),
+                  ),
                 ],
               ),
               ...filtered.map((m) {
@@ -4235,7 +5339,8 @@ class _BranchIdsDirectoryViewState extends State<_BranchIdsDirectoryView> {
                           showPortalDetailsSheet(
                             context,
                             title: 'Member Profile: ${m['fullName']}',
-                            subtitle: 'ID: ${m['customerCode']} • Card Number: ${m['card']}',
+                            subtitle:
+                                'ID: ${m['customerCode']} • Card Number: ${m['card']}',
                             meta: m['store'],
                             status: m['status'],
                             highlights: [
@@ -4246,7 +5351,13 @@ class _BranchIdsDirectoryViewState extends State<_BranchIdsDirectoryView> {
                             ],
                           );
                         },
-                        child: Text(m['customerCode']!, style: AppTypography.small.copyWith(color: AppColors.shieldBlue, fontWeight: FontWeight.bold)),
+                        child: Text(
+                          m['customerCode']!,
+                          style: AppTypography.small.copyWith(
+                            color: AppColors.shieldBlue,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                       ),
                     ),
                     Padding(
@@ -4254,26 +5365,57 @@ class _BranchIdsDirectoryViewState extends State<_BranchIdsDirectoryView> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(m['fullName']!, style: AppTypography.small.copyWith(fontWeight: FontWeight.w600)),
-                          Text(m['mobile']!, style: AppTypography.tiny.copyWith(color: AppColors.gray)),
+                          Text(
+                            m['fullName']!,
+                            style: AppTypography.small.copyWith(
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          Text(
+                            m['mobile']!,
+                            style: AppTypography.tiny.copyWith(
+                              color: AppColors.gray,
+                            ),
+                          ),
                         ],
                       ),
                     ),
-                    Padding(padding: const EdgeInsets.all(12), child: Text(m['store']!, style: AppTypography.small)),
-                    Padding(padding: const EdgeInsets.all(12), child: Text(m['agentCode']!, style: AppTypography.small.copyWith(fontFamily: 'monospace'))),
-                    Padding(padding: const EdgeInsets.all(12), child: Text(m['age']!, style: AppTypography.small)),
+                    Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: Text(m['store']!, style: AppTypography.small),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: Text(
+                        m['agentCode']!,
+                        style: AppTypography.small.copyWith(
+                          fontFamily: 'monospace',
+                        ),
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: Text(m['age']!, style: AppTypography.small),
+                    ),
                     Padding(
                       padding: const EdgeInsets.all(12),
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
                         decoration: BoxDecoration(
-                          color: isPending ? AppColors.warning.withValues(alpha: 0.1) : AppColors.shieldGreen.withValues(alpha: 0.1),
+                          color: isPending
+                              ? AppColors.warning.withValues(alpha: 0.1)
+                              : AppColors.shieldGreen.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Text(
                           m['status']!,
                           style: AppTypography.tiny.copyWith(
-                            color: isPending ? AppColors.warning : AppColors.shieldGreen,
+                            color: isPending
+                                ? AppColors.warning
+                                : AppColors.shieldGreen,
                             fontWeight: FontWeight.bold,
                           ),
                           textAlign: TextAlign.center,
@@ -4295,19 +5437,68 @@ class _ServiceUtilizationView extends StatefulWidget {
   const _ServiceUtilizationView();
 
   @override
-  State<_ServiceUtilizationView> createState() => _ServiceUtilizationViewState();
+  State<_ServiceUtilizationView> createState() =>
+      _ServiceUtilizationViewState();
 }
 
 class _ServiceUtilizationViewState extends State<_ServiceUtilizationView> {
   String _selectedCategory = 'ALL';
 
   final List<Map<String, dynamic>> _txns = [
-    {'customer': 'Nihal Rahman', 'card': 'SHLD-CARD-123456', 'provider': 'SHIELD Hyper Pharmacy Perinthalmanna', 'category': 'Pharmacy', 'amount': 1200.00, 'date': '03/06/2026', 'status': 'Settled'},
-    {'customer': 'Nihal Rahman', 'card': 'SHLD-CARD-123456', 'provider': 'Smart Clinic Manjeri', 'category': 'Clinic', 'amount': 500.00, 'date': '05/06/2026', 'status': 'Settled'},
-    {'customer': 'Nihal Rahman', 'card': 'SHLD-CARD-123456', 'provider': 'Laboratory Tirur', 'category': 'Lab', 'amount': 350.00, 'date': '12/06/2026', 'status': 'Settled'},
-    {'customer': 'Fathima Sherin', 'card': 'SHLD-CARD-789012', 'provider': 'SHIELD Hyper Pharmacy Manjeri', 'category': 'Pharmacy', 'amount': 850.00, 'date': '15/06/2026', 'status': 'Settled'},
-    {'customer': 'Fathima Sherin', 'card': 'SHLD-CARD-789012', 'provider': 'Dentistry Melattur', 'category': 'Dental', 'amount': 1500.00, 'date': '18/06/2026', 'status': 'Settled'},
-    {'customer': 'Shanib K', 'card': 'SHLD-CARD-456789', 'provider': 'Home Care Alanallur', 'category': 'Homecare', 'amount': 600.00, 'date': '20/06/2026', 'status': 'Settled'},
+    {
+      'customer': 'Nihal Rahman',
+      'card': 'SHLD-CARD-123456',
+      'provider': 'SHIELD Hyper Pharmacy Perinthalmanna',
+      'category': 'Pharmacy',
+      'amount': 1200.00,
+      'date': '03/06/2026',
+      'status': 'Settled',
+    },
+    {
+      'customer': 'Nihal Rahman',
+      'card': 'SHLD-CARD-123456',
+      'provider': 'Smart Clinic Manjeri',
+      'category': 'Clinic',
+      'amount': 500.00,
+      'date': '05/06/2026',
+      'status': 'Settled',
+    },
+    {
+      'customer': 'Nihal Rahman',
+      'card': 'SHLD-CARD-123456',
+      'provider': 'Laboratory Tirur',
+      'category': 'Lab',
+      'amount': 350.00,
+      'date': '12/06/2026',
+      'status': 'Settled',
+    },
+    {
+      'customer': 'Fathima Sherin',
+      'card': 'SHLD-CARD-789012',
+      'provider': 'SHIELD Hyper Pharmacy Manjeri',
+      'category': 'Pharmacy',
+      'amount': 850.00,
+      'date': '15/06/2026',
+      'status': 'Settled',
+    },
+    {
+      'customer': 'Fathima Sherin',
+      'card': 'SHLD-CARD-789012',
+      'provider': 'Dentistry Melattur',
+      'category': 'Dental',
+      'amount': 1500.00,
+      'date': '18/06/2026',
+      'status': 'Settled',
+    },
+    {
+      'customer': 'Shanib K',
+      'card': 'SHLD-CARD-456789',
+      'provider': 'Home Care Alanallur',
+      'category': 'Homecare',
+      'amount': 600.00,
+      'date': '20/06/2026',
+      'status': 'Settled',
+    },
   ];
 
   Widget _buildCategoryChip(String cat, String label) {
@@ -4382,38 +5573,127 @@ class _ServiceUtilizationViewState extends State<_ServiceUtilizationView> {
               TableRow(
                 decoration: const BoxDecoration(
                   color: AppColors.lightGray,
-                  borderRadius: BorderRadius.only(topLeft: Radius.circular(16), topRight: Radius.circular(16)),
+                  borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(16),
+                    topRight: Radius.circular(16),
+                  ),
                 ),
                 children: [
-                  Padding(padding: const EdgeInsets.all(12), child: Text('Date', style: AppTypography.small.copyWith(fontWeight: FontWeight.bold, color: AppColors.shieldNavy))),
-                  Padding(padding: const EdgeInsets.all(12), child: Text('Member / Card', style: AppTypography.small.copyWith(fontWeight: FontWeight.bold, color: AppColors.shieldNavy))),
-                  Padding(padding: const EdgeInsets.all(12), child: Text('Utilized At Provider', style: AppTypography.small.copyWith(fontWeight: FontWeight.bold, color: AppColors.shieldNavy))),
-                  Padding(padding: const EdgeInsets.all(12), child: Text('Category', style: AppTypography.small.copyWith(fontWeight: FontWeight.bold, color: AppColors.shieldNavy))),
-                  Padding(padding: const EdgeInsets.all(12), child: Text('Debited', style: AppTypography.small.copyWith(fontWeight: FontWeight.bold, color: AppColors.shieldNavy))),
-                  Padding(padding: const EdgeInsets.all(12), child: Text('Status', style: AppTypography.small.copyWith(fontWeight: FontWeight.bold, color: AppColors.shieldNavy))),
+                  Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Text(
+                      'Date',
+                      style: AppTypography.small.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.shieldNavy,
+                      ),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Text(
+                      'Member / Card',
+                      style: AppTypography.small.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.shieldNavy,
+                      ),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Text(
+                      'Utilized At Provider',
+                      style: AppTypography.small.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.shieldNavy,
+                      ),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Text(
+                      'Category',
+                      style: AppTypography.small.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.shieldNavy,
+                      ),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Text(
+                      'Debited',
+                      style: AppTypography.small.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.shieldNavy,
+                      ),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Text(
+                      'Status',
+                      style: AppTypography.small.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.shieldNavy,
+                      ),
+                    ),
+                  ),
                 ],
               ),
               ...filtered.map((t) {
                 return TableRow(
                   children: [
-                    Padding(padding: const EdgeInsets.all(12), child: Text(t['date']!, style: AppTypography.small)),
+                    Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: Text(t['date']!, style: AppTypography.small),
+                    ),
                     Padding(
                       padding: const EdgeInsets.all(12),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(t['customer']!, style: AppTypography.small.copyWith(fontWeight: FontWeight.w600)),
-                          Text(t['card']!, style: AppTypography.tiny.copyWith(color: AppColors.gray, fontFamily: 'monospace')),
+                          Text(
+                            t['customer']!,
+                            style: AppTypography.small.copyWith(
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          Text(
+                            t['card']!,
+                            style: AppTypography.tiny.copyWith(
+                              color: AppColors.gray,
+                              fontFamily: 'monospace',
+                            ),
+                          ),
                         ],
                       ),
                     ),
-                    Padding(padding: const EdgeInsets.all(12), child: Text(t['provider']!, style: AppTypography.small)),
-                    Padding(padding: const EdgeInsets.all(12), child: Text(t['category']!, style: AppTypography.small)),
-                    Padding(padding: const EdgeInsets.all(12), child: Text('₹${(t['amount'] as double).toStringAsFixed(2)}', style: AppTypography.small.copyWith(fontWeight: FontWeight.bold, color: AppColors.error))),
+                    Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: Text(t['provider']!, style: AppTypography.small),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: Text(t['category']!, style: AppTypography.small),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: Text(
+                        '₹${(t['amount'] as double).toStringAsFixed(2)}',
+                        style: AppTypography.small.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.error,
+                        ),
+                      ),
+                    ),
                     Padding(
                       padding: const EdgeInsets.all(12),
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
                         decoration: BoxDecoration(
                           color: AppColors.shieldGreen.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(6),
@@ -4456,9 +5736,20 @@ class _AdminReportsView extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Total Wallet Cash Balance', style: AppTypography.small.copyWith(color: AppColors.gray)),
+                    Text(
+                      'Total Wallet Cash Balance',
+                      style: AppTypography.small.copyWith(
+                        color: AppColors.gray,
+                      ),
+                    ),
                     const SizedBox(height: 8),
-                    Text('₹8,450.00', style: AppTypography.h3.copyWith(color: AppColors.shieldNavy, fontWeight: FontWeight.bold)),
+                    Text(
+                      '₹8,450.00',
+                      style: AppTypography.h3.copyWith(
+                        color: AppColors.shieldNavy,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -4470,9 +5761,20 @@ class _AdminReportsView extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Referral Points Awarded', style: AppTypography.small.copyWith(color: AppColors.gray)),
+                    Text(
+                      'Referral Points Awarded',
+                      style: AppTypography.small.copyWith(
+                        color: AppColors.gray,
+                      ),
+                    ),
                     const SizedBox(height: 8),
-                    Text('300 PTS', style: AppTypography.h3.copyWith(color: AppColors.shieldBlue, fontWeight: FontWeight.bold)),
+                    Text(
+                      '300 PTS',
+                      style: AppTypography.h3.copyWith(
+                        color: AppColors.shieldBlue,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -4484,9 +5786,20 @@ class _AdminReportsView extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Membership Fees collected', style: AppTypography.small.copyWith(color: AppColors.gray)),
+                    Text(
+                      'Membership Fees collected',
+                      style: AppTypography.small.copyWith(
+                        color: AppColors.gray,
+                      ),
+                    ),
                     const SizedBox(height: 8),
-                    Text('₹1,500.00', style: AppTypography.h3.copyWith(color: AppColors.shieldGreen, fontWeight: FontWeight.bold)),
+                    Text(
+                      '₹1,500.00',
+                      style: AppTypography.h3.copyWith(
+                        color: AppColors.shieldGreen,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -4503,7 +5816,10 @@ class _AdminReportsView extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Membership Plan Distribution', style: AppTypography.h4),
+                    Text(
+                      'Membership Plan Distribution',
+                      style: AppTypography.h4,
+                    ),
                     const SizedBox(height: 20),
                     // Founding
                     Row(
@@ -4514,7 +5830,10 @@ class _AdminReportsView extends StatelessWidget {
                             height: 24,
                             decoration: const BoxDecoration(
                               color: AppColors.shieldNavy,
-                              borderRadius: BorderRadius.only(topLeft: Radius.circular(6), bottomLeft: Radius.circular(6)),
+                              borderRadius: BorderRadius.only(
+                                topLeft: Radius.circular(6),
+                                bottomLeft: Radius.circular(6),
+                              ),
                             ),
                           ),
                         ),
@@ -4524,7 +5843,10 @@ class _AdminReportsView extends StatelessWidget {
                             height: 24,
                             decoration: const BoxDecoration(
                               color: AppColors.shieldBlue,
-                              borderRadius: BorderRadius.only(topRight: Radius.circular(6), bottomRight: Radius.circular(6)),
+                              borderRadius: BorderRadius.only(
+                                topRight: Radius.circular(6),
+                                bottomRight: Radius.circular(6),
+                              ),
                             ),
                           ),
                         ),
@@ -4536,16 +5858,30 @@ class _AdminReportsView extends StatelessWidget {
                       children: [
                         Row(
                           children: [
-                            Container(width: 12, height: 12, color: AppColors.shieldNavy),
+                            Container(
+                              width: 12,
+                              height: 12,
+                              color: AppColors.shieldNavy,
+                            ),
                             const SizedBox(width: 8),
-                            Text('Founding Members (65%)', style: AppTypography.small),
+                            Text(
+                              'Founding Members (65%)',
+                              style: AppTypography.small,
+                            ),
                           ],
                         ),
                         Row(
                           children: [
-                            Container(width: 12, height: 12, color: AppColors.shieldBlue),
+                            Container(
+                              width: 12,
+                              height: 12,
+                              color: AppColors.shieldBlue,
+                            ),
                             const SizedBox(width: 8),
-                            Text('Standard Members (35%)', style: AppTypography.small),
+                            Text(
+                              'Standard Members (35%)',
+                              style: AppTypography.small,
+                            ),
                           ],
                         ),
                       ],
@@ -4561,11 +5897,18 @@ class _AdminReportsView extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Service Category Utilization share', style: AppTypography.h4),
+                    Text(
+                      'Service Category Utilization share',
+                      style: AppTypography.h4,
+                    ),
                     const SizedBox(height: 16),
                     _buildUtilBar('Pharmacy', 55, AppColors.shieldGreen),
                     const SizedBox(height: 12),
-                    _buildUtilBar('Clinics & Consults', 25, AppColors.shieldBlue),
+                    _buildUtilBar(
+                      'Clinics & Consults',
+                      25,
+                      AppColors.shieldBlue,
+                    ),
                     const SizedBox(height: 12),
                     _buildUtilBar('Laboratory', 10, AppColors.shieldNavy),
                     const SizedBox(height: 12),
@@ -4588,7 +5931,10 @@ class _AdminReportsView extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(label, style: AppTypography.small),
-            Text('$percentage%', style: AppTypography.small.copyWith(fontWeight: FontWeight.bold)),
+            Text(
+              '$percentage%',
+              style: AppTypography.small.copyWith(fontWeight: FontWeight.bold),
+            ),
           ],
         ),
         const SizedBox(height: 6),
