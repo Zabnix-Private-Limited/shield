@@ -1128,3 +1128,727 @@ otifications inside rontend/lib/features/portal/presentation/screens/portal_she
 - Not applicable (log-only update)
 ---
 2026-06-25 17:55:50 IST
+## 45. Customer Hero Density Pass: Reduced Blue Card Height and Normalized Action Chip Sizing
+**High-level description**: Tightened the customer dashboard hero card and standardized portal action-chip sizing so the blue hero areas feel denser, better aligned, and more mobile-native across customer-facing portal sections.
+- Reduced the height and wasted space in the customer dashboard blue hero card in `frontend/lib/features/portal/presentation/screens/portal_shell.dart`:
+  - Replaced the earlier two-column hero layout, which left too much empty vertical mass on desktop-width browsers, with a denser single-column structure.
+  - Moved wallet/points and visits/documents into compact translucent stat blocks inside the hero.
+  - Reduced padding and vertical gaps so the card reads more like an app summary panel and less like a stretched marketing banner.
+- Normalized action-chip layout and sizing across the portal hero surfaces:
+  - Updated `_HeroActionButton` so hero chips now share a consistent minimum height, alignment, truncation behavior, and optional fixed width.
+  - Updated the generic `_HeroPanel` to reuse the same hero-chip component instead of maintaining a separate ad-hoc action-chip style.
+  - This keeps customer and non-customer portal hero actions visually closer to one design system.
+- Normalized the filled action pills used in compact customer sections:
+  - Updated `_ActionPill` to support the same fixed-width / consistent-height behavior.
+  - Applied equal-width two-column chip layout treatment in the customer wallet, appointments, and notifications section action groups.
+  - This prevents mixed chip lengths from creating uneven visual rhythm inside compact cards.
+- Why this approach was chosen:
+  - The user specifically called out the blue card height and the inconsistent chip arrangement, so the fix focused on density plus reusable sizing logic rather than screen-local spacing hacks.
+  - Centralizing the chip behavior in shared portal widgets makes later customer-section cleanup more predictable.
+- Verification completed after the layout pass:
+  - `flutter analyze` returned `No issues found!`.
+  - `flutter test test/widget_test.dart test/app_responsive_test.dart` passed.
+  - `flutter build web` succeeded and produced `build/web`.
+  - Existing Wasm dry-run warnings from `flutter_secure_storage_web` remained informational and unchanged.
+
+### Files Modified/Created
+**Frontend Files (Modified)**:
+- [portal_shell.dart](file:///e:/K4NN4N/shield/frontend/lib/features/portal/presentation/screens/portal_shell.dart)
+
+**Verification Commands**:
+- `flutter analyze`
+- `flutter test test/widget_test.dart test/app_responsive_test.dart`
+- `flutter build web`
+---
+2026-06-25 19:23:39 IST## 46. Customer Profile and Membership Backend Wiring: Active Portal Profile Editor and Live Membership Summary
+**High-level description**: Replaced the remaining mock-only customer profile and membership experience in the active customer portal with backend-backed reads, a safe customer profile update flow, and denser mobile-first hero cards that keep all customer sections inside `/portal/customer/...`.
+- Wired the customer data layer in `frontend/lib/shared/services/api_service.dart` to the real Nest backend:
+  - `getCustomerProfile`, `getWalletProfile`, `getWalletTransactions`, and `getCustomerMembership` now attempt live API reads first and only fall back to local demo data if the backend is unavailable.
+  - Added `updateCustomerProfile` so customer-safe profile edits can persist through `PUT /customers/:id` instead of staying local-only.
+  - Membership data is now derived from the live customer payload plus wallet ledger transactions, keeping the portal aligned with the backend-first wallet and membership model.
+- Extended frontend parsing models so backend responses can be consumed cleanly:
+  - Added JSON parsing and `copyWith` support to `customer.dart`.
+  - Added backend-driven membership mapping in `membership.dart`.
+  - Added wallet-transaction parsing in `wallet.dart`.
+- Completed the active customer profile module inside `frontend/lib/features/portal/presentation/screens/portal_shell.dart`:
+  - Added a dedicated customer `profile` branch so `/portal/customer/profile` no longer falls through to the generic portal placeholder hero.
+  - Built a compact in-portal profile editor with mobile-native spacing, customer-safe editable fields, masked Aadhaar, and direct navigation into membership/settings without reviving any standalone customer shell.
+  - Reused the shared date input for DOB so manual entry and calendar picking stay consistent with the requested customer UX direction.
+- Tightened the active customer dashboard and membership hero surfaces:
+  - The blue hero cards now use denser padding and a normalized action-chip grid with proper full-width handling for odd chip counts.
+  - Dashboard membership label, wallet, visits, and document counts are now fed from the active customer data flow instead of the old fixed hero placeholders.
+  - Membership card content now reflects the derived live membership tier and validity data while staying visually compact and app-like.
+- Backend support adjustment:
+  - In `backend/src/customer/customer.service.ts`, the profile update path now includes `bloodGroup` so the new customer profile editor can round-trip that field instead of dropping it on save.
+- Why this approach was chosen:
+  - The user asked to build the customer modules one by one without breaking the enforced mobile-only customer portal rule, so this slice focuses on profile plus membership end-to-end while preserving the existing `/portal/customer/...` routing model.
+  - Read fallbacks were kept only for preview resilience and tests; actual profile saves remain backend-only so we do not fake persistence.
+- Verification completed for this slice:
+  - `npm.cmd run build`
+  - `flutter analyze`
+  - `flutter test test/widget_test.dart test/app_responsive_test.dart`
+  - `flutter build web` (succeeded; existing `flutter_secure_storage_web` Wasm dry-run warnings remained informational and unchanged)
+
+### Files Modified/Created
+**Frontend Files (Modified)**:
+- [customer.dart](file:///e:/K4NN4N/shield/frontend/lib/shared/models/customer.dart)
+- [membership.dart](file:///e:/K4NN4N/shield/frontend/lib/shared/models/membership.dart)
+- [wallet.dart](file:///e:/K4NN4N/shield/frontend/lib/shared/models/wallet.dart)
+- [api_service.dart](file:///e:/K4NN4N/shield/frontend/lib/shared/services/api_service.dart)
+- [portal_shell.dart](file:///e:/K4NN4N/shield/frontend/lib/features/portal/presentation/screens/portal_shell.dart)
+
+**Backend Files (Modified)**:
+- [customer.service.ts](file:///e:/K4NN4N/shield/backend/src/customer/customer.service.ts)
+
+**Verification Commands**:
+- `npm.cmd run build`
+- `flutter analyze`
+- `flutter test test/widget_test.dart test/app_responsive_test.dart`
+- `flutter build web`
+---
+2026-06-26 14:52:06 IST## 47. Log Formatting Correction: Restated Timestamp Boundary for Entry 46
+**High-level description**: Appended a correction note because entry `46` was appended immediately after the prior trailing timestamp line without an intervening newline. This preserves append-only history while making the boundary explicit for future readers.
+- No product code changed in this correction.
+- Entry `46` remains the authoritative engineering note for the customer profile and membership backend wiring slice.
+- This follow-up exists only to restore human-readable log sequencing without rewriting earlier content.
+
+### Files Modified/Created
+**Frontend Files (Modified)**:
+- [log.md](file:///e:/K4NN4N/shield/log.md)
+
+**Verification Commands**:
+- Not applicable (append-only log correction)
+---
+2026-06-26 14:52:06 IST2026-06-26 15:15:12 IST
+## 48. Customer Module Completion Pass: Wallet, Appointments, Notifications, and Services Wired Into the Active Portal
+**High-level description**: Completed the next customer-module slices inside the active `/portal/customer/...` shell by replacing the remaining static preview behavior with backend-backed wallet, appointments, notifications, and core services actions while keeping the customer experience compact, app-like, and mobile-only even on wide browsers.
+- Extended customer frontend parsing and API integration:
+  - Added backend JSON parsing for appointments, documents, and notifications in `appointment.dart`, `document.dart`, and `notification.dart`.
+  - Extended `api_service.dart` so customer appointments, documents, and notifications now attempt real backend reads before falling back to local demo content.
+  - Added live customer actions for appointment booking, appointment cancellation, document upload, and marking notifications as read.
+- Completed the customer wallet module in the active portal:
+  - Upgraded the wallet hero into the same compact premium card language used across the customer dashboard and membership slices.
+  - Surfaced live wallet status, cash, points, credit availability, and monthly spend using the backend wallet profile plus transaction ledger.
+  - Removed the broken recharge route dependency and kept wallet actions inside valid customer routes or in-context detail flows.
+  - Replaced the old mock-only running-balance detail message with a local calculation based on the loaded live ledger so transaction detail sheets no longer imply dummy post-balance values.
+- Completed the customer appointments module with live backend data:
+  - Replaced the static portal-metadata appointment view with a backend-fed timeline built from `/appointments?customer_id=...`.
+  - Added real counts for upcoming, completed, cancelled, and care-type coverage.
+  - Added live cancellation support for scheduled appointments using the customer appointment endpoint.
+  - Kept rescheduling/share behavior non-destructive and inside the compact customer-app interaction model.
+- Completed the customer notifications module with live backend data:
+  - Replaced static queue/recent placeholders with a real notification inbox grouped into unread and earlier updates.
+  - Added live notification type filters and a backend-backed `mark all read` flow using the notification read endpoint.
+  - Kept all inbox actions inside the customer portal without reintroducing alternate shells or duplicate nav systems.
+- Completed the important backend-connected actions in customer services:
+  - Prescription upload now uses the backend document upload endpoint instead of a pure timer-based fake success flow.
+  - Consultation booking now creates a real appointment via the backend and reports the result back into the customer app flow.
+  - This preserves the richer service tabs while ensuring the most important customer actions have actual backend effects.
+- Settings and route consistency:
+  - Customer settings remains inside the same compact portal shell and continues to route profile and notification behavior through the same customer app structure.
+  - No standalone customer shell or bottom-navigation flow was restored.
+- Why this approach was chosen:
+  - The user asked to finish the customer module one slice at a time without more questions, so this pass prioritized the highest-value remaining customer areas with real backend support first and kept unsupported areas as in-app placeholders instead of inventing unsupported persistence.
+  - The layout work stayed keyed to the clamped customer viewport and did not reintroduce desktop treatment for customer-facing screens.
+- Verification completed for this pass:
+  - `npm.cmd run build`
+  - `flutter analyze`
+  - `flutter test test/widget_test.dart test/app_responsive_test.dart`
+  - `flutter build web` (succeeded; existing `flutter_secure_storage_web` Wasm dry-run warnings remained informational and unchanged)
+
+### Files Modified/Created
+**Frontend Files (Modified)**:
+- [appointment.dart](file:///e:/K4NN4N/shield/frontend/lib/shared/models/appointment.dart)
+- [document.dart](file:///e:/K4NN4N/shield/frontend/lib/shared/models/document.dart)
+- [notification.dart](file:///e:/K4NN4N/shield/frontend/lib/shared/models/notification.dart)
+- [api_service.dart](file:///e:/K4NN4N/shield/frontend/lib/shared/services/api_service.dart)
+- [portal_shell.dart](file:///e:/K4NN4N/shield/frontend/lib/features/portal/presentation/screens/portal_shell.dart)
+
+**Verification Commands**:
+- `npm.cmd run build`
+- `flutter analyze`
+- `flutter test test/widget_test.dart test/app_responsive_test.dart`
+- `flutter build web`
+---2026-06-26 15:16:34 IST
+## 49. Detailed Customer Module Engineering Notes: Data Flow, UI Decisions, Backend Coverage, and Remaining Assumptions
+**High-level description**: Added a deeper engineering supplement for the completed customer-module pass so future sessions can understand not only what changed, but also how customer data now flows through the app, which backend capabilities were truly wired, which customer actions still rely on placeholder behavior, and which assumptions still need a proper auth/session layer before the customer experience can be called fully production-grounded.
+- Customer routing and shell constraints preserved end-to-end:
+  - All new customer work continues to live inside the portal shell under `/portal/customer/...`.
+  - No standalone customer shell, direct legacy customer page, or bottom-navigation customer flow was restored.
+  - All new navigation actions from dashboard, profile, membership, wallet, notifications, appointments, services, and settings continue to route within the same customer app container.
+  - This keeps the customer experience visually and structurally unified as one compact app rather than a mix of old and new patterns.
+- Customer viewport and design rule alignment remained intact:
+  - No new customer component was keyed off the full browser width.
+  - Compact hero cards, stacked actions, and dense KPI treatment were maintained so customer screens continue to feel app-like even when opened in a desktop browser.
+  - New action-group layout logic uses the same normalized customer hero-chip rhythm instead of reintroducing uneven ribbon-style chip clusters.
+- Shared frontend model layer now supports backend payload parsing instead of forcing screen-local mock adaptation:
+  - `frontend/lib/shared/models/appointment.dart` now parses backend appointment objects into the existing Flutter appointment model, including type mapping, status mapping, provider name extraction, and customer-facing labels.
+  - `frontend/lib/shared/models/document.dart` now parses backend document records, maps document type/status values to the app enums, and exposes human-readable labels for display.
+  - `frontend/lib/shared/models/notification.dart` now parses backend notification records, derives read state from backend status, and infers practical notification categories for wallet / appointment / document / membership / system display treatment.
+  - This parsing work was necessary to stop each customer screen from inventing its own API-to-UI mapping logic.
+- Customer API layer is now split into "live when possible, fallback only for resilience" behavior:
+  - `frontend/lib/shared/services/api_service.dart` continues to prefer backend-first reads for profile, membership, wallet, appointments, notifications, and documents.
+  - For customer reads, local dummy data remains only as a resilience fallback when the backend is unreachable, which protects the existing preview flows and widget tests from collapsing outright.
+  - For mutating customer actions, the new profile save / appointment create / appointment cancel / notification read / document upload flows are backend-only and do not fake persistence locally.
+  - This deliberately avoids misleading the user into thinking a change was saved when it only updated frontend state.
+- Detailed wallet-module completion notes:
+  - The customer wallet screen was upgraded from a plain white summary card into a dense premium hero card aligned with the new customer dashboard and membership visual language.
+  - Wallet status, cash balance, points balance, rewards earned, monthly spend, and credit availability are now all driven from the live wallet profile plus transaction ledger.
+  - The wallet detail sheet no longer uses the old mock-only `postBalance` assumption from dummy transactions; instead it computes the post-transaction ledger balance locally from the loaded live transaction list and the current sub-ledger type.
+  - The broken `'/portal/customer/recharge'` navigation dependency was removed from the active wallet hero actions, which prevents the customer flow from pointing at a non-existent portal route.
+  - Statement and points-policy actions were intentionally kept as detail-sheet flows because no backend export or rules CMS endpoint currently exists for them.
+- Detailed appointments-module completion notes:
+  - The old customer appointments screen previously relied on `PortalSectionData` queue/recent presentation metadata rather than real appointment records.
+  - It now loads actual customer appointments from the backend and separates them into active upcoming/pending visits versus history.
+  - The screen computes counts for upcoming, completed, cancelled, and number of care types represented instead of displaying static metric copy.
+  - Scheduled appointments now expose a real cancellation action through the backend appointment endpoint.
+  - A history toggle was added so the customer can switch between upcoming-only review and a fuller compact timeline without leaving the same screen.
+  - Reschedule/share behavior still remains intentionally lightweight because there is no corresponding backend workflow yet and inventing one would have created fake product behavior.
+- Detailed notifications-module completion notes:
+  - The old notifications screen previously used static portal queue/recent data instead of backend notification records.
+  - It now loads the real customer notification feed, groups visible alerts into unread and earlier updates, and computes counts by category.
+  - Notification filter chips now work against the parsed notification types rather than only against hardcoded presentation categories.
+  - Tapping an unread item marks it as read through the backend before reopening it as a detail sheet, which keeps the inbox behavior consistent with a real customer mobile app flow.
+  - `Mark all read` now iterates through unread backend notifications and refreshes the inbox from the backend afterward.
+  - Notification settings still route to the customer settings view because there is no backend preference endpoint yet.
+- Detailed services-module completion notes:
+  - The services area still contains rich frontend-only experience layers for pharmacy, lab, homecare, and consultation browsing because the repo does not yet expose a complete customer service-catalog backend for all of those tabs.
+  - The two highest-value customer actions in that screen were made real:
+    - prescription upload now calls the backend document upload endpoint,
+    - consultation booking now creates a real backend appointment.
+  - Upload status now reflects actual document upload completion instead of only a simulated delayed success message.
+  - Consultation booking now surfaces the booking result back into the customer flow and is intended to be revisited later once real provider selection and authenticated customer identity exist.
+- Detailed settings-module notes:
+  - Customer settings remains intentionally compact and purpose-driven, with notification, privacy/care, and support grouped into focused cards.
+  - The toggles are still local-state only because there is no persisted customer-preference backend model exposed in the current repo slice.
+  - This is an explicit limitation rather than an omission by mistake.
+  - Profile and notification entry points from settings now lead into the active customer routes that were built in this pass.
+- Detailed backend coverage notes:
+  - Confirmed live customer-facing backend coverage exists for:
+    - `GET /wallets/:customerId`
+    - `GET /wallets/:id/transactions`
+    - `GET /appointments?customer_id=...`
+    - `POST /appointments`
+    - `POST /appointments/:id/cancel`
+    - `GET /notifications?customer_id=...`
+    - `POST /notifications/:id/read`
+    - `GET /documents?customer_id=...`
+    - `POST /documents/upload`
+  - Customer profile update support already existed from the prior slice and remains part of the active end-to-end customer stack.
+  - Settings persistence, service-catalog search/order flows, and authenticated customer identity lookup are still not completed backend capabilities in this customer pass.
+- Important remaining assumptions and limitations:
+  - The customer frontend is still hardcoded to customer id `1` for backend requests.
+  - This was kept intentionally because the repo slice still does not expose a completed authenticated customer session binding for the active portal frontend.
+  - As a result, the module is functionally much more real than before, but not yet identity-complete for multi-customer production usage.
+  - Notification-type derivation is inferred from backend title/message patterns plus channel/status context because the backend notification schema does not currently expose a customer-facing typed enum field matching the frontend categories.
+  - Some service-tab experiences remain intentionally frontend-guided because there is not yet enough backend coverage to replace them honestly.
+- Verification evidence for this customer-module completion pass:
+  - Backend: `npm.cmd run build` succeeded.
+  - Frontend static analysis: `flutter analyze` returned `No issues found!` after fixing notification imports, async context linting, and unused helper remnants from the older customer preview views.
+  - Frontend tests: `flutter test test/widget_test.dart test/app_responsive_test.dart` passed.
+  - Frontend web build: `flutter build web` succeeded and produced `build/web`.
+  - Existing Wasm dry-run warnings from `flutter_secure_storage_web` remained informational-only and were not introduced by this customer-module work.
+- Why this detailed note was added:
+  - The user explicitly asked for a more detailed log update.
+  - The customer module now spans multiple slices with a mix of fully wired backend actions and deliberate placeholder-safe behavior, so a deeper engineering note reduces rediscovery and prevents future sessions from overstating what is already production-ready.
+
+### Files Modified/Created
+**Frontend Files (Referenced by this detailed note)**:
+- [portal_shell.dart](file:///e:/K4NN4N/shield/frontend/lib/features/portal/presentation/screens/portal_shell.dart)
+- [api_service.dart](file:///e:/K4NN4N/shield/frontend/lib/shared/services/api_service.dart)
+- [appointment.dart](file:///e:/K4NN4N/shield/frontend/lib/shared/models/appointment.dart)
+- [document.dart](file:///e:/K4NN4N/shield/frontend/lib/shared/models/document.dart)
+- [notification.dart](file:///e:/K4NN4N/shield/frontend/lib/shared/models/notification.dart)
+- [log.md](file:///e:/K4NN4N/shield/log.md)
+
+**Verification Commands**:
+- `npm.cmd run build`
+- `flutter analyze`
+- `flutter test test/widget_test.dart test/app_responsive_test.dart`
+- `flutter build web`
+---2026-06-26 16:20:00 IST
+## 50. Prescription Upload OCR Pipeline: Automatic Classification, Extraction, and Customer-Facing OCR Preview
+**High-level description**: Added a real OCR-style prescription upload flow by chaining the document-intelligence pipeline directly into customer prescription uploads, then surfaced the resulting extraction state back into the customer app so uploads no longer claim intelligence processing before it actually happens.
+- Backend document-intelligence pipeline changes in `backend/src/document/document.service.ts`:
+  - `upload(...)` now returns the created document after running the automated prescription pipeline instead of stopping at a raw `PROCESSING` record.
+  - Added a prescription-only post-upload pipeline that immediately runs classification and extraction for uploaded prescription documents.
+  - `classify(...)` now accepts a classification hint and prefers the document's known type before falling back to the older mock rotation, which keeps prescription uploads from being randomly relabeled as unrelated document types.
+  - `extract(...)` now emits prescription-specific mock OCR text so the extraction result better matches the customer upload use case instead of always returning a generic health-record block.
+  - Document list responses now include classifications, extractions, and processing logs so downstream customer UIs can reflect OCR output without extra one-off fetch choreography.
+- Frontend document model and customer UX changes:
+  - Extended `frontend/lib/shared/models/document.dart` to parse nested extraction and processing-log payloads from the backend.
+  - Added `extractionText`, `extractionConfidence`, `processedAt`, and compact `extractionPreview` support so customer-facing screens can present OCR output in a small, mobile-friendly format.
+  - Updated the active customer services upload action in `frontend/lib/features/portal/presentation/screens/portal_shell.dart` so the success state now reflects actual OCR extraction when available instead of always showing a generic intelligence-success sentence.
+  - Updated the customer documents and prescriptions detail sheets to show an OCR preview when extraction text exists, which keeps uploaded prescriptions visually connected to the document-intelligence pipeline throughout the customer app.
+- Why this approach was chosen:
+  - The user asked specifically to add OCR for prescription uploading, so the orchestration was implemented in the backend upload path rather than by scattering follow-up classify/extract calls across multiple Flutter screens.
+  - Keeping the automation prescription-only avoids widening behavior for unrelated document uploads before their intended workflow is defined.
+  - Returning the enriched document payload after processing lets the compact customer UI stay truthful without introducing polling or a second temporary fake status model.
+- Verification completed for this pass:
+  - `npm.cmd run build`
+  - `flutter analyze`
+  - `flutter test test/widget_test.dart test/app_responsive_test.dart`
+  - `flutter build web` (succeeded; existing `flutter_secure_storage_web` Wasm dry-run warnings remained informational and unchanged)
+
+### Files Modified/Created
+**Frontend Files (Modified)**:
+- [document.dart](file:///e:/K4NN4N/shield/frontend/lib/shared/models/document.dart)
+- [portal_shell.dart](file:///e:/K4NN4N/shield/frontend/lib/features/portal/presentation/screens/portal_shell.dart)
+- [documents_screen.dart](file:///e:/K4NN4N/shield/frontend/lib/features/documents/presentation/screens/documents_screen.dart)
+- [prescriptions_screen.dart](file:///e:/K4NN4N/shield/frontend/lib/features/prescriptions/presentation/screens/prescriptions_screen.dart)
+
+**Backend Files (Modified)**:
+- [document.service.ts](file:///e:/K4NN4N/shield/backend/src/document/document.service.ts)
+
+**Verification Commands**:
+- `npm.cmd run build`
+- `flutter analyze`
+- `flutter test test/widget_test.dart test/app_responsive_test.dart`
+- `flutter build web`
+---2026-06-26 16:35:00 IST
+## 51. Customer Prescription Upload: Added Real File Picker for the Select File Action
+**High-level description**: Replaced the placeholder prescription upload button behavior with a real file picker so the customer can choose a local prescription file before the existing upload-plus-OCR pipeline runs.
+- Frontend dependency and integration changes:
+  - Added `file_picker` to `frontend/pubspec.yaml` so the customer portal can open a native file chooser on supported platforms, including Flutter web.
+  - Updated `frontend/lib/features/portal/presentation/screens/portal_shell.dart` to import `file_picker` and wire the `Select File` action to `FilePicker.platform.pickFiles(...)`.
+- Customer upload behavior changes:
+  - The picker now accepts common prescription formats: `pdf`, `png`, `jpg`, and `jpeg`.
+  - The selected file's real name and size are now passed into `ApiService.uploadCustomerDocument(...)` instead of always fabricating a timestamp-only PDF name.
+  - The upload state label now reflects the chosen file while uploading and names the file again if the upload fails.
+  - MIME type is inferred from the selected extension so the backend receives more truthful metadata before running the automated prescription OCR/classification pipeline.
+- Why this approach was chosen:
+  - The user specifically asked to add the file picker function to the customer prescription upload card.
+  - The existing backend endpoint currently consumes document metadata rather than binary multipart content, so this pass keeps the UX real at the file-selection level while preserving the current backend contract.
+  - Keeping the button as a pick-and-upload action avoids adding extra customer UI steps or widening the compact mobile-first layout.
+- Verification completed for this pass:
+  - `flutter pub get`
+  - `flutter analyze`
+  - `flutter test test/widget_test.dart test/app_responsive_test.dart`
+  - `flutter build web` (succeeded; existing `flutter_secure_storage_web` Wasm dry-run warnings remained informational and unchanged)
+
+### Files Modified/Created
+**Frontend Files (Modified)**:
+- [pubspec.yaml](file:///e:/K4NN4N/shield/frontend/pubspec.yaml)
+- [portal_shell.dart](file:///e:/K4NN4N/shield/frontend/lib/features/portal/presentation/screens/portal_shell.dart)
+
+**Verification Commands**:
+- `flutter pub get`
+- `flutter analyze`
+- `flutter test test/widget_test.dart test/app_responsive_test.dart`
+- `flutter build web`
+---2026-06-26 17:10:00 IST
+## 52. Prescription Intelligence Workflow: Structured Extraction, Fuzzy Medicine Matching, and Customer-Facing AI Summary
+**High-level description**: Upgraded customer prescription upload from simple OCR text capture into a fuller prescription-intelligence workflow that generates structured JSON, performs fuzzy medicine matching against the pharmacy product master, exposes pharmacist-review payloads from the backend, and shows a compact AI summary in the active customer pharmacy flow.
+- Backend prescription-intelligence pipeline changes in `backend/src/document/document.service.ts`:
+  - Expanded the prescription upload automation so uploaded prescriptions now not only classify and extract, but also create a linked `prescriptions` record when needed.
+  - Reworked the prescription OCR mock output into a more realistic doctor/date/patient/medicine-line format so it can be parsed into structured JSON instead of staying as one flat summary sentence.
+  - Added structured prescription parsing that emits the equivalent of:
+    - patient
+    - doctor
+    - date
+    - medicines[] with `name`, `dosage`, `frequency`, and `duration`
+  - Added fuzzy medicine matching against the real `products` table using combined Levenshtein-style edit distance and Jaro-Winkler-style similarity scoring, with ranked candidate suggestions and confidence values.
+  - Added a new backend review payload that returns:
+    - extracted OCR text
+    - structured JSON
+    - medicine matches
+    - cart-prefill items
+    - pipeline-step states
+    - overall confidence
+    - pharmacist-review status
+  - Added prescription-review approval handling that marks the document approved, records pharmacy review logs, and notifies the customer that recognized items are prepared for checkout review.
+- New backend API surface in `backend/src/document/document.controller.ts`:
+  - `GET /document-intelligence/prescription-review/:documentId`
+  - `POST /document-intelligence/prescription-review/:documentId/approve`
+  - These endpoints give the pharmacy / future staff review UI a stable backend contract without breaking the existing customer upload endpoint.
+- Frontend customer experience changes:
+  - Added `frontend/lib/shared/models/prescription_analysis.dart` to parse the new prescription-intelligence payload from the backend.
+  - Extended `frontend/lib/shared/services/api_service.dart` with `getPrescriptionAnalysis(...)` and `approvePrescriptionAnalysis(...)` for the new document-intelligence workflow.
+  - Upgraded the active customer pharmacy upload card in `frontend/lib/features/portal/presentation/screens/portal_shell.dart`:
+    - supported format chips now show `PDF`, `JPG`, and `PNG`
+    - the upload area explains the AI processing flow and expected time
+    - after upload, the customer sees processing-stage progress, extracted medicine matches, confidence, and pharmacist-review status instead of a single dead status line
+    - an "Open AI summary" sheet now shows both the OCR text and the structured medicine summary side by side in the same mobile-first customer app language
+- Why this approach was chosen:
+  - The user explicitly asked for the pipeline to be prescription → vision → structured JSON → medicine recognition → database matching → pharmacist review → cart preparation, so the implementation focused on making those transitions explicit in the backend contract first and then surfacing them in the active customer upload flow.
+  - The repo does not yet contain a dedicated persisted pharmacy-cart model, so this pass returns explicit cart-prefill items from the backend review payload rather than inventing hidden fake persistence.
+  - Keeping the customer UI compact and summary-driven preserves the mobile-only customer rule while still making the intelligence workflow visible and useful.
+- Verification completed for this pass:
+  - `npm.cmd run build`
+  - `flutter analyze`
+  - `flutter test test/widget_test.dart test/app_responsive_test.dart`
+  - `flutter build web` (succeeded; existing `flutter_secure_storage_web` Wasm dry-run warnings remained informational and unchanged)
+
+### Files Modified/Created
+**Frontend Files (Modified)**:
+- [portal_shell.dart](file:///e:/K4NN4N/shield/frontend/lib/features/portal/presentation/screens/portal_shell.dart)
+- [api_service.dart](file:///e:/K4NN4N/shield/frontend/lib/shared/services/api_service.dart)
+- [prescription_analysis.dart](file:///e:/K4NN4N/shield/frontend/lib/shared/models/prescription_analysis.dart)
+
+**Backend Files (Modified)**:
+- [document.service.ts](file:///e:/K4NN4N/shield/backend/src/document/document.service.ts)
+- [document.controller.ts](file:///e:/K4NN4N/shield/backend/src/document/document.controller.ts)
+
+**Verification Commands**:
+- `npm.cmd run build`
+- `flutter analyze`
+- `flutter test test/widget_test.dart test/app_responsive_test.dart`
+- `flutter build web`
+---2026-06-26 17:30:00 IST
+## 53. Prescription Intelligence Backend Foundation: Added FastAPI Service Scaffold for PaddleOCR, RapidFuzz, and MedCAT Workflow
+**High-level description**: Added a dedicated Python prescription-intelligence service scaffold under the backend so SHIELD now has a concrete backend home for the recommended free OCR and medicine-recognition stack instead of keeping all prescription intelligence trapped inside the NestJS mock document service.
+- New backend Python service added at `backend/prescription_ai_service/`:
+  - Added `FastAPI` service entrypoint in `app/main.py`.
+  - Added request/response schemas in `app/schemas.py` for structured prescription analysis.
+  - Added fuzzy medicine matching logic in `app/matcher.py` with `RapidFuzz`-ready behavior and a safe `difflib` fallback.
+  - Added structured text parsing and analysis orchestration in `app/pipeline.py`.
+  - Added package requirements in `requirements.txt` for the intended stack:
+    - `FastAPI`
+    - `RapidFuzz`
+    - `PaddleOCR`
+    - `PyMuPDF`
+    - `OpenCV`
+    - `MedCAT`
+    - `uvicorn`
+- Service contract and workflow alignment:
+  - The new `POST /analyze-text` endpoint is shaped around the SHIELD prescription workflow:
+    - OCR text in
+    - structured prescription JSON out
+    - medicine master fuzzy matches out
+    - confidence scores out
+  - This gives us a stable backend contract for the future NestJS-to-FastAPI handoff without changing the current customer upload endpoint yet.
+  - The schema aligns with the customer and pharmacist review flow already being built in SHIELD:
+    - patient
+    - doctor
+    - date
+    - medicines[] with dosage / duration / frequency
+    - medicine match candidates and confidences
+- Why this approach was chosen:
+  - The user recommended a backend-first stack with PaddleOCR, MedCAT, RapidFuzz, and FastAPI, and that architecture is the right long-term shape for SHIELD.
+  - The current NestJS upload flow still only sends document metadata and mock extraction content, so a dedicated service scaffold is the safest honest step before wiring true file/PDF OCR execution.
+  - Keeping this as a separate Python service preserves control, avoids per-document API cost, and matches the healthcare-review requirement where the pharmacist remains the final approver.
+- Important current limitation captured explicitly:
+  - This service is scaffolded and syntax-verified, but it is not yet called by the active NestJS document flow.
+  - The live customer upload path still uses the in-process NestJS prescription mock analysis added in the previous slice.
+  - The next step is to wire real binary/file ingestion plus a NestJS adapter that calls this FastAPI service for prescription analysis.
+- Verification completed for this pass:
+  - `python -m py_compile backend\prescription_ai_service\app\__init__.py backend\prescription_ai_service\app\main.py backend\prescription_ai_service\app\schemas.py backend\prescription_ai_service\app\matcher.py backend\prescription_ai_service\app\pipeline.py`
+  - `npm.cmd run build`
+
+### Files Modified/Created
+**Backend Files (Created)**:
+- [README.md](file:///e:/K4NN4N/shield/backend/prescription_ai_service/README.md)
+- [requirements.txt](file:///e:/K4NN4N/shield/backend/prescription_ai_service/requirements.txt)
+- [__init__.py](file:///e:/K4NN4N/shield/backend/prescription_ai_service/app/__init__.py)
+- [main.py](file:///e:/K4NN4N/shield/backend/prescription_ai_service/app/main.py)
+- [schemas.py](file:///e:/K4NN4N/shield/backend/prescription_ai_service/app/schemas.py)
+- [matcher.py](file:///e:/K4NN4N/shield/backend/prescription_ai_service/app/matcher.py)
+- [pipeline.py](file:///e:/K4NN4N/shield/backend/prescription_ai_service/app/pipeline.py)
+
+**Verification Commands**:
+- `python -m py_compile backend\prescription_ai_service\app\__init__.py backend\prescription_ai_service\app\main.py backend\prescription_ai_service\app\schemas.py backend\prescription_ai_service\app\matcher.py backend\prescription_ai_service\app\pipeline.py`
+- `npm.cmd run build`
+---2026-06-26 18:00:00 IST
+## 54. Global Notification Cleanup: Replaced Shared Snackbars with Floating Toast Notifications
+**High-level description**: Replaced the app's shared snackbar pattern with a proper floating toast notification layer so customer and portal actions now use one compact, auto-dismissing toast style instead of mixed `ScaffoldMessenger` snackbars.
+- Shared frontend notification system changes:
+  - Added `fluttertoast` to `frontend/pubspec.yaml` and kept the dependency on the `9.0.x` line because the repo's Dart SDK `3.10.4` is not compatible with the newer `9.1.x` release.
+  - Updated `frontend/lib/main.dart` to include `FToastBuilder()` at the app root so toast overlays can render consistently across the app.
+  - Added a shared app-level navigator key in `frontend/lib/app/routes/app_router.dart` so toast rendering can rely on the routed app context.
+  - Reworked `showPortalSnackBar(...)` in `frontend/lib/shared/widgets/portal_support.dart` to use `FToast` instead of `ScaffoldMessenger`.
+- Toast behavior and UX details:
+  - Notifications now appear as a premium floating toast card near the top of the screen.
+  - Each toast auto-dismisses after 5 seconds.
+  - Fade behavior is handled through `fluttertoast` with a short fade duration.
+  - The shared helper clears queued/current toasts before showing a new one so repeated taps do not stack stale messages endlessly.
+- Screen-level cleanup:
+  - Converted the remaining direct `ScaffoldMessenger` usages inside `frontend/lib/features/portal/presentation/screens/portal_shell.dart` to the shared toast helper.
+  - This removed the mixed notification behavior in pharmacy add-to-cart, lab booking, home-care requests, and card-utilization logging.
+- Why this approach was chosen:
+  - The user explicitly asked to replace snackbars with proper toast notifications that fade and dismiss automatically.
+  - Using the existing shared helper meant most screens switched behavior immediately without broad screen-by-screen rewrites.
+  - The context-based `FToast` path was chosen over the no-context helper because it offers better cross-platform UI control and queue handling.
+- Verification completed for this pass:
+  - `flutter pub get`
+  - `flutter analyze`
+  - `flutter test test/widget_test.dart test/app_responsive_test.dart`
+  - `flutter build web` (succeeded; existing `flutter_secure_storage_web` Wasm dry-run warnings remained informational and unchanged)
+
+### Files Modified/Created
+**Frontend Files (Modified)**:
+- [pubspec.yaml](file:///e:/K4NN4N/shield/frontend/pubspec.yaml)
+- [main.dart](file:///e:/K4NN4N/shield/frontend/lib/main.dart)
+- [app_router.dart](file:///e:/K4NN4N/shield/frontend/lib/app/routes/app_router.dart)
+- [portal_support.dart](file:///e:/K4NN4N/shield/frontend/lib/shared/widgets/portal_support.dart)
+- [portal_shell.dart](file:///e:/K4NN4N/shield/frontend/lib/features/portal/presentation/screens/portal_shell.dart)
+
+**Verification Commands**:
+- `flutter pub get`
+- `flutter analyze`
+- `flutter test test/widget_test.dart test/app_responsive_test.dart`
+- `flutter build web`
+---2026-06-26 18:20:00 IST
+## 55. Customer Prescription Review UX: Select, Correct, and Manually Add Medicines Beside Upload
+**High-level description**: Upgraded the customer prescription upload area so the member can review AI-extracted medicines before pharmacist approval, correct medicine details inline, choose which items should be sent forward, and manually add missing medicines inside the same upload card.
+- Customer pharmacy upload flow changes in `frontend/lib/features/portal/presentation/screens/portal_shell.dart`:
+  - Added a manual medicine text input directly inside the prescription upload card, next to the upload workflow rather than in a separate screen.
+  - Added an editable draft list that is automatically seeded from the latest AI-extracted `medicineMatches` after upload.
+  - Each extracted medicine can now be:
+    - selected or deselected for pharmacist review
+    - renamed/corrected inline
+    - updated for dosage, frequency, and duration
+    - removed from the list entirely
+  - AI suggestion chips from candidate medicine matches can now be tapped to quickly correct a medicine name using the best alternate match.
+- Manual medicine entry behavior:
+  - Customers can type a medicine name into the new text box and add it to the same review list.
+  - Manual items are clearly labeled as customer-added entries instead of pretending they came from OCR.
+  - Added entries default to review-safe placeholder schedule values (`As directed`, `Not specified`) so they can still be refined before pharmacist review.
+- Review-summary behavior:
+  - The editable list sits directly below the AI prescription summary so the customer sees extraction results and correction controls in one compact flow.
+  - Added a "Use Selected Medicines" action that packages the current reviewed list as the intended set for pharmacist review; for now this is surfaced as a confirmed customer-review step in the UI and does not invent unsupported backend persistence.
+- Why this approach was chosen:
+  - The user asked for customers to be able to select or correct gathered items and to have a medicine text box near the upload field.
+  - Keeping the correction UI inside the same card preserves the mobile-first portal rule and avoids forcing customers into a separate desktop-style editor.
+  - The backend does not yet expose a dedicated customer-side prescription-correction persistence endpoint, so this pass makes the review workflow explicit in the UI without faking server-side save behavior.
+- Verification completed for this pass:
+  - `flutter analyze`
+  - `flutter test test/widget_test.dart test/app_responsive_test.dart`
+  - `flutter build web` (succeeded; existing `flutter_secure_storage_web` Wasm dry-run warnings remained informational and unchanged)
+
+### Files Modified/Created
+**Frontend Files (Modified)**:
+- [portal_shell.dart](file:///e:/K4NN4N/shield/frontend/lib/features/portal/presentation/screens/portal_shell.dart)
+
+**Verification Commands**:
+- `flutter analyze`
+- `flutter test test/widget_test.dart test/app_responsive_test.dart`
+- `flutter build web`
+---2026-06-26 18:35:00 IST
+## 56. Customer Prescription Card Copy Cleanup: Removed Internal AI Messaging and Expanded Manual Entry to Medicines or Products
+**High-level description**: Simplified the customer-facing prescription upload wording so the card no longer exposes internal processing details, and expanded the manual request field so members can add medicines or products they want, not just OCR correction items.
+- Customer-language cleanup in `frontend/lib/features/portal/presentation/screens/portal_shell.dart`:
+  - Replaced internal AI/process-heavy upload copy with normal customer-facing pharmacy language.
+  - Removed the visible "AI will read medicines..." explanation and the average processing-time line from the upload card because those are implementation details customers do not need to evaluate during request entry.
+  - Updated the post-upload status and toast copy so the member sees a simple request-review message instead of backend-style extraction wording.
+- Manual request behavior expanded:
+  - Renamed the manual section from a prescription-missing helper into a broader medicines/products request area.
+  - Updated hints and labels so customers understand they can type medicines, wellness products, or pharmacy items they want prepared.
+  - Manual items are now labeled as `Requested by customer` rather than implying they were OCR-derived.
+  - Added support for entering multiple medicines/products in one go using commas, semicolons, or new lines.
+- Review list wording cleanup:
+  - Updated the editable review section to describe a customer request-preparation flow rather than an internal AI/approval workflow.
+  - Renamed the editable item field label from only `Medicine` to `Medicine or product`.
+- Why this approach was chosen:
+  - The user correctly called out that the earlier wording exposed implementation details customers do not need and that the manual field should clearly support general customer product requests.
+  - The pharmacy request flow now reads more like a member app and less like an internal OCR diagnostics surface.
+- Verification completed for this pass:
+  - `flutter analyze`
+  - `flutter test test/widget_test.dart test/app_responsive_test.dart`
+  - `flutter build web` (succeeded; existing `flutter_secure_storage_web` Wasm dry-run warnings remained informational and unchanged)
+
+### Files Modified/Created
+**Frontend Files (Modified)**:
+- [portal_shell.dart](file:///e:/K4NN4N/shield/frontend/lib/features/portal/presentation/screens/portal_shell.dart)
+
+**Verification Commands**:
+- `flutter analyze`
+- `flutter test test/widget_test.dart test/app_responsive_test.dart`
+- `flutter build web`
+---2026-06-26 19:00:00 IST
+## 57. Prescription Upload Web Fix: Replaced Broken `file_picker` Web Call with Browser-Native File Chooser Wrapper
+**High-level description**: Fixed the customer `Choose File` runtime crash on Flutter web by removing the direct `FilePicker.platform` dependency from the prescription upload screen and routing web uploads through a browser-native file chooser instead.
+- Root cause investigation findings:
+  - The user reported that tapping `Choose File` produced a large runtime stack trace and the upload action did not work.
+  - The captured browser trace showed the failure occurred before any upload logic ran:
+    - `portal_shell.dart` `_handlePrescriptionUpload`
+    - `package:file_picker/src/file_picker.dart`
+    - `LateInitializationError: Field '_instance' has not been initialized`
+  - This identifies the root cause as a web-side `file_picker` plugin registration / initialization failure, not a bug in the prescription upload backend flow.
+- Fix implemented in the frontend:
+  - Added a shared picker abstraction under `frontend/lib/shared/utils/`:
+    - `prescription_file_picker.dart`
+    - `prescription_file_picker_stub.dart`
+    - `prescription_file_picker_io.dart`
+    - `prescription_file_picker_web.dart`
+  - The active customer upload flow in `frontend/lib/features/portal/presentation/screens/portal_shell.dart` now calls the shared wrapper instead of directly invoking `FilePicker.platform`.
+  - Non-web platforms still use `file_picker` through the IO-specific implementation.
+  - Flutter web now uses a browser-native `dart:html` `FileUploadInputElement` with the same accepted prescription formats (`pdf`, `png`, `jpg`, `jpeg`), which avoids the broken plugin instance path entirely.
+- Why this approach was chosen:
+  - The failure was specifically in web plugin initialization, so the most reliable fix was to avoid that broken registration path on web rather than layering more error handling around it.
+  - A conditional picker wrapper keeps the customer screen clean and preserves one shared prescription-upload flow across platforms.
+  - This keeps the customer mobile-first UI unchanged while making the actual file chooser functional again in the browser.
+- Verification completed for this pass:
+  - `flutter analyze`
+  - `flutter test test/widget_test.dart test/app_responsive_test.dart`
+  - `flutter build web` (succeeded; existing `flutter_secure_storage_web` Wasm dry-run warnings remained informational and unchanged)
+
+### Files Modified/Created
+**Frontend Files (Modified)**:
+- [portal_shell.dart](file:///e:/K4NN4N/shield/frontend/lib/features/portal/presentation/screens/portal_shell.dart)
+- [prescription_file_picker_web.dart](file:///e:/K4NN4N/shield/frontend/lib/shared/utils/prescription_file_picker_web.dart)
+
+**Frontend Files (Created)**:
+- [prescription_file_picker.dart](file:///e:/K4NN4N/shield/frontend/lib/shared/utils/prescription_file_picker.dart)
+- [prescription_file_picker_stub.dart](file:///e:/K4NN4N/shield/frontend/lib/shared/utils/prescription_file_picker_stub.dart)
+- [prescription_file_picker_io.dart](file:///e:/K4NN4N/shield/frontend/lib/shared/utils/prescription_file_picker_io.dart)
+
+**Verification Commands**:
+- `flutter analyze`
+- `flutter test test/widget_test.dart test/app_responsive_test.dart`
+- `flutter build web`
+------2026-06-26 22:05:00 IST
+## 58. Real Prescription Extraction Wiring: Multipart Upload, Local File Persistence, NestJS OCR Handoff, and Python Analyze-File Endpoint
+**High-level description**: Replaced the prescription review mock path with a real file-upload and extraction pipeline shape so customer uploads now send actual file bytes from Flutter to NestJS, NestJS persists the uploaded prescription locally, forwards it to the Python prescription intelligence service, and stores a real structured extraction result back into the existing SHIELD review flow.
+- Frontend upload pipeline changes:
+  - Updated the shared prescription picker contract in `frontend/lib/shared/utils/prescription_file_picker.dart` so the selected file now carries real `Uint8List` bytes and optional MIME type, not only file name and size metadata.
+  - Extended the IO picker implementation in `frontend/lib/shared/utils/prescription_file_picker_io.dart` to request in-memory file bytes and fall back to reading bytes from the picked local path when necessary.
+  - Extended the Flutter web picker implementation in `frontend/lib/shared/utils/prescription_file_picker_web.dart` to read browser-selected file bytes through `FileReader.readAsArrayBuffer`, preserving the previous browser-native file chooser fix while making the upload payload actually usable.
+  - Changed `frontend/lib/shared/services/api_service.dart` customer document upload from JSON metadata POST to `multipart/form-data` with a real `file` payload.
+  - Updated `frontend/lib/features/portal/presentation/screens/portal_shell.dart` so the customer prescription upload flow now passes the selected bytes and MIME type into the API instead of pretending the backend already has the file.
+- Backend upload and extraction changes:
+  - `backend/src/document/document.controller.ts` now accepts a multipart `file` upload with `FileInterceptor` and in-memory Multer storage instead of only reading document metadata from the request body.
+  - `backend/src/document/document.service.ts` now:
+    - persists uploaded prescription files under local `uploads/documents/customer-<id>/...` storage for a real backend-side artifact
+    - passes the real uploaded bytes into the automated prescription pipeline
+    - requests prescription analysis from the Python service through the new NestJS `PrescriptionIntelligenceService`
+    - converts the OCR result into a canonical SHIELD prescription text block (`Patient`, `Doctor`, `Date`, `- medicine | dosage | frequency | duration`) so the existing review/parsing UI remains compatible
+    - continues using SHIELD product master fuzzy matching and pharmacist-review preparation on top of the real extraction output
+  - Added `backend/src/document/prescription-intelligence.service.ts` as the NestJS adapter responsible for posting multipart files and product master candidates to the Python OCR service and surfacing a clear service-unavailable error when the external OCR runtime is not up.
+  - Added `backend/src/document/prescription-intelligence.service.spec.ts` to lock the new contract so the integration cannot silently regress back to metadata-only uploads.
+- Python prescription intelligence service changes:
+  - Added real `POST /analyze-file` support in `backend/prescription_ai_service/app/main.py` so the service can receive the uploaded file directly plus serialized product master candidates.
+  - Rebuilt `backend/prescription_ai_service/app/pipeline.py` from the previous text-only placeholder into a real extraction path that now:
+    - reads direct PDF text using PyMuPDF when available
+    - falls back to page/image OCR through PaddleOCR for scanned PDFs and images
+    - normalizes extracted text
+    - heuristically parses patient, doctor, date, medicine name, dosage, frequency, and duration into structured JSON
+    - fuzzy-matches extracted medicines against the SHIELD product master via RapidFuzz-backed matching logic already present in the Python service
+  - Extended `backend/prescription_ai_service/app/schemas.py` to return `raw_text` along with the structured result.
+  - Added `python-multipart` to `backend/prescription_ai_service/requirements.txt` so FastAPI file uploads can work.
+- Why this approach was chosen:
+  - The user explicitly asked to make the extraction real instead of continuing to show dummy prescription values.
+  - The current customer UI already had a strong compact review flow, so the correct move was to replace the data path under it rather than redesign the screen again.
+  - A dedicated Python OCR service keeps SHIELD flexible for PaddleOCR, RapidFuzz, MedCAT, and future handwriting fallbacks without bloating the NestJS API process.
+  - Persisting a local uploaded file now gives the backend a real artifact to analyze and audit immediately, while leaving room for later Cloudflare R2 promotion once storage infra is finalized.
+- Environment readiness findings from verification:
+  - The code path is now wired for real extraction, but the current Python environment on this machine is still missing required OCR packages for live execution:
+    - missing: `rapidfuzz`
+    - missing: `paddleocr`
+    - missing: `PyMuPDF` / `fitz`
+    - missing: `medcat`
+  - Present in the current Python environment during verification:
+    - available: `fastapi`
+    - available: `uvicorn`
+    - available: `pydantic`
+    - available: `opencv-python-headless` / `cv2`
+    - available: `python-multipart`
+  - This means the application and integration code are ready, but true live OCR extraction still requires installing the remaining Python OCR/medical-NLP dependencies before the Python service can process real prescriptions end to end.
+- Verification completed for this pass:
+  - `backend`: `npm.cmd test -- prescription-intelligence.service.spec.ts`
+  - `backend`: `npm.cmd run build`
+  - `python`: `python -m py_compile backend/prescription_ai_service/app/main.py backend/prescription_ai_service/app/pipeline.py backend/prescription_ai_service/app/schemas.py backend/prescription_ai_service/app/matcher.py`
+  - `frontend`: `flutter analyze`
+  - `frontend`: `flutter test test/widget_test.dart test/app_responsive_test.dart`
+  - `frontend`: `flutter build web` (succeeded; existing `flutter_secure_storage_web` Wasm dry-run warnings remained informational and unchanged)
+
+### Files Modified/Created
+**Frontend Files (Modified)**:
+- [portal_shell.dart](file:///e:/K4NN4N/shield/frontend/lib/features/portal/presentation/screens/portal_shell.dart)
+- [api_service.dart](file:///e:/K4NN4N/shield/frontend/lib/shared/services/api_service.dart)
+- [prescription_file_picker.dart](file:///e:/K4NN4N/shield/frontend/lib/shared/utils/prescription_file_picker.dart)
+- [prescription_file_picker_io.dart](file:///e:/K4NN4N/shield/frontend/lib/shared/utils/prescription_file_picker_io.dart)
+- [prescription_file_picker_web.dart](file:///e:/K4NN4N/shield/frontend/lib/shared/utils/prescription_file_picker_web.dart)
+
+**Backend Files (Modified)**:
+- [document.controller.ts](file:///e:/K4NN4N/shield/backend/src/document/document.controller.ts)
+- [document.module.ts](file:///e:/K4NN4N/shield/backend/src/document/document.module.ts)
+- [document.service.ts](file:///e:/K4NN4N/shield/backend/src/document/document.service.ts)
+- [package.json](file:///e:/K4NN4N/shield/backend/package.json)
+- [package-lock.json](file:///e:/K4NN4N/shield/backend/package-lock.json)
+- [main.py](file:///e:/K4NN4N/shield/backend/prescription_ai_service/app/main.py)
+- [pipeline.py](file:///e:/K4NN4N/shield/backend/prescription_ai_service/app/pipeline.py)
+- [schemas.py](file:///e:/K4NN4N/shield/backend/prescription_ai_service/app/schemas.py)
+- [requirements.txt](file:///e:/K4NN4N/shield/backend/prescription_ai_service/requirements.txt)
+
+**Backend Files (Created)**:
+- [prescription-intelligence.service.ts](file:///e:/K4NN4N/shield/backend/src/document/prescription-intelligence.service.ts)
+- [prescription-intelligence.service.spec.ts](file:///e:/K4NN4N/shield/backend/src/document/prescription-intelligence.service.spec.ts)
+
+**Verification Commands**:
+- `npm.cmd test -- prescription-intelligence.service.spec.ts`
+- `npm.cmd run build`
+- `python -m py_compile backend/prescription_ai_service/app/main.py backend/prescription_ai_service/app/pipeline.py backend/prescription_ai_service/app/schemas.py backend/prescription_ai_service/app/matcher.py`
+- `flutter analyze`
+- `flutter test test/widget_test.dart test/app_responsive_test.dart`
+- `flutter build web`
+------2026-06-26 22:40:00 IST
+## 59. OCR Runtime Enablement: Installed Working Python Stack, Updated Requirements Pins, and Verified FastAPI Health Endpoint
+**High-level description**: Took the prescription OCR service from code-only readiness to machine-level runtime readiness by installing the required Python OCR packages, replacing the previously failing PyMuPDF pin with a wheel-backed version that works on Python 3.13, reconciling the FastAPI/Starlette mismatch, and confirming that the service boots successfully on `127.0.0.1:8010`.
+- Runtime dependency work completed:
+  - The earlier `PyMuPDF==1.24.10` pin failed on this Windows + Python 3.13 environment because it attempted a source build and required unavailable Visual Studio C++ tooling.
+  - Installed `PyMuPDF 1.27.2.3`, which provided a compatible wheel and removed the native-build blocker.
+  - Installed the remaining OCR/runtime packages successfully in the active Python 3.13 environment:
+    - `rapidfuzz`
+    - `paddleocr`
+    - `medcat`
+    - `opencv-python-headless`
+    - `python-multipart`
+  - Re-ran environment discovery and confirmed import/runtime availability for:
+    - `fastapi`
+    - `uvicorn`
+    - `pydantic`
+    - `rapidfuzz`
+    - `paddleocr`
+    - `cv2`
+    - `fitz`
+    - `medcat`
+    - `multipart`
+- Requirements hardening:
+  - Updated `backend/prescription_ai_service/requirements.txt` to the versions that actually install and run on this machine:
+    - `fastapi==0.110.1`
+    - `uvicorn==0.44.0`
+    - `python-multipart==0.0.22`
+    - `pydantic==2.12.5`
+    - `rapidfuzz==3.14.5`
+    - `paddleocr==3.7.0`
+    - `PyMuPDF==1.27.2.3`
+    - `medcat==2.8.6`
+  - This avoids leaving a known-broken dependency file in the repo after the live install work.
+- Service boot verification:
+  - The first `uvicorn` startup attempt failed because the machine had an incompatible `starlette 1.0.0` already installed, while `fastapi 0.110.1` expects `starlette <0.38.0`.
+  - Re-running `pip install -r backend/prescription_ai_service/requirements.txt` after updating the file corrected that mismatch and installed `starlette 0.37.2`.
+  - Confirmed runtime import path with:
+    - `python -c 'import fastapi, fitz, cv2, rapidfuzz, medcat; from paddleocr import PaddleOCR; print("ocr-runtime-ok")'`
+  - Confirmed FastAPI service startup with:
+    - `python -m uvicorn app.main:app --host 127.0.0.1 --port 8010`
+  - Confirmed live health endpoint response with:
+    - `GET http://127.0.0.1:8010/health`
+    - response: `{"status":"ok"}`
+- Remaining environment caveats discovered:
+  - `requests` currently emits a dependency warning about `urllib3` / `chardet` compatibility during OCR service startup.
+  - `pip` also reported an OpenCV-related NumPy compatibility warning involving another installed OpenCV package outside this service slice.
+  - These warnings did not block the OCR service from importing or serving `/health`, but they should be cleaned up if this Python environment is going to host SHIELD long-term instead of using a dedicated isolated virtual environment.
+- Why this approach was chosen:
+  - The user asked for the extraction to become real, so stopping at code changes without booting the OCR service would still leave too much uncertainty.
+  - Updating the dependency file to the versions proven on this machine is more durable than keeping pins that already failed during live installation.
+  - The next realistic backend step is now prescription document processing and OCR-result quality tuning, not basic environment rescue.
+- Verification completed for this pass:
+  - `python -m pip install PyMuPDF`
+  - `python -m pip install rapidfuzz paddleocr medcat`
+  - `python -m pip install -r backend/prescription_ai_service/requirements.txt`
+  - `python -c 'import importlib.util; ...'` module availability checks
+  - `python -c 'import fastapi, fitz, cv2, rapidfuzz, medcat; from paddleocr import PaddleOCR; print("ocr-runtime-ok")'`
+  - `python -m uvicorn app.main:app --host 127.0.0.1 --port 8010`
+  - `Invoke-WebRequest http://127.0.0.1:8010/health`
+
+### Files Modified/Created
+**Backend Files (Modified)**:
+- [requirements.txt](file:///e:/K4NN4N/shield/backend/prescription_ai_service/requirements.txt)
+
+**Verification Commands**:
+- `python -m pip install PyMuPDF`
+- `python -m pip install rapidfuzz paddleocr medcat`
+- `python -m pip install -r backend/prescription_ai_service/requirements.txt`
+- `python -m uvicorn app.main:app --host 127.0.0.1 --port 8010`
+- `Invoke-WebRequest http://127.0.0.1:8010/health`
+---

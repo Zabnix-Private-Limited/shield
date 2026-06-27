@@ -125,6 +125,7 @@ export class CustomerService {
         district: data.district,
         state: data.state,
         pincode: data.pincode,
+        bloodGroup: data.blood_group,
       },
     });
   }

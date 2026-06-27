@@ -7,7 +7,11 @@ import {
   Body,
   Query,
   HttpCode,
+  UploadedFile,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import * as multer from 'multer';
 import { DocumentService } from './document.service';
 
 @Controller()
@@ -15,19 +19,26 @@ export class DocumentController {
   constructor(private documentService: DocumentService) {}
 
   @Post('documents/upload')
-  async upload(@Body() body: any) {
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: multer.memoryStorage(),
+      limits: { fileSize: 15 * 1024 * 1024 },
+    }),
+  )
+  async upload(@UploadedFile() file: any, @Body() body: any) {
     const uploaderId = body.uploaded_by ? BigInt(body.uploaded_by) : undefined;
     const doc = await this.documentService.upload({
       customerId: BigInt(body.customer_id),
-      fileName: body.file_name || 'prescription.pdf',
-      fileSize: Number(body.file_size || 1024),
-      mimeType: body.mime_type || 'application/pdf',
+      fileName: file?.originalname || body.file_name || 'prescription.pdf',
+      fileSize: Number(file?.size || body.file_size || 1024),
+      mimeType: file?.mimetype || body.mime_type || 'application/pdf',
       documentType: body.document_type || 'prescription',
       uploadedBy: uploaderId,
+      fileBuffer: file?.buffer,
     });
     return {
       success: true,
-      message: 'Document metadata uploaded successfully',
+      message: 'Document uploaded successfully',
       data: doc,
     };
   }
@@ -107,6 +118,37 @@ export class DocumentController {
       success: true,
       message: 'Document extraction validation saved',
       data: doc,
+    };
+  }
+
+  @Get('document-intelligence/prescription-review/:documentId')
+  async getPrescriptionReview(@Param('documentId') documentId: string) {
+    const review = await this.documentService.getPrescriptionReview(
+      BigInt(documentId),
+    );
+    return {
+      success: true,
+      message: 'Prescription review summary retrieved',
+      data: review,
+    };
+  }
+
+  @Post('document-intelligence/prescription-review/:documentId/approve')
+  async approvePrescriptionReview(
+    @Param('documentId') documentId: string,
+    @Body() body: any,
+  ) {
+    const staffId = body.staff_id ? BigInt(body.staff_id) : BigInt(1);
+    const providerId = body.provider_id ? BigInt(body.provider_id) : undefined;
+    const review = await this.documentService.approvePrescriptionReview(
+      BigInt(documentId),
+      staffId,
+      providerId,
+    );
+    return {
+      success: true,
+      message: 'Prescription approved and pharmacy cart prefill prepared',
+      data: review,
     };
   }
 

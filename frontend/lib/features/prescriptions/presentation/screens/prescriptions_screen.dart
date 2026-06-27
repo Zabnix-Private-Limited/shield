@@ -128,6 +128,8 @@ class _PrescriptionsScreenState extends State<PrescriptionsScreen> {
                           'Upload source: ${prescription.uploadedBy ?? 'Provider'}',
                           'Type: Prescription',
                           'Current state: ${_getStatusText(prescription.status)}',
+                          if (prescription.extractionPreview != null)
+                            'OCR preview: ${prescription.extractionPreview}',
                         ],
                       );
                     },

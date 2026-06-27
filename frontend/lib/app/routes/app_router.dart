@@ -1,8 +1,12 @@
+import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../features/portal/presentation/screens/portal_shell.dart';
 import '../../shared/models/shield_role.dart';
 
+final GlobalKey<NavigatorState> rootNavigatorKey = GlobalKey<NavigatorState>();
+
 final GoRouter router = GoRouter(
+  navigatorKey: rootNavigatorKey,
   initialLocation: '/portal/customer/dashboard',
   routes: [
     GoRoute(

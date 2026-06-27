@@ -27,6 +27,36 @@ class WalletTransaction extends Equatable {
     required this.createdAt,
   });
 
+  factory WalletTransaction.fromJson(Map<String, dynamic> json) {
+    double parseAmount(dynamic value) {
+      if (value == null) return 0;
+      return double.tryParse(value.toString()) ?? 0;
+    }
+
+    return WalletTransaction(
+      id: json['id'].toString(),
+      uuid: (json['uuid'] ?? 'wallet-txn-${json['id']}').toString(),
+      walletId: (json['walletId'] ?? json['wallet_id']).toString(),
+      transactionType:
+          (json['transactionType'] ?? json['transaction_type'] ?? 'DEBIT')
+              .toString(),
+      subLedgerType:
+          (json['subLedgerType'] ?? json['sub_ledger_type'] ?? 'CASH')
+              .toString(),
+      amount: parseAmount(json['amount']),
+      referenceType: (json['referenceType'] ?? json['reference_type'])
+          ?.toString(),
+      referenceId: (json['referenceId'] ?? json['reference_id'])?.toString(),
+      remarks: json['remarks']?.toString(),
+      createdBy: (json['createdBy'] ?? json['created_by'])?.toString(),
+      createdAt:
+          DateTime.tryParse(
+            (json['createdAt'] ?? json['created_at']).toString(),
+          ) ??
+          DateTime.now(),
+    );
+  }
+
   double get postBalance {
     double balance = 0;
     for (final txn in dummyTransactions) {

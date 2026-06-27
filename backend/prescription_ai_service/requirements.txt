@@ -1,0 +1,9 @@
+fastapi==0.110.1
+uvicorn==0.44.0
+python-multipart==0.0.22
+pydantic==2.12.5
+rapidfuzz==3.14.5
+paddleocr==3.7.0
+opencv-python-headless==4.10.0.84
+PyMuPDF==1.27.2.3
+medcat==2.8.6

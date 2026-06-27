@@ -3,8 +3,12 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_typography.dart';
+import '../../../../shared/models/appointment.dart';
 import '../../../../shared/models/customer.dart';
+import '../../../../shared/models/document.dart';
 import '../../../../shared/models/membership.dart';
+import '../../../../shared/models/notification.dart';
+import '../../../../shared/models/prescription_analysis.dart';
 import '../../../../shared/models/shield_role.dart';
 import '../../../../shared/models/wallet.dart';
 import '../../../../shared/widgets/app_button.dart';
@@ -14,6 +18,7 @@ import '../../../../shared/widgets/app_responsive.dart';
 import '../../../../shared/widgets/app_skeleton.dart';
 import '../../../../shared/widgets/shield_date_input_field.dart';
 import '../../../../shared/services/api_service.dart';
+import '../../../../shared/utils/prescription_file_picker.dart';
 import '../../../../shared/widgets/portal_support.dart';
 import '../portal_role_data.dart';
 
@@ -166,6 +171,50 @@ class _PortalShellState extends State<PortalShell> {
   }
 }
 
+class _EditablePrescriptionItem {
+  final String name;
+  final String dosage;
+  final String frequency;
+  final String duration;
+  final double confidence;
+  final String source;
+  final bool selected;
+  final List<String> alternatives;
+
+  const _EditablePrescriptionItem({
+    required this.name,
+    required this.dosage,
+    required this.frequency,
+    required this.duration,
+    required this.confidence,
+    required this.source,
+    required this.selected,
+    this.alternatives = const [],
+  });
+
+  _EditablePrescriptionItem copyWith({
+    String? name,
+    String? dosage,
+    String? frequency,
+    String? duration,
+    double? confidence,
+    String? source,
+    bool? selected,
+    List<String>? alternatives,
+  }) {
+    return _EditablePrescriptionItem(
+      name: name ?? this.name,
+      dosage: dosage ?? this.dosage,
+      frequency: frequency ?? this.frequency,
+      duration: duration ?? this.duration,
+      confidence: confidence ?? this.confidence,
+      source: source ?? this.source,
+      selected: selected ?? this.selected,
+      alternatives: alternatives ?? this.alternatives,
+    );
+  }
+}
+
 class _RoleContent extends StatelessWidget {
   final PortalRoleData portal;
   final PortalSectionData section;
@@ -174,6 +223,8 @@ class _RoleContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isCustomerProfile =
+        portal.role == SHIELDRole.customer && section.key == 'profile';
     final isCustomerDashboard =
         portal.role == SHIELDRole.customer && section.key == 'dashboard';
     final isCustomerMembership =
@@ -218,7 +269,9 @@ class _RoleContent extends StatelessWidget {
               children: [
                 _PortalHeader(portal: portal, section: section),
                 const SizedBox(height: 20),
-                if (isCustomerDashboard)
+                if (isCustomerProfile)
+                  const _CustomerProfilePortalView()
+                else if (isCustomerDashboard)
                   const _CustomerDashboardPortalView()
                 else if (isCustomerMembership)
                   const _CustomerMembershipPortalView()
@@ -772,7 +825,7 @@ class _HeroPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
@@ -784,94 +837,63 @@ class _HeroPanel extends StatelessWidget {
         ),
         borderRadius: BorderRadius.circular(24),
       ),
-      child: Wrap(
-        spacing: 20,
-        runSpacing: 20,
-        crossAxisAlignment: WrapCrossAlignment.center,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(
-            width: 520,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisSize: MainAxisSize.min,
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: AppColors.white.withValues(alpha: 0.16),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Icon(portal.icon, color: AppColors.white, size: 24),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: AppColors.white.withValues(alpha: 0.16),
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: Icon(
-                        portal.icon,
+                    Text(
+                      portal.operatorName,
+                      style: AppTypography.body.copyWith(
                         color: AppColors.white,
-                        size: 28,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
-                    const SizedBox(width: 12),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          portal.operatorName,
-                          style: AppTypography.body.copyWith(
-                            color: AppColors.white,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        Text(
-                          portal.regionLabel,
-                          style: AppTypography.tiny.copyWith(
-                            color: AppColors.white.withValues(alpha: 0.8),
-                          ),
-                        ),
-                      ],
+                    Text(
+                      portal.regionLabel,
+                      style: AppTypography.tiny.copyWith(
+                        color: AppColors.white.withValues(alpha: 0.8),
+                      ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 18),
-                Text(
-                  section.summary,
-                  style: AppTypography.h4.copyWith(color: AppColors.white),
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
-          SizedBox(
-            width: 320,
-            child: Wrap(
-              spacing: 10,
-              runSpacing: 10,
-              children: section.actions.map((action) {
-                return InkWell(
-                  onTap: () => _handleHeroAction(
-                    context,
-                    portal: portal,
-                    section: section,
-                    action: action,
-                  ),
-                  borderRadius: BorderRadius.circular(999),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 14,
-                      vertical: 10,
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppColors.white.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(999),
-                    ),
-                    child: Text(
-                      action,
-                      style: AppTypography.small.copyWith(
-                        color: AppColors.white,
-                        fontWeight: FontWeight.w600,
-                      ),
+          const SizedBox(height: 14),
+          Text(
+            section.summary,
+            style: AppTypography.h4.copyWith(color: AppColors.white),
+          ),
+          const SizedBox(height: 14),
+          _HeroActionGrid(
+            actions: section.actions
+                .map(
+                  (action) => _HeroActionGridItem(
+                    label: action,
+                    onTap: () => _handleHeroAction(
+                      context,
+                      portal: portal,
+                      section: section,
+                      action: action,
                     ),
                   ),
-                );
-              }).toList(),
-            ),
+                )
+                .toList(),
           ),
         ],
       ),
@@ -1491,6 +1513,552 @@ class _TagChip extends StatelessWidget {
   }
 }
 
+class _CustomerProfilePortalView extends StatefulWidget {
+  const _CustomerProfilePortalView();
+
+  @override
+  State<_CustomerProfilePortalView> createState() =>
+      _CustomerProfilePortalViewState();
+}
+
+class _CustomerProfilePortalViewState
+    extends State<_CustomerProfilePortalView> {
+  static const List<String> _genderOptions = ['Male', 'Female', 'Other'];
+  static const List<String> _bloodGroupOptions = [
+    'A+',
+    'A-',
+    'B+',
+    'B-',
+    'AB+',
+    'AB-',
+    'O+',
+    'O-',
+  ];
+
+  final _formKey = GlobalKey<FormState>();
+  final _firstNameController = TextEditingController();
+  final _lastNameController = TextEditingController();
+  final _emailController = TextEditingController();
+  final _addressLine1Controller = TextEditingController();
+  final _addressLine2Controller = TextEditingController();
+  final _cityController = TextEditingController();
+  final _districtController = TextEditingController();
+  final _stateController = TextEditingController();
+  final _pincodeController = TextEditingController();
+
+  bool _isLoading = true;
+  bool _isEditing = false;
+  bool _isSaving = false;
+  String? _error;
+  String? _selectedGender;
+  String? _selectedBloodGroup;
+  DateTime _selectedDob = DateTime(DateTime.now().year - 25, 1, 1);
+  Customer? _customer;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadProfile();
+  }
+
+  @override
+  void dispose() {
+    _firstNameController.dispose();
+    _lastNameController.dispose();
+    _emailController.dispose();
+    _addressLine1Controller.dispose();
+    _addressLine2Controller.dispose();
+    _cityController.dispose();
+    _districtController.dispose();
+    _stateController.dispose();
+    _pincodeController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadProfile() async {
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+
+    try {
+      final customer = await ApiService.getCustomerProfile('1');
+      if (!mounted) return;
+      _hydrateForm(customer);
+      setState(() {
+        _customer = customer;
+        _isLoading = false;
+      });
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _error = error.toString();
+        _isLoading = false;
+      });
+    }
+  }
+
+  void _hydrateForm(Customer customer) {
+    _firstNameController.text = customer.firstName;
+    _lastNameController.text = customer.lastName;
+    _emailController.text = customer.email ?? '';
+    _addressLine1Controller.text = customer.addressLine1 ?? '';
+    _addressLine2Controller.text = customer.addressLine2 ?? '';
+    _cityController.text = customer.city ?? '';
+    _districtController.text = customer.district ?? '';
+    _stateController.text = customer.state ?? '';
+    _pincodeController.text = customer.pincode ?? '';
+    _selectedGender = customer.gender;
+    _selectedBloodGroup = customer.bloodGroup;
+    _selectedDob = customer.dob ?? DateTime(DateTime.now().year - 25, 1, 1);
+  }
+
+  Future<void> _saveProfile() async {
+    if (_customer == null || !_formKey.currentState!.validate()) {
+      return;
+    }
+
+    setState(() {
+      _isSaving = true;
+      _error = null;
+    });
+
+    try {
+      final savedCustomer = await ApiService.updateCustomerProfile(
+        _customer!.id,
+        _customer!.copyWith(
+          firstName: _firstNameController.text.trim(),
+          lastName: _lastNameController.text.trim(),
+          email: _normalizeOptional(_emailController.text),
+          dob: _selectedDob,
+          gender: _selectedGender,
+          addressLine1: _normalizeOptional(_addressLine1Controller.text),
+          addressLine2: _normalizeOptional(_addressLine2Controller.text),
+          city: _normalizeOptional(_cityController.text),
+          district: _normalizeOptional(_districtController.text),
+          state: _normalizeOptional(_stateController.text),
+          pincode: _normalizeOptional(_pincodeController.text),
+          bloodGroup: _selectedBloodGroup,
+        ),
+      );
+
+      if (!mounted) return;
+      _hydrateForm(savedCustomer);
+      setState(() {
+        _customer = savedCustomer;
+        _isEditing = false;
+        _isSaving = false;
+      });
+      showPortalSnackBar(context, 'Customer profile updated successfully.');
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _isSaving = false;
+        _error = error.toString();
+      });
+      showPortalSnackBar(
+        context,
+        'Profile update failed. Check backend connectivity and try again.',
+      );
+    }
+  }
+
+  String? _normalizeOptional(String value) {
+    final trimmed = value.trim();
+    return trimmed.isEmpty ? null : trimmed;
+  }
+
+  String _formatDate(DateTime? date) {
+    if (date == null) return 'Not added';
+    return DateFormat('dd MMM yyyy').format(date);
+  }
+
+  String _calculateAge(DateTime? dob) {
+    if (dob == null) return 'N/A';
+    final now = DateTime.now();
+    var age = now.year - dob.year;
+    if (now.month < dob.month ||
+        (now.month == dob.month && now.day < dob.day)) {
+      age--;
+    }
+    return '$age yrs';
+  }
+
+  String? _requiredValidator(String? value) {
+    if ((value ?? '').trim().isEmpty) {
+      return 'Required';
+    }
+    return null;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const AppPortalSectionSkeleton(
+        showHero: true,
+        statCards: 2,
+        listItems: 3,
+      );
+    }
+
+    if (_error != null && _customer == null) {
+      return AppCard(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Profile unavailable', style: AppTypography.h4),
+            const SizedBox(height: 8),
+            Text(
+              _error!,
+              style: AppTypography.small.copyWith(color: AppColors.gray),
+            ),
+            const SizedBox(height: 16),
+            AppButton(text: 'Retry', onPressed: _loadProfile),
+          ],
+        ),
+      );
+    }
+
+    final customer = _customer!;
+    final address = [
+      customer.addressLine1,
+      customer.addressLine2,
+      customer.city,
+      customer.district,
+      customer.state,
+      customer.pincode,
+    ].where((part) => part != null && part.trim().isNotEmpty).join(', ');
+
+    return Form(
+      key: _formKey,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [AppColors.shieldBlue, AppColors.shieldNavy],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            customer.fullName.toUpperCase(),
+                            style: AppTypography.body.copyWith(
+                              color: AppColors.white,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 0.7,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            customer.customerCode,
+                            style: AppTypography.small.copyWith(
+                              color: AppColors.white.withValues(alpha: 0.84),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.white.withValues(alpha: 0.16),
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: Text(
+                        customer.status.toUpperCase(),
+                        style: AppTypography.tiny.copyWith(
+                          color: AppColors.white,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 10,
+                  runSpacing: 10,
+                  children: [
+                    _ProfileSummaryChip(
+                      label: customer.mobile,
+                      icon: Icons.phone_iphone_outlined,
+                    ),
+                    _ProfileSummaryChip(
+                      label: customer.bloodGroup ?? 'Blood group pending',
+                      icon: Icons.bloodtype_outlined,
+                    ),
+                    _ProfileSummaryChip(
+                      label: _calculateAge(customer.dob),
+                      icon: Icons.cake_outlined,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                _HeroActionGrid(
+                  actions: [
+                    _HeroActionGridItem(
+                      label: _isEditing ? 'Cancel changes' : 'Edit details',
+                      onTap: () {
+                        if (_isEditing) {
+                          _hydrateForm(customer);
+                        }
+                        setState(() {
+                          _isEditing = !_isEditing;
+                          _error = null;
+                        });
+                      },
+                    ),
+                    _HeroActionGridItem(
+                      label: 'View member ID',
+                      onTap: () => context.go('/portal/customer/membership'),
+                    ),
+                    _HeroActionGridItem(
+                      label: 'Open settings',
+                      onTap: () => context.go('/portal/customer/settings'),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 18),
+          AppCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(child: Text('Identity', style: AppTypography.h4)),
+                    if (_isEditing)
+                      Text(
+                        'Only customer-safe fields are editable here.',
+                        style: AppTypography.tiny.copyWith(
+                          color: AppColors.gray,
+                        ),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                if (_isEditing) ...[
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _CustomerProfileTextField(
+                          controller: _firstNameController,
+                          label: 'First name',
+                          validator: _requiredValidator,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _CustomerProfileTextField(
+                          controller: _lastNameController,
+                          label: 'Last name',
+                          validator: _requiredValidator,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  ShieldDateInputField(
+                    label: 'Date of birth',
+                    initialDate: _selectedDob,
+                    maxDate: DateTime.now(),
+                    onChanged: (value) => _selectedDob = value,
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _CustomerProfileDropdown(
+                          label: 'Gender',
+                          value: _selectedGender,
+                          items: _genderOptions,
+                          onChanged: (value) {
+                            setState(() {
+                              _selectedGender = value;
+                            });
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _CustomerProfileDropdown(
+                          label: 'Blood group',
+                          value: _selectedBloodGroup,
+                          items: _bloodGroupOptions,
+                          onChanged: (value) {
+                            setState(() {
+                              _selectedBloodGroup = value;
+                            });
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                ] else ...[
+                  _ProfileFactRow(
+                    label: 'Date of birth',
+                    value:
+                        '${_formatDate(customer.dob)}${customer.dob != null ? ' • ${_calculateAge(customer.dob)}' : ''}',
+                  ),
+                  const Divider(height: 24),
+                  _ProfileFactRow(
+                    label: 'Gender',
+                    value: customer.gender ?? 'Not added',
+                  ),
+                  const Divider(height: 24),
+                  _ProfileFactRow(
+                    label: 'Blood group',
+                    value: customer.bloodGroup ?? 'Not added',
+                  ),
+                  const Divider(height: 24),
+                  _ProfileFactRow(
+                    label: 'Aadhaar',
+                    value: customer.aadhaarNumber.length >= 4
+                        ? '****${customer.aadhaarNumber.substring(customer.aadhaarNumber.length - 4)}'
+                        : customer.aadhaarNumber,
+                  ),
+                  const Divider(height: 24),
+                  _ProfileFactRow(
+                    label: 'Agent code',
+                    value: customer.agentCode ?? 'Not available',
+                  ),
+                ],
+              ],
+            ),
+          ),
+          const SizedBox(height: 14),
+          AppCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Contact and address', style: AppTypography.h4),
+                const SizedBox(height: 16),
+                if (_isEditing) ...[
+                  _CustomerProfileTextField(
+                    controller: _emailController,
+                    label: 'Email',
+                    keyboardType: TextInputType.emailAddress,
+                  ),
+                  const SizedBox(height: 12),
+                  _CustomerProfileTextField(
+                    controller: _addressLine1Controller,
+                    label: 'Address line 1',
+                  ),
+                  const SizedBox(height: 12),
+                  _CustomerProfileTextField(
+                    controller: _addressLine2Controller,
+                    label: 'Address line 2',
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _CustomerProfileTextField(
+                          controller: _cityController,
+                          label: 'City',
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _CustomerProfileTextField(
+                          controller: _districtController,
+                          label: 'District',
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _CustomerProfileTextField(
+                          controller: _stateController,
+                          label: 'State',
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _CustomerProfileTextField(
+                          controller: _pincodeController,
+                          label: 'Pincode',
+                          keyboardType: TextInputType.number,
+                          validator: (value) {
+                            final trimmed = value?.trim() ?? '';
+                            if (trimmed.isEmpty) return null;
+                            if (trimmed.length < 6) {
+                              return 'Enter a valid pincode';
+                            }
+                            return null;
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                ] else ...[
+                  _ProfileFactRow(label: 'Mobile', value: customer.mobile),
+                  const Divider(height: 24),
+                  _ProfileFactRow(
+                    label: 'Email',
+                    value: customer.email ?? 'Not added',
+                  ),
+                  const Divider(height: 24),
+                  _ProfileFactRow(
+                    label: 'Address',
+                    value: address.isEmpty ? 'Address not added' : address,
+                  ),
+                ],
+              ],
+            ),
+          ),
+          if (_error != null) ...[
+            const SizedBox(height: 14),
+            Text(
+              _error!,
+              style: AppTypography.small.copyWith(color: AppColors.error),
+            ),
+          ],
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              Expanded(
+                child: AppButton(
+                  text: _isEditing
+                      ? (_isSaving ? 'Saving...' : 'Save profile')
+                      : 'Refresh details',
+                  onPressed: _isSaving
+                      ? null
+                      : (_isEditing ? _saveProfile : _loadProfile),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _CustomerDashboardPortalView extends StatefulWidget {
   const _CustomerDashboardPortalView();
 
@@ -1504,6 +2072,9 @@ class _CustomerDashboardPortalViewState
   late Future<Customer> _customerFuture;
   late Future<Map<String, dynamic>> _walletFuture;
   late Future<List<WalletTransaction>> _transactionsFuture;
+  late Future<Membership> _membershipFuture;
+  late Future<List<Appointment>> _appointmentsFuture;
+  late Future<List<Document>> _documentsFuture;
 
   @override
   void initState() {
@@ -1514,6 +2085,9 @@ class _CustomerDashboardPortalViewState
       (wallet) =>
           ApiService.getWalletTransactions(wallet['walletId'].toString()),
     );
+    _membershipFuture = ApiService.getCustomerMembership('1');
+    _appointmentsFuture = ApiService.getAppointments(SHIELDRole.customer);
+    _documentsFuture = ApiService.getDocuments(SHIELDRole.customer);
   }
 
   @override
@@ -1523,6 +2097,9 @@ class _CustomerDashboardPortalViewState
         _customerFuture,
         _walletFuture,
         _transactionsFuture,
+        _membershipFuture,
+        _appointmentsFuture,
+        _documentsFuture,
       ]),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
@@ -1552,19 +2129,22 @@ class _CustomerDashboardPortalViewState
         final customer = snapshot.data![0] as Customer;
         final wallet = snapshot.data![1] as Map<String, dynamic>;
         final transactions = snapshot.data![2] as List<WalletTransaction>;
+        final membership = snapshot.data![3] as Membership;
+        final appointments = snapshot.data![4] as List<Appointment>;
+        final documents = snapshot.data![5] as List<Document>;
         final walletBalance =
             double.tryParse(wallet['balance']?.toString() ?? '0') ?? 0.0;
         final pointsBalance =
             double.tryParse(wallet['pointsBalance']?.toString() ?? '0') ?? 0.0;
-        const upcomingVisits = 3;
-        const documentCount = 12;
+        final upcomingVisits = appointments.length;
+        final documentCount = documents.length;
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.all(20),
+              padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
                   colors: [AppColors.shieldBlue, AppColors.shieldNavy],
@@ -1573,90 +2153,96 @@ class _CustomerDashboardPortalViewState
                 ),
                 borderRadius: BorderRadius.circular(20),
               ),
-              child: Wrap(
-                spacing: 20,
-                runSpacing: 16,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  SizedBox(
-                    width: 440,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          customer.fullName.toUpperCase(),
-                          style: AppTypography.body.copyWith(
-                            color: AppColors.white,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: 0.8,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Founding Member',
-                          style: AppTypography.small.copyWith(
-                            color: AppColors.white.withValues(alpha: 0.8),
-                          ),
-                        ),
-                        const SizedBox(height: 18),
-                        Text(
-                          'Wallet ₹${walletBalance.toStringAsFixed(0)}',
-                          style: AppTypography.h4.copyWith(
-                            color: AppColors.white,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          '${pointsBalance.toStringAsFixed(0)} Reward Points',
-                          style: AppTypography.body.copyWith(
-                            color: AppColors.white.withValues(alpha: 0.88),
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  SizedBox(
-                    width: 280,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          '$upcomingVisits Upcoming Visits',
-                          style: AppTypography.h5.copyWith(
-                            color: AppColors.white,
-                          ),
-                        ),
-                        const SizedBox(height: 6),
-                        Text(
-                          '$documentCount Documents',
-                          style: AppTypography.body.copyWith(
-                            color: AppColors.white.withValues(alpha: 0.88),
-                          ),
-                        ),
-                        const SizedBox(height: 14),
-                        Wrap(
-                          spacing: 10,
-                          runSpacing: 10,
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            _HeroActionButton(
-                              label: 'View card',
-                              onTap: () =>
-                                  context.go('/portal/customer/membership'),
+                            Text(
+                              customer.fullName.toUpperCase(),
+                              style: AppTypography.body.copyWith(
+                                color: AppColors.white,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 0.8,
+                              ),
                             ),
-                            _HeroActionButton(
-                              label: 'Book visit',
-                              onTap: () =>
-                                  context.go('/portal/customer/appointments'),
-                            ),
-                            _HeroActionButton(
-                              label: 'Open wallet',
-                              onTap: () =>
-                                  context.go('/portal/customer/wallet'),
+                            const SizedBox(height: 4),
+                            Text(
+                              membership.tierLabel,
+                              style: AppTypography.small.copyWith(
+                                color: AppColors.white.withValues(alpha: 0.8),
+                              ),
                             ),
                           ],
                         ),
-                      ],
-                    ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.white.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        child: Text(
+                          customer.status.toUpperCase(),
+                          style: AppTypography.tiny.copyWith(
+                            color: AppColors.white,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 0.4,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  LayoutBuilder(
+                    builder: (context, constraints) {
+                      final itemWidth = (constraints.maxWidth - 10) / 2;
+                      return Wrap(
+                        spacing: 10,
+                        runSpacing: 10,
+                        children: [
+                          _HeroStatBlock(
+                            width: itemWidth,
+                            label: 'Wallet',
+                            value: '₹${walletBalance.toStringAsFixed(0)}',
+                            secondary:
+                                '${pointsBalance.toStringAsFixed(0)} reward pts',
+                          ),
+                          _HeroStatBlock(
+                            width: itemWidth,
+                            label: 'Activity',
+                            value: '$upcomingVisits visits',
+                            secondary: '$documentCount documents',
+                          ),
+                        ],
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 10),
+                  _HeroActionGrid(
+                    actions: [
+                      _HeroActionGridItem(
+                        label: 'View card',
+                        onTap: () => context.go('/portal/customer/membership'),
+                      ),
+                      _HeroActionGridItem(
+                        label: 'Book visit',
+                        onTap: () =>
+                            context.go('/portal/customer/appointments'),
+                      ),
+                      _HeroActionGridItem(
+                        label: 'Open wallet',
+                        onTap: () => context.go('/portal/customer/wallet'),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -1701,54 +2287,45 @@ class _CustomerDashboardPortalViewState
             const SizedBox(height: 24),
             Text('Upcoming Appointments', style: AppTypography.h4),
             const SizedBox(height: 12),
-            ...[
-              {
-                'title': 'General Medicine',
-                'date': '21 Jun 2026',
-                'subtitle': 'Dr Haneefa • Manjeri',
-              },
-              {
-                'title': 'Dental Review',
-                'date': '26 Jun 2026',
-                'subtitle': 'Melattur branch follow-up',
-              },
-            ].map(
-              (item) => Padding(
-                padding: const EdgeInsets.only(bottom: 10),
-                child: AppCard(
-                  padding: const EdgeInsets.all(14),
-                  child: Row(
-                    children: [
-                      const Icon(
-                        Icons.calendar_today_outlined,
-                        color: AppColors.shieldBlue,
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              item['title']!,
-                              style: AppTypography.body.copyWith(
-                                fontWeight: FontWeight.w700,
-                              ),
+            ...appointments
+                .take(3)
+                .map(
+                  (appointment) => Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: AppCard(
+                      padding: const EdgeInsets.all(14),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.calendar_today_outlined,
+                            color: AppColors.shieldBlue,
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  appointment.doctorName ?? 'Appointment',
+                                  style: AppTypography.body.copyWith(
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  '${DateFormat('dd MMM yyyy').format(appointment.appointmentDate)} • ${appointment.department ?? 'SHIELD care'}',
+                                  style: AppTypography.small.copyWith(
+                                    color: AppColors.gray,
+                                  ),
+                                ),
+                              ],
                             ),
-                            const SizedBox(height: 4),
-                            Text(
-                              '${item['date']} • ${item['subtitle']}',
-                              style: AppTypography.small.copyWith(
-                                color: AppColors.gray,
-                              ),
-                            ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
-                    ],
+                    ),
                   ),
                 ),
-              ),
-            ),
             const SizedBox(height: 14),
             Text('Recent Activity', style: AppTypography.h4),
             const SizedBox(height: 12),
@@ -1878,64 +2455,98 @@ class _CustomerMembershipPortalViewState
           children: [
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.all(24),
+              padding: const EdgeInsets.all(18),
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
                   colors: [Color(0xFF14213D), Color(0xFF0F172A)],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
-                borderRadius: BorderRadius.circular(24),
+                borderRadius: BorderRadius.circular(20),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'SHIELD',
-                    style: AppTypography.h3.copyWith(
-                      color: AppColors.white,
-                      fontWeight: FontWeight.w700,
-                    ),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          'SHIELD',
+                          style: AppTypography.h4.copyWith(
+                            color: AppColors.white,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.white.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        child: Text(
+                          membership.isActive ? 'ACTIVE' : 'INACTIVE',
+                          style: AppTypography.tiny.copyWith(
+                            color: AppColors.white,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 0.4,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 16),
                   Text(
                     customer.fullName.toUpperCase(),
                     style: AppTypography.h4.copyWith(color: AppColors.white),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 6),
                   Text(
-                    'FOUNDING MEMBER',
-                    style: AppTypography.body.copyWith(
-                      color: AppColors.white.withValues(alpha: 0.82),
+                    membership.tierLabel.toUpperCase(),
+                    style: AppTypography.small.copyWith(
+                      color: AppColors.white.withValues(alpha: 0.84),
                       fontWeight: FontWeight.w600,
-                      letterSpacing: 1.2,
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  Text(
-                    'ID: ${membership.customerCode}',
-                    style: AppTypography.body.copyWith(
-                      color: AppColors.white,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(height: 18),
-                  Text(
-                    'VALID UNTIL',
-                    style: AppTypography.tiny.copyWith(
-                      color: AppColors.white.withValues(alpha: 0.72),
                       letterSpacing: 1.0,
                     ),
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    DateFormat(
-                      'dd MMM yyyy',
-                    ).format(membership.endDate).toUpperCase(),
-                    style: AppTypography.body.copyWith(
-                      color: AppColors.white,
-                      fontWeight: FontWeight.w700,
-                    ),
+                  const SizedBox(height: 14),
+                  Wrap(
+                    spacing: 10,
+                    runSpacing: 10,
+                    children: [
+                      _ProfileSummaryChip(
+                        label: 'ID ${membership.customerCode}',
+                        icon: Icons.badge_outlined,
+                        dark: true,
+                      ),
+                      _ProfileSummaryChip(
+                        label:
+                            'Valid till ${DateFormat('dd MMM yyyy').format(membership.endDate)}',
+                        icon: Icons.event_outlined,
+                        dark: true,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  _HeroActionGrid(
+                    actions: [
+                      _HeroActionGridItem(
+                        label: 'Open wallet',
+                        onTap: () => context.go('/portal/customer/wallet'),
+                      ),
+                      _HeroActionGridItem(
+                        label: 'Open profile',
+                        onTap: () => context.go('/portal/customer/profile'),
+                      ),
+                      _HeroActionGridItem(
+                        label: 'Book visit',
+                        onTap: () =>
+                            context.go('/portal/customer/appointments'),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -1952,7 +2563,7 @@ class _CustomerMembershipPortalViewState
                 children: [
                   _KpiTile(
                     title: 'Tier',
-                    value: 'Founding',
+                    value: membership.tierLabel.replaceAll(' Member', ''),
                     icon: Icons.badge_outlined,
                     color: AppColors.shieldBlue,
                   ),
@@ -1978,8 +2589,8 @@ class _CustomerMembershipPortalViewState
             const SizedBox(height: 12),
             ...[
               'Digital privilege card with QR verification',
-              'Founding-member pharmacy and healthcare benefits',
-              'Wallet-linked service access across SHIELD service points',
+              '${membership.tierLabel} service access across SHIELD care points',
+              'Wallet-linked membership benefits calculated from the live ledger',
               'Priority support for onboarding and membership exceptions',
             ].map(
               (benefit) => Padding(
@@ -2015,10 +2626,15 @@ class _CustomerMembershipPortalViewState
 }
 
 class _HeroActionButton extends StatelessWidget {
-  const _HeroActionButton({required this.label, required this.onTap});
+  const _HeroActionButton({
+    required this.label,
+    required this.onTap,
+    this.width,
+  });
 
   final String label;
   final VoidCallback onTap;
+  final double? width;
 
   @override
   Widget build(BuildContext context) {
@@ -2028,10 +2644,16 @@ class _HeroActionButton extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(999),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        child: Container(
+          width: width,
+          constraints: const BoxConstraints(minHeight: 38),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+          alignment: Alignment.center,
           child: Text(
             label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
             style: AppTypography.small.copyWith(
               color: AppColors.white,
               fontWeight: FontWeight.w700,
@@ -2039,6 +2661,271 @@ class _HeroActionButton extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _HeroActionGridItem {
+  const _HeroActionGridItem({required this.label, required this.onTap});
+
+  final String label;
+  final VoidCallback onTap;
+}
+
+class _HeroActionGrid extends StatelessWidget {
+  const _HeroActionGrid({required this.actions});
+
+  final List<_HeroActionGridItem> actions;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final singleWidth = constraints.maxWidth;
+        final twoColumnWidth = constraints.maxWidth >= 280
+            ? (constraints.maxWidth - 12) / 2
+            : singleWidth;
+
+        return Wrap(
+          spacing: 12,
+          runSpacing: 10,
+          children: [
+            for (var index = 0; index < actions.length; index++)
+              _HeroActionButton(
+                label: actions[index].label,
+                width: actions.length.isOdd && index == actions.length - 1
+                    ? singleWidth
+                    : twoColumnWidth,
+                onTap: actions[index].onTap,
+              ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _HeroStatBlock extends StatelessWidget {
+  const _HeroStatBlock({
+    required this.label,
+    required this.value,
+    required this.secondary,
+    this.width,
+  });
+
+  final String label;
+  final String value;
+  final String secondary;
+  final double? width;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: width,
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: AppColors.white.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: AppTypography.tiny.copyWith(
+              color: AppColors.white.withValues(alpha: 0.72),
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.4,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            value,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: AppTypography.body.copyWith(
+              color: AppColors.white,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 3),
+          Text(
+            secondary,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: AppTypography.small.copyWith(
+              color: AppColors.white.withValues(alpha: 0.86),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CustomerProfileTextField extends StatelessWidget {
+  const _CustomerProfileTextField({
+    required this.controller,
+    required this.label,
+    this.keyboardType,
+    this.validator,
+  });
+
+  final TextEditingController controller;
+  final String label;
+  final TextInputType? keyboardType;
+  final String? Function(String?)? validator;
+
+  @override
+  Widget build(BuildContext context) {
+    return TextFormField(
+      controller: controller,
+      keyboardType: keyboardType,
+      validator: validator,
+      style: AppTypography.body.copyWith(color: AppColors.shieldNavy),
+      decoration: InputDecoration(
+        labelText: label,
+        filled: true,
+        fillColor: AppColors.white,
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 14,
+          vertical: 14,
+        ),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: const BorderSide(color: AppColors.divider),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: const BorderSide(color: AppColors.divider),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: const BorderSide(color: AppColors.shieldBlue),
+        ),
+      ),
+    );
+  }
+}
+
+class _CustomerProfileDropdown extends StatelessWidget {
+  const _CustomerProfileDropdown({
+    required this.label,
+    required this.value,
+    required this.items,
+    required this.onChanged,
+  });
+
+  final String label;
+  final String? value;
+  final List<String> items;
+  final ValueChanged<String?> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return DropdownButtonFormField<String>(
+      initialValue: value,
+      items: items
+          .map(
+            (item) => DropdownMenuItem<String>(value: item, child: Text(item)),
+          )
+          .toList(),
+      onChanged: onChanged,
+      decoration: InputDecoration(
+        labelText: label,
+        filled: true,
+        fillColor: AppColors.white,
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 14,
+          vertical: 14,
+        ),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: const BorderSide(color: AppColors.divider),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: const BorderSide(color: AppColors.divider),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: const BorderSide(color: AppColors.shieldBlue),
+        ),
+      ),
+    );
+  }
+}
+
+class _ProfileSummaryChip extends StatelessWidget {
+  const _ProfileSummaryChip({
+    required this.label,
+    required this.icon,
+    this.dark = false,
+  });
+
+  final String label;
+  final IconData icon;
+  final bool dark;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+      decoration: BoxDecoration(
+        color: dark
+            ? AppColors.white.withValues(alpha: 0.1)
+            : AppColors.white.withValues(alpha: 0.14),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 16, color: AppColors.white),
+          const SizedBox(width: 8),
+          Text(
+            label,
+            style: AppTypography.small.copyWith(
+              color: AppColors.white,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ProfileFactRow extends StatelessWidget {
+  const _ProfileFactRow({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          flex: 2,
+          child: Text(
+            label,
+            style: AppTypography.small.copyWith(color: AppColors.gray),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          flex: 3,
+          child: Text(
+            value,
+            textAlign: TextAlign.right,
+            style: AppTypography.body.copyWith(
+              color: AppColors.shieldNavy,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -2163,11 +3050,17 @@ class _CustomerWalletViewState extends State<_CustomerWalletView> {
           );
         }
 
+        final walletProfile = snapshot.data![0] as Map<String, dynamic>;
         final transactions = snapshot.data![1] as List<WalletTransaction>;
         double cashBalance = 0;
         double pointsBalance = 0;
         double monthlySpend = 0;
         double rewardCredits = 0;
+        final creditAvailable =
+            double.tryParse(
+              (walletProfile['creditAvailable'] ?? 0).toString(),
+            ) ??
+            0;
 
         for (final txn in transactions) {
           final delta = txn.transactionType == 'CREDIT'
@@ -2190,48 +3083,105 @@ class _CustomerWalletViewState extends State<_CustomerWalletView> {
           return _selectedLedger == 'ALL' ||
               txn.subLedgerType == _selectedLedger;
         }).toList();
+        double ledgerBalanceAfter(WalletTransaction target) {
+          final sameLedger =
+              transactions
+                  .where((txn) => txn.subLedgerType == target.subLedgerType)
+                  .toList()
+                ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
+          var balance = 0.0;
+          for (final txn in sameLedger) {
+            balance += txn.transactionType == 'CREDIT'
+                ? txn.amount
+                : -txn.amount;
+            if (txn.id == target.id) {
+              return balance;
+            }
+          }
+          return balance;
+        }
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            AppCard(
-              padding: const EdgeInsets.all(20),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [AppColors.shieldBlue, AppColors.shieldNavy],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(20),
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
                     children: [
-                      Container(
-                        width: 48,
-                        height: 48,
-                        decoration: BoxDecoration(
-                          color: AppColors.shieldBlue.withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: const Icon(
-                          Icons.account_balance_wallet_outlined,
-                          color: AppColors.shieldBlue,
+                      Expanded(
+                        child: Text(
+                          'Wallet overview',
+                          style: AppTypography.h4.copyWith(
+                            color: AppColors.white,
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
                       ),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text('Wallet overview', style: AppTypography.h4),
-                            const SizedBox(height: 4),
-                            Text(
-                              'Cash, points, and recent ledger movement in one place.',
-                              style: AppTypography.small.copyWith(
-                                color: AppColors.gray,
-                              ),
-                            ),
-                          ],
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.white.withValues(alpha: 0.14),
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        child: Text(
+                          (walletProfile['status'] ?? 'ACTIVE').toString(),
+                          style: AppTypography.tiny.copyWith(
+                            color: AppColors.white,
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 18),
+                  const SizedBox(height: 6),
+                  Text(
+                    'Cash, points, credit, and ledger movement in one compact customer view.',
+                    style: AppTypography.small.copyWith(
+                      color: AppColors.white.withValues(alpha: 0.84),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  LayoutBuilder(
+                    builder: (context, constraints) {
+                      final itemWidth = (constraints.maxWidth - 10) / 2;
+                      return Wrap(
+                        spacing: 10,
+                        runSpacing: 10,
+                        children: [
+                          _HeroStatBlock(
+                            width: itemWidth,
+                            label: 'Cash',
+                            value: '₹${cashBalance.toStringAsFixed(0)}',
+                            secondary:
+                                '${pointsBalance.toStringAsFixed(0)} reward pts',
+                          ),
+                          _HeroStatBlock(
+                            width: itemWidth,
+                            label: 'Credit',
+                            value: '₹${creditAvailable.toStringAsFixed(0)}',
+                            secondary:
+                                '₹${monthlySpend.toStringAsFixed(0)} spent this cycle',
+                          ),
+                        ],
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 12),
                   Row(
                     children: [
                       Expanded(
@@ -2239,8 +3189,9 @@ class _CustomerWalletViewState extends State<_CustomerWalletView> {
                           title: 'Cash balance',
                           value: '₹${cashBalance.toStringAsFixed(0)}',
                           caption: 'Redeemable portal cash',
-                          accentColor: AppColors.shieldNavy,
+                          accentColor: AppColors.white,
                           icon: Icons.currency_rupee,
+                          dark: true,
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -2249,8 +3200,9 @@ class _CustomerWalletViewState extends State<_CustomerWalletView> {
                           title: 'Points balance',
                           value: '${pointsBalance.toStringAsFixed(0)} pts',
                           caption: 'Referral + loyalty rewards',
-                          accentColor: AppColors.shieldBlue,
+                          accentColor: AppColors.white,
                           icon: Icons.stars_rounded,
+                          dark: true,
                         ),
                       ),
                     ],
@@ -2263,8 +3215,9 @@ class _CustomerWalletViewState extends State<_CustomerWalletView> {
                           title: 'Monthly spend',
                           value: '₹${monthlySpend.toStringAsFixed(0)}',
                           caption: 'Pharmacy + services',
-                          accentColor: AppColors.error,
+                          accentColor: AppColors.white,
                           icon: Icons.arrow_upward_rounded,
+                          dark: true,
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -2273,22 +3226,21 @@ class _CustomerWalletViewState extends State<_CustomerWalletView> {
                           title: 'Rewards earned',
                           value: '${rewardCredits.toStringAsFixed(0)} pts',
                           caption: 'Approved referrals + promos',
-                          accentColor: AppColors.shieldGreen,
+                          accentColor: AppColors.white,
                           icon: Icons.card_giftcard_outlined,
+                          dark: true,
                         ),
                       ),
                     ],
                   ),
                   const SizedBox(height: 14),
-                  Wrap(
-                    spacing: 10,
-                    runSpacing: 10,
-                    children: [
-                      _ActionPill(
-                        label: 'Raise recharge request',
-                        onTap: () => context.go('/portal/customer/recharge'),
+                  _HeroActionGrid(
+                    actions: [
+                      _HeroActionGridItem(
+                        label: 'Open profile',
+                        onTap: () => context.go('/portal/customer/profile'),
                       ),
-                      _ActionPill(
+                      _HeroActionGridItem(
                         label: 'Open statement',
                         onTap: () => showPortalDetailsSheet(
                           context,
@@ -2296,14 +3248,14 @@ class _CustomerWalletViewState extends State<_CustomerWalletView> {
                           subtitle:
                               'Detailed statements stay grouped inside the customer wallet flow until export APIs are wired.',
                           meta: 'Customer wallet',
-                          status: 'Frontend flow',
+                          status: 'Live ledger',
                           highlights: const [
                             'Cash and points entries remain separated by sub-ledger type.',
                             'Statement export can later connect here without changing the customer route structure.',
                           ],
                         ),
                       ),
-                      _ActionPill(
+                      _HeroActionGridItem(
                         label: 'Points rules',
                         onTap: () => showPortalDetailsSheet(
                           context,
@@ -2311,7 +3263,7 @@ class _CustomerWalletViewState extends State<_CustomerWalletView> {
                           subtitle:
                               'Referral, loyalty, and promotional points stay separate from cash.',
                           meta: 'Customer wallet',
-                          status: 'Frontend flow',
+                          status: 'Policy',
                           highlights: const [
                             'Referral points credit only after the referred member is approved.',
                             'Wallet cash remains branch-restricted only for Hyper Pharmacy usage where applicable.',
@@ -2368,8 +3320,8 @@ class _CustomerWalletViewState extends State<_CustomerWalletView> {
                     ).format(txn.createdAt),
                     status: txn.transactionType,
                     highlights: [
-                      'Post-transaction balance in ${txn.subLedgerType} ledger is ${txn.postBalance.toStringAsFixed(0)}.',
-                      'This preview stays frontend-only until backend wallet APIs are wired.',
+                      'Post-transaction balance in ${txn.subLedgerType} ledger is ${ledgerBalanceAfter(txn).toStringAsFixed(0)}.',
+                      'This transaction is loaded from the live customer wallet ledger.',
                     ],
                   ),
                   child: Row(
@@ -2624,400 +3576,669 @@ class _CustomerSettingsViewState extends State<_CustomerSettingsView> {
   }
 }
 
-class _CustomerAppointmentsView extends StatelessWidget {
+class _CustomerAppointmentsView extends StatefulWidget {
   final PortalSectionData section;
 
   const _CustomerAppointmentsView({required this.section});
 
   @override
-  Widget build(BuildContext context) {
-    final nextVisit = section.queueItems.isNotEmpty
-        ? section.queueItems.first
-        : null;
+  State<_CustomerAppointmentsView> createState() =>
+      _CustomerAppointmentsViewState();
+}
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        AppCard(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
+class _CustomerAppointmentsViewState extends State<_CustomerAppointmentsView> {
+  late Future<List<Appointment>> _appointmentsFuture;
+  bool _showUpcomingOnly = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadAppointments();
+  }
+
+  void _loadAppointments() {
+    _appointmentsFuture = ApiService.getAppointments(SHIELDRole.customer);
+  }
+
+  Future<void> _cancelAppointment(Appointment appointment) async {
+    try {
+      await ApiService.cancelCustomerAppointment(appointment.id);
+      if (!mounted) return;
+      setState(_loadAppointments);
+      showPortalSnackBar(context, 'Appointment cancelled successfully.');
+    } catch (_) {
+      if (!mounted) return;
+      showPortalSnackBar(
+        context,
+        'Cancellation is unavailable right now. Please try again shortly.',
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<List<Appointment>>(
+      future: _appointmentsFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const AppPortalSectionSkeleton(
+            showHero: true,
+            statCards: 3,
+            listItems: 5,
+          );
+        }
+
+        if (snapshot.hasError || !snapshot.hasData) {
+          return AppCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Appointments unavailable', style: AppTypography.h4),
+                const SizedBox(height: 8),
+                Text(
+                  'The customer appointment feed could not be loaded.',
+                  style: AppTypography.small.copyWith(color: AppColors.gray),
+                ),
+                const SizedBox(height: 16),
+                AppButton(
+                  text: 'Retry',
+                  onPressed: () => setState(_loadAppointments),
+                ),
+              ],
+            ),
+          );
+        }
+
+        final appointments = snapshot.data!;
+        final upcoming =
+            appointments
+                .where(
+                  (appointment) =>
+                      appointment.status != AppointmentStatus.cancelled &&
+                      appointment.status != AppointmentStatus.completed,
+                )
+                .toList()
+              ..sort((a, b) => a.appointmentDate.compareTo(b.appointmentDate));
+        final history =
+            appointments
+                .where(
+                  (appointment) =>
+                      appointment.status == AppointmentStatus.cancelled ||
+                      appointment.status == AppointmentStatus.completed,
+                )
+                .toList()
+              ..sort((a, b) => b.appointmentDate.compareTo(a.appointmentDate));
+        final visibleList = _showUpcomingOnly ? upcoming : appointments;
+        final nextVisit = upcoming.isNotEmpty ? upcoming.first : null;
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [AppColors.shieldBlue, AppColors.shieldNavy],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Container(
-                    width: 48,
-                    height: 48,
-                    decoration: BoxDecoration(
-                      color: AppColors.shieldBlue.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: const Icon(
-                      Icons.calendar_month_rounded,
-                      color: AppColors.shieldBlue,
-                    ),
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Appointments', style: AppTypography.h4),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Keep upcoming visits, pending requests, and reminders in one mobile timeline.',
-                          style: AppTypography.small.copyWith(
-                            color: AppColors.gray,
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          '${upcoming.length} active visits',
+                          style: AppTypography.h4.copyWith(
+                            color: AppColors.white,
+                            fontWeight: FontWeight.w700,
                           ),
                         ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              if (nextVisit != null) ...[
-                const SizedBox(height: 16),
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: AppColors.lightGray,
-                    borderRadius: BorderRadius.circular(18),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Next visit',
-                        style: AppTypography.tiny.copyWith(
-                          color: AppColors.gray,
-                          fontWeight: FontWeight.w700,
-                        ),
                       ),
-                      const SizedBox(height: 6),
-                      Text(
-                        nextVisit.title,
-                        style: AppTypography.body.copyWith(
-                          fontWeight: FontWeight.w700,
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 6,
                         ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        '${nextVisit.meta} • ${nextVisit.status}',
-                        style: AppTypography.small.copyWith(
-                          color: AppColors.shieldBlue,
+                        decoration: BoxDecoration(
+                          color: AppColors.white.withValues(alpha: 0.14),
+                          borderRadius: BorderRadius.circular(999),
                         ),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        nextVisit.subtitle,
-                        style: AppTypography.small.copyWith(
-                          color: AppColors.darkGray,
+                        child: Text(
+                          '${history.length} completed',
+                          style: AppTypography.tiny.copyWith(
+                            color: AppColors.white,
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
                       ),
                     ],
                   ),
-                ),
-              ],
-              const SizedBox(height: 14),
-              Wrap(
-                spacing: 10,
-                runSpacing: 10,
+                  const SizedBox(height: 6),
+                  Text(
+                    'Clinic, dental, and homecare visits stay inside the same customer app timeline.',
+                    style: AppTypography.small.copyWith(
+                      color: AppColors.white.withValues(alpha: 0.84),
+                    ),
+                  ),
+                  if (nextVisit != null) ...[
+                    const SizedBox(height: 12),
+                    _HeroStatBlock(
+                      label: 'Next visit',
+                      value: nextVisit.doctorName ?? 'Appointment scheduled',
+                      secondary:
+                          '${DateFormat('dd MMM yyyy').format(nextVisit.appointmentDate)} • ${nextVisit.department ?? nextVisit.typeLabel}',
+                    ),
+                  ],
+                  const SizedBox(height: 10),
+                  _HeroActionGrid(
+                    actions: [
+                      _HeroActionGridItem(
+                        label: 'Book consultation',
+                        onTap: () => context.go('/portal/customer/services'),
+                      ),
+                      _HeroActionGridItem(
+                        label: _showUpcomingOnly
+                            ? 'Show full history'
+                            : 'Show upcoming only',
+                        onTap: () {
+                          setState(() {
+                            _showUpcomingOnly = !_showUpcomingOnly;
+                          });
+                        },
+                      ),
+                      _HeroActionGridItem(
+                        label: 'Open notifications',
+                        onTap: () =>
+                            context.go('/portal/customer/notifications'),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 18),
+            LayoutBuilder(
+              builder: (context, constraints) => GridView.count(
+                crossAxisCount: constraints.maxWidth >= 420 ? 2 : 1,
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                crossAxisSpacing: 14,
+                mainAxisSpacing: 14,
+                childAspectRatio: constraints.maxWidth >= 420 ? 2.5 : 3,
                 children: [
-                  _SectionMetricBadge(
-                    metric: section.metrics[0],
+                  _KpiTile(
+                    title: 'Upcoming',
+                    value: '${upcoming.length}',
                     icon: Icons.event_available_rounded,
+                    color: AppColors.shieldBlue,
                   ),
-                  _SectionMetricBadge(
-                    metric: section.metrics[1],
-                    icon: Icons.pending_actions_rounded,
+                  _KpiTile(
+                    title: 'Completed',
+                    value:
+                        '${history.where((a) => a.status == AppointmentStatus.completed).length}',
+                    icon: Icons.task_alt_rounded,
+                    color: AppColors.shieldGreen,
                   ),
-                  _SectionMetricBadge(
-                    metric: section.metrics[2],
-                    icon: Icons.history_rounded,
+                  _KpiTile(
+                    title: 'Cancelled',
+                    value:
+                        '${history.where((a) => a.status == AppointmentStatus.cancelled).length}',
+                    icon: Icons.cancel_outlined,
+                    color: AppColors.error,
                   ),
-                ],
-              ),
-              const SizedBox(height: 14),
-              Wrap(
-                spacing: 10,
-                runSpacing: 10,
-                children: [
-                  _ActionPill(
-                    label: 'Book consultation',
-                    onTap: () => context.go('/portal/customer/services'),
+                  _KpiTile(
+                    title: 'Care types',
+                    value:
+                        '${appointments.map((a) => a.typeLabel).toSet().length}',
+                    icon: Icons.local_hospital_outlined,
+                    color: AppColors.warning,
                   ),
-                  _ActionPill(
-                    label: 'Reschedule',
-                    onTap: () => showPortalSnackBar(
-                      context,
-                      'Reschedule flow is available as a frontend-only appointment action.',
-                    ),
-                  ),
-                  _ActionPill(
-                    label: 'Share slot',
-                    onTap: () => showPortalSnackBar(
-                      context,
-                      'Slot details shared in the customer appointment preview.',
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 20),
-        Text('Upcoming and pending', style: AppTypography.h4),
-        const SizedBox(height: 12),
-        ...section.queueItems.map(
-          (item) => Padding(
-            padding: const EdgeInsets.only(bottom: 10),
-            child: _CustomerTimelineTile(
-              icon: item.status == 'Pending'
-                  ? Icons.schedule_send_outlined
-                  : Icons.event_note_rounded,
-              accentColor: item.status == 'Pending'
-                  ? AppColors.warning
-                  : AppColors.shieldBlue,
-              title: item.title,
-              subtitle: item.subtitle,
-              meta: '${item.meta} • ${item.status}',
-              onTap: () => showPortalDetailsSheet(
-                context,
-                title: item.title,
-                subtitle: item.subtitle,
-                meta: item.meta,
-                status: item.status,
-                highlights: [
-                  'This appointment stays inside the customer portal flow.',
-                  'Reminder and status updates will continue to surface in notifications and wallet-linked care history.',
                 ],
               ),
             ),
-          ),
-        ),
-        const SizedBox(height: 14),
-        Text('Recent activity', style: AppTypography.h4),
-        const SizedBox(height: 12),
-        ...section.recentItems.map(
-          (item) => Padding(
-            padding: const EdgeInsets.only(bottom: 10),
-            child: _CustomerTimelineTile(
-              icon: Icons.check_circle_outline_rounded,
-              accentColor: AppColors.shieldGreen,
-              title: item.title,
-              subtitle: item.subtitle,
-              meta: '${item.meta} • ${item.status}',
-              onTap: () => showPortalDetailsSheet(
-                context,
-                title: item.title,
-                subtitle: item.subtitle,
-                meta: item.meta,
-                status: item.status,
-                highlights: const [
-                  'Completed and delivered events remain visible for continuity.',
-                  'This customer preview is tuned for compact mobile review instead of a wide portal dashboard.',
-                ],
+            const SizedBox(height: 20),
+            Text(
+              _showUpcomingOnly
+                  ? 'Upcoming and pending'
+                  : 'Appointment timeline',
+              style: AppTypography.h4,
+            ),
+            const SizedBox(height: 12),
+            ...visibleList.map(
+              (appointment) => Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: AppCard(
+                  padding: const EdgeInsets.all(14),
+                  onTap: () => showPortalDetailsSheet(
+                    context,
+                    title: appointment.doctorName ?? appointment.typeLabel,
+                    subtitle: appointment.notes ?? 'Customer appointment entry',
+                    meta: DateFormat(
+                      'dd MMM yyyy • hh:mm a',
+                    ).format(appointment.appointmentDate),
+                    status: appointment.statusLabel,
+                    highlights: [
+                      'Provider: ${appointment.department ?? appointment.typeLabel}',
+                      'This appointment remains inside the mobile-first customer portal flow.',
+                    ],
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        width: 42,
+                        height: 42,
+                        decoration: BoxDecoration(
+                          color: _appointmentAccent(
+                            appointment.status,
+                          ).withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        child: Icon(
+                          _appointmentIcon(appointment.status),
+                          color: _appointmentAccent(appointment.status),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              appointment.doctorName ?? appointment.typeLabel,
+                              style: AppTypography.body.copyWith(
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              '${DateFormat('dd MMM yyyy • hh:mm a').format(appointment.appointmentDate)} • ${appointment.department ?? appointment.typeLabel}',
+                              style: AppTypography.small.copyWith(
+                                color: AppColors.gray,
+                              ),
+                            ),
+                            if ((appointment.notes ?? '').isNotEmpty) ...[
+                              const SizedBox(height: 4),
+                              Text(
+                                appointment.notes!,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: AppTypography.tiny.copyWith(
+                                  color: AppColors.darkGray,
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          _StatusPill(
+                            label: appointment.statusLabel,
+                            color: _appointmentAccent(appointment.status),
+                          ),
+                          if (appointment.status == AppointmentStatus.scheduled)
+                            TextButton(
+                              onPressed: () => _cancelAppointment(appointment),
+                              child: const Text('Cancel'),
+                            ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ),
-          ),
-        ),
-      ],
+          ],
+        );
+      },
     );
   }
 }
 
-class _CustomerNotificationsView extends StatelessWidget {
+class _CustomerNotificationsView extends StatefulWidget {
   final PortalSectionData section;
 
   const _CustomerNotificationsView({required this.section});
 
   @override
-  Widget build(BuildContext context) {
-    final unreadCount = section.queueItems.length;
+  State<_CustomerNotificationsView> createState() =>
+      _CustomerNotificationsViewState();
+}
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        AppCard(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
+class _CustomerNotificationsViewState
+    extends State<_CustomerNotificationsView> {
+  late Future<List<NotificationModel>> _notificationsFuture;
+  NotificationType? _activeType;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadNotifications();
+  }
+
+  void _loadNotifications() {
+    _notificationsFuture = ApiService.getNotifications(SHIELDRole.customer);
+  }
+
+  Future<void> _markAllRead(List<NotificationModel> notifications) async {
+    final unread = notifications.where((notification) => !notification.isRead);
+    for (final notification in unread) {
+      await ApiService.markNotificationRead(notification.id);
+    }
+    if (!mounted) return;
+    setState(_loadNotifications);
+    showPortalSnackBar(context, 'All unread notifications marked as read.');
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<List<NotificationModel>>(
+      future: _notificationsFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const AppPortalSectionSkeleton(
+            showHero: true,
+            statCards: 3,
+            listItems: 5,
+          );
+        }
+
+        if (snapshot.hasError || !snapshot.hasData) {
+          return AppCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Notifications unavailable', style: AppTypography.h4),
+                const SizedBox(height: 8),
+                Text(
+                  'The customer notification feed could not be loaded.',
+                  style: AppTypography.small.copyWith(color: AppColors.gray),
+                ),
+                const SizedBox(height: 16),
+                AppButton(
+                  text: 'Retry',
+                  onPressed: () => setState(_loadNotifications),
+                ),
+              ],
+            ),
+          );
+        }
+
+        final notifications = snapshot.data!;
+        final visible = _activeType == null
+            ? notifications
+            : notifications
+                  .where((notification) => notification.type == _activeType)
+                  .toList();
+        final unread = visible
+            .where((notification) => !notification.isRead)
+            .toList();
+        final read = visible
+            .where((notification) => notification.isRead)
+            .toList();
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [AppColors.shieldBlue, AppColors.shieldNavy],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Container(
-                    width: 48,
-                    height: 48,
-                    decoration: BoxDecoration(
-                      color: AppColors.shieldBlue.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: const Icon(
-                      Icons.notifications_active_outlined,
-                      color: AppColors.shieldBlue,
-                    ),
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Notifications', style: AppTypography.h4),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Appointment reminders, wallet alerts, and document updates in one focused inbox.',
-                          style: AppTypography.small.copyWith(
-                            color: AppColors.gray,
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          '${unread.length} unread right now',
+                          style: AppTypography.h4.copyWith(
+                            color: AppColors.white,
+                            fontWeight: FontWeight.w700,
                           ),
                         ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [AppColors.shieldBlue, AppColors.shieldNavy],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(18),
-                ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            '$unreadCount unread right now',
-                            style: AppTypography.h5.copyWith(
-                              color: AppColors.white,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            'High-priority customer updates stay at the top of the mobile inbox.',
-                            style: AppTypography.small.copyWith(
-                              color: AppColors.white.withValues(alpha: 0.84),
-                            ),
-                          ),
-                        ],
                       ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.white.withValues(alpha: 0.14),
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        child: Text(
+                          '${notifications.length} total',
+                          style: AppTypography.tiny.copyWith(
+                            color: AppColors.white,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'Wallet alerts, appointment reminders, and document updates stay grouped in the same customer inbox.',
+                    style: AppTypography.small.copyWith(
+                      color: AppColors.white.withValues(alpha: 0.84),
                     ),
-                    const SizedBox(width: 12),
-                    const Icon(
-                      Icons.mark_email_unread_outlined,
-                      color: AppColors.white,
-                      size: 28,
+                  ),
+                  const SizedBox(height: 10),
+                  _HeroActionGrid(
+                    actions: [
+                      _HeroActionGridItem(
+                        label: 'Mark all read',
+                        onTap: () => _markAllRead(notifications),
+                      ),
+                      _HeroActionGridItem(
+                        label: 'Open settings',
+                        onTap: () => context.go('/portal/customer/settings'),
+                      ),
+                      _HeroActionGridItem(
+                        label: 'Refresh feed',
+                        onTap: () => setState(_loadNotifications),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 18),
+            LayoutBuilder(
+              builder: (context, constraints) => GridView.count(
+                crossAxisCount: constraints.maxWidth >= 420 ? 2 : 1,
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                crossAxisSpacing: 14,
+                mainAxisSpacing: 14,
+                childAspectRatio: constraints.maxWidth >= 420 ? 2.5 : 3,
+                children: [
+                  _KpiTile(
+                    title: 'Unread',
+                    value: '${notifications.where((n) => !n.isRead).length}',
+                    icon: Icons.mark_email_unread_outlined,
+                    color: AppColors.shieldBlue,
+                  ),
+                  _KpiTile(
+                    title: 'Wallet',
+                    value:
+                        '${notifications.where((n) => n.type == NotificationType.wallet).length}',
+                    icon: Icons.account_balance_wallet_outlined,
+                    color: AppColors.shieldGreen,
+                  ),
+                  _KpiTile(
+                    title: 'Appointments',
+                    value:
+                        '${notifications.where((n) => n.type == NotificationType.appointment).length}',
+                    icon: Icons.calendar_month_outlined,
+                    color: AppColors.warning,
+                  ),
+                  _KpiTile(
+                    title: 'Documents',
+                    value:
+                        '${notifications.where((n) => n.type == NotificationType.document).length}',
+                    icon: Icons.description_outlined,
+                    color: AppColors.shieldNavy,
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  _FilterChip(
+                    label: 'All',
+                    selected: _activeType == null,
+                    onTap: () => setState(() => _activeType = null),
+                  ),
+                  const SizedBox(width: 8),
+                  for (final type in NotificationType.values) ...[
+                    _FilterChip(
+                      label: _notificationTypeLabel(type),
+                      selected: _activeType == type,
+                      onTap: () => setState(() => _activeType = type),
                     ),
+                    const SizedBox(width: 8),
                   ],
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
+            Text('Unread first', style: AppTypography.h4),
+            const SizedBox(height: 12),
+            ...unread.map(
+              (notification) => Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: _CustomerTimelineTile(
+                  icon: _notificationIcon(notification.type),
+                  accentColor: AppColors.shieldBlue,
+                  title: notification.title,
+                  subtitle: notification.body,
+                  meta:
+                      '${notification.typeLabel} • ${DateFormat('dd MMM • hh:mm a').format(notification.createdAt)}',
+                  highlightUnread: true,
+                  onTap: () async {
+                    await ApiService.markNotificationRead(notification.id);
+                    if (!context.mounted) return;
+                    setState(_loadNotifications);
+                    showPortalDetailsSheet(
+                      context,
+                      title: notification.title,
+                      subtitle: notification.body,
+                      meta: notification.typeLabel,
+                      status: 'Read',
+                      highlights: const [
+                        'This alert remains inside the compact customer app inbox.',
+                      ],
+                    );
+                  },
                 ),
               ),
-              const SizedBox(height: 14),
-              Wrap(
-                spacing: 10,
-                runSpacing: 10,
-                children: [
-                  _SectionMetricBadge(
-                    metric: section.metrics[0],
-                    icon: Icons.mark_email_unread_outlined,
+            ),
+            const SizedBox(height: 14),
+            Text('Earlier updates', style: AppTypography.h4),
+            const SizedBox(height: 12),
+            ...read.map(
+              (notification) => Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: _CustomerTimelineTile(
+                  icon: _notificationIcon(notification.type),
+                  accentColor: AppColors.shieldGreen,
+                  title: notification.title,
+                  subtitle: notification.body,
+                  meta:
+                      '${notification.typeLabel} • ${DateFormat('dd MMM • hh:mm a').format(notification.createdAt)}',
+                  onTap: () => showPortalDetailsSheet(
+                    context,
+                    title: notification.title,
+                    subtitle: notification.body,
+                    meta: notification.typeLabel,
+                    status: 'Read',
+                    highlights: const [
+                      'Read items stay available as lightweight customer history.',
+                    ],
                   ),
-                  _SectionMetricBadge(
-                    metric: section.metrics[1],
-                    icon: Icons.calendar_view_week_outlined,
-                  ),
-                  _SectionMetricBadge(
-                    metric: section.metrics[2],
-                    icon: Icons.verified_outlined,
-                  ),
-                ],
-              ),
-              const SizedBox(height: 14),
-              Wrap(
-                spacing: 10,
-                runSpacing: 10,
-                children: [
-                  _ActionPill(
-                    label: 'Mark all read',
-                    onTap: () => showPortalSnackBar(
-                      context,
-                      'All local notification previews marked as read.',
-                    ),
-                  ),
-                  _ActionPill(
-                    label: 'Filter alerts',
-                    onTap: () => _showNotificationFilterSheet(context),
-                  ),
-                  _ActionPill(
-                    label: 'Notification settings',
-                    onTap: () => context.go('/portal/customer/settings'),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 20),
-        Text('Unread first', style: AppTypography.h4),
-        const SizedBox(height: 12),
-        ...section.queueItems.map(
-          (item) => Padding(
-            padding: const EdgeInsets.only(bottom: 10),
-            child: _CustomerTimelineTile(
-              icon: Icons.notifications_active_outlined,
-              accentColor: AppColors.shieldBlue,
-              title: item.title,
-              subtitle: item.subtitle,
-              meta: '${item.meta} • ${item.status}',
-              highlightUnread: true,
-              onTap: () => showPortalDetailsSheet(
-                context,
-                title: item.title,
-                subtitle: item.subtitle,
-                meta: item.meta,
-                status: item.status,
-                highlights: const [
-                  'Unread customer alerts stay promoted above the activity history.',
-                  'Notification actions keep routing inside the portal customer app.',
-                ],
+                ),
               ),
             ),
-          ),
-        ),
-        const SizedBox(height: 14),
-        Text('Earlier updates', style: AppTypography.h4),
-        const SizedBox(height: 12),
-        ...section.recentItems.map(
-          (item) => Padding(
-            padding: const EdgeInsets.only(bottom: 10),
-            child: _CustomerTimelineTile(
-              icon: Icons.done_all_rounded,
-              accentColor: AppColors.shieldGreen,
-              title: item.title,
-              subtitle: item.subtitle,
-              meta: '${item.meta} • ${item.status}',
-              onTap: () => showPortalDetailsSheet(
-                context,
-                title: item.title,
-                subtitle: item.subtitle,
-                meta: item.meta,
-                status: item.status,
-                highlights: const [
-                  'Read items remain available as lightweight history instead of a heavy desktop feed.',
-                  'Settings and reminder behavior continue to live in the same customer app shell.',
-                ],
-              ),
-            ),
-          ),
-        ),
-      ],
+          ],
+        );
+      },
     );
+  }
+}
+
+Color _appointmentAccent(AppointmentStatus status) {
+  switch (status) {
+    case AppointmentStatus.completed:
+      return AppColors.shieldGreen;
+    case AppointmentStatus.cancelled:
+      return AppColors.error;
+    case AppointmentStatus.rescheduled:
+      return AppColors.warning;
+    case AppointmentStatus.scheduled:
+      return AppColors.shieldBlue;
+  }
+}
+
+IconData _appointmentIcon(AppointmentStatus status) {
+  switch (status) {
+    case AppointmentStatus.completed:
+      return Icons.task_alt_rounded;
+    case AppointmentStatus.cancelled:
+      return Icons.cancel_outlined;
+    case AppointmentStatus.rescheduled:
+      return Icons.update_rounded;
+    case AppointmentStatus.scheduled:
+      return Icons.event_note_rounded;
+  }
+}
+
+String _notificationTypeLabel(NotificationType type) {
+  switch (type) {
+    case NotificationType.wallet:
+      return 'Wallet';
+    case NotificationType.appointment:
+      return 'Visits';
+    case NotificationType.document:
+      return 'Docs';
+    case NotificationType.membership:
+      return 'Member';
+    case NotificationType.system:
+      return 'System';
+  }
+}
+
+IconData _notificationIcon(NotificationType type) {
+  switch (type) {
+    case NotificationType.wallet:
+      return Icons.account_balance_wallet_outlined;
+    case NotificationType.appointment:
+      return Icons.calendar_month_outlined;
+    case NotificationType.document:
+      return Icons.description_outlined;
+    case NotificationType.membership:
+      return Icons.workspace_premium_outlined;
+    case NotificationType.system:
+      return Icons.notifications_active_outlined;
   }
 }
 
@@ -3027,6 +4248,7 @@ class _CompactValueCard extends StatelessWidget {
   final String caption;
   final Color accentColor;
   final IconData icon;
+  final bool dark;
 
   const _CompactValueCard({
     required this.title,
@@ -3034,103 +4256,57 @@ class _CompactValueCard extends StatelessWidget {
     required this.caption,
     required this.accentColor,
     required this.icon,
+    this.dark = false,
   });
 
   @override
   Widget build(BuildContext context) {
     return AppCard(
       padding: const EdgeInsets.all(14),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  title,
-                  style: AppTypography.small.copyWith(color: AppColors.gray),
-                ),
-              ),
-              Icon(icon, color: accentColor, size: 18),
-            ],
-          ),
-          const SizedBox(height: 10),
-          Text(
-            value,
-            style: AppTypography.h4.copyWith(
-              color: accentColor,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            caption,
-            style: AppTypography.tiny.copyWith(color: AppColors.gray),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _SectionMetricBadge extends StatelessWidget {
-  final PortalMetric metric;
-  final IconData icon;
-
-  const _SectionMetricBadge({required this.metric, required this.icon});
-
-  @override
-  Widget build(BuildContext context) {
-    return AppCard(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, color: AppColors.shieldBlue, size: 18),
-          const SizedBox(width: 10),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                metric.label,
-                style: AppTypography.tiny.copyWith(color: AppColors.gray),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                metric.value,
-                style: AppTypography.body.copyWith(fontWeight: FontWeight.w700),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ActionPill extends StatelessWidget {
-  final String label;
-  final VoidCallback onTap;
-
-  const _ActionPill({required this.label, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(999),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-        decoration: BoxDecoration(
-          color: AppColors.shieldBlue.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(999),
-        ),
-        child: Text(
-          label,
-          style: AppTypography.small.copyWith(
-            color: AppColors.shieldBlue,
-            fontWeight: FontWeight.w700,
-          ),
+        decoration: dark
+            ? BoxDecoration(
+                color: AppColors.white.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(16),
+              )
+            : null,
+        padding: dark ? const EdgeInsets.all(2) : EdgeInsets.zero,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    title,
+                    style: AppTypography.small.copyWith(
+                      color: dark
+                          ? AppColors.white.withValues(alpha: 0.82)
+                          : AppColors.gray,
+                    ),
+                  ),
+                ),
+                Icon(icon, color: accentColor, size: 18),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Text(
+              value,
+              style: AppTypography.h4.copyWith(
+                color: accentColor,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              caption,
+              style: AppTypography.tiny.copyWith(
+                color: dark
+                    ? AppColors.white.withValues(alpha: 0.78)
+                    : AppColors.gray,
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -3609,6 +4785,13 @@ class _CustomerServicesViewState extends State<_CustomerServicesView> {
       'PHARMACY'; // 'PHARMACY', 'LAB', 'HOMECARE', 'CONSULTATION'
   String _uploadStatus = 'No files selected';
   bool _isUploading = false;
+  bool _isBooking = false;
+  String? _lastBookingStatus;
+  String? _selectedPrescriptionName;
+  PrescriptionAnalysis? _latestPrescriptionAnalysis;
+  final TextEditingController _manualMedicineController =
+      TextEditingController();
+  final List<_EditablePrescriptionItem> _editablePrescriptionItems = [];
 
   // Consultation booking fields
   String _specialistType =
@@ -3617,33 +4800,825 @@ class _CustomerServicesViewState extends State<_CustomerServicesView> {
   DateTime _selectedDate = DateTime.now().add(const Duration(days: 1));
   String? _selectedDietPlan;
 
-  void _handlePrescriptionUpload() {
+  @override
+  void dispose() {
+    _manualMedicineController.dispose();
+    super.dispose();
+  }
+
+  String _inferMimeType(String fileName) {
+    final lower = fileName.toLowerCase();
+    if (lower.endsWith('.png')) {
+      return 'image/png';
+    }
+    if (lower.endsWith('.jpg') || lower.endsWith('.jpeg')) {
+      return 'image/jpeg';
+    }
+    return 'application/pdf';
+  }
+
+  Future<void> _handlePrescriptionUpload() async {
+    final picked = await pickPrescriptionFile();
+
+    if (!mounted || picked == null) {
+      return;
+    }
+
+    final fileName =
+        picked.name.isEmpty
+            ? 'Prescription_${DateFormat('yyyy_MM_dd_HHmm').format(DateTime.now())}.pdf'
+            : picked.name;
+    final fileSize = picked.size <= 0 ? 1024 : picked.size;
+
     setState(() {
+      _selectedPrescriptionName = fileName;
+      _latestPrescriptionAnalysis = null;
       _isUploading = true;
-      _uploadStatus = 'Uploading prescription...';
+      _uploadStatus = 'Uploading $fileName...';
     });
-    Future.delayed(const Duration(seconds: 2), () {
+
+    try {
+      final uploaded = await ApiService.uploadCustomerDocument(
+        fileName: fileName,
+        documentType: 'PRESCRIPTION',
+        fileBytes: picked.bytes,
+        mimeType: picked.mimeType ?? _inferMimeType(fileName),
+        fileSize: fileSize,
+      );
+      final analysis = await ApiService.getPrescriptionAnalysis(uploaded.id);
       if (!mounted) return;
       setState(() {
         _isUploading = false;
-        _uploadStatus = 'Upload Success! Validation Pending by Pharmacist.';
+        _latestPrescriptionAnalysis = analysis;
+        _editablePrescriptionItems
+          ..clear()
+          ..addAll(
+            analysis.medicineMatches.map(
+              (medicine) => _EditablePrescriptionItem(
+                name: medicine.matchedProductName ?? medicine.rawName,
+                dosage: medicine.dosage,
+                frequency: medicine.frequency,
+                duration: medicine.duration,
+                confidence: medicine.confidence,
+                source: medicine.isMatched ? 'From prescription' : 'Check name',
+                selected: true,
+                alternatives: medicine.candidates
+                    .map((candidate) => candidate.productName)
+                    .toList(),
+              ),
+            ),
+          );
+        _uploadStatus =
+            'Prescription received. Review the items below before we send them to the pharmacist.';
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Prescription uploaded successfully for review.'),
-        ),
+      showPortalSnackBar(
+        context,
+        'Prescription uploaded. Please confirm the items below.',
       );
-    });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _isUploading = false;
+        _latestPrescriptionAnalysis = null;
+        _uploadStatus =
+            'Upload failed for ${_selectedPrescriptionName ?? 'selected file'}. Please retry.';
+      });
+      showPortalSnackBar(
+        context,
+        'Document upload is unavailable right now. Please retry shortly.',
+      );
+    }
   }
 
-  void _handleBookAppointment() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          'Successfully booked $_specialistType consultation ($_consultationMode) for ${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}!',
+  void _addManualMedicine() {
+    final value = _manualMedicineController.text.trim();
+    if (value.isEmpty) {
+      showPortalSnackBar(
+        context,
+        'Type a medicine or product name before adding it to the request list.',
+      );
+      return;
+    }
+
+    final entries = value
+        .split(RegExp(r'[\n,;]+'))
+        .map((item) => item.trim())
+        .where((item) => item.isNotEmpty)
+        .toList();
+
+    setState(() {
+      _editablePrescriptionItems.insertAll(
+        0,
+        entries.map(
+          (entry) => _EditablePrescriptionItem(
+            name: entry,
+            dosage: 'As directed',
+            frequency: 'As directed',
+            duration: 'Not specified',
+            confidence: 0,
+            source: 'Requested by customer',
+            selected: true,
+          ),
+        ),
+      );
+      _manualMedicineController.clear();
+    });
+    showPortalSnackBar(
+      context,
+      entries.length == 1
+          ? 'Added ${entries.first} to your request list.'
+          : 'Added ${entries.length} items to your request list.',
+    );
+  }
+
+  void _submitEditablePrescriptionItems() {
+    final selectedCount = _editablePrescriptionItems.where((item) => item.selected).length;
+    if (selectedCount == 0) {
+      showPortalSnackBar(
+        context,
+        'Select at least one medicine or product before sending the list for review.',
+      );
+      return;
+    }
+
+    showPortalSnackBar(
+      context,
+      '$selectedCount items selected. Our pharmacy team will review them with your request.',
+    );
+  }
+
+  void _showPrescriptionAnalysisSheet(PrescriptionAnalysis analysis) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) {
+        return SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 28),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 44,
+                    height: 5,
+                    decoration: BoxDecoration(
+                      color: AppColors.divider,
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Text('AI Extracted Prescription', style: AppTypography.h4),
+                const SizedBox(height: 8),
+                Text(
+                  '${analysis.structuredData.doctor} • ${analysis.structuredData.date}',
+                  style: AppTypography.body.copyWith(color: AppColors.gray),
+                ),
+                const SizedBox(height: 16),
+                AppCard(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Prescription Summary',
+                        style: AppTypography.small.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      ...analysis.medicineMatches.map(
+                        (medicine) => Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: _buildMedicineMatchRow(
+                            medicine,
+                            compact: false,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                AppCard(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Original OCR Text',
+                        style: AppTypography.small.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        analysis.extractedText ?? 'No OCR text available.',
+                        style: AppTypography.small.copyWith(
+                          color: AppColors.darkGray,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 20),
+                AppButton(
+                  text: 'Close',
+                  onPressed: () => Navigator.of(context).pop(),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildSupportChip(String label) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: AppColors.shieldBlue.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        label,
+        style: AppTypography.tiny.copyWith(
+          color: AppColors.shieldBlue,
+          fontWeight: FontWeight.w700,
         ),
       ),
     );
+  }
+
+  Widget _buildPipelineStep(PrescriptionPipelineStep step) {
+    return Row(
+      children: [
+        Icon(
+          step.isDone ? Icons.check_circle : Icons.radio_button_unchecked,
+          size: 18,
+          color: step.isDone ? AppColors.shieldGreen : AppColors.gray,
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Text(
+            step.label,
+            style: AppTypography.small.copyWith(
+              color: step.isDone ? AppColors.darkGray : AppColors.gray,
+              fontWeight: step.isDone ? FontWeight.w600 : FontWeight.w500,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildManualMedicineComposer() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.divider),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Add medicines or products',
+            style: AppTypography.small.copyWith(
+              fontWeight: FontWeight.w700,
+              color: AppColors.darkGray,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Type medicines, wellness products, or pharmacy items you want us to prepare.',
+            style: AppTypography.tiny.copyWith(color: AppColors.gray),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _manualMedicineController,
+                  textInputAction: TextInputAction.done,
+                  onSubmitted: (_) => _addManualMedicine(),
+                  minLines: 1,
+                  maxLines: 3,
+                  decoration: InputDecoration(
+                    hintText: 'Type medicine or product names',
+                    filled: true,
+                    fillColor: AppColors.lightGray,
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 14,
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none,
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none,
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(
+                        color: AppColors.shieldBlue,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              AppButton(
+                text: 'Add',
+                width: 92,
+                height: 50,
+                onPressed: _addManualMedicine,
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEditablePrescriptionList() {
+    if (_editablePrescriptionItems.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return AppCard(
+      padding: const EdgeInsets.all(18),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Review medicines before approval', style: AppTypography.h5),
+                    const SizedBox(height: 6),
+                    Text(
+                      'Keep only the medicines or products you want us to review or prepare.',
+                      style: AppTypography.small.copyWith(color: AppColors.gray),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: AppColors.shieldBlue.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Text(
+                  '${_editablePrescriptionItems.where((item) => item.selected).length} selected',
+                  style: AppTypography.tiny.copyWith(
+                    color: AppColors.shieldBlue,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          ...List.generate(_editablePrescriptionItems.length, (index) {
+            final item = _editablePrescriptionItems[index];
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: _buildEditablePrescriptionItem(item, index),
+            );
+          }),
+          const SizedBox(height: 8),
+          AppButton(
+            text: 'Use Selected Medicines',
+            onPressed: _submitEditablePrescriptionItems,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEditablePrescriptionItem(
+    _EditablePrescriptionItem item,
+    int index,
+  ) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.lightGray,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: item.selected
+              ? AppColors.shieldBlue.withValues(alpha: 0.35)
+              : AppColors.divider,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Checkbox(
+                value: item.selected,
+                onChanged: (value) {
+                  setState(() {
+                    _editablePrescriptionItems[index] =
+                        item.copyWith(selected: value ?? false);
+                  });
+                },
+                activeColor: AppColors.shieldBlue,
+                visualDensity: VisualDensity.compact,
+              ),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      item.source,
+                      style: AppTypography.tiny.copyWith(
+                        color: item.source == 'Requested by customer'
+                            ? AppColors.warning
+                            : AppColors.gray,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      item.confidence > 0
+                          ? 'Confidence ${item.confidence.toStringAsFixed(0)}%'
+                          : 'Manual entry',
+                      style: AppTypography.tiny.copyWith(color: AppColors.gray),
+                    ),
+                  ],
+                ),
+              ),
+              IconButton(
+                onPressed: () {
+                  final removedName = item.name;
+                  setState(() {
+                    _editablePrescriptionItems.removeAt(index);
+                  });
+                  showPortalSnackBar(
+                    context,
+                    'Removed $removedName from the review list.',
+                  );
+                },
+                icon: const Icon(
+                  Icons.close_rounded,
+                  size: 18,
+                  color: AppColors.gray,
+                ),
+                visualDensity: VisualDensity.compact,
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          TextFormField(
+            initialValue: item.name,
+            decoration: const InputDecoration(
+              labelText: 'Medicine or product',
+            ),
+            onChanged: (value) {
+              setState(() {
+                _editablePrescriptionItems[index] = item.copyWith(name: value);
+              });
+            },
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: TextFormField(
+                  initialValue: item.dosage,
+                  decoration: const InputDecoration(labelText: 'Dosage'),
+                  onChanged: (value) {
+                    setState(() {
+                      _editablePrescriptionItems[index] =
+                          item.copyWith(dosage: value);
+                    });
+                  },
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: TextFormField(
+                  initialValue: item.frequency,
+                  decoration: const InputDecoration(labelText: 'Frequency'),
+                  onChanged: (value) {
+                    setState(() {
+                      _editablePrescriptionItems[index] =
+                          item.copyWith(frequency: value);
+                    });
+                  },
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          TextFormField(
+            initialValue: item.duration,
+            decoration: const InputDecoration(labelText: 'Duration'),
+            onChanged: (value) {
+              setState(() {
+                _editablePrescriptionItems[index] =
+                    item.copyWith(duration: value);
+              });
+            },
+          ),
+          if (item.alternatives.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Text(
+              'Suggested matches',
+              style: AppTypography.tiny.copyWith(
+                color: AppColors.gray,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: item.alternatives.map((alternative) {
+                return InkWell(
+                  onTap: () {
+                    setState(() {
+                      _editablePrescriptionItems[index] =
+                          item.copyWith(name: alternative);
+                    });
+                  },
+                  borderRadius: BorderRadius.circular(999),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.white,
+                      borderRadius: BorderRadius.circular(999),
+                      border: Border.all(color: AppColors.divider),
+                    ),
+                    child: Text(
+                      alternative,
+                      style: AppTypography.tiny.copyWith(
+                        color: AppColors.shieldBlue,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMedicineMatchRow(
+    PrescriptionMedicineMatch medicine, {
+    bool compact = true,
+  }) {
+    final highlightColor = medicine.isMatched
+        ? AppColors.shieldGreen
+        : AppColors.warning;
+    final matchedName = medicine.matchedProductName ?? medicine.rawName;
+
+    return Container(
+      padding: EdgeInsets.all(compact ? 12 : 14),
+      decoration: BoxDecoration(
+        color: AppColors.lightGray,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.divider),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(
+                medicine.isMatched ? Icons.check_circle : Icons.pending_actions,
+                size: 18,
+                color: highlightColor,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      matchedName,
+                      style: AppTypography.small.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.darkGray,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '${medicine.dosage} • ${medicine.frequency} • ${medicine.duration}',
+                      style: AppTypography.tiny.copyWith(color: AppColors.gray),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 10),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 8,
+                  vertical: 5,
+                ),
+                decoration: BoxDecoration(
+                  color: highlightColor.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Text(
+                  '${medicine.confidence.toStringAsFixed(0)}%',
+                  style: AppTypography.tiny.copyWith(
+                    color: highlightColor,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          if (!medicine.isMatched && medicine.candidates.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Text(
+              'Best match: ${medicine.candidates.first.productName}',
+              style: AppTypography.tiny.copyWith(
+                color: AppColors.darkGray,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAnalysisSummary(PrescriptionAnalysis analysis) {
+    return AppCard(
+      padding: const EdgeInsets.all(18),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Prescription Summary', style: AppTypography.h5),
+                    const SizedBox(height: 6),
+                    Text(
+                      '${analysis.structuredData.doctor} • ${analysis.structuredData.date}',
+                      style: AppTypography.small.copyWith(
+                        color: AppColors.gray,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: AppColors.warning.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Text(
+                  analysis.reviewStatus == 'APPROVED'
+                      ? 'Approved'
+                      : 'Pending review',
+                  style: AppTypography.tiny.copyWith(
+                    color: analysis.reviewStatus == 'APPROVED'
+                        ? AppColors.shieldGreen
+                        : AppColors.warning,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          ...analysis.steps.map(
+            (step) => Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: _buildPipelineStep(step),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Confidence ${analysis.overallConfidence.toStringAsFixed(0)}%',
+            style: AppTypography.small.copyWith(
+              color: AppColors.shieldBlue,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 14),
+          ...analysis.medicineMatches.take(3).map(
+            (medicine) => Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: _buildMedicineMatchRow(medicine),
+            ),
+          ),
+          if (analysis.medicineMatches.length > 3)
+            Padding(
+              padding: const EdgeInsets.only(top: 2),
+              child: Text(
+                '+${analysis.medicineMatches.length - 3} more medicines in extracted summary',
+                style: AppTypography.tiny.copyWith(color: AppColors.gray),
+              ),
+            ),
+          const SizedBox(height: 14),
+          Text(
+            '${analysis.cartPrefill.length} items prepared for pharmacy cart review.',
+            style: AppTypography.small.copyWith(
+              color: AppColors.darkGray,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton(
+              onPressed: () => _showPrescriptionAnalysisSheet(analysis),
+              style: TextButton.styleFrom(
+                padding: EdgeInsets.zero,
+                minimumSize: const Size(0, 0),
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+              child: const Text('Open AI summary'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _handleBookAppointment() async {
+    setState(() {
+      _isBooking = true;
+      _lastBookingStatus = null;
+    });
+
+    const providerMap = {
+      'DOCTOR': '1',
+      'DENTAL': '2',
+      'COSMETIC': '3',
+      'DIETITIAN': '4',
+    };
+
+    const appointmentTypeMap = {
+      'DOCTOR': 'CLINIC',
+      'DENTAL': 'DENTAL',
+      'COSMETIC': 'CLINIC',
+      'DIETITIAN': 'CLINIC',
+    };
+
+    try {
+      final appointment = await ApiService.createCustomerAppointment(
+        providerId: providerMap[_specialistType] ?? '1',
+        appointmentType: appointmentTypeMap[_specialistType] ?? 'CLINIC',
+        appointmentDate: _selectedDate,
+        remarks: '$_specialistType consultation via $_consultationMode',
+      );
+      if (!mounted) return;
+      setState(() {
+        _isBooking = false;
+        _lastBookingStatus =
+            'Booked ${appointment.typeLabel.toLowerCase()} visit for ${DateFormat('dd MMM yyyy').format(appointment.appointmentDate)}.';
+      });
+      showPortalSnackBar(
+        context,
+        'Consultation booked successfully inside your customer appointments.',
+      );
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _isBooking = false;
+        _lastBookingStatus = 'Booking failed. Please retry.';
+      });
+      showPortalSnackBar(
+        context,
+        'Appointment booking is unavailable right now. Please retry shortly.',
+      );
+    }
   }
 
   Widget _buildTabButton(String key, String label, IconData icon) {
@@ -3778,56 +5753,101 @@ class _CustomerServicesViewState extends State<_CustomerServicesView> {
               Text('Digital Prescription Upload', style: AppTypography.h4),
               const SizedBox(height: 6),
               Text(
-                'Upload your prescription. Our pharmacists will validate and preload it for quick checkout.',
+                'Upload a prescription or tell us what you need. Our pharmacy team will review and prepare it for you.',
                 style: AppTypography.small.copyWith(color: AppColors.gray),
               ),
-              const SizedBox(height: 16),
-              Row(
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
                 children: [
-                  Expanded(
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 12,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppColors.lightGray,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: AppColors.divider),
-                      ),
-                      child: Row(
-                        children: [
-                          const Icon(
-                            Icons.file_present,
-                            color: AppColors.shieldBlue,
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Text(
-                              _uploadStatus,
-                              style: AppTypography.small.copyWith(
-                                color: _uploadStatus.contains('Success')
-                                    ? AppColors.shieldGreen
-                                    : AppColors.darkGray,
-                                fontWeight: _uploadStatus.contains('Success')
-                                    ? FontWeight.bold
-                                    : FontWeight.normal,
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  AppButton(
-                    text: 'Select File',
-                    onPressed: _isUploading ? null : _handlePrescriptionUpload,
-                    isLoading: _isUploading,
-                  ),
+                  _buildSupportChip('PDF'),
+                  _buildSupportChip('JPG'),
+                  _buildSupportChip('PNG'),
                 ],
               ),
+              const SizedBox(height: 16),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: AppColors.lightGray,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: AppColors.divider),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          width: 42,
+                          height: 42,
+                          decoration: BoxDecoration(
+                            color: AppColors.shieldBlue.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Icon(
+                            Icons.description_outlined,
+                            color: AppColors.shieldBlue,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                _selectedPrescriptionName ?? 'Choose a prescription file',
+                                style: AppTypography.small.copyWith(
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.darkGray,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                _uploadStatus,
+                                style: AppTypography.tiny.copyWith(
+                                  color:
+                                      _uploadStatus.contains('processed.') ||
+                                              _uploadStatus.contains('OCR')
+                                          ? AppColors.shieldGreen
+                                          : AppColors.gray,
+                                  fontWeight:
+                                      _uploadStatus.contains('processed.') ||
+                                              _uploadStatus.contains('OCR')
+                                          ? FontWeight.w700
+                                          : FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 14),
+                    AppButton(
+                      text: _isUploading ? 'Processing...' : 'Choose File',
+                      onPressed: _isUploading ? null : _handlePrescriptionUpload,
+                      isLoading: _isUploading,
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      'Upload a prescription above, or add the medicines and products you want below.',
+                      style: AppTypography.tiny.copyWith(color: AppColors.gray),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 14),
+              _buildManualMedicineComposer(),
+              if (_latestPrescriptionAnalysis != null) ...[
+                const SizedBox(height: 16),
+                _buildAnalysisSummary(_latestPrescriptionAnalysis!),
+                const SizedBox(height: 16),
+                _buildEditablePrescriptionList(),
+              ],
             ],
           ),
         ),
@@ -3899,10 +5919,9 @@ class _CustomerServicesViewState extends State<_CustomerServicesView> {
                           size: 20,
                         ),
                         onPressed: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text('Added ${prod['name']} to cart'),
-                            ),
+                          showPortalSnackBar(
+                            context,
+                            'Added ${prod['name']} to cart',
                           );
                         },
                       ),
@@ -3973,10 +5992,9 @@ class _CustomerServicesViewState extends State<_CustomerServicesView> {
                             tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                           ),
                           onPressed: () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text('Added ${prod['name']} to cart'),
-                              ),
+                            showPortalSnackBar(
+                              context,
+                              'Added ${prod['name']} to cart',
                             );
                           },
                           child: const Text('Add'),
@@ -4090,12 +6108,9 @@ class _CustomerServicesViewState extends State<_CustomerServicesView> {
                           tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                         ),
                         onPressed: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                'Requested ${test['name']}. Our lab coordinator will contact you.',
-                              ),
-                            ),
+                          showPortalSnackBar(
+                            context,
+                            'Requested ${test['name']}. Our lab coordinator will contact you.',
                           );
                         },
                         child: const Text('Book Test'),
@@ -4203,12 +6218,9 @@ class _CustomerServicesViewState extends State<_CustomerServicesView> {
                           tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                         ),
                         onPressed: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                'Requested ${srv['name']}. Home care team will schedule a visit.',
-                              ),
-                            ),
+                          showPortalSnackBar(
+                            context,
+                            'Requested ${srv['name']}. Home care team will schedule a visit.',
                           );
                         },
                         child: const Text('Request'),
@@ -4412,7 +6424,20 @@ class _CustomerServicesViewState extends State<_CustomerServicesView> {
               AppButton(
                 text: 'Book Consultation Slot',
                 onPressed: _handleBookAppointment,
+                isLoading: _isBooking,
               ),
+              if (_lastBookingStatus != null) ...[
+                const SizedBox(height: 12),
+                Text(
+                  _lastBookingStatus!,
+                  style: AppTypography.small.copyWith(
+                    color: _lastBookingStatus!.contains('failed')
+                        ? AppColors.error
+                        : AppColors.shieldGreen,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
             ],
           ),
         ),
@@ -4615,12 +6640,9 @@ class _CardUtilizationViewState extends State<_CardUtilizationView> {
         'Card ${_selectedCard['cardNumber']} (${_selectedCard['fullName']}) utilized at ${_selectedProvider['name']} for ₹${amount.toStringAsFixed(2)}',
       );
     });
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          'Logged card utilization of ₹${amount.toStringAsFixed(2)} successfully!',
-        ),
-      ),
+    showPortalSnackBar(
+      context,
+      'Logged card utilization of ₹${amount.toStringAsFixed(2)} successfully!',
     );
   }
 

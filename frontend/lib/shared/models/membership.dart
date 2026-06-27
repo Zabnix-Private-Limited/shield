@@ -1,5 +1,8 @@
 import 'package:equatable/equatable.dart';
 
+import 'customer.dart';
+import 'wallet.dart';
+
 enum MembershipTier { foundingMember, standardMember }
 
 class Membership extends Equatable {
@@ -30,6 +33,80 @@ class Membership extends Equatable {
     required this.createdAt,
     required this.updatedAt,
   });
+
+  String get tierLabel => switch (tier) {
+    MembershipTier.foundingMember => 'Founding Member',
+    MembershipTier.standardMember => 'Standard Member',
+  };
+
+  factory Membership.fromApi({
+    required Customer customer,
+    required Map<String, dynamic> customerPayload,
+    required List<WalletTransaction> transactions,
+  }) {
+    final membership = customerPayload['membership'] as Map<String, dynamic>?;
+    final membershipType =
+        membership?['membershipType'] as Map<String, dynamic>?;
+    final tierSource =
+        (membershipType?['name'] ??
+                membershipType?['code'] ??
+                membership?['status'] ??
+                '')
+            .toString()
+            .toLowerCase();
+    final earned = transactions
+        .where((txn) => txn.transactionType.toUpperCase() == 'CREDIT')
+        .fold<double>(0, (total, txn) => total + txn.amount);
+    final redeemed = transactions
+        .where((txn) => txn.transactionType.toUpperCase() != 'CREDIT')
+        .fold<double>(0, (total, txn) => total + txn.amount);
+
+    DateTime parseDate(dynamic value, DateTime fallback) {
+      if (value == null) return fallback;
+      return DateTime.tryParse(value.toString()) ?? fallback;
+    }
+
+    final createdAt = parseDate(
+      membership?['createdAt'] ?? membership?['created_at'],
+      customer.createdAt,
+    );
+    final startDate = parseDate(
+      membership?['activationDate'] ?? membership?['activation_date'],
+      customer.createdAt,
+    );
+    final endDate = parseDate(
+      membership?['expiryDate'] ?? membership?['expiry_date'],
+      startDate.add(const Duration(days: 365)),
+    );
+
+    return Membership(
+      id: (membership?['id'] ?? customer.id).toString(),
+      uuid: (membership?['uuid'] ?? 'membership-${customer.id}').toString(),
+      customerId: customer.id,
+      tier: tierSource.contains('founding')
+          ? MembershipTier.foundingMember
+          : MembershipTier.standardMember,
+      customerCode:
+          (membership?['membershipNumber'] ??
+                  membership?['membership_number'] ??
+                  customer.customerCode)
+              .toString(),
+      startDate: startDate,
+      endDate: endDate,
+      isActive:
+          ((membership?['status'] ?? customer.status)
+              .toString()
+              .toUpperCase()) ==
+          'ACTIVE',
+      totalEarnedCredits: earned,
+      totalRedeemedCredits: redeemed,
+      createdAt: createdAt,
+      updatedAt: parseDate(
+        membership?['updatedAt'] ?? membership?['updated_at'],
+        customer.updatedAt,
+      ),
+    );
+  }
 
   @override
   List<Object?> get props => [

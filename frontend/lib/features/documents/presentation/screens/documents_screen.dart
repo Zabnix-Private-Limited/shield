@@ -126,6 +126,8 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
                           'Uploaded by: ${document.uploadedBy ?? 'System'}',
                           if (document.processedAt != null)
                             'Processed on ${document.processedAt!.day}/${document.processedAt!.month}/${document.processedAt!.year}.',
+                          if (document.extractionPreview != null)
+                            'OCR preview: ${document.extractionPreview}',
                         ],
                       );
                     },
