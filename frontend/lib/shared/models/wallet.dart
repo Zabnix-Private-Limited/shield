@@ -33,16 +33,52 @@ class WalletTransaction extends Equatable {
       return double.tryParse(value.toString()) ?? 0;
     }
 
+    String normalizeLedgerType(Map<String, dynamic> source) {
+      final rawLedger =
+          (source['subLedgerType'] ??
+                  source['sub_ledger_type'] ??
+                  source['ledger'] ??
+                  'CASH')
+              .toString()
+              .toUpperCase();
+      if (rawLedger == 'REWARD_POINTS') {
+        return 'POINTS';
+      }
+      if (rawLedger == 'SHIELD_BENEFIT') {
+        return 'BENEFIT';
+      }
+      return rawLedger;
+    }
+
+    String normalizeTransactionType(Map<String, dynamic> source) {
+      final rawType =
+          (source['transactionType'] ?? source['transaction_type'] ?? 'DEBIT')
+              .toString()
+              .toUpperCase();
+      const creditTypes = {
+        'CREDIT',
+        'RECHARGE',
+        'OPENING_BALANCE',
+        'POINT_REDEMPTION_CREDIT',
+        'REVERSAL_CREDIT',
+        'BONUS',
+        'EARNED',
+        'REFERRAL_REWARDED',
+        'APPROVED_CREDIT',
+        'GRANT',
+        'PRELOAD',
+      };
+      return creditTypes.contains(rawType) ? 'CREDIT' : 'DEBIT';
+    }
+
     return WalletTransaction(
       id: json['id'].toString(),
       uuid: (json['uuid'] ?? 'wallet-txn-${json['id']}').toString(),
-      walletId: (json['walletId'] ?? json['wallet_id']).toString(),
-      transactionType:
-          (json['transactionType'] ?? json['transaction_type'] ?? 'DEBIT')
+      walletId:
+          (json['walletId'] ?? json['wallet_id'] ?? json['wallet_id_fk'] ?? '')
               .toString(),
-      subLedgerType:
-          (json['subLedgerType'] ?? json['sub_ledger_type'] ?? 'CASH')
-              .toString(),
+      transactionType: normalizeTransactionType(json),
+      subLedgerType: normalizeLedgerType(json),
       amount: parseAmount(json['amount']),
       referenceType: (json['referenceType'] ?? json['reference_type'])
           ?.toString(),
@@ -57,11 +93,15 @@ class WalletTransaction extends Equatable {
     );
   }
 
+  bool get isCredit => transactionType.toUpperCase() == 'CREDIT';
+
+  double get signedAmount => isCredit ? amount : -amount;
+
   double get postBalance {
     double balance = 0;
     for (final txn in dummyTransactions) {
       if (txn.walletId == walletId && txn.subLedgerType == subLedgerType) {
-        balance += txn.transactionType == 'CREDIT' ? txn.amount : -txn.amount;
+        balance += txn.signedAmount;
       }
 
       if (txn.id == id) {
@@ -210,12 +250,8 @@ class Wallet extends Equatable {
   double get currentBalance {
     double balance = 0;
     for (final txn in dummyTransactions) {
-      if (txn.walletId == id) {
-        if (txn.transactionType == 'CREDIT') {
-          balance += txn.amount;
-        } else {
-          balance -= txn.amount;
-        }
+      if (txn.walletId == id && txn.subLedgerType == 'CASH') {
+        balance += txn.signedAmount;
       }
     }
     return balance;

@@ -20,11 +20,15 @@ import { RedisModule } from './redis/redis.module';
 import { AuthModule } from './auth/auth.module';
 import { PricingModule } from './pricing/pricing.module';
 import { ReferralModule } from './referral/referral.module';
+import { MasterDataModule } from './master-data/master-data.module';
+import { ServiceProviderModule } from './service-provider/service-provider.module';
 
 @Module({
   imports: [
     SentryModule.forRoot(),
     AuthModule,
+    MasterDataModule,
+    ServiceProviderModule,
     PrismaModule,
     PricingModule,
     ReferralModule,

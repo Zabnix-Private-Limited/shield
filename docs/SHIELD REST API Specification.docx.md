@@ -12,7 +12,9 @@ Authentication: Firebase ID Token Verification \+ SHIELD JWT
 
 Base URL:
 
-https://api.shield.sahakar.com/api/v1
+* Local Development: `http://localhost:3000`
+* Staging/Custom: `https://api.shield.sahakar.com/api/v1`
+* Live Vercel Production: `https://shield-backend.vercel.app`
 
 API Versioning:
 

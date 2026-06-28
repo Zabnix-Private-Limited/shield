@@ -37,6 +37,7 @@ class _PortalShellState extends State<PortalShell> {
   bool _isLoading = true;
   PortalSectionData? _sectionData;
   String? _error;
+  bool _isInternalSidebarExpanded = true;
 
   @override
   void initState() {
@@ -77,6 +78,12 @@ class _PortalShellState extends State<PortalShell> {
     }
   }
 
+  void _toggleInternalSidebar() {
+    setState(() {
+      _isInternalSidebarExpanded = !_isInternalSidebarExpanded;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final portal = portalDataForRole(widget.role);
@@ -84,9 +91,7 @@ class _PortalShellState extends State<PortalShell> {
     final isCustomer = widget.role == SHIELDRole.customer;
 
     if (_isLoading) {
-      return AppPageSkeleton(
-        showSidebar: !isCustomer && AppResponsive.isDesktop(context),
-      );
+      return const AppPageSkeleton(showSidebar: false);
     }
 
     if (_error != null || _sectionData == null) {
@@ -153,19 +158,25 @@ class _PortalShellState extends State<PortalShell> {
                   );
                 },
               )
-            : SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: SizedBox(
-                  width: 1300,
-                  child: Row(
-                    children: [
-                      _RoleSidebar(portal: portal, activeSectionKey: activeKey),
-                      Expanded(
-                        child: _RoleContent(portal: portal, section: section),
-                      ),
-                    ],
+            : Row(
+                children: [
+                  _InternalPortalSidebar(
+                    portal: portal,
+                    activeSectionKey: activeKey,
+                    collapsed: !_isInternalSidebarExpanded,
                   ),
-                ),
+                  Expanded(
+                    child: Scaffold(
+                      backgroundColor: AppColors.lightGray,
+                      body: _RoleContent(
+                        portal: portal,
+                        section: section,
+                        onSidebarToggle: _toggleInternalSidebar,
+                        isSidebarExpanded: _isInternalSidebarExpanded,
+                      ),
+                    ),
+                  ),
+                ],
               ),
       ),
     );
@@ -216,14 +227,102 @@ class _EditablePrescriptionItem {
   }
 }
 
+IconData _portalSectionIcon(String key) {
+  switch (key) {
+    case 'dashboard':
+      return Icons.space_dashboard_outlined;
+    case 'wallet':
+    case 'wallet-ops':
+      return Icons.account_balance_wallet_outlined;
+    case 'services':
+      return Icons.medical_services_outlined;
+    case 'appointments':
+    case 'book-appointment':
+      return Icons.event_note_outlined;
+    case 'documents':
+    case 'reports':
+      return Icons.description_outlined;
+    case 'profile':
+    case 'users':
+      return Icons.person_outline_rounded;
+    case 'membership':
+    case 'membership-plans':
+      return Icons.workspace_premium_outlined;
+    case 'prescriptions':
+      return Icons.receipt_long_outlined;
+    case 'notifications':
+    case 'notification-center':
+      return Icons.notifications_none_rounded;
+    case 'settings':
+    case 'system':
+      return Icons.settings_outlined;
+    case 'customers':
+    case 'patients':
+      return Icons.groups_outlined;
+    case 'verification':
+      return Icons.verified_user_outlined;
+    case 'bills':
+      return Icons.request_quote_outlined;
+    case 'qr-scan':
+      return Icons.qr_code_scanner_rounded;
+    case 'history':
+      return Icons.history_rounded;
+    case 'consultations':
+      return Icons.local_hospital_outlined;
+    case 'home-visits':
+      return Icons.home_work_outlined;
+    case 'treatments':
+      return Icons.healing_outlined;
+    case 'tasks':
+      return Icons.checklist_rtl_outlined;
+    case 'follow-ups':
+      return Icons.call_outlined;
+    case 'complaints':
+      return Icons.report_problem_outlined;
+    case 'campaigns':
+      return Icons.campaign_outlined;
+    case 'approvals':
+      return Icons.fact_check_outlined;
+    case 'memberships':
+      return Icons.badge_outlined;
+    case 'reversals':
+      return Icons.swap_horiz_outlined;
+    case 'support':
+      return Icons.support_agent_outlined;
+    case 'analytics':
+      return Icons.insights_outlined;
+    case 'credit':
+      return Icons.credit_score_outlined;
+    case 'retention':
+      return Icons.favorite_border_rounded;
+    case 'roles':
+      return Icons.admin_panel_settings_outlined;
+    case 'businesses':
+      return Icons.apartment_outlined;
+    case 'audit':
+      return Icons.policy_outlined;
+    default:
+      return Icons.radio_button_checked_outlined;
+  }
+}
+
 class _RoleContent extends StatelessWidget {
   final PortalRoleData portal;
   final PortalSectionData section;
+  final VoidCallback? onSidebarToggle;
+  final bool isSidebarExpanded;
 
-  const _RoleContent({required this.portal, required this.section});
+  const _RoleContent({
+    required this.portal,
+    required this.section,
+    this.onSidebarToggle,
+    this.isSidebarExpanded = true,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final isAdminDashboard =
+        portal.role == SHIELDRole.superAdmin && section.key == 'dashboard';
     final isCustomerProfile =
         portal.role == SHIELDRole.customer && section.key == 'profile';
     final isCustomerDashboard =
@@ -246,6 +345,9 @@ class _RoleContent extends StatelessWidget {
         (portal.role == SHIELDRole.dentalStaff && section.key == 'patients');
     final isAdminBusinesses =
         portal.role == SHIELDRole.superAdmin && section.key == 'businesses';
+    final isAdminMasterData =
+        portal.role == SHIELDRole.superAdmin &&
+        section.key == 'membership-plans';
     final isAdminAudit =
         portal.role == SHIELDRole.superAdmin && section.key == 'audit';
     final isReportsSection =
@@ -268,9 +370,16 @@ class _RoleContent extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _PortalHeader(portal: portal, section: section),
+                _PortalHeader(
+                  portal: portal,
+                  section: section,
+                  onSidebarToggle: onSidebarToggle,
+                  isSidebarExpanded: isSidebarExpanded,
+                ),
                 const SizedBox(height: 20),
-                if (isCustomerProfile)
+                if (isAdminDashboard)
+                  const _AdminOperationsCenterView()
+                else if (isCustomerProfile)
                   const _CustomerProfilePortalView()
                 else if (isCustomerDashboard)
                   const _CustomerDashboardPortalView()
@@ -289,59 +398,15 @@ class _RoleContent extends StatelessWidget {
                 else if (isCardUtilization)
                   const _CardUtilizationView()
                 else if (isAdminBusinesses)
-                  const _BranchIdsDirectoryView()
+                  const _AdminProviderNetworkView()
+                else if (isAdminMasterData)
+                  const _AdminMasterDataView()
                 else if (isAdminAudit)
                   const _ServiceUtilizationView()
                 else if (isReportsSection)
                   const _AdminReportsView()
-                else ...[
-                  _HeroPanel(portal: portal, section: section),
-                  const SizedBox(height: 20),
-                  _MetricGrid(
-                    metrics: section.metrics,
-                    accentColor: portal.accentColor,
-                  ),
-                  const SizedBox(height: 20),
-                  LayoutBuilder(
-                    builder: (context, constraints) {
-                      final stack = constraints.maxWidth < 900;
-                      final priorityPanel = _ListPanel(
-                        title: 'Priority Queue',
-                        subtitle:
-                            'What needs attention first in this role view.',
-                        items: section.queueItems,
-                        accentColor: portal.accentColor,
-                      );
-                      final recentPanel = _ListPanel(
-                        title: 'Recent Activity',
-                        subtitle:
-                            'Latest actions and timeline events in the portal flow.',
-                        items: section.recentItems,
-                        accentColor: AppColors.shieldBlue,
-                      );
-
-                      if (stack) {
-                        return Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            priorityPanel,
-                            const SizedBox(height: 20),
-                            recentPanel,
-                          ],
-                        );
-                      }
-
-                      return Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(child: priorityPanel),
-                          const SizedBox(width: 20),
-                          Expanded(child: recentPanel),
-                        ],
-                      );
-                    },
-                  ),
-                ],
+                else
+                  _EnterpriseWorkspaceView(portal: portal, section: section),
               ],
             ),
           ),
@@ -351,111 +416,32 @@ class _RoleContent extends StatelessWidget {
   }
 }
 
-class _RoleSidebar extends StatelessWidget {
+class _InternalPortalSidebar extends StatelessWidget {
   final PortalRoleData portal;
   final String activeSectionKey;
+  final bool collapsed;
 
-  const _RoleSidebar({required this.portal, required this.activeSectionKey});
+  const _InternalPortalSidebar({
+    required this.portal,
+    required this.activeSectionKey,
+    required this.collapsed,
+  });
 
   @override
   Widget build(BuildContext context) {
-    if (portal.role == SHIELDRole.customer) {
-      return _CustomerPortalNav(
+    if (portal.role == SHIELDRole.superAdmin) {
+      return _AdminPortalNav(
         portal: portal,
         activeSectionKey: activeSectionKey,
         inDrawer: false,
+        collapsed: collapsed,
       );
     }
 
-    return Container(
-      width: 280,
-      decoration: const BoxDecoration(
-        color: AppColors.white,
-        border: Border(right: BorderSide(color: AppColors.divider)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 24, 20, 16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'SHIELD',
-                  style: AppTypography.h3.copyWith(color: portal.accentColor),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  portal.role.label,
-                  style: AppTypography.body.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  portal.regionLabel,
-                  style: AppTypography.tiny.copyWith(color: AppColors.gray),
-                ),
-              ],
-            ),
-          ),
-          const Divider(height: 1),
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.all(12),
-              children: portal.sections.map((section) {
-                final isActive = section.key == activeSectionKey;
-
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(14),
-                    onTap: () => context.go(
-                      '/portal/${portal.role.routeKey}/${section.key}',
-                    ),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 14,
-                        vertical: 14,
-                      ),
-                      decoration: BoxDecoration(
-                        color: isActive
-                            ? portal.accentColor.withValues(alpha: 0.12)
-                            : AppColors.transparent,
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            section.title,
-                            style: AppTypography.body.copyWith(
-                              color: isActive
-                                  ? portal.accentColor
-                                  : AppColors.darkGray,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            section.summary,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: AppTypography.tiny.copyWith(
-                              color: AppColors.gray,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                );
-              }).toList(),
-            ),
-          ),
-        ],
-      ),
+    return _RoleRailNav(
+      portal: portal,
+      activeSectionKey: activeSectionKey,
+      collapsed: collapsed,
     );
   }
 }
@@ -472,6 +458,18 @@ class _RoleDrawer extends StatelessWidget {
       return Drawer(
         child: SafeArea(
           child: _CustomerPortalNav(
+            portal: portal,
+            activeSectionKey: activeSectionKey,
+            inDrawer: true,
+          ),
+        ),
+      );
+    }
+
+    if (portal.role == SHIELDRole.superAdmin) {
+      return Drawer(
+        child: SafeArea(
+          child: _AdminPortalNav(
             portal: portal,
             activeSectionKey: activeSectionKey,
             inDrawer: true,
@@ -542,32 +540,222 @@ class _RoleDrawer extends StatelessWidget {
   }
 }
 
+class _RoleRailNav extends StatelessWidget {
+  const _RoleRailNav({
+    required this.portal,
+    required this.activeSectionKey,
+    required this.collapsed,
+  });
+
+  final PortalRoleData portal;
+  final String activeSectionKey;
+  final bool collapsed;
+
+  @override
+  Widget build(BuildContext context) {
+    final width = collapsed ? 92.0 : 276.0;
+
+    return Container(
+      width: width,
+      decoration: const BoxDecoration(
+        color: AppColors.white,
+        border: Border(right: BorderSide(color: AppColors.divider)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: EdgeInsets.fromLTRB(
+              collapsed ? 16 : 18,
+              20,
+              collapsed ? 16 : 18,
+              16,
+            ),
+            child: Column(
+              crossAxisAlignment: collapsed
+                  ? CrossAxisAlignment.center
+                  : CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: collapsed ? 44 : double.infinity,
+                  padding: EdgeInsets.all(collapsed ? 10 : 14),
+                  decoration: BoxDecoration(
+                    color: portal.accentColor.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Icon(
+                    portal.icon,
+                    color: portal.accentColor,
+                    size: collapsed ? 20 : 22,
+                  ),
+                ),
+                if (!collapsed) ...[
+                  const SizedBox(height: 14),
+                  Text(
+                    portal.role.label,
+                    style: AppTypography.body.copyWith(
+                      color: AppColors.shieldNavy,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    portal.regionLabel,
+                    style: AppTypography.tiny.copyWith(color: AppColors.gray),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          const Divider(height: 1),
+          Expanded(
+            child: ListView(
+              padding: EdgeInsets.fromLTRB(
+                collapsed ? 10 : 12,
+                12,
+                collapsed ? 10 : 12,
+                12,
+              ),
+              children: portal.sections.map((section) {
+                final isActive = section.key == activeSectionKey;
+                final icon = _portalSectionIcon(section.key);
+                final tile = InkWell(
+                  borderRadius: BorderRadius.circular(16),
+                  onTap: () => context.go(
+                    '/portal/${portal.role.routeKey}/${section.key}',
+                  ),
+                  child: Container(
+                    margin: const EdgeInsets.only(bottom: 8),
+                    padding: EdgeInsets.symmetric(
+                      horizontal: collapsed ? 0 : 12,
+                      vertical: collapsed ? 10 : 12,
+                    ),
+                    decoration: BoxDecoration(
+                      color: isActive
+                          ? portal.accentColor.withValues(alpha: 0.12)
+                          : AppColors.transparent,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: collapsed
+                        ? Center(
+                            child: Icon(
+                              icon,
+                              size: 20,
+                              color: isActive
+                                  ? portal.accentColor
+                                  : AppColors.darkGray,
+                            ),
+                          )
+                        : Row(
+                            children: [
+                              Icon(
+                                icon,
+                                size: 18,
+                                color: isActive
+                                    ? portal.accentColor
+                                    : AppColors.gray,
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Text(
+                                  section.title,
+                                  style: AppTypography.small.copyWith(
+                                    color: isActive
+                                        ? portal.accentColor
+                                        : AppColors.darkGray,
+                                    fontWeight: isActive
+                                        ? FontWeight.w700
+                                        : FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                  ),
+                );
+
+                if (!collapsed) {
+                  return tile;
+                }
+
+                return Tooltip(message: section.title, child: tile);
+              }).toList(),
+            ),
+          ),
+          if (!collapsed)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 18),
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppColors.lightGray,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Text(
+                  'Desktop workspace: optimized for dense navigation, quicker tasks, and all-day use.',
+                  style: AppTypography.tiny.copyWith(
+                    color: AppColors.gray,
+                    height: 1.35,
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
 class _PortalHeader extends StatelessWidget {
   final PortalRoleData portal;
   final PortalSectionData section;
+  final VoidCallback? onSidebarToggle;
+  final bool isSidebarExpanded;
 
-  const _PortalHeader({required this.portal, required this.section});
+  const _PortalHeader({
+    required this.portal,
+    required this.section,
+    this.onSidebarToggle,
+    this.isSidebarExpanded = true,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Builder(
-          builder: (context) {
-            final scaffold = Scaffold.maybeOf(context);
-            final showMenu = scaffold?.hasDrawer ?? false;
-            if (!showMenu) {
-              return const SizedBox.shrink();
-            }
-            return Padding(
-              padding: const EdgeInsets.only(right: 12),
-              child: IconButton(
-                onPressed: () => Scaffold.of(context).openDrawer(),
-                icon: const Icon(Icons.menu),
+        if (onSidebarToggle != null)
+          Padding(
+            padding: const EdgeInsets.only(right: 12),
+            child: IconButton(
+              tooltip: isSidebarExpanded
+                  ? 'Collapse sidebar'
+                  : 'Expand sidebar',
+              onPressed: onSidebarToggle,
+              icon: Icon(
+                isSidebarExpanded
+                    ? Icons.menu_open_rounded
+                    : Icons.menu_rounded,
               ),
-            );
-          },
-        ),
+            ),
+          )
+        else
+          Builder(
+            builder: (context) {
+              final scaffold = Scaffold.maybeOf(context);
+              final showMenu = scaffold?.hasDrawer ?? false;
+              if (!showMenu) {
+                return const SizedBox.shrink();
+              }
+              return Padding(
+                padding: const EdgeInsets.only(right: 12),
+                child: IconButton(
+                  onPressed: () => Scaffold.of(context).openDrawer(),
+                  icon: const Icon(Icons.menu),
+                ),
+              );
+            },
+          ),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -782,6 +970,247 @@ class _CustomerPortalNav extends StatelessWidget {
   }
 }
 
+class _AdminPortalNav extends StatelessWidget {
+  const _AdminPortalNav({
+    required this.portal,
+    required this.activeSectionKey,
+    required this.inDrawer,
+    this.collapsed = false,
+  });
+
+  final PortalRoleData portal;
+  final String activeSectionKey;
+  final bool inDrawer;
+  final bool collapsed;
+
+  static const List<MapEntry<String, List<String>>> _groups = [
+    MapEntry('Operations', ['dashboard', 'audit']),
+    MapEntry('People', ['users']),
+    MapEntry('Provider Network', ['businesses']),
+    MapEntry('Commercial', ['membership-plans']),
+    MapEntry('Reports', ['reports']),
+    MapEntry('System', ['roles', 'notification-center', 'system']),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final isCollapsedRail = collapsed && !inDrawer;
+
+    return Container(
+      width: inDrawer
+          ? null
+          : isCollapsedRail
+          ? 96
+          : 304,
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        border: inDrawer
+            ? null
+            : const Border(right: BorderSide(color: AppColors.divider)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: EdgeInsets.fromLTRB(
+              isCollapsedRail ? 16 : 20,
+              22,
+              isCollapsedRail ? 16 : 20,
+              16,
+            ),
+            child: Column(
+              crossAxisAlignment: isCollapsedRail
+                  ? CrossAxisAlignment.center
+                  : CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: isCollapsedRail ? 46 : double.infinity,
+                  padding: EdgeInsets.all(isCollapsedRail ? 10 : 14),
+                  decoration: BoxDecoration(
+                    color: portal.accentColor.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(
+                      color: portal.accentColor.withValues(alpha: 0.14),
+                    ),
+                  ),
+                  child: Icon(
+                    Icons.admin_panel_settings_outlined,
+                    color: portal.accentColor,
+                    size: isCollapsedRail ? 22 : 24,
+                  ),
+                ),
+                if (!isCollapsedRail) ...[
+                  const SizedBox(height: 14),
+                  Text(
+                    'SHIELD Control',
+                    style: AppTypography.h3.copyWith(color: portal.accentColor),
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    portal.operatorName,
+                    style: AppTypography.body.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Unified Admin Console',
+                    style: AppTypography.small.copyWith(
+                      color: AppColors.darkGray,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          const Divider(height: 1),
+          Expanded(
+            child: ListView.separated(
+              padding: EdgeInsets.fromLTRB(
+                isCollapsedRail ? 10 : 12,
+                12,
+                isCollapsedRail ? 10 : 12,
+                16,
+              ),
+              itemCount: _groups.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 10),
+              itemBuilder: (context, index) {
+                final group = _groups[index];
+                final items = group.value
+                    .map(
+                      (key) => portal.sections.firstWhere(
+                        (section) => section.key == key,
+                        orElse: () => portal.defaultSection,
+                      ),
+                    )
+                    .where((section) => group.value.contains(section.key))
+                    .toList();
+
+                return Container(
+                  padding: EdgeInsets.fromLTRB(
+                    isCollapsedRail ? 8 : 10,
+                    10,
+                    isCollapsedRail ? 8 : 10,
+                    8,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.lightGray,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: AppColors.divider),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (!isCollapsedRail)
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(8, 2, 8, 10),
+                          child: Text(
+                            group.key,
+                            style: AppTypography.tiny.copyWith(
+                              color: AppColors.gray,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 0.3,
+                            ),
+                          ),
+                        ),
+                      ...items.map((section) {
+                        final isActive = section.key == activeSectionKey;
+                        final icon = _portalSectionIcon(section.key);
+                        final tile = Padding(
+                          padding: const EdgeInsets.only(bottom: 6),
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(16),
+                            onTap: () {
+                              if (inDrawer) {
+                                Navigator.pop(context);
+                              }
+                              context.go(
+                                '/portal/${portal.role.routeKey}/${section.key}',
+                              );
+                            },
+                            child: Container(
+                              width: double.infinity,
+                              padding: EdgeInsets.symmetric(
+                                horizontal: isCollapsedRail ? 0 : 14,
+                                vertical: 12,
+                              ),
+                              decoration: BoxDecoration(
+                                color: isActive
+                                    ? portal.accentColor.withValues(alpha: 0.12)
+                                    : AppColors.transparent,
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              child: isCollapsedRail
+                                  ? Center(
+                                      child: Icon(
+                                        icon,
+                                        size: 20,
+                                        color: isActive
+                                            ? portal.accentColor
+                                            : AppColors.darkGray,
+                                      ),
+                                    )
+                                  : Row(
+                                      children: [
+                                        Icon(
+                                          icon,
+                                          size: 18,
+                                          color: isActive
+                                              ? portal.accentColor
+                                              : AppColors.gray,
+                                        ),
+                                        const SizedBox(width: 10),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                section.title,
+                                                style: AppTypography.small
+                                                    .copyWith(
+                                                      color: isActive
+                                                          ? portal.accentColor
+                                                          : AppColors.darkGray,
+                                                      fontWeight:
+                                                          FontWeight.w700,
+                                                    ),
+                                              ),
+                                              const SizedBox(height: 3),
+                                              Text(
+                                                section.summary,
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                                style: AppTypography.tiny
+                                                    .copyWith(
+                                                      color: AppColors.gray,
+                                                    ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                            ),
+                          ),
+                        );
+                        if (!isCollapsedRail) {
+                          return tile;
+                        }
+                        return Tooltip(message: section.title, child: tile);
+                      }),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _RoleSwitcher extends StatelessWidget {
   final PortalRoleData portal;
 
@@ -824,78 +1253,97 @@ class _HeroPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            portal.accentColor.withValues(alpha: 0.95),
-            AppColors.shieldNavy,
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(24),
-      ),
+    final primaryMetric = section.metrics.isNotEmpty
+        ? section.metrics.first
+        : null;
+    final queueCount = section.queueItems.length;
+    final recentCount = section.recentItems.length;
+
+    return AppCard(
+      padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: AppColors.white.withValues(alpha: 0.16),
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: Icon(portal.icon, color: AppColors.white, size: 24),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      portal.operatorName,
-                      style: AppTypography.body.copyWith(
-                        color: AppColors.white,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    Text(
-                      portal.regionLabel,
-                      style: AppTypography.tiny.copyWith(
-                        color: AppColors.white.withValues(alpha: 0.8),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
-          Text(
-            section.summary,
-            style: AppTypography.h4.copyWith(color: AppColors.white),
-          ),
-          const SizedBox(height: 14),
-          _HeroActionGrid(
-            actions: section.actions
-                .map(
-                  (action) => _HeroActionGridItem(
-                    label: action,
-                    onTap: () => _handleHeroAction(
-                      context,
-                      portal: portal,
-                      section: section,
-                      action: action,
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final stack = constraints.maxWidth < 980;
+              final left = Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Today\'s Operations',
+                    style: AppTypography.tiny.copyWith(
+                      color: portal.accentColor,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0.3,
                     ),
                   ),
-                )
-                .toList(),
+                  const SizedBox(height: 6),
+                  Text(
+                    section.summary,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTypography.body.copyWith(
+                      color: AppColors.shieldNavy,
+                      fontWeight: FontWeight.w600,
+                      height: 1.3,
+                    ),
+                  ),
+                ],
+              );
+
+              final right = Wrap(
+                spacing: 10,
+                runSpacing: 10,
+                alignment: WrapAlignment.end,
+                children: [
+                  _WorkspaceMiniStat(
+                    label: primaryMetric?.label ?? 'Focus',
+                    value: primaryMetric?.value ?? '${section.actions.length}',
+                  ),
+                  _WorkspaceMiniStat(label: 'Queue', value: '$queueCount'),
+                  _WorkspaceMiniStat(label: 'Updates', value: '$recentCount'),
+                ],
+              );
+
+              if (stack) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [left, const SizedBox(height: 12), right],
+                );
+              }
+
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(child: left),
+                  const SizedBox(width: 16),
+                  right,
+                ],
+              );
+            },
           ),
+          if (section.actions.isNotEmpty) ...[
+            const SizedBox(height: 14),
+            Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              children: section.actions
+                  .map(
+                    (action) => _WorkspaceActionChip(
+                      label: action,
+                      accentColor: portal.accentColor,
+                      onTap: () => _handleHeroAction(
+                        context,
+                        portal: portal,
+                        section: section,
+                        action: action,
+                      ),
+                    ),
+                  )
+                  .toList(),
+            ),
+          ],
         ],
       ),
     );
@@ -1310,6 +1758,80 @@ void _showNotificationFilterSheet(BuildContext context) {
   );
 }
 
+class _EnterpriseWorkspaceView extends StatelessWidget {
+  const _EnterpriseWorkspaceView({required this.portal, required this.section});
+
+  final PortalRoleData portal;
+  final PortalSectionData section;
+
+  @override
+  Widget build(BuildContext context) {
+    final monitoringItems = section.insightItems.isNotEmpty
+        ? section.insightItems
+        : section.recentItems;
+    final activityItems = section.recentItems.isNotEmpty
+        ? section.recentItems
+        : monitoringItems;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _HeroPanel(portal: portal, section: section),
+        const SizedBox(height: 14),
+        _MetricGrid(metrics: section.metrics, accentColor: portal.accentColor),
+        const SizedBox(height: 16),
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final stack = constraints.maxWidth < 1040;
+            final left = Column(
+              children: [
+                _EnterpriseWorkPanel(
+                  title: 'Today\'s Work',
+                  subtitle: 'Operational items that need attention now.',
+                  items: section.queueItems,
+                  accentColor: portal.accentColor,
+                  viewAllLabel: 'Open queue',
+                ),
+                const SizedBox(height: 16),
+                _EnterpriseWorkPanel(
+                  title: 'Approvals & Exceptions',
+                  subtitle: 'Items to review, verify, or escalate next.',
+                  items: monitoringItems,
+                  accentColor: AppColors.warning,
+                  viewAllLabel: 'Review all',
+                ),
+              ],
+            );
+            final right = _EnterpriseUtilityPanel(
+              portal: portal,
+              section: section,
+              activityItems: activityItems,
+              notificationItems: monitoringItems,
+            );
+
+            if (stack) {
+              return Column(
+                children: [left, const SizedBox(height: 16), right],
+              );
+            }
+
+            return Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(flex: 7, child: left),
+                const SizedBox(width: 16),
+                Expanded(flex: 3, child: right),
+              ],
+            );
+          },
+        ),
+        const SizedBox(height: 16),
+        _EnterpriseDataTable(section: section, accentColor: portal.accentColor),
+      ],
+    );
+  }
+}
+
 class _MetricGrid extends StatelessWidget {
   final List<PortalMetric> metrics;
   final Color accentColor;
@@ -1320,16 +1842,20 @@ class _MetricGrid extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final count = constraints.maxWidth >= 1000
-            ? 3
+        final count = constraints.maxWidth >= 1180
+            ? metrics.length.clamp(1, 6)
+            : constraints.maxWidth >= 1000
+            ? 4
             : constraints.maxWidth >= 640
             ? 2
             : 1;
-        final aspectRatio = constraints.maxWidth >= 1000
-            ? 2.75
+        final aspectRatio = constraints.maxWidth >= 1180
+            ? 2.9
+            : constraints.maxWidth >= 1000
+            ? 2.65
             : constraints.maxWidth >= 640
-            ? 2.35
-            : 3.1;
+            ? 2.15
+            : 2.9;
 
         return GridView.builder(
           itemCount: metrics.length,
@@ -1344,15 +1870,24 @@ class _MetricGrid extends StatelessWidget {
           itemBuilder: (context, index) {
             final metric = metrics[index];
             return AppCard(
-              padding: const EdgeInsets.all(14),
+              padding: const EdgeInsets.all(12),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisAlignment: MainAxisAlignment.start,
                       children: [
+                        Text(
+                          metric.value,
+                          textAlign: TextAlign.left,
+                          style: AppTypography.h4.copyWith(
+                            color: accentColor,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
                         Text(
                           metric.label,
                           maxLines: 1,
@@ -1362,29 +1897,27 @@ class _MetricGrid extends StatelessWidget {
                             fontWeight: FontWeight.w600,
                           ),
                         ),
-                        const SizedBox(height: 6),
+                        const SizedBox(height: 4),
                         Text(
                           metric.note,
-                          maxLines: 2,
+                          maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: AppTypography.tiny.copyWith(
                             color: AppColors.darkGray,
-                            height: 1.25,
+                            height: 1.2,
                           ),
                         ),
                       ],
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  Align(
-                    alignment: Alignment.topRight,
-                    child: Text(
-                      metric.value,
-                      textAlign: TextAlign.right,
-                      style: AppTypography.h4.copyWith(
-                        color: accentColor,
-                        fontWeight: FontWeight.w700,
-                      ),
+                  const SizedBox(width: 10),
+                  Container(
+                    width: 8,
+                    height: 8,
+                    margin: const EdgeInsets.only(top: 6),
+                    decoration: BoxDecoration(
+                      color: accentColor,
+                      shape: BoxShape.circle,
                     ),
                   ),
                 ],
@@ -1397,92 +1930,98 @@ class _MetricGrid extends StatelessWidget {
   }
 }
 
-class _ListPanel extends StatelessWidget {
+class _EnterpriseWorkPanel extends StatelessWidget {
   final String title;
   final String subtitle;
   final List<PortalListItem> items;
   final Color accentColor;
+  final String viewAllLabel;
 
-  const _ListPanel({
+  const _EnterpriseWorkPanel({
     required this.title,
     required this.subtitle,
     required this.items,
     required this.accentColor,
+    required this.viewAllLabel,
   });
 
   @override
   Widget build(BuildContext context) {
+    final visibleItems = items.take(5).toList();
+
     return AppCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: AppTypography.h4),
-          const SizedBox(height: 4),
-          Text(
-            subtitle,
-            style: AppTypography.small.copyWith(color: AppColors.gray),
-          ),
-          const SizedBox(height: 16),
-          ...items.asMap().entries.map((entry) {
-            final item = entry.value;
-            final isLast = entry.key == items.length - 1;
-
-            return Padding(
-              padding: EdgeInsets.only(bottom: isLast ? 0 : 14),
-              child: Container(
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: AppColors.lightGray,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: AppColors.divider),
-                ),
-                child: Row(
+          Row(
+            children: [
+              Expanded(
+                child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Container(
-                      width: 10,
-                      height: 10,
-                      margin: const EdgeInsets.only(top: 6),
-                      decoration: BoxDecoration(
-                        color: accentColor,
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            item.title,
-                            style: AppTypography.body.copyWith(
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            item.subtitle,
-                            style: AppTypography.small.copyWith(
-                              color: AppColors.darkGray,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Wrap(
-                            spacing: 8,
-                            runSpacing: 8,
-                            children: [
-                              _TagChip(label: item.meta, color: AppColors.gray),
-                              _TagChip(label: item.status, color: accentColor),
-                            ],
-                          ),
-                        ],
+                    Text(title, style: AppTypography.h4),
+                    const SizedBox(height: 4),
+                    Text(
+                      subtitle,
+                      style: AppTypography.small.copyWith(
+                        color: AppColors.gray,
                       ),
                     ),
                   ],
                 ),
               ),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: accentColor.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Text(
+                  '${items.length} open',
+                  style: AppTypography.tiny.copyWith(
+                    color: accentColor,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          ...visibleItems.asMap().entries.map((entry) {
+            final item = entry.value;
+            final isLast = entry.key == visibleItems.length - 1;
+
+            return Column(
+              children: [
+                _EnterpriseRowItem(
+                  item: item,
+                  accentColor: accentColor,
+                  showMetaChips: false,
+                ),
+                if (!isLast) const Divider(height: 18),
+              ],
             );
           }),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Text(
+                '${items.length} items in this panel',
+                style: AppTypography.tiny.copyWith(color: AppColors.gray),
+              ),
+              const Spacer(),
+              Text(
+                viewAllLabel,
+                style: AppTypography.tiny.copyWith(
+                  color: accentColor,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ],
+          ),
         ],
       ),
     );
@@ -1510,6 +2049,462 @@ class _TagChip extends StatelessWidget {
           fontWeight: FontWeight.w700,
         ),
       ),
+    );
+  }
+}
+
+class _WorkspaceMiniStat extends StatelessWidget {
+  const _WorkspaceMiniStat({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: AppColors.lightGray,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.divider),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            value,
+            style: AppTypography.body.copyWith(
+              color: AppColors.shieldNavy,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            label,
+            style: AppTypography.tiny.copyWith(color: AppColors.gray),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _WorkspaceActionChip extends StatelessWidget {
+  const _WorkspaceActionChip({
+    required this.label,
+    required this.accentColor,
+    required this.onTap,
+  });
+
+  final String label;
+  final Color accentColor;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(999),
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+        decoration: BoxDecoration(
+          color: accentColor.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(color: accentColor.withValues(alpha: 0.16)),
+        ),
+        child: Text(
+          label,
+          style: AppTypography.tiny.copyWith(
+            color: accentColor,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _EnterpriseUtilityPanel extends StatelessWidget {
+  const _EnterpriseUtilityPanel({
+    required this.portal,
+    required this.section,
+    required this.activityItems,
+    required this.notificationItems,
+  });
+
+  final PortalRoleData portal;
+  final PortalSectionData section;
+  final List<PortalListItem> activityItems;
+  final List<PortalListItem> notificationItems;
+
+  @override
+  Widget build(BuildContext context) {
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Utility Rail', style: AppTypography.h4),
+          const SizedBox(height: 4),
+          Text(
+            'Role-specific shortcuts, alerts, and recency without pulling focus from the work area.',
+            style: AppTypography.small.copyWith(color: AppColors.gray),
+          ),
+          const SizedBox(height: 14),
+          _EnterpriseUtilitySection(
+            title: 'Quick Actions',
+            child: Column(
+              children: section.actions
+                  .take(4)
+                  .map(
+                    (action) => Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(14),
+                        onTap: () => _handleHeroAction(
+                          context,
+                          portal: portal,
+                          section: section,
+                          action: action,
+                        ),
+                        child: Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 10,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColors.lightGray,
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(color: AppColors.divider),
+                          ),
+                          child: Text(
+                            action,
+                            style: AppTypography.small.copyWith(
+                              color: AppColors.shieldNavy,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  )
+                  .toList(),
+            ),
+          ),
+          const SizedBox(height: 14),
+          _EnterpriseUtilitySection(
+            title: 'Notifications',
+            child: Column(
+              children: notificationItems.take(3).map((item) {
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: _EnterpriseRowItem(
+                    item: item,
+                    accentColor: AppColors.warning,
+                    compact: true,
+                    showMetaChips: false,
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
+          const SizedBox(height: 14),
+          _EnterpriseUtilitySection(
+            title: 'Today',
+            child: Row(
+              children: [
+                Expanded(
+                  child: _WorkspaceMiniStat(
+                    label: 'Shortcuts',
+                    value: '${section.actions.length}',
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: _WorkspaceMiniStat(
+                    label: 'Live alerts',
+                    value: '${notificationItems.length}',
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 14),
+          _EnterpriseUtilitySection(
+            title: 'Recent Activity',
+            child: Column(
+              children: activityItems.take(3).map((item) {
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: _EnterpriseRowItem(
+                    item: item,
+                    accentColor: AppColors.shieldBlue,
+                    compact: true,
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _EnterpriseDataTable extends StatelessWidget {
+  const _EnterpriseDataTable({
+    required this.section,
+    required this.accentColor,
+  });
+
+  final PortalSectionData section;
+  final Color accentColor;
+
+  @override
+  Widget build(BuildContext context) {
+    final tableRows = [
+      ...section.queueItems,
+      ...section.insightItems,
+      ...section.recentItems,
+    ].take(6).toList();
+
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Enterprise Data Table', style: AppTypography.h4),
+          const SizedBox(height: 4),
+          Text(
+            'Shared dense workspace summary for sortable operational lists and fast scanning.',
+            style: AppTypography.small.copyWith(color: AppColors.gray),
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    _TagChip(
+                      label: 'Search ready',
+                      color: AppColors.shieldBlue,
+                    ),
+                    _TagChip(label: 'Bulk actions', color: accentColor),
+                    _TagChip(label: 'Export', color: AppColors.success),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                '${tableRows.length} rows',
+                style: AppTypography.tiny.copyWith(
+                  color: AppColors.gray,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(18),
+            child: Container(
+              decoration: BoxDecoration(
+                border: Border.all(color: AppColors.divider),
+                borderRadius: BorderRadius.circular(18),
+              ),
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: DataTable(
+                  headingRowColor: WidgetStatePropertyAll(AppColors.lightGray),
+                  dataRowMinHeight: 58,
+                  dataRowMaxHeight: 72,
+                  columnSpacing: 24,
+                  columns: const [
+                    DataColumn(label: Text('Work Item')),
+                    DataColumn(label: Text('Context')),
+                    DataColumn(label: Text('Status')),
+                    DataColumn(label: Text('Signal')),
+                  ],
+                  rows: tableRows
+                      .map(
+                        (item) => DataRow(
+                          cells: [
+                            DataCell(
+                              SizedBox(
+                                width: 260,
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      item.title,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: AppTypography.small.copyWith(
+                                        color: AppColors.shieldNavy,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      item.subtitle,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: AppTypography.tiny.copyWith(
+                                        color: AppColors.gray,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            DataCell(
+                              Text(
+                                item.meta,
+                                style: AppTypography.tiny.copyWith(
+                                  color: AppColors.darkGray,
+                                ),
+                              ),
+                            ),
+                            DataCell(
+                              _TagChip(label: item.status, color: accentColor),
+                            ),
+                            DataCell(
+                              Text(
+                                item.subtitle.length > 42 ? 'High' : 'Normal',
+                                style: AppTypography.tiny.copyWith(
+                                  color: item.subtitle.length > 42
+                                      ? AppColors.warning
+                                      : AppColors.success,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                      .toList(),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _EnterpriseUtilitySection extends StatelessWidget {
+  const _EnterpriseUtilitySection({required this.title, required this.child});
+
+  final String title;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.lightGray,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.divider),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: AppTypography.small.copyWith(fontWeight: FontWeight.w800),
+          ),
+          const SizedBox(height: 12),
+          child,
+        ],
+      ),
+    );
+  }
+}
+
+class _EnterpriseRowItem extends StatelessWidget {
+  const _EnterpriseRowItem({
+    required this.item,
+    required this.accentColor,
+    this.compact = false,
+    this.showMetaChips = true,
+  });
+
+  final PortalListItem item;
+  final Color accentColor;
+  final bool compact;
+  final bool showMetaChips;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: compact ? 8 : 10,
+          height: compact ? 8 : 10,
+          margin: const EdgeInsets.only(top: 5),
+          decoration: BoxDecoration(color: accentColor, shape: BoxShape.circle),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Text(
+                      item.title,
+                      style: AppTypography.small.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Text(
+                    item.status,
+                    style: AppTypography.tiny.copyWith(
+                      color: accentColor,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 3),
+              Text(
+                item.subtitle,
+                maxLines: compact ? 2 : 3,
+                overflow: TextOverflow.ellipsis,
+                style: AppTypography.small.copyWith(
+                  color: AppColors.darkGray,
+                  height: 1.3,
+                ),
+              ),
+              const SizedBox(height: 6),
+              if (showMetaChips)
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    _TagChip(label: item.meta, color: AppColors.gray),
+                    _TagChip(label: item.status, color: accentColor),
+                  ],
+                )
+              else
+                Text(
+                  item.meta,
+                  style: AppTypography.tiny.copyWith(color: AppColors.gray),
+                ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
@@ -1609,9 +2604,27 @@ class _CustomerProfilePortalViewState
     _districtController.text = customer.district ?? '';
     _stateController.text = customer.state ?? '';
     _pincodeController.text = customer.pincode ?? '';
-    _selectedGender = customer.gender;
-    _selectedBloodGroup = customer.bloodGroup;
+    _selectedGender = _normalizeDropdownValue(customer.gender, _genderOptions);
+    _selectedBloodGroup = _normalizeDropdownValue(
+      customer.bloodGroup,
+      _bloodGroupOptions,
+    );
     _selectedDob = customer.dob ?? DateTime(DateTime.now().year - 25, 1, 1);
+  }
+
+  String? _normalizeDropdownValue(String? value, List<String> options) {
+    final normalized = value?.trim();
+    if (normalized == null || normalized.isEmpty) {
+      return null;
+    }
+
+    for (final option in options) {
+      if (option.toLowerCase() == normalized.toLowerCase()) {
+        return option;
+      }
+    }
+
+    return null;
   }
 
   Future<void> _saveProfile() async {
@@ -2824,8 +3837,10 @@ class _CustomerProfileDropdown extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final normalizedValue = items.contains(value) ? value : null;
+
     return DropdownButtonFormField<String>(
-      initialValue: value,
+      initialValue: normalizedValue,
       items: items
           .map(
             (item) => DropdownMenuItem<String>(value: item, child: Text(item)),
@@ -3304,89 +4319,134 @@ class _CustomerWalletViewState extends State<_CustomerWalletView> {
               ),
             ),
             const SizedBox(height: 12),
-            ...visibleTransactions.take(6).map((txn) {
-              final isCredit = txn.transactionType == 'CREDIT';
-              final accent = isCredit ? AppColors.shieldGreen : AppColors.error;
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 10),
-                child: AppCard(
-                  padding: const EdgeInsets.all(14),
-                  onTap: () => showPortalDetailsSheet(
-                    context,
-                    title: txn.remarks ?? 'Wallet transaction',
-                    subtitle:
-                        '${txn.subLedgerType} ${txn.transactionType.toLowerCase()} entry for ${txn.amount.toStringAsFixed(0)}.',
-                    meta: DateFormat(
-                      'dd MMM yyyy, hh:mm a',
-                    ).format(txn.createdAt),
-                    status: txn.transactionType,
-                    highlights: [
-                      'Post-transaction balance in ${txn.subLedgerType} ledger is ${ledgerBalanceAfter(txn).toStringAsFixed(0)}.',
-                      'This transaction is loaded from the live customer wallet ledger.',
-                    ],
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 42,
-                        height: 42,
-                        decoration: BoxDecoration(
-                          color: accent.withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                        child: Icon(
-                          isCredit
-                              ? Icons.arrow_downward_rounded
-                              : Icons.arrow_upward_rounded,
-                          color: accent,
-                          size: 20,
-                        ),
+            if (visibleTransactions.isEmpty)
+              AppCard(
+                padding: const EdgeInsets.all(14),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 42,
+                      height: 42,
+                      decoration: BoxDecoration(
+                        color: AppColors.lightGray,
+                        borderRadius: BorderRadius.circular(14),
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              txn.remarks ?? 'Wallet transaction',
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: AppTypography.body.copyWith(
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                            const SizedBox(height: 3),
-                            Text(
-                              DateFormat(
-                                'dd MMM • hh:mm a',
-                              ).format(txn.createdAt),
-                              style: AppTypography.tiny.copyWith(
-                                color: AppColors.gray,
-                              ),
-                            ),
-                          ],
-                        ),
+                      child: const Icon(
+                        Icons.receipt_long_outlined,
+                        color: AppColors.gray,
+                        size: 20,
                       ),
-                      const SizedBox(width: 12),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.end,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            '${isCredit ? '+' : '-'}₹${txn.amount.toStringAsFixed(0)}',
+                            'No wallet activity yet',
                             style: AppTypography.body.copyWith(
-                              color: accent,
                               fontWeight: FontWeight.w700,
                             ),
                           ),
                           const SizedBox(height: 3),
-                          _LedgerBadge(ledgerType: txn.subLedgerType),
+                          Text(
+                            'Recent cash and points movements will appear here after ledger entries are available.',
+                            style: AppTypography.tiny.copyWith(
+                              color: AppColors.gray,
+                            ),
+                          ),
                         ],
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-              );
-            }),
+              )
+            else
+              ...visibleTransactions.take(6).map((txn) {
+                final isCredit = txn.transactionType == 'CREDIT';
+                final accent = isCredit
+                    ? AppColors.shieldGreen
+                    : AppColors.error;
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: AppCard(
+                    padding: const EdgeInsets.all(14),
+                    onTap: () => showPortalDetailsSheet(
+                      context,
+                      title: txn.remarks ?? 'Wallet transaction',
+                      subtitle:
+                          '${txn.subLedgerType} ${txn.transactionType.toLowerCase()} entry for ${txn.amount.toStringAsFixed(0)}.',
+                      meta: DateFormat(
+                        'dd MMM yyyy, hh:mm a',
+                      ).format(txn.createdAt),
+                      status: txn.transactionType,
+                      highlights: [
+                        'Post-transaction balance in ${txn.subLedgerType} ledger is ${ledgerBalanceAfter(txn).toStringAsFixed(0)}.',
+                        'This transaction is loaded from the live customer wallet ledger.',
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 42,
+                          height: 42,
+                          decoration: BoxDecoration(
+                            color: accent.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          child: Icon(
+                            isCredit
+                                ? Icons.arrow_downward_rounded
+                                : Icons.arrow_upward_rounded,
+                            color: accent,
+                            size: 20,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                txn.remarks ?? 'Wallet transaction',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: AppTypography.body.copyWith(
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                              const SizedBox(height: 3),
+                              Text(
+                                DateFormat(
+                                  'dd MMM • hh:mm a',
+                                ).format(txn.createdAt),
+                                style: AppTypography.tiny.copyWith(
+                                  color: AppColors.gray,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Text(
+                              '${isCredit ? '+' : '-'}₹${txn.amount.toStringAsFixed(0)}',
+                              style: AppTypography.body.copyWith(
+                                color: accent,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            const SizedBox(height: 3),
+                            _LedgerBadge(ledgerType: txn.subLedgerType),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }),
           ],
         );
       },
@@ -4280,16 +5340,14 @@ class _CompactValueCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AppCard(
-      padding: const EdgeInsets.all(14),
-      child: Container(
-        decoration: dark
-            ? BoxDecoration(
-                color: AppColors.white.withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(16),
-              )
-            : null,
-        padding: dark ? const EdgeInsets.all(2) : EdgeInsets.zero,
+    if (dark) {
+      return Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: AppColors.white.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: AppColors.white.withValues(alpha: 0.10)),
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -4299,9 +5357,7 @@ class _CompactValueCard extends StatelessWidget {
                   child: Text(
                     title,
                     style: AppTypography.small.copyWith(
-                      color: dark
-                          ? AppColors.white.withValues(alpha: 0.82)
-                          : AppColors.gray,
+                      color: AppColors.white.withValues(alpha: 0.82),
                     ),
                   ),
                 ),
@@ -4320,13 +5376,44 @@ class _CompactValueCard extends StatelessWidget {
             Text(
               caption,
               style: AppTypography.tiny.copyWith(
-                color: dark
-                    ? AppColors.white.withValues(alpha: 0.78)
-                    : AppColors.gray,
+                color: AppColors.white.withValues(alpha: 0.78),
               ),
             ),
           ],
         ),
+      );
+    }
+
+    return AppCard(
+      padding: const EdgeInsets.all(14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  title,
+                  style: AppTypography.small.copyWith(color: AppColors.gray),
+                ),
+              ),
+              Icon(icon, color: accentColor, size: 18),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Text(
+            value,
+            style: AppTypography.h4.copyWith(
+              color: accentColor,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            caption,
+            style: AppTypography.tiny.copyWith(color: AppColors.gray),
+          ),
+        ],
       ),
     );
   }
@@ -6931,6 +8018,2120 @@ class _CardUtilizationViewState extends State<_CardUtilizationView> {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _AdminOperationsCenterView extends StatelessWidget {
+  const _AdminOperationsCenterView();
+
+  @override
+  Widget build(BuildContext context) {
+    const topStats = [
+      (
+        'Revenue Run Rate',
+        '₹8.4L',
+        '+11% vs last month • 3 branches above target',
+        Icons.currency_rupee_rounded,
+        AppColors.shieldNavy,
+      ),
+      (
+        'Active Customers',
+        '412',
+        '36 need reactivation • 14 renewals due',
+        Icons.people_alt_outlined,
+        AppColors.shieldBlue,
+      ),
+      (
+        'Provider Network',
+        '12',
+        '2 license reviews • 1 timing gap',
+        Icons.local_hospital_outlined,
+        AppColors.shieldGreen,
+      ),
+      (
+        'Critical Exceptions',
+        '9',
+        '3 wallet • 4 approval • 2 audit',
+        Icons.warning_amber_rounded,
+        AppColors.warning,
+      ),
+    ];
+
+    const quickActions = [
+      ('Approve', 'Customer batch', Icons.fact_check_outlined),
+      ('Assign', 'Provider review', Icons.apartment_outlined),
+      ('Control', 'Commercial rules', Icons.tune_outlined),
+      ('Export', 'Leadership pack', Icons.download_outlined),
+    ];
+
+    const queueItems = [
+      (
+        'Provider pricing misalignment',
+        'Perinthalmanna pharmacy pricing needs rule review before next billing cycle.',
+        'Commercial',
+        'Attention',
+      ),
+      (
+        'Role assignment cleanup',
+        'Two branch users still have broader-than-needed permissions after last onboarding.',
+        'Access',
+        'Review',
+      ),
+      (
+        'Referral reward backlog',
+        'Three qualified referrals are waiting for reward posting and audit confirmation.',
+        'Referral',
+        'Pending',
+      ),
+      (
+        'Campaign readiness',
+        'Wellness camp campaign has audience selection ready but notification copy is still draft.',
+        'Growth',
+        'Draft',
+      ),
+    ];
+
+    const healthRows = [
+      ('Customers', 'Healthy', 'Approvals are within the same-day target.'),
+      (
+        'Wallet & Benefits',
+        'Watch',
+        'Manual adjustments spiked at Tirur and need audit attention.',
+      ),
+      (
+        'Providers',
+        'Healthy',
+        'All active branches are billable; two provider records need documentation refresh.',
+      ),
+      (
+        'CRM',
+        'Focus',
+        'Renewal callbacks are lagging in Alanallur and Makkaraparamba.',
+      ),
+      (
+        'Notifications',
+        'Healthy',
+        'Push and SMS delivery remain above 98% this week.',
+      ),
+    ];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        AppCard(
+          padding: const EdgeInsets.all(18),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final stack = constraints.maxWidth < 980;
+                  final intro = Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Admin Operations Center',
+                        style: AppTypography.h3.copyWith(
+                          color: AppColors.shieldNavy,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        'Search first, act fast, and keep governance visible across providers, customers, and commercial controls.',
+                        style: AppTypography.small.copyWith(
+                          color: AppColors.gray,
+                          height: 1.35,
+                        ),
+                      ),
+                    ],
+                  );
+
+                  final search = Container(
+                    constraints: const BoxConstraints(maxWidth: 340),
+                    padding: const EdgeInsets.symmetric(horizontal: 14),
+                    decoration: BoxDecoration(
+                      color: AppColors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: AppColors.divider),
+                    ),
+                    child: const TextField(
+                      decoration: InputDecoration(
+                        border: InputBorder.none,
+                        icon: Icon(Icons.search, color: AppColors.gray),
+                        hintText: 'Search customer, provider, or rule',
+                      ),
+                    ),
+                  );
+
+                  final actions = Wrap(
+                    spacing: 10,
+                    runSpacing: 10,
+                    children: const [
+                      _AdminFilterPill(
+                        label: 'All branches',
+                        icon: Icons.account_tree_outlined,
+                        active: true,
+                      ),
+                      _AdminFilterPill(
+                        label: 'This week',
+                        icon: Icons.date_range_outlined,
+                      ),
+                      _AdminFilterPill(
+                        label: 'Exceptions',
+                        icon: Icons.error_outline_rounded,
+                      ),
+                      _AdminFilterPill(
+                        label: 'Export',
+                        icon: Icons.file_download_outlined,
+                      ),
+                    ],
+                  );
+
+                  if (stack) {
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        intro,
+                        const SizedBox(height: 16),
+                        search,
+                        const SizedBox(height: 12),
+                        actions,
+                      ],
+                    );
+                  }
+
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(child: intro),
+                          const SizedBox(width: 16),
+                          search,
+                        ],
+                      ),
+                      const SizedBox(height: 14),
+                      actions,
+                    ],
+                  );
+                },
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 18),
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final compact = constraints.maxWidth < 960;
+            final statCards = Wrap(
+              spacing: 14,
+              runSpacing: 14,
+              children: topStats.map((stat) {
+                return SizedBox(
+                  width: compact
+                      ? constraints.maxWidth
+                      : (constraints.maxWidth - 42) / 4,
+                  child: _AdminStatCard(
+                    label: stat.$1,
+                    value: stat.$2,
+                    note: stat.$3,
+                    icon: stat.$4,
+                    accent: stat.$5,
+                  ),
+                );
+              }).toList(),
+            );
+
+            return statCards;
+          },
+        ),
+        const SizedBox(height: 18),
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final stack = constraints.maxWidth < 980;
+            final left = AppCard(
+              padding: const EdgeInsets.all(22),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Priority Queue', style: AppTypography.h4),
+                  const SizedBox(height: 6),
+                  Text(
+                    'What deserves admin attention before more feature expansion.',
+                    style: AppTypography.small.copyWith(color: AppColors.gray),
+                  ),
+                  const SizedBox(height: 18),
+                  ...queueItems.map(
+                    (item) => Padding(
+                      padding: const EdgeInsets.only(bottom: 14),
+                      child: _AdminQueueTile(
+                        title: item.$1,
+                        subtitle: item.$2,
+                        meta: item.$3,
+                        status: item.$4,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+
+            final right = Column(
+              children: [
+                AppCard(
+                  padding: const EdgeInsets.all(22),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Quick Actions', style: AppTypography.h4),
+                      const SizedBox(height: 6),
+                      Text(
+                        'Command-level shortcuts for the highest-leverage admin workflows.',
+                        style: AppTypography.small.copyWith(
+                          color: AppColors.gray,
+                        ),
+                      ),
+                      const SizedBox(height: 18),
+                      ...quickActions.map(
+                        (action) => Padding(
+                          padding: const EdgeInsets.only(bottom: 10),
+                          child: _AdminQuickActionTile(
+                            title: action.$1,
+                            subtitle: action.$2,
+                            icon: action.$3,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 18),
+                AppCard(
+                  padding: const EdgeInsets.all(22),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Platform Health', style: AppTypography.h4),
+                      const SizedBox(height: 6),
+                      Text(
+                        'A role-driven status summary across SHIELD operational domains.',
+                        style: AppTypography.small.copyWith(
+                          color: AppColors.gray,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      ...healthRows.map(
+                        (row) => Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: _AdminHealthRow(
+                            title: row.$1,
+                            status: row.$2,
+                            note: row.$3,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            );
+
+            if (stack) {
+              return Column(
+                children: [left, const SizedBox(height: 18), right],
+              );
+            }
+
+            return Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(child: left),
+                const SizedBox(width: 18),
+                Expanded(child: right),
+              ],
+            );
+          },
+        ),
+      ],
+    );
+  }
+}
+
+class _AdminProviderNetworkView extends StatefulWidget {
+  const _AdminProviderNetworkView();
+
+  @override
+  State<_AdminProviderNetworkView> createState() =>
+      _AdminProviderNetworkViewState();
+}
+
+class _AdminProviderNetworkViewState extends State<_AdminProviderNetworkView> {
+  List<Map<String, dynamic>> _providers = [];
+  List<Map<String, dynamic>> _businesses = [];
+  bool _isLoading = true;
+  Map<String, dynamic> _analytics = {};
+  String _selectedType = 'ALL';
+  String _searchQuery = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    setState(() {
+      _isLoading = true;
+    });
+    try {
+      final providers = await ApiService.getProviders();
+      final businesses = await ApiService.getBusinesses();
+      final analytics = await ApiService.getProviderAnalytics();
+      setState(() {
+        _providers = providers;
+        _businesses = businesses;
+        _analytics = analytics ?? {};
+        _isLoading = false;
+      });
+    } catch (e) {
+      debugPrint('Error loading provider data: $e');
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  void _showAddProviderDialog(BuildContext context) {
+    final nameController = TextEditingController();
+    String selectedType = 'CLINIC';
+    String selectedStatus = 'ACTIVE';
+    String? selectedBusinessId;
+
+    if (_businesses.isNotEmpty) {
+      selectedBusinessId = _businesses.first['id'].toString();
+    }
+
+    showDialog<void>(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              title: Text('Add New Provider', style: AppTypography.h4.copyWith(color: AppColors.shieldNavy)),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Provider Name', style: AppTypography.tiny.copyWith(fontWeight: FontWeight.w700)),
+                    const SizedBox(height: 6),
+                    TextField(
+                      controller: nameController,
+                      decoration: InputDecoration(
+                        hintText: 'Enter provider name',
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Text('Provider Type', style: AppTypography.tiny.copyWith(fontWeight: FontWeight.w700)),
+                    const SizedBox(height: 6),
+                    DropdownButtonFormField<String>(
+                      initialValue: selectedType,
+                      decoration: InputDecoration(
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 14),
+                      ),
+                      items: const [
+                        DropdownMenuItem(value: 'CLINIC', child: Text('Clinic')),
+                        DropdownMenuItem(value: 'PHARMACY', child: Text('Pharmacy')),
+                        DropdownMenuItem(value: 'LABORATORY', child: Text('Laboratory')),
+                        DropdownMenuItem(value: 'DENTAL', child: Text('Dental')),
+                        DropdownMenuItem(value: 'HOME_VISIT', child: Text('Homecare')),
+                      ],
+                      onChanged: (val) {
+                        if (val != null) setDialogState(() => selectedType = val);
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    Text('Branch / Business Assignment', style: AppTypography.tiny.copyWith(fontWeight: FontWeight.w700)),
+                    const SizedBox(height: 6),
+                    DropdownButtonFormField<String>(
+                      initialValue: selectedBusinessId,
+                      decoration: InputDecoration(
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 14),
+                      ),
+                      items: _businesses.map((biz) {
+                        return DropdownMenuItem<String>(
+                          value: biz['id'].toString(),
+                          child: Text(biz['name']?.toString() ?? ''),
+                        );
+                      }).toList(),
+                      onChanged: (val) {
+                        if (val != null) setDialogState(() => selectedBusinessId = val);
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    Text('Initial Status', style: AppTypography.tiny.copyWith(fontWeight: FontWeight.w700)),
+                    const SizedBox(height: 6),
+                    DropdownButtonFormField<String>(
+                      initialValue: selectedStatus,
+                      decoration: InputDecoration(
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 14),
+                      ),
+                      items: const [
+                        DropdownMenuItem(value: 'ACTIVE', child: Text('Active')),
+                        DropdownMenuItem(value: 'SETUP', child: Text('Setup')),
+                        DropdownMenuItem(value: 'INACTIVE', child: Text('Inactive')),
+                        DropdownMenuItem(value: 'SUSPENDED', child: Text('Suspended')),
+                      ],
+                      onChanged: (val) {
+                        if (val != null) setDialogState(() => selectedStatus = val);
+                      },
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton(
+                  onPressed: () async {
+                    if (nameController.text.trim().isEmpty) return;
+                    Navigator.pop(context);
+                    setState(() => _isLoading = true);
+                    await ApiService.createProvider({
+                      'providerName': nameController.text.trim(),
+                      'providerType': selectedType,
+                      'businessId': selectedBusinessId,
+                      'status': selectedStatus,
+                    });
+                    _loadData();
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.shieldBlue,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: const Text('Create', style: TextStyle(color: AppColors.white)),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _showEditProviderDialog(BuildContext context, Map<String, dynamic> provider) {
+    final providerId = provider['id'].toString();
+    final nameController = TextEditingController(text: provider['providerName']?.toString());
+    String selectedType = provider['providerType']?.toString() ?? 'CLINIC';
+    String selectedStatus = provider['status']?.toString() ?? 'ACTIVE';
+    String? selectedBusinessId = provider['businessId']?.toString() ?? provider['business']?['id']?.toString();
+
+    if (selectedBusinessId != null && !_businesses.any((b) => b['id'].toString() == selectedBusinessId)) {
+      selectedBusinessId = null;
+    }
+    if (selectedBusinessId == null && _businesses.isNotEmpty) {
+      selectedBusinessId = _businesses.first['id'].toString();
+    }
+
+    showDialog<void>(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              title: Text('Edit Provider Details', style: AppTypography.h4.copyWith(color: AppColors.shieldNavy)),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Provider Name', style: AppTypography.tiny.copyWith(fontWeight: FontWeight.w700)),
+                    const SizedBox(height: 6),
+                    TextField(
+                      controller: nameController,
+                      decoration: InputDecoration(
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Text('Provider Type', style: AppTypography.tiny.copyWith(fontWeight: FontWeight.w700)),
+                    const SizedBox(height: 6),
+                    DropdownButtonFormField<String>(
+                      initialValue: selectedType,
+                      decoration: InputDecoration(
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 14),
+                      ),
+                      items: const [
+                        DropdownMenuItem(value: 'CLINIC', child: Text('Clinic')),
+                        DropdownMenuItem(value: 'PHARMACY', child: Text('Pharmacy')),
+                        DropdownMenuItem(value: 'LABORATORY', child: Text('Laboratory')),
+                        DropdownMenuItem(value: 'DENTAL', child: Text('Dental')),
+                        DropdownMenuItem(value: 'HOME_VISIT', child: Text('Homecare')),
+                      ],
+                      onChanged: (val) {
+                        if (val != null) setDialogState(() => selectedType = val);
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    Text('Branch / Business Assignment', style: AppTypography.tiny.copyWith(fontWeight: FontWeight.w700)),
+                    const SizedBox(height: 6),
+                    DropdownButtonFormField<String>(
+                      initialValue: selectedBusinessId,
+                      decoration: InputDecoration(
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 14),
+                      ),
+                      items: _businesses.map((biz) {
+                        return DropdownMenuItem<String>(
+                          value: biz['id'].toString(),
+                          child: Text(biz['name']?.toString() ?? ''),
+                        );
+                      }).toList(),
+                      onChanged: (val) {
+                        if (val != null) setDialogState(() => selectedBusinessId = val);
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    Text('Status', style: AppTypography.tiny.copyWith(fontWeight: FontWeight.w700)),
+                    const SizedBox(height: 6),
+                    DropdownButtonFormField<String>(
+                      initialValue: selectedStatus,
+                      decoration: InputDecoration(
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 14),
+                      ),
+                      items: const [
+                        DropdownMenuItem(value: 'ACTIVE', child: Text('Active')),
+                        DropdownMenuItem(value: 'SETUP', child: Text('Setup')),
+                        DropdownMenuItem(value: 'INACTIVE', child: Text('Inactive')),
+                        DropdownMenuItem(value: 'SUSPENDED', child: Text('Suspended')),
+                      ],
+                      onChanged: (val) {
+                        if (val != null) setDialogState(() => selectedStatus = val);
+                      },
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton(
+                  onPressed: () async {
+                    if (nameController.text.trim().isEmpty) return;
+                    Navigator.pop(context);
+                    setState(() => _isLoading = true);
+                    await ApiService.updateProvider(providerId, {
+                      'providerName': nameController.text.trim(),
+                      'providerType': selectedType,
+                      'businessId': selectedBusinessId,
+                      'status': selectedStatus,
+                    });
+                    _loadData();
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.shieldBlue,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: const Text('Save Changes', style: TextStyle(color: AppColors.white)),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _confirmDeleteProvider(BuildContext context, String providerId, String name) {
+    showDialog<void>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Text('Delete Provider', style: TextStyle(color: Colors.red[800], fontWeight: FontWeight.bold)),
+          content: Text('Are you sure you want to delete "$name"? This action will remove the provider record from the network.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                Navigator.pop(context);
+                Navigator.pop(context);
+                setState(() => _isLoading = true);
+                await ApiService.deleteProvider(providerId);
+                _loadData();
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.redAccent,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              child: const Text('Delete', style: TextStyle(color: AppColors.white)),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showProviderDetailsSheet(BuildContext context, Map<String, dynamic> provider) {
+    final providerId = provider['id'].toString();
+    final name = provider['providerName']?.toString() ?? '';
+    final type = provider['providerType']?.toString() ?? '';
+    final status = provider['status']?.toString() ?? '';
+    final branchName = provider['business']?['name']?.toString() ?? 'Central Group';
+    final owner = (provider['uuid']?.toString() ?? '').split('-').first.toUpperCase();
+
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) {
+        return SafeArea(
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.fromLTRB(24, 20, 24, 28),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 44,
+                    height: 5,
+                    decoration: BoxDecoration(
+                      color: AppColors.divider,
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Text(name, style: AppTypography.h4.copyWith(color: AppColors.shieldNavy)),
+                    ),
+                    _AdminStatusBadge(label: status),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text('Operational Details & Live Performance metrics.', style: AppTypography.small.copyWith(color: AppColors.gray)),
+                const SizedBox(height: 16),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    _AdminMetaChip(icon: Icons.category_outlined, label: type),
+                    _AdminMetaChip(icon: Icons.place_outlined, label: branchName),
+                    _AdminMetaChip(icon: Icons.person_outline_rounded, label: 'Owner: $owner'),
+                  ],
+                ),
+                const SizedBox(height: 24),
+                Text('Live Performance Metrics', style: AppTypography.body.copyWith(fontWeight: FontWeight.w700)),
+                const SizedBox(height: 12),
+                FutureBuilder<Map<String, dynamic>?>(
+                  future: ApiService.getProviderPerformance(providerId),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(
+                        child: Padding(
+                          padding: EdgeInsets.all(16.0),
+                          child: CircularProgressIndicator(color: AppColors.shieldBlue),
+                        ),
+                      );
+                    }
+                    if (snapshot.hasError || snapshot.data == null) {
+                      return Text('Failed to load performance metrics.', style: AppTypography.small.copyWith(color: AppColors.gray));
+                    }
+                    final perf = snapshot.data!;
+                    return GridView.count(
+                      crossAxisCount: 2,
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      crossAxisSpacing: 12,
+                      mainAxisSpacing: 12,
+                      childAspectRatio: 2.2,
+                      children: [
+                        _buildStatCard('Total Appointments', perf['totalAppointments']?.toString() ?? '0', Icons.event),
+                        _buildStatCard('Unique Patients', perf['uniquePatients']?.toString() ?? '0', Icons.people_outline),
+                        _buildStatCard('Completion Rate', '${(perf['completionRate'] as num?)?.toStringAsFixed(1) ?? '0'}%', Icons.check_circle_outline),
+                        _buildStatCard('Revenue Generated', '₹${perf['revenue']?.toString() ?? '0'}', Icons.currency_rupee),
+                      ],
+                    );
+                  },
+                ),
+                const SizedBox(height: 28),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () {
+                          Navigator.pop(context);
+                          _showEditProviderDialog(context, provider);
+                        },
+                        icon: const Icon(Icons.edit_outlined, size: 16),
+                        label: const Text('Edit Details'),
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: () => _confirmDeleteProvider(context, providerId, name),
+                        icon: const Icon(Icons.delete_outline, size: 16, color: AppColors.white),
+                        label: const Text('Delete Provider', style: TextStyle(color: AppColors.white)),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.redAccent,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                      ),
+                    ),
+                  ],
+                )
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildStatCard(String title, String value, IconData icon) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.lightGray,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.divider),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, size: 20, color: AppColors.shieldBlue),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(title, style: AppTypography.tiny.copyWith(color: AppColors.gray), maxLines: 1, overflow: TextOverflow.ellipsis),
+                const SizedBox(height: 2),
+                Text(value, style: AppTypography.small.copyWith(fontWeight: FontWeight.w700, color: AppColors.shieldNavy)),
+              ],
+            ),
+          )
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 60.0),
+        child: Center(
+          child: CircularProgressIndicator(color: AppColors.shieldBlue),
+        ),
+      );
+    }
+
+    final filteredProviders = _providers.where((provider) {
+      final matchesType = _selectedType == 'ALL' ||
+          provider['providerType'] == _selectedType;
+      final query = _searchQuery.trim().toLowerCase();
+      final matchesSearch = query.isEmpty ||
+          (provider['providerName']?.toString() ?? '').toLowerCase().contains(query) ||
+          (provider['business']?['name']?.toString() ?? '').toLowerCase().contains(query);
+      return matchesType && matchesSearch;
+    }).toList();
+
+    final activeCount = _providers.where((p) => p['status'] == 'ACTIVE').length;
+    final totalRevenue = _analytics['totalRevenue'] ?? 0;
+    final totalAppointments = _analytics['totalAppointments'] ?? 0;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        AppCard(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Provider Network Command',
+                          style: AppTypography.h3.copyWith(
+                            color: AppColors.shieldNavy,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'One centralized provider system for directory, services, users, readiness, and operational performance.',
+                          style: AppTypography.body.copyWith(
+                            color: AppColors.gray,
+                            height: 1.45,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: AppColors.shieldBlue.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(18),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Network snapshot',
+                          style: AppTypography.tiny.copyWith(
+                            color: AppColors.shieldBlue,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text('$activeCount active providers', style: AppTypography.body),
+                        Text('${_businesses.length} branches', style: AppTypography.body),
+                        Text('₹$totalRevenue total revenue', style: AppTypography.body),
+                        Text('$totalAppointments total appts', style: AppTypography.body),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  Expanded(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14),
+                      decoration: BoxDecoration(
+                        color: AppColors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: AppColors.divider),
+                      ),
+                      child: TextField(
+                        onChanged: (value) =>
+                            setState(() => _searchQuery = value),
+                        decoration: const InputDecoration(
+                          border: InputBorder.none,
+                          icon: Icon(Icons.search, color: AppColors.gray),
+                          hintText: 'Search provider or branch',
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  ElevatedButton.icon(
+                    onPressed: () => _showAddProviderDialog(context),
+                    icon: const Icon(Icons.add, color: AppColors.white, size: 18),
+                    label: const Text('Add Provider', style: TextStyle(color: AppColors.white, fontWeight: FontWeight.bold)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.shieldBlue,
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Wrap(
+                spacing: 10,
+                runSpacing: 10,
+                children: [
+                  _AdminFilterPill(
+                    label: 'All providers',
+                    icon: Icons.grid_view_rounded,
+                    active: _selectedType == 'ALL',
+                    onTap: () => setState(() => _selectedType = 'ALL'),
+                  ),
+                  _AdminFilterPill(
+                    label: 'Pharmacy',
+                    icon: Icons.local_pharmacy_outlined,
+                    active: _selectedType == 'PHARMACY',
+                    onTap: () => setState(() => _selectedType = 'PHARMACY'),
+                  ),
+                  _AdminFilterPill(
+                    label: 'Clinic',
+                    icon: Icons.medical_services_outlined,
+                    active: _selectedType == 'CLINIC',
+                    onTap: () => setState(() => _selectedType = 'CLINIC'),
+                  ),
+                  _AdminFilterPill(
+                    label: 'Lab',
+                    icon: Icons.science_outlined,
+                    active: _selectedType == 'LABORATORY',
+                    onTap: () => setState(() => _selectedType = 'LABORATORY'),
+                  ),
+                  _AdminFilterPill(
+                    label: 'Dental',
+                    icon: Icons.masks_outlined,
+                    active: _selectedType == 'DENTAL',
+                    onTap: () => setState(() => _selectedType = 'DENTAL'),
+                  ),
+                  _AdminFilterPill(
+                    label: 'Homecare',
+                    icon: Icons.home_work_outlined,
+                    active: _selectedType == 'HOME_VISIT',
+                    onTap: () => setState(() => _selectedType = 'HOME_VISIT'),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 18),
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final stack = constraints.maxWidth < 1040;
+            final directory = AppCard(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Provider Directory', style: AppTypography.h4),
+                  const SizedBox(height: 6),
+                  Text(
+                    'Centralized provider records instead of separate doctor, lab, and pharmacy CRUD silos.',
+                    style: AppTypography.small.copyWith(color: AppColors.gray),
+                  ),
+                  const SizedBox(height: 18),
+                  if (filteredProviders.isEmpty)
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 40),
+                      child: Center(child: Text('No providers found matching filters.')),
+                    )
+                  else
+                    ...filteredProviders.map(
+                      (provider) => Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: _AdminProviderRow(
+                          provider: provider,
+                          onTap: () => _showProviderDetailsSheet(context, provider),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            );
+
+            final side = Column(
+              children: [
+                AppCard(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Management Modules', style: AppTypography.h4),
+                      const SizedBox(height: 14),
+                      const _AdminMiniModuleTile(
+                        title: 'Provider Directory',
+                        subtitle: 'Identity, branch, category, and ownership',
+                        icon: Icons.apartment_outlined,
+                      ),
+                      const SizedBox(height: 10),
+                      const _AdminMiniModuleTile(
+                        title: 'Provider Services',
+                        subtitle:
+                            'Capabilities, pricing, and enabled workflows',
+                        icon: Icons.medical_services_outlined,
+                      ),
+                      const SizedBox(height: 10),
+                      const _AdminMiniModuleTile(
+                        title: 'Users & Licenses',
+                        subtitle: 'Staff accounts, credentials, and renewals',
+                        icon: Icons.badge_outlined,
+                      ),
+                      const SizedBox(height: 10),
+                      const _AdminMiniModuleTile(
+                        title: 'Timings & Holidays',
+                        subtitle:
+                            'Availability windows and operational closures',
+                        icon: Icons.schedule_outlined,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 18),
+                AppCard(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Readiness Watchlist', style: AppTypography.h4),
+                      const SizedBox(height: 14),
+                      ..._providers.where((p) => p['status'] != 'ACTIVE').map((p) {
+                        String readinessNote = 'Awaiting active setup verification.';
+                        if (p['status'] == 'SETUP') {
+                          readinessNote = 'Timings and operational schedules must be set up.';
+                        } else if (p['status'] == 'SUSPENDED') {
+                          readinessNote = 'Provider has been suspended by system administrator.';
+                        }
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 12.0),
+                          child: _AdminHealthRow(
+                            title: p['providerName']?.toString() ?? '',
+                            status: p['status']?.toString() ?? '',
+                            note: readinessNote,
+                          ),
+                        );
+                      }),
+                      if (_providers.every((p) => p['status'] == 'ACTIVE'))
+                        const Center(child: Text('All providers are active and ready.')),
+                    ],
+                  ),
+                ),
+              ],
+            );
+
+            if (stack) {
+              return Column(
+                children: [directory, const SizedBox(height: 18), side],
+              );
+            }
+
+            return Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(flex: 3, child: directory),
+                const SizedBox(width: 18),
+                Expanded(flex: 2, child: side),
+              ],
+            );
+          },
+        ),
+      ],
+    );
+  }
+}
+
+class _AdminMasterDataView extends StatefulWidget {
+  const _AdminMasterDataView();
+
+  @override
+  State<_AdminMasterDataView> createState() => _AdminMasterDataViewState();
+}
+
+class _AdminMasterDataViewState extends State<_AdminMasterDataView> {
+  String _selectedGroup = 'ALL';
+  String _searchQuery = '';
+
+  static const List<Map<String, String>> _domains = [
+    {
+      'name': 'Branches',
+      'group': 'Organization',
+      'owner': 'Admin',
+      'records': '5 records',
+      'status': 'Active',
+      'note': 'Branch identity, territory linkage, and operational ownership.',
+      'next': 'Review territory assignment',
+    },
+    {
+      'name': 'Departments',
+      'group': 'Organization',
+      'owner': 'Admin',
+      'records': '14 records',
+      'status': 'Active',
+      'note':
+          'Department structure shared across admin, CRM, and provider teams.',
+      'next': 'Confirm CRM/service handoff map',
+    },
+    {
+      'name': 'Services',
+      'group': 'Catalog',
+      'owner': 'Admin',
+      'records': '32 records',
+      'status': 'Review',
+      'note':
+          'Central service catalog for customer, provider, and reporting flows.',
+      'next': 'Normalize service naming',
+    },
+    {
+      'name': 'Provider Types',
+      'group': 'Catalog',
+      'owner': 'Admin',
+      'records': '7 records',
+      'status': 'Open',
+      'note':
+          'Single taxonomy for pharmacy, lab, doctor, dental, homecare, and more.',
+      'next': 'Align capabilities to each type',
+    },
+    {
+      'name': 'Membership Plans',
+      'group': 'Commercial',
+      'owner': 'Admin',
+      'records': '2 records',
+      'status': 'Active',
+      'note':
+          'Founding and standard plan masters with fee and renewal governance.',
+      'next': 'Preview renewal copy',
+    },
+    {
+      'name': 'Benefit Rules',
+      'group': 'Commercial',
+      'owner': 'Admin',
+      'records': '11 rules',
+      'status': 'Review',
+      'note':
+          'Central benefit application rules, not portal-local discount logic.',
+      'next': 'Check provider eligibility mapping',
+    },
+    {
+      'name': 'Referral Rules',
+      'group': 'Commercial',
+      'owner': 'Admin',
+      'records': '4 rules',
+      'status': 'Active',
+      'note':
+          'Delayed, status-driven referral qualification and reward policy.',
+      'next': 'Review pending campaign changes',
+    },
+    {
+      'name': 'Wallet Rules',
+      'group': 'Commercial',
+      'owner': 'Admin',
+      'records': '6 rules',
+      'status': 'Review',
+      'note':
+          'Cash, reward points, and benefit-ledger control data for SHIELD.',
+      'next': 'Validate recharge controls',
+    },
+    {
+      'name': 'Holiday Calendar',
+      'group': 'Operations',
+      'owner': 'Admin',
+      'records': '9 holidays',
+      'status': 'Pending',
+      'note':
+          'Central closures for branches, providers, and downstream scheduling.',
+      'next': 'Publish festival calendar',
+    },
+    {
+      'name': 'Working Hours',
+      'group': 'Operations',
+      'owner': 'Admin',
+      'records': '18 shifts',
+      'status': 'Pending',
+      'note':
+          'Reusable slot and shift masters for appointments and provider timings.',
+      'next': 'Confirm weekend rules',
+    },
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final filteredDomains = _domains.where((domain) {
+      final matchesGroup =
+          _selectedGroup == 'ALL' || domain['group'] == _selectedGroup;
+      final query = _searchQuery.trim().toLowerCase();
+      final matchesSearch =
+          query.isEmpty ||
+          domain['name']!.toLowerCase().contains(query) ||
+          domain['group']!.toLowerCase().contains(query) ||
+          domain['note']!.toLowerCase().contains(query);
+      return matchesGroup && matchesSearch;
+    }).toList();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        AppCard(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Admin Master Data Console', style: AppTypography.h2),
+              const SizedBox(height: 8),
+              Text(
+                'One workspace for organization, catalog, commercial, and operational masters that every other portal should consume.',
+                style: AppTypography.body.copyWith(
+                  color: AppColors.gray,
+                  height: 1.45,
+                ),
+              ),
+              const SizedBox(height: 20),
+              Wrap(
+                spacing: 12,
+                runSpacing: 12,
+                children: const [
+                  _AdminStatusOverviewChip(
+                    label: '10 master groups',
+                    icon: Icons.dataset_outlined,
+                  ),
+                  _AdminStatusOverviewChip(
+                    label: '7 rule sets',
+                    icon: Icons.rule_folder_outlined,
+                  ),
+                  _AdminStatusOverviewChip(
+                    label: '3 pending reviews',
+                    icon: Icons.pending_actions_outlined,
+                  ),
+                  _AdminStatusOverviewChip(
+                    label: 'No hardcoded drift',
+                    icon: Icons.shield_outlined,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  Expanded(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14),
+                      decoration: BoxDecoration(
+                        color: AppColors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: AppColors.divider),
+                      ),
+                      child: TextField(
+                        onChanged: (value) =>
+                            setState(() => _searchQuery = value),
+                        decoration: const InputDecoration(
+                          border: InputBorder.none,
+                          icon: Icon(Icons.search, color: AppColors.gray),
+                          hintText:
+                              'Search master domain, owner, or governance note',
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Wrap(
+                spacing: 10,
+                runSpacing: 10,
+                children: [
+                  _AdminFilterPill(
+                    label: 'All masters',
+                    icon: Icons.grid_view_rounded,
+                    active: _selectedGroup == 'ALL',
+                    onTap: () => setState(() => _selectedGroup = 'ALL'),
+                  ),
+                  _AdminFilterPill(
+                    label: 'Organization',
+                    icon: Icons.account_tree_outlined,
+                    active: _selectedGroup == 'Organization',
+                    onTap: () =>
+                        setState(() => _selectedGroup = 'Organization'),
+                  ),
+                  _AdminFilterPill(
+                    label: 'Catalog',
+                    icon: Icons.widgets_outlined,
+                    active: _selectedGroup == 'Catalog',
+                    onTap: () => setState(() => _selectedGroup = 'Catalog'),
+                  ),
+                  _AdminFilterPill(
+                    label: 'Commercial',
+                    icon: Icons.request_quote_outlined,
+                    active: _selectedGroup == 'Commercial',
+                    onTap: () => setState(() => _selectedGroup = 'Commercial'),
+                  ),
+                  _AdminFilterPill(
+                    label: 'Operations',
+                    icon: Icons.schedule_outlined,
+                    active: _selectedGroup == 'Operations',
+                    onTap: () => setState(() => _selectedGroup = 'Operations'),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 18),
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final stack = constraints.maxWidth < 1040;
+            final directory = AppCard(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Domain Directory', style: AppTypography.h4),
+                  const SizedBox(height: 6),
+                  Text(
+                    'These masters should own labels, types, rules, and operational defaults instead of scattering config through feature screens.',
+                    style: AppTypography.small.copyWith(color: AppColors.gray),
+                  ),
+                  const SizedBox(height: 18),
+                  ...filteredDomains.map(
+                    (domain) => Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: _AdminMasterDomainRow(
+                        domain: domain,
+                        onTap: () {
+                          showPortalDetailsSheet(
+                            context,
+                            title: domain['name']!,
+                            subtitle: domain['note']!,
+                            meta: '${domain['group']} • ${domain['records']}',
+                            status: domain['status']!,
+                            highlights: [
+                              'Owner: ${domain['owner']}',
+                              'Record volume: ${domain['records']}',
+                              'Next action: ${domain['next']}',
+                            ],
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+
+            final side = Column(
+              children: [
+                AppCard(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Control Modules', style: AppTypography.h4),
+                      const SizedBox(height: 14),
+                      const _AdminMiniModuleTile(
+                        title: 'Organization',
+                        subtitle:
+                            'Branches, departments, territories, and ownership',
+                        icon: Icons.apartment_outlined,
+                      ),
+                      const SizedBox(height: 10),
+                      const _AdminMiniModuleTile(
+                        title: 'Catalog',
+                        subtitle:
+                            'Service categories, services, and provider types',
+                        icon: Icons.widgets_outlined,
+                      ),
+                      const SizedBox(height: 10),
+                      const _AdminMiniModuleTile(
+                        title: 'Commercial Rules',
+                        subtitle:
+                            'Membership, benefits, referral, and wallet controls',
+                        icon: Icons.request_quote_outlined,
+                      ),
+                      const SizedBox(height: 10),
+                      const _AdminMiniModuleTile(
+                        title: 'Operational Calendar',
+                        subtitle: 'Holidays, shifts, and working-hour defaults',
+                        icon: Icons.event_available_outlined,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 18),
+                AppCard(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Readiness Watchlist', style: AppTypography.h4),
+                      const SizedBox(height: 14),
+                      const _AdminHealthRow(
+                        title: 'Provider type taxonomy',
+                        status: 'Open',
+                        note:
+                            'A single capability map is still needed before provider portal expansion.',
+                      ),
+                      const SizedBox(height: 12),
+                      const _AdminHealthRow(
+                        title: 'Working-hour standards',
+                        status: 'Pending',
+                        note:
+                            'Appointment and provider timing defaults should be unified in one source.',
+                      ),
+                      const SizedBox(height: 12),
+                      const _AdminHealthRow(
+                        title: 'Commercial rule ownership',
+                        status: 'Review',
+                        note:
+                            'Wallet, benefit, reward, and referral controls must stay inside the admin master layer.',
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            );
+
+            if (stack) {
+              return Column(
+                children: [directory, const SizedBox(height: 18), side],
+              );
+            }
+
+            return Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(flex: 3, child: directory),
+                const SizedBox(width: 18),
+                Expanded(flex: 2, child: side),
+              ],
+            );
+          },
+        ),
+      ],
+    );
+  }
+}
+
+class _AdminStatCard extends StatelessWidget {
+  const _AdminStatCard({
+    required this.label,
+    required this.value,
+    required this.note,
+    required this.icon,
+    required this.accent,
+  });
+
+  final String label;
+  final String value;
+  final String note;
+  final IconData icon;
+  final Color accent;
+
+  @override
+  Widget build(BuildContext context) {
+    return AppCard(
+      padding: const EdgeInsets.all(14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Text(
+                  label,
+                  style: AppTypography.small.copyWith(color: AppColors.gray),
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: accent.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(icon, size: 18, color: accent),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Text(
+            value,
+            style: AppTypography.h3.copyWith(
+              color: AppColors.shieldNavy,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            note,
+            style: AppTypography.tiny.copyWith(
+              color: AppColors.darkGray,
+              height: 1.35,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AdminStatusOverviewChip extends StatelessWidget {
+  const _AdminStatusOverviewChip({required this.label, required this.icon});
+
+  final String label;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: AppColors.lightGray,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.divider),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 16, color: AppColors.shieldBlue),
+          const SizedBox(width: 8),
+          Text(
+            label,
+            style: AppTypography.small.copyWith(
+              color: AppColors.shieldNavy,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AdminQueueTile extends StatelessWidget {
+  const _AdminQueueTile({
+    required this.title,
+    required this.subtitle,
+    required this.meta,
+    required this.status,
+  });
+
+  final String title;
+  final String subtitle;
+  final String meta;
+  final String status;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.lightGray,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: AppColors.divider),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  title,
+                  style: AppTypography.body.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              _AdminStatusBadge(label: status),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            subtitle,
+            style: AppTypography.small.copyWith(
+              color: AppColors.darkGray,
+              height: 1.4,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            meta,
+            style: AppTypography.tiny.copyWith(
+              color: AppColors.gray,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AdminMasterDomainRow extends StatelessWidget {
+  const _AdminMasterDomainRow({required this.domain, required this.onTap});
+
+  final Map<String, String> domain;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(18),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: AppColors.lightGray,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: AppColors.divider),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    domain['name']!,
+                    style: AppTypography.body.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.shieldNavy,
+                    ),
+                  ),
+                ),
+                _AdminStatusBadge(label: domain['status']!),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                _AdminMetaChip(
+                  icon: Icons.folder_open_outlined,
+                  label: domain['group']!,
+                ),
+                _AdminMetaChip(
+                  icon: Icons.inventory_2_outlined,
+                  label: domain['records']!,
+                ),
+                _AdminMetaChip(
+                  icon: Icons.person_outline_rounded,
+                  label: domain['owner']!,
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Text(
+              domain['note']!,
+              style: AppTypography.small.copyWith(
+                color: AppColors.darkGray,
+                height: 1.4,
+              ),
+            ),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Text(
+                  'Next',
+                  style: AppTypography.tiny.copyWith(
+                    color: AppColors.gray,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    domain['next']!,
+                    style: AppTypography.tiny.copyWith(
+                      color: AppColors.shieldBlue,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _AdminQuickActionTile extends StatelessWidget {
+  const _AdminQuickActionTile({
+    required this.title,
+    required this.subtitle,
+    required this.icon,
+  });
+
+  final String title;
+  final String subtitle;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.lightGray,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.divider),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: AppColors.shieldBlue.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(icon, size: 18, color: AppColors.shieldBlue),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: AppTypography.small.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  subtitle,
+                  style: AppTypography.tiny.copyWith(color: AppColors.gray),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AdminHealthRow extends StatelessWidget {
+  const _AdminHealthRow({
+    required this.title,
+    required this.status,
+    required this.note,
+  });
+
+  final String title;
+  final String status;
+  final String note;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: AppTypography.small.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                note,
+                style: AppTypography.tiny.copyWith(
+                  color: AppColors.gray,
+                  height: 1.35,
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(width: 12),
+        _AdminStatusBadge(label: status),
+      ],
+    );
+  }
+}
+
+class _AdminProviderRow extends StatelessWidget {
+  const _AdminProviderRow({required this.provider, required this.onTap});
+
+  final Map<String, dynamic> provider;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final name = provider['providerName']?.toString() ?? '';
+    final type = provider['providerType']?.toString() ?? '';
+    final status = provider['status']?.toString() ?? '';
+    final branchName = provider['business']?['name']?.toString() ?? 'Central Group';
+    final owner = (provider['uuid']?.toString() ?? '').split('-').first.toUpperCase();
+    
+    String services = 'General Healthcare Services';
+    if (type == 'PHARMACY') {
+      services = 'Billing, prescriptions, wallet settlement';
+    } else if (type == 'CLINIC') {
+      services = 'Consultations, reports, appointments';
+    } else if (type == 'LABORATORY') {
+      services = 'Tests, reports, collections';
+    } else if (type == 'DENTAL') {
+      services = 'Procedures, recalls, image uploads';
+    } else if (type == 'HOME_VISIT') {
+      services = 'Route visits, nurse assignments, follow-ups';
+    }
+
+    String readiness = 'Pending Setup';
+    if (status == 'ACTIVE') {
+      readiness = 'Ready';
+    } else if (status == 'SETUP') {
+      readiness = 'Needs Timings';
+    } else if (status == 'SUSPENDED') {
+      readiness = 'Suspended';
+    }
+
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(18),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: AppColors.lightGray,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: AppColors.divider),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    name,
+                    style: AppTypography.body.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.shieldNavy,
+                    ),
+                  ),
+                ),
+                _AdminStatusBadge(label: status),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                _AdminMetaChip(
+                  icon: Icons.category_outlined,
+                  label: type,
+                ),
+                _AdminMetaChip(
+                  icon: Icons.place_outlined,
+                  label: branchName,
+                ),
+                _AdminMetaChip(
+                  icon: Icons.person_outline_rounded,
+                  label: owner,
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Text(
+              services,
+              style: AppTypography.small.copyWith(
+                color: AppColors.darkGray,
+                height: 1.4,
+              ),
+            ),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Text(
+                  'Readiness',
+                  style: AppTypography.tiny.copyWith(
+                    color: AppColors.gray,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                _AdminStatusBadge(label: readiness),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _AdminMiniModuleTile extends StatelessWidget {
+  const _AdminMiniModuleTile({
+    required this.title,
+    required this.subtitle,
+    required this.icon,
+  });
+
+  final String title;
+  final String subtitle;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.lightGray,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.divider),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: AppColors.shieldNavy.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(icon, size: 18, color: AppColors.shieldNavy),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: AppTypography.small.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  subtitle,
+                  style: AppTypography.tiny.copyWith(color: AppColors.gray),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AdminMetaChip extends StatelessWidget {
+  const _AdminMetaChip({required this.icon, required this.label});
+
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: AppColors.divider),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: AppColors.gray),
+          const SizedBox(width: 6),
+          Text(label, style: AppTypography.tiny),
+        ],
+      ),
+    );
+  }
+}
+
+class _AdminStatusBadge extends StatelessWidget {
+  const _AdminStatusBadge({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final normalized = label.toLowerCase();
+    final color = normalized.contains('ready') || normalized.contains('healthy')
+        ? AppColors.shieldGreen
+        : normalized.contains('pending') ||
+              normalized.contains('watch') ||
+              normalized.contains('review') ||
+              normalized.contains('due')
+        ? AppColors.warning
+        : normalized.contains('draft') ||
+              normalized.contains('setup') ||
+              normalized.contains('needs')
+        ? AppColors.shieldBlue
+        : AppColors.error;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        label,
+        style: AppTypography.tiny.copyWith(
+          color: color,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+    );
+  }
+}
+
+class _AdminFilterPill extends StatelessWidget {
+  const _AdminFilterPill({
+    required this.label,
+    required this.icon,
+    this.active = false,
+    this.onTap,
+  });
+
+  final String label;
+  final IconData icon;
+  final bool active;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(999),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: active
+              ? AppColors.shieldNavy.withValues(alpha: 0.08)
+              : AppColors.white,
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(
+            color: active ? AppColors.shieldNavy : AppColors.divider,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              size: 16,
+              color: active ? AppColors.shieldNavy : AppColors.gray,
+            ),
+            const SizedBox(width: 8),
+            Text(
+              label,
+              style: AppTypography.small.copyWith(
+                color: active ? AppColors.shieldNavy : AppColors.darkGray,
+                fontWeight: active ? FontWeight.w700 : FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

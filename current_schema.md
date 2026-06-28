@@ -21,6 +21,20 @@ CREATE TABLE "audit_logs" (
 	"device_info" text,
 	"created_at" timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
+CREATE TABLE "benefit_ledger_transactions" (
+	"id" bigserial PRIMARY KEY,
+	"uuid" uuid NOT NULL,
+	"wallet_id" bigint NOT NULL,
+	"transaction_type" varchar(50) NOT NULL,
+	"amount" numeric(15, 2) NOT NULL,
+	"service_type" varchar(50),
+	"reference_type" varchar(100),
+	"reference_id" bigint,
+	"remarks" text,
+	"created_by" bigint,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"metadata" jsonb
+);
 CREATE TABLE "businesses" (
 	"id" bigserial PRIMARY KEY,
 	"uuid" uuid NOT NULL,
@@ -30,6 +44,31 @@ CREATE TABLE "businesses" (
 	"status" varchar(50) DEFAULT 'ACTIVE',
 	"created_at" timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+CREATE TABLE "cash_wallet_transactions" (
+	"id" bigserial PRIMARY KEY,
+	"uuid" uuid NOT NULL,
+	"wallet_id" bigint NOT NULL,
+	"transaction_type" varchar(50) NOT NULL,
+	"amount" numeric(15, 2) NOT NULL,
+	"reference_type" varchar(100),
+	"reference_id" bigint,
+	"remarks" text,
+	"created_by" bigint,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"metadata" jsonb
+);
+CREATE TABLE "commercial_settings" (
+	"id" bigserial PRIMARY KEY,
+	"uuid" uuid NOT NULL,
+	"code" varchar(100) NOT NULL,
+	"value_type" varchar(30) NOT NULL,
+	"value_text" text,
+	"value_number" numeric(15, 2),
+	"value_boolean" boolean,
+	"status" varchar(50) DEFAULT 'ACTIVE' NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 CREATE TABLE "complaints" (
 	"id" bigserial PRIMARY KEY,
@@ -247,6 +286,25 @@ CREATE TABLE "prescriptions" (
 	"document_id" bigint,
 	"issue_date" date
 );
+CREATE TABLE "pricing_rule_audits" (
+	"id" bigserial PRIMARY KEY,
+	"uuid" uuid NOT NULL,
+	"wallet_id" bigint,
+	"customer_id" bigint,
+	"service_type" varchar(50) NOT NULL,
+	"original_amount" numeric(15, 2) NOT NULL,
+	"benefit_applied" numeric(15, 2) DEFAULT '0' NOT NULL,
+	"membership_discount_applied" numeric(15, 2) DEFAULT '0' NOT NULL,
+	"reward_points_earned" numeric(15, 2) DEFAULT '0' NOT NULL,
+	"reward_points_redeemed" numeric(15, 2) DEFAULT '0' NOT NULL,
+	"reward_credit_applied" numeric(15, 2) DEFAULT '0' NOT NULL,
+	"cash_wallet_deducted" numeric(15, 2) DEFAULT '0' NOT NULL,
+	"final_payable_amount" numeric(15, 2) DEFAULT '0' NOT NULL,
+	"matched_rule_code" varchar(100),
+	"preloading_used" boolean DEFAULT false NOT NULL,
+	"metadata" jsonb,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL
+);
 CREATE TABLE "product_categories" (
 	"id" bigserial PRIMARY KEY,
 	"name" varchar(255)
@@ -296,7 +354,38 @@ CREATE TABLE "referral_reward_events" (
 	"rejected_at" timestamp with time zone,
 	"rejected_reason" text,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"expired_at" timestamp with time zone
+);
+CREATE TABLE "reward_point_rules" (
+	"id" bigserial PRIMARY KEY,
+	"uuid" uuid NOT NULL,
+	"action_code" varchar(100) NOT NULL,
+	"display_name" varchar(255) NOT NULL,
+	"points" numeric(12, 2) NOT NULL,
+	"requires_approval" boolean DEFAULT false NOT NULL,
+	"status" varchar(50) DEFAULT 'ACTIVE' NOT NULL,
+	"metadata" jsonb,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
+);
+CREATE TABLE "reward_point_transactions" (
+	"id" bigserial PRIMARY KEY,
+	"uuid" uuid NOT NULL,
+	"wallet_id" bigint NOT NULL,
+	"transaction_type" varchar(50) NOT NULL,
+	"action_code" varchar(100),
+	"points" numeric(15, 2) NOT NULL,
+	"reason" text,
+	"reference_type" varchar(100),
+	"reference_id" bigint,
+	"status" varchar(30) DEFAULT 'APPROVED' NOT NULL,
+	"created_by" bigint,
+	"approved_by" bigint,
+	"approved_at" timestamp with time zone,
+	"expires_at" timestamp with time zone,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"metadata" jsonb
 );
 CREATE TABLE "reward_redemption_rules" (
 	"id" bigserial PRIMARY KEY,
@@ -337,7 +426,9 @@ CREATE TABLE "service_benefit_rules" (
 	"reward_points_on_service" numeric(12, 2) DEFAULT '0' NOT NULL,
 	"status" varchar(50) DEFAULT 'ACTIVE' NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
-	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"wallets_allowed" varchar(120) DEFAULT 'CASH' NOT NULL,
+	"allow_external_payment" boolean DEFAULT true NOT NULL
 );
 CREATE TABLE "service_providers" (
 	"id" bigserial PRIMARY KEY,
@@ -409,9 +500,22 @@ CREATE INDEX "idx_appointment_date" ON "appointments" ("appointment_date");
 CREATE INDEX "idx_appointment_provider" ON "appointments" ("provider_id");
 CREATE INDEX "idx_appointment_status" ON "appointments" ("status");
 CREATE UNIQUE INDEX "audit_logs_pkey" ON "audit_logs" ("id");
+CREATE UNIQUE INDEX "benefit_ledger_transactions_pkey" ON "benefit_ledger_transactions" ("id");
+CREATE UNIQUE INDEX "benefit_ledger_transactions_uuid_key" ON "benefit_ledger_transactions" ("uuid");
+CREATE INDEX "idx_benefit_ledger_transactions_date" ON "benefit_ledger_transactions" ("created_at");
+CREATE INDEX "idx_benefit_ledger_transactions_service" ON "benefit_ledger_transactions" ("service_type");
+CREATE INDEX "idx_benefit_ledger_transactions_wallet" ON "benefit_ledger_transactions" ("wallet_id");
 CREATE UNIQUE INDEX "businesses_code_key" ON "businesses" ("code");
 CREATE UNIQUE INDEX "businesses_pkey" ON "businesses" ("id");
 CREATE UNIQUE INDEX "businesses_uuid_key" ON "businesses" ("uuid");
+CREATE UNIQUE INDEX "cash_wallet_transactions_pkey" ON "cash_wallet_transactions" ("id");
+CREATE UNIQUE INDEX "cash_wallet_transactions_uuid_key" ON "cash_wallet_transactions" ("uuid");
+CREATE INDEX "idx_cash_wallet_transactions_date" ON "cash_wallet_transactions" ("created_at");
+CREATE INDEX "idx_cash_wallet_transactions_type" ON "cash_wallet_transactions" ("transaction_type");
+CREATE INDEX "idx_cash_wallet_transactions_wallet" ON "cash_wallet_transactions" ("wallet_id");
+CREATE UNIQUE INDEX "commercial_settings_code_key" ON "commercial_settings" ("code");
+CREATE UNIQUE INDEX "commercial_settings_pkey" ON "commercial_settings" ("id");
+CREATE UNIQUE INDEX "commercial_settings_uuid_key" ON "commercial_settings" ("uuid");
 CREATE UNIQUE INDEX "complaints_pkey" ON "complaints" ("id");
 CREATE UNIQUE INDEX "consultations_pkey" ON "consultations" ("id");
 CREATE UNIQUE INDEX "credit_accounts_customer_id_key" ON "credit_accounts" ("customer_id");
@@ -461,6 +565,12 @@ CREATE UNIQUE INDEX "permissions_code_key" ON "permissions" ("code");
 CREATE UNIQUE INDEX "permissions_pkey" ON "permissions" ("id");
 CREATE UNIQUE INDEX "permissions_uuid_key" ON "permissions" ("uuid");
 CREATE UNIQUE INDEX "prescriptions_pkey" ON "prescriptions" ("id");
+CREATE INDEX "idx_pricing_rule_audits_customer" ON "pricing_rule_audits" ("customer_id");
+CREATE INDEX "idx_pricing_rule_audits_date" ON "pricing_rule_audits" ("created_at");
+CREATE INDEX "idx_pricing_rule_audits_service" ON "pricing_rule_audits" ("service_type");
+CREATE INDEX "idx_pricing_rule_audits_wallet" ON "pricing_rule_audits" ("wallet_id");
+CREATE UNIQUE INDEX "pricing_rule_audits_pkey" ON "pricing_rule_audits" ("id");
+CREATE UNIQUE INDEX "pricing_rule_audits_uuid_key" ON "pricing_rule_audits" ("uuid");
 CREATE UNIQUE INDEX "product_categories_pkey" ON "product_categories" ("id");
 CREATE UNIQUE INDEX "products_pkey" ON "products" ("id");
 CREATE UNIQUE INDEX "products_uuid_key" ON "products" ("uuid");
@@ -472,6 +582,15 @@ CREATE INDEX "idx_referral_reward_events_status" ON "referral_reward_events" ("s
 CREATE UNIQUE INDEX "referral_reward_events_pkey" ON "referral_reward_events" ("id");
 CREATE UNIQUE INDEX "referral_reward_events_referred_customer_id_key" ON "referral_reward_events" ("referred_customer_id");
 CREATE UNIQUE INDEX "referral_reward_events_uuid_key" ON "referral_reward_events" ("uuid");
+CREATE UNIQUE INDEX "reward_point_rules_action_code_key" ON "reward_point_rules" ("action_code");
+CREATE UNIQUE INDEX "reward_point_rules_pkey" ON "reward_point_rules" ("id");
+CREATE UNIQUE INDEX "reward_point_rules_uuid_key" ON "reward_point_rules" ("uuid");
+CREATE INDEX "idx_reward_point_transactions_action" ON "reward_point_transactions" ("action_code");
+CREATE INDEX "idx_reward_point_transactions_date" ON "reward_point_transactions" ("created_at");
+CREATE INDEX "idx_reward_point_transactions_status" ON "reward_point_transactions" ("status");
+CREATE INDEX "idx_reward_point_transactions_wallet" ON "reward_point_transactions" ("wallet_id");
+CREATE UNIQUE INDEX "reward_point_transactions_pkey" ON "reward_point_transactions" ("id");
+CREATE UNIQUE INDEX "reward_point_transactions_uuid_key" ON "reward_point_transactions" ("uuid");
 CREATE UNIQUE INDEX "reward_redemption_rules_code_key" ON "reward_redemption_rules" ("code");
 CREATE UNIQUE INDEX "reward_redemption_rules_pkey" ON "reward_redemption_rules" ("id");
 CREATE UNIQUE INDEX "reward_redemption_rules_uuid_key" ON "reward_redemption_rules" ("uuid");
@@ -508,6 +627,10 @@ CREATE UNIQUE INDEX "wallets_uuid_key" ON "wallets" ("uuid");
 ALTER TABLE "appointments" ADD CONSTRAINT "appointments_customer_id_fkey" FOREIGN KEY ("customer_id") REFERENCES "customers"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 ALTER TABLE "appointments" ADD CONSTRAINT "appointments_provider_id_fkey" FOREIGN KEY ("provider_id") REFERENCES "service_providers"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 ALTER TABLE "audit_logs" ADD CONSTRAINT "audit_logs_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "benefit_ledger_transactions" ADD CONSTRAINT "benefit_ledger_transactions_created_by_fkey" FOREIGN KEY ("created_by") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "benefit_ledger_transactions" ADD CONSTRAINT "benefit_ledger_transactions_wallet_id_fkey" FOREIGN KEY ("wallet_id") REFERENCES "wallets"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "cash_wallet_transactions" ADD CONSTRAINT "cash_wallet_transactions_created_by_fkey" FOREIGN KEY ("created_by") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "cash_wallet_transactions" ADD CONSTRAINT "cash_wallet_transactions_wallet_id_fkey" FOREIGN KEY ("wallet_id") REFERENCES "wallets"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 ALTER TABLE "complaints" ADD CONSTRAINT "complaints_customer_id_fkey" FOREIGN KEY ("customer_id") REFERENCES "customers"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 ALTER TABLE "consultations" ADD CONSTRAINT "consultations_appointment_id_fkey" FOREIGN KEY ("appointment_id") REFERENCES "appointments"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 ALTER TABLE "consultations" ADD CONSTRAINT "consultations_customer_id_fkey" FOREIGN KEY ("customer_id") REFERENCES "customers"("id") ON DELETE SET NULL ON UPDATE CASCADE;
@@ -541,6 +664,8 @@ ALTER TABLE "notifications" ADD CONSTRAINT "notifications_customer_id_fkey" FORE
 ALTER TABLE "prescriptions" ADD CONSTRAINT "prescriptions_consultation_id_fkey" FOREIGN KEY ("consultation_id") REFERENCES "consultations"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 ALTER TABLE "prescriptions" ADD CONSTRAINT "prescriptions_customer_id_fkey" FOREIGN KEY ("customer_id") REFERENCES "customers"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 ALTER TABLE "prescriptions" ADD CONSTRAINT "prescriptions_document_id_fkey" FOREIGN KEY ("document_id") REFERENCES "documents"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "pricing_rule_audits" ADD CONSTRAINT "pricing_rule_audits_customer_id_fkey" FOREIGN KEY ("customer_id") REFERENCES "customers"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "pricing_rule_audits" ADD CONSTRAINT "pricing_rule_audits_wallet_id_fkey" FOREIGN KEY ("wallet_id") REFERENCES "wallets"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 ALTER TABLE "products" ADD CONSTRAINT "products_category_id_fkey" FOREIGN KEY ("category_id") REFERENCES "product_categories"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 ALTER TABLE "purchase_items" ADD CONSTRAINT "purchase_items_product_id_fkey" FOREIGN KEY ("product_id") REFERENCES "products"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 ALTER TABLE "purchase_items" ADD CONSTRAINT "purchase_items_purchase_id_fkey" FOREIGN KEY ("purchase_id") REFERENCES "purchases"("id") ON DELETE SET NULL ON UPDATE CASCADE;
@@ -548,6 +673,9 @@ ALTER TABLE "purchases" ADD CONSTRAINT "purchases_customer_id_fkey" FOREIGN KEY 
 ALTER TABLE "purchases" ADD CONSTRAINT "purchases_provider_id_fkey" FOREIGN KEY ("provider_id") REFERENCES "service_providers"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 ALTER TABLE "referral_reward_events" ADD CONSTRAINT "referral_reward_events_referred_customer_id_fkey" FOREIGN KEY ("referred_customer_id") REFERENCES "customers"("id") ON DELETE CASCADE;
 ALTER TABLE "referral_reward_events" ADD CONSTRAINT "referral_reward_events_referrer_customer_id_fkey" FOREIGN KEY ("referrer_customer_id") REFERENCES "customers"("id") ON DELETE CASCADE;
+ALTER TABLE "reward_point_transactions" ADD CONSTRAINT "reward_point_transactions_approved_by_fkey" FOREIGN KEY ("approved_by") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "reward_point_transactions" ADD CONSTRAINT "reward_point_transactions_created_by_fkey" FOREIGN KEY ("created_by") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "reward_point_transactions" ADD CONSTRAINT "reward_point_transactions_wallet_id_fkey" FOREIGN KEY ("wallet_id") REFERENCES "wallets"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 ALTER TABLE "role_permissions" ADD CONSTRAINT "role_permissions_permission_id_fkey" FOREIGN KEY ("permission_id") REFERENCES "permissions"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 ALTER TABLE "role_permissions" ADD CONSTRAINT "role_permissions_role_id_fkey" FOREIGN KEY ("role_id") REFERENCES "roles"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 ALTER TABLE "service_providers" ADD CONSTRAINT "service_providers_business_id_fkey" FOREIGN KEY ("business_id") REFERENCES "businesses"("id") ON DELETE SET NULL ON UPDATE CASCADE;

@@ -220,26 +220,29 @@ class ApiService {
       final wallet = _readEnvelope(response);
       final walletId = wallet['walletId'].toString();
       final transactions = await _getWalletTransactionsFromBackend(walletId);
-      final pointsBalance = transactions
-          .where((txn) => txn.subLedgerType.toUpperCase() == 'POINTS')
-          .fold<double>(
-            0,
-            (total, txn) =>
-                total +
-                (txn.transactionType.toUpperCase() == 'CREDIT'
-                    ? txn.amount
-                    : -txn.amount),
-          );
+      final cashWallet =
+          wallet['cashWallet'] is Map<String, dynamic>
+              ? wallet['cashWallet'] as Map<String, dynamic>
+              : const <String, dynamic>{};
+      final rewardPoints =
+          wallet['rewardPoints'] is Map<String, dynamic>
+              ? wallet['rewardPoints'] as Map<String, dynamic>
+              : const <String, dynamic>{};
+      final cashBalance =
+          double.tryParse((cashWallet['available'] ?? 0).toString()) ?? 0;
+      final pointsBalance =
+          double.tryParse((rewardPoints['available'] ?? 0).toString()) ?? 0;
 
       return {
         'walletId': walletId,
         'customerId': wallet['customerId'].toString(),
-        'balance': double.tryParse(wallet['balance'].toString()) ?? 0,
-        'cashBalance': double.tryParse(wallet['balance'].toString()) ?? 0,
+        'balance': cashBalance,
+        'cashBalance': cashBalance,
         'pointsBalance': pointsBalance,
         'creditAvailable':
-            double.tryParse((wallet['credit_available'] ?? 0).toString()) ?? 0,
+            double.tryParse((wallet['creditAvailable'] ?? 0).toString()) ?? 0,
         'status': (wallet['status'] ?? 'ACTIVE').toString(),
+        'transactionsLoaded': transactions.isNotEmpty,
       };
     } catch (_) {
       await Future<void>.delayed(_mockDelay);
@@ -250,9 +253,7 @@ class ApiService {
       double cashBalance = 0;
       double pointsBalance = 0;
       for (final transaction in transactions) {
-        final delta = transaction.transactionType == 'CREDIT'
-            ? transaction.amount
-            : -transaction.amount;
+        final delta = transaction.signedAmount;
         if (transaction.subLedgerType == 'POINTS') {
           pointsBalance += delta;
         } else {
@@ -487,4 +488,56 @@ class ApiService {
         return 'FUCHSIA';
     }
   }
+
+  static Future<List<Map<String, dynamic>>> getProviders() async {
+    try {
+      final response = await _dio.get('/service-providers');
+      final data = _readEnvelopeList(response);
+      return List<Map<String, dynamic>>.from(
+        data.map((item) => Map<String, dynamic>.from(item as Map)),
+      );
+    } catch (e) {
+      debugPrint('Error getting service providers: $e');
+      return [];
+    }
+  }
+
+  static Future<Map<String, dynamic>?> createProvider(Map<String, dynamic> data) async {
+    final response = await _dio.post('/service-providers', data: data);
+    return _readEnvelope(response);
+  }
+
+  static Future<Map<String, dynamic>?> updateProvider(String id, Map<String, dynamic> data) async {
+    final response = await _dio.put('/service-providers/$id', data: data);
+    return _readEnvelope(response);
+  }
+
+  static Future<Map<String, dynamic>?> deleteProvider(String id) async {
+    final response = await _dio.delete('/service-providers/$id');
+    return _readEnvelope(response);
+  }
+
+  static Future<Map<String, dynamic>?> getProviderPerformance(String id) async {
+    final response = await _dio.get('/service-providers/$id/performance');
+    return _readEnvelope(response);
+  }
+
+  static Future<Map<String, dynamic>?> getProviderAnalytics() async {
+    final response = await _dio.get('/service-providers/analytics');
+    return _readEnvelope(response);
+  }
+
+  static Future<List<Map<String, dynamic>>> getBusinesses() async {
+    try {
+      final response = await _dio.get('/master-data/admin/businesses');
+      final data = _readEnvelopeList(response);
+      return List<Map<String, dynamic>>.from(
+        data.map((item) => Map<String, dynamic>.from(item as Map)),
+      );
+    } catch (e) {
+      debugPrint('Error getting businesses: $e');
+      return [];
+    }
+  }
 }
+

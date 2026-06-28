@@ -260,7 +260,7 @@ export class WalletService {
       }),
     ]);
 
-    return [
+    const splitTransactions = [
       ...cashTransactions.map((txn) => ({
         ledger: 'CASH',
         id: txn.id,
@@ -284,6 +284,30 @@ export class WalletService {
         actionCode: txn.actionCode,
       })),
     ].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+
+    if (splitTransactions.length > 0) {
+      return splitTransactions;
+    }
+
+    const legacyTransactions = await this.prisma.walletTransaction.findMany({
+      where: {
+        walletId,
+        ...(filters.type ? { transactionType: filters.type.toUpperCase() } : {}),
+        ...(dateFilter ? { createdAt: dateFilter } : {}),
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    return legacyTransactions.map((txn) => ({
+      ledger: txn.subLedgerType || 'CASH',
+      id: txn.id,
+      transactionType: txn.transactionType || 'DEBIT',
+      amount: Number(txn.amount || 0),
+      remarks: txn.remarks,
+      createdAt: txn.createdAt,
+      referenceType: txn.referenceType,
+      referenceId: txn.referenceId,
+    }));
   }
 
   async ensureSufficientCashBalance(customerId: bigint, requiredAmount: number) {
@@ -374,6 +398,71 @@ export class WalletService {
         this.prisma.rewardPointTransaction.findMany({ where: { walletId } }),
         this.prisma.benefitLedgerTransaction.findMany({ where: { walletId } }),
       ]);
+
+    if (
+      cashTransactions.length === 0 &&
+      rewardTransactions.length === 0 &&
+      benefitTransactions.length === 0
+    ) {
+      const legacyTransactions = await this.prisma.walletTransaction.findMany({
+        where: { walletId },
+      });
+
+      let cashAvailable = 0;
+      let cashCredited = 0;
+      let cashDebited = 0;
+      let pointsAvailable = 0;
+      let pointsEarned = 0;
+      let pointsRedeemed = 0;
+
+      for (const txn of legacyTransactions) {
+        const amount = Number(txn.amount || 0);
+        const ledgerType = (txn.subLedgerType || 'CASH').toUpperCase();
+        const transactionType = (txn.transactionType || 'DEBIT').toUpperCase();
+        const isPositive = this.isPositiveCashEntry(transactionType);
+
+        if (ledgerType === WALLET_LEDGER_TYPES.REWARD_POINTS) {
+          if (isPositive) {
+            pointsAvailable += amount;
+            pointsEarned += amount;
+          } else {
+            pointsAvailable -= amount;
+            pointsRedeemed += amount;
+          }
+          continue;
+        }
+
+        if (ledgerType === WALLET_LEDGER_TYPES.SHIELD_BENEFIT) {
+          continue;
+        }
+
+        if (isPositive) {
+          cashAvailable += amount;
+          cashCredited += amount;
+        } else {
+          cashAvailable -= amount;
+          cashDebited += amount;
+        }
+      }
+
+      return {
+        cashWallet: {
+          available: Number(cashAvailable.toFixed(2)),
+          credited: Number(cashCredited.toFixed(2)),
+          debited: Number(cashDebited.toFixed(2)),
+        },
+        rewardPoints: {
+          available: Number(pointsAvailable.toFixed(2)),
+          earned: Number(pointsEarned.toFixed(2)),
+          redeemed: Number(pointsRedeemed.toFixed(2)),
+        },
+        shieldBenefit: {
+          remaining: 0,
+          granted: 0,
+          appliedTotal: 0,
+        },
+      };
+    }
 
     let cashAvailable = 0;
     let cashCredited = 0;

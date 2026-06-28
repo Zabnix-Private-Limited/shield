@@ -84,13 +84,20 @@ function readList(key: string, fallback: string[]) {
     .filter(Boolean);
 }
 
+function mergeUnique(values: string[]) {
+  return Array.from(new Set(values.map((value) => value.trim()).filter(Boolean)));
+}
+
 export function getAppEnv(): ShieldAppEnv {
   return {
     nodeEnv: readString('NODE_ENV', 'development'),
     appName: readString('APP_NAME', 'SHIELD'),
     appUrl: readString('APP_URL', 'http://127.0.0.1:53431'),
     apiBaseUrl: readString('API_BASE_URL', 'http://127.0.0.1:3000'),
-    corsOrigins: readList('CORS_ORIGIN', defaultCorsOrigins),
+    corsOrigins: mergeUnique([
+      ...defaultCorsOrigins,
+      ...readList('CORS_ORIGIN', []),
+    ]),
     port: readNumber('PORT', 3000),
     databaseUrl: readString('DATABASE_URL'),
     redisUrl: readString('REDIS_URL'),

@@ -3993,7 +3993,7 @@ PortalRoleData portalDataForRole(SHIELDRole role) {
         role: role,
         operatorName: 'Ameen Basith',
         headline:
-            'System-wide administration for users, roles, businesses, audit, and platform configuration',
+            'Operations-center administration for provider readiness, governance, people, and platform control',
         regionLabel: 'Unified SHIELD admin console',
         icon: Icons.admin_panel_settings,
         accentColor: AppColors.error,
@@ -4002,8 +4002,8 @@ PortalRoleData portalDataForRole(SHIELDRole role) {
             key: 'dashboard',
             title: 'Dashboard',
             summary:
-                'View users, roles, businesses, permission health, and system events from the top-level admin control room.',
-            actions: const ['Add user', 'Open audit', 'Check system'],
+                'Run SHIELD from one operations center across providers, commercial controls, people, reporting, and governance.',
+            actions: const ['Review queue', 'Open provider network', 'Check system'],
             metrics: const [
               PortalMetric(label: 'Users', value: '86', note: 'All roles'),
               PortalMetric(label: 'Businesses', value: '5', note: 'Configured'),
@@ -4215,10 +4215,10 @@ PortalRoleData portalDataForRole(SHIELDRole role) {
           ),
           PortalSectionData(
             key: 'businesses',
-            title: 'Businesses',
+            title: 'Provider Network',
             summary:
-                'Manage business units, departments, branch identities, and service-provider structure across the SHIELD network.',
-            actions: const ['Add business', 'Create department', 'Edit branch'],
+                'Manage branches, provider identities, departments, services, and readiness from one centralized provider system.',
+            actions: const ['Add provider', 'Create branch', 'Review readiness'],
             metrics: const [
               PortalMetric(label: 'Businesses', value: '5', note: 'Configured'),
               PortalMetric(
@@ -4447,79 +4447,79 @@ PortalRoleData portalDataForRole(SHIELDRole role) {
           ),
           PortalSectionData(
             key: 'membership-plans',
-            title: 'Membership Plans',
+            title: 'Master Data',
             summary:
-                'Configure founding and standard membership plans, fees, benefits, and renewal rules in an admin-focused planning screen.',
-            actions: const ['Add plan', 'Edit benefit', 'Preview card'],
+                'Control centralized masters for branches, departments, services, provider types, plans, commercial rules, and operational calendars.',
+            actions: const ['Open catalog', 'Review rules', 'Check gaps'],
             metrics: const [
               PortalMetric(
-                label: 'Plans',
-                value: '2',
-                note: 'Founding + standard',
+                label: 'Master groups',
+                value: '10',
+                note: 'Visible domains',
               ),
               PortalMetric(
-                label: 'Active benefits',
-                value: '11',
-                note: 'Visible in portal',
+                label: 'Rule sets',
+                value: '7',
+                note: 'Commercial + ops',
               ),
               PortalMetric(
-                label: 'Draft changes',
-                value: '1',
-                note: 'Awaiting review',
+                label: 'Pending reviews',
+                value: '3',
+                note: 'Ops backlog',
               ),
             ],
             queueItems: const [
               PortalListItem(
-                title: 'Founding member plan',
+                title: 'Branch calendar alignment',
                 subtitle:
-                    'Legacy RC migration benefits are summarized with card and wallet eligibility notes.',
-                meta: 'Core plan',
-                status: 'Active',
+                    'Holiday and working-hour masters should be confirmed before appointment expansion.',
+                meta: 'Operations',
+                status: 'Review',
               ),
               PortalListItem(
-                title: 'Standard member plan',
+                title: 'Provider type mapping',
                 subtitle:
-                    'General enrollment fee and digital privilege card package are shown for new customers.',
-                meta: 'Enrollment',
-                status: 'Active',
+                    'Capabilities need one clean provider-type taxonomy before more portal wiring.',
+                meta: 'Provider domain',
+                status: 'Open',
               ),
               PortalListItem(
-                title: 'Renewal wording update',
+                title: 'Commercial rule audit',
                 subtitle:
-                    'A draft copy change is prepared for the next management review.',
-                meta: 'Content draft',
+                    'Wallet, benefit, referral, and reward rule masters should stay centralized.',
+                meta: 'Commercial control',
                 status: 'Pending',
               ),
             ],
             recentItems: const [
               PortalListItem(
-                title: 'Benefit preview opened',
+                title: 'Service list preview opened',
                 subtitle:
-                    'Admin can check how plan changes would appear in the customer app.',
-                meta: 'Cross-view',
+                    'Admin reviewed how master service labels will flow into downstream portals.',
+                meta: 'Catalog check',
                 status: 'Viewed',
               ),
               PortalListItem(
-                title: 'Rule note saved',
+                title: 'Department mapping note saved',
                 subtitle:
-                    'A renewal rule explanation was retained inside the plan details panel.',
-                meta: 'Governance',
-                status: 'Saved',
+                    'Ownership guidance retained for cross-branch operations and CRM visibility.',
+                    meta: 'Governance',
+                    status: 'Saved',
               ),
             ],
             insightItems: const [
               PortalListItem(
-                title: 'Important closure',
+                title: 'Platform backbone',
                 subtitle:
-                    'This page closes the biggest remaining admin gap from the UI spec after users, roles, and settings.',
-                meta: 'Spec fit',
-                status: 'Major',
+                    'Master data is the cleanest way to stop hardcoded labels, statuses, and rule drift across SHIELD.',
+                meta: 'Architecture fit',
+                status: 'Core',
               ),
               PortalListItem(
-                title: 'Narrative strength',
+                title: 'Sequencing benefit',
                 subtitle:
-                    'Membership plans help management connect frontend polish to the core business model of SHIELD.',
-                meta: 'Product story',
+                    'Once this surface is solid, customer, provider, agent, and CRM screens can consume the same masters consistently.',
+                meta: 'Delivery leverage',
                 status: 'Strong',
               ),
             ],

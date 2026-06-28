@@ -3663,3 +3663,549 @@ pm run build
 - git diff --stat -- AGENTS.md docs/SHIELD Database Schema.docx.md docs/SHIELD Security Architecture.docx.md docs/SHIELD REST API Specification.docx.md docs/SHIELD Functional Requirements Document.docx.md
 ---
 2026-06-28 20:19:06 IST
+## 92. Commercial Architecture Freeze Implementation: Split Immutable Wallet Ledgers, Pricing Rule Audits, Reward Rule Master, and Admin-Configurable Preload Controls
+**High-level description**: Refactored the SHIELD backend toward the stricter commercial architecture you froze. The previous implementation still centered on one generic `wallet_transactions` runtime path with hardcoded reward assumptions and only partial hidden-benefit behavior. This pass introduces separate immutable cash/reward/benefit ledgers, a pricing-rule audit trail, admin-configurable commercial settings and reward masters, and tighter visibility/write rules so customer, provider, agent, CRM, and admin surfaces can rely on the same backend truth.
+- Split-ledger persistence added in Prisma schema:
+  - `backend/prisma/schema.prisma`
+  - added immutable ledger tables:
+    - `cash_wallet_transactions`
+    - `reward_point_transactions`
+    - `benefit_ledger_transactions`
+  - kept the legacy `wallet_transactions` model present for compatibility, but the new wallet/pricing/referral code now writes to the split ledgers instead of extending the generic table further
+  - added `pricing_rule_audits` to capture commercial decisions per evaluated transaction
+  - added `reward_point_rules` as the configurable reward-rule master
+  - added `commercial_settings` for admin-driven preload and other commercial toggles
+  - extended `service_benefit_rules` with:
+    - `wallets_allowed`
+    - `allow_external_payment`
+  - extended `referral_reward_events` with `expired_at` so the lifecycle can represent future expiry without schema churn
+- Admin-configurable commercial bootstrap hardened:
+  - `backend/src/pricing/commercial-bootstrap.service.ts`
+  - runtime DDL now ensures the new split-ledger, audit, reward-master, and setting tables exist in a live database without waiting on external migration flow
+  - seeded benefit defaults now reflect the frozen business rule set more accurately:
+    - `PHARMACY` => benefit not eligible, wallets allowed = `CASH`
+    - `LAB`, `DOCTOR`, `DENTAL`, `COSMETIC`, `DIETITIAN`, `HOMECARE` => benefit eligible with configurable caps and `CASH,BENEFIT` wallet usage
+  - seeded configurable reward master entries such as:
+    - `SUCCESSFUL_REFERRAL`
+    - `DOCTOR_CONSULTATION`
+    - `LAB_TEST`
+    - `HEALTH_CAMP`
+    - `WELLNESS_EVENT`
+    - `BIRTHDAY_BONUS`
+    - `ANNIVERSARY_BONUS`
+  - seeded commercial settings for preload control:
+    - `CASH_WALLET_PRELOAD_ENABLED`
+    - `DEFAULT_CASH_WALLET_PRELOAD_AMOUNT`
+    - `BENEFIT_PRELOAD_ENABLED`
+    - `DEFAULT_BENEFIT_PRELOAD_AMOUNT`
+- Pricing engine upgraded into the central commercial rule engine:
+  - `backend/src/pricing/pricing.service.ts`
+  - pricing now evaluates against split-ledger balances instead of the generic wallet transaction table
+  - added support for:
+    - allowed wallet modes per service
+    - benefit eligibility and caps
+    - external payment allowance flags
+    - reward-point earning lookup via reward-rule master
+    - redemption-rule driven reward-credit application
+    - preload-setting awareness
+  - pricing evaluation can now persist `pricing_rule_audits` for real service transactions, recording:
+    - original amount
+    - benefit applied
+    - membership discount applied
+    - reward points earned
+    - reward points redeemed
+    - reward credit applied
+    - cash wallet deducted
+    - final payable amount
+    - matched rule code
+    - whether preload configuration was in play
+  - importantly, customer-facing pricing output no longer exposes hidden benefit remaining; it returns only customer-visible benefit lines and current-transaction values
+- Admin commercial control endpoints added:
+  - `backend/src/pricing/pricing.controller.ts`
+  - added admin access to:
+    - commercial configuration snapshot
+    - pricing rule audits
+    - service benefit rule upserts
+    - reward rule upserts
+    - redemption rule upserts
+    - commercial setting upserts
+  - this is the backend foundation for the requested admin-dashboard configurability, including preload-balance usage control
+- Wallet service moved to the split-ledger runtime model:
+  - `backend/src/wallet/wallet.service.ts`
+  - customer-visible wallet now exposes only:
+    - `cashWallet`
+    - `rewardPoints`
+  - hidden benefit is returned only when explicitly requested for admin callers
+  - recharge/adjust/redeem logic now writes to the appropriate immutable ledger table instead of the generic shared wallet transaction model
+  - reward-point redemption now debits the reward ledger and credits the cash ledger, keeping the “points become SHIELD ecosystem credit, not bank/UPI cash” rule enforced at the ledger layer
+  - transaction history now merges only customer-visible cash/reward ledgers by default, which keeps hidden benefit internals out of normal wallet feeds
+- Wallet controller tightened for hidden-benefit governance:
+  - `backend/src/wallet/wallet.controller.ts`
+  - preserved customer wallet visibility rules
+  - added admin-only enforcement for benefit-ledger recharge/adjust endpoints so general wallet-update permissions do not implicitly grant access to internal subsidy operations
+- Referral lifecycle corrected further toward the frozen design:
+  - `backend/src/referral/referral.service.ts`
+  - removed the old hardcoded reward-point assumption as the source of truth
+  - referral rewards now resolve from the reward-rule master (`SUCCESSFUL_REFERRAL`) when progressing from `QUALIFIED` to `REWARDED`
+  - status handling is now aligned more closely with the intended lifecycle vocabulary:
+    - `PENDING`
+    - `VERIFIED`
+    - `QUALIFIED`
+    - `REWARDED`
+    - `REJECTED`
+    - schema-ready for `EXPIRED`
+  - added explicit rejection support for invalidated onboarding/membership cases so pending rewards are not silently left dangling
+- Customer onboarding now respects admin-configurable preload behavior:
+  - `backend/src/customer/customer.service.ts`
+  - after customer+wallet creation, the service now applies optional preload entries using `commercial_settings`
+  - cash preload and hidden-benefit preload can both be turned on/off and adjusted by admin without code changes
+  - this is the requested “usage of preloading balance should be configurable” behavior, implemented in backend runtime rather than as a hardcoded opening-balance assumption
+  - also removed the previous fallback default email injection and tightened self-referral avoidance during referrer lookup
+- Dashboard service adjusted to stop relying on the generic wallet transaction model:
+  - `backend/src/dashboard/dashboard.service.ts`
+  - customer dashboard and wallet widgets now read from the split-ledger wallet summary
+  - management recharge totals now aggregate from the cash ledger instead of the old shared table
+  - admin dashboard role sections now surface commercial settings/rule summaries so preload and benefit controls are not backend-only hidden switches
+- Module wiring updated where needed so the refactored services resolve cleanly:
+  - `backend/src/customer/customer.module.ts`
+  - `backend/src/dashboard/dashboard.module.ts`
+- Pharmacy flow aligned to the stricter ledger architecture:
+  - `backend/src/pharmacy/pharmacy.service.ts`
+  - purchase evaluation now persists pricing audits through the pricing engine
+  - pharmacy cash deduction now writes to the dedicated cash ledger
+  - hidden benefit is no longer written opportunistically in pharmacy flow because the service rule already forbids benefit eligibility for medicines; that hard business rule is now enforced by configuration plus engine behavior instead of feature-local assumptions
+- Why this approach was chosen:
+  - your frozen architecture clearly separates what customers may see from what SHIELD needs internally for commercial accounting; split ledgers are the cleanest way to preserve that boundary in code and data
+  - moving preload values and reward values into admin-editable tables prevents the backend from ossifying business policy into hardcoded constants
+  - pricing-rule audit storage gives SHIELD a durable trail for reconciliation and future reporting without relying on reconstructing commercial decisions from scattered module logic after the fact
+  - keeping the benefit ledger isolated from normal customer/provider transaction feeds reduces the risk of accidental leakage of internal subsidy balances while still letting admins audit the underlying financial behavior
+- Important implementation honesty notes:
+  - the schema now includes the new immutable ledgers and pricing audit model, and the main wallet/pricing/referral/pharmacy paths use them; some older report/dashboard/demo-oriented codepaths may still conceptually reference the legacy wallet model and should continue to be normalized over future slices
+  - the backend now stores and exposes the admin-configurable commercial controls needed for an admin dashboard, but the actual Flutter admin UI for those controls is still a future frontend slice
+  - deeper fraud heuristics like same-device abuse or family-policy matching still need dedicated operational data sources; this pass focused on the ledger/rule-engine architecture and the lifecycle hooks that are realistically enforceable with the current domain model
+- Verification completed for this pass:
+  - `npx prisma generate`
+  - `npm run build`
+- Verification notes:
+  - Prisma Client regenerated successfully after the split-ledger and commercial-config schema additions
+  - Nest backend build passed after the wallet, pricing, referral, customer, dashboard, and module-wiring refactor
+  - no Flutter/web or APK verification was run because this was a backend architecture pass and the active workflow preference is to avoid unrelated heavy mobile builds
+
+### Files Modified/Created
+**Backend Files (Modified)**:
+- backend/prisma/schema.prisma
+- backend/src/customer/customer.module.ts
+- backend/src/customer/customer.service.ts
+- backend/src/dashboard/dashboard.module.ts
+- backend/src/dashboard/dashboard.service.ts
+- backend/src/pharmacy/pharmacy.service.ts
+- backend/src/pricing/commercial-bootstrap.service.ts
+- backend/src/pricing/pricing.controller.ts
+- backend/src/pricing/pricing.service.ts
+- backend/src/pricing/pricing.types.ts
+- backend/src/referral/referral.service.ts
+- backend/src/wallet/wallet.controller.ts
+- backend/src/wallet/wallet.service.ts
+
+**Verification Commands**:
+- npx prisma generate
+- npm run build
+---
+2026-06-28 20:35:52 IST
+
+---
+2026-06-28 18:32:00 IST
+
+## 93. Live Schema Alignment Pass: Synced Backend CORS and Frontend Wallet Parsing to Updated `current_schema.md`
+**High-level description**: Aligned runtime code to the manually updated live database schema snapshot in `current_schema.md` without inventing extra schema assumptions. This pass focused on the two concrete breakages seen in the running web app: backend CORS/preflight failures from `localhost:53431` and frontend wallet parsing still expecting the older single-ledger `wallet_transactions` shape instead of the newer split-ledger commercial model.
+- Backend changes:
+  - `backend/src/config/app-env.ts`
+  - changed CORS origin resolution to merge configured `CORS_ORIGIN` values with the safe local defaults instead of replacing them entirely
+  - this keeps both `http://localhost:53431` and `http://127.0.0.1:53431` available during local Flutter web runs even when a custom env origin list is present
+  - `backend/src/main.ts`
+  - expanded allowed CORS preflight headers to include `sentry-trace` and `baggage` in addition to the existing JSON/auth headers
+  - also allowed `accept`, `origin`, and `x-requested-with` so browser preflight from the instrumented Flutter web build stops failing before the request reaches controllers
+- Frontend changes:
+  - `frontend/lib/shared/models/wallet.dart`
+  - updated `WalletTransaction.fromJson()` to normalize backend split-ledger transaction payloads into the customer UI’s existing `CREDIT/DEBIT` and `CASH/POINTS` presentation model
+  - mapped backend `ledger = REWARD_POINTS` into frontend `subLedgerType = POINTS`
+  - mapped newer backend transaction codes such as `RECHARGE`, `BONUS`, `OPENING_BALANCE`, `POINT_REDEMPTION_CREDIT`, `APPROVED_CREDIT`, `GRANT`, and `PRELOAD` into customer-visible credit semantics
+  - added `isCredit` and `signedAmount` helpers so future balance math no longer relies on string-only inline checks everywhere
+  - `frontend/lib/shared/services/api_service.dart`
+  - updated wallet profile parsing to read the live backend response shape:
+    - `cashWallet.available`
+    - `rewardPoints.available`
+    - `creditAvailable`
+  - stopped reading the removed/older flat `balance` payload shape from the backend wallet endpoint
+  - kept the customer screens stable by continuing to expose `balance`, `cashBalance`, and `pointsBalance` to the UI layer after normalization
+  - updated fallback transaction aggregation to use signed helper math instead of assuming every non-`CREDIT` entry is an old-style debit row
+- Why this approach was chosen:
+  - `current_schema.md` is now the live DB truth source, so the safest path was to align runtime code to the schema-backed API contract instead of forcing a broad UI rewrite
+  - normalizing wallet data at the model/API boundary keeps the customer mobile-first screens stable while the backend evolves toward the newer immutable split-ledger design
+  - broadening preflight handling at the Nest edge fixes the actual web runtime failure where requests were being blocked before the backend business logic even ran
+- Runtime issue notes from this pass:
+  - the `FIREBASE_WEB_VAPID_KEY is empty` browser message is not caused by missing env storage in the repo; it indicates Flutter web was launched without the env-forwarding wrapper / `--dart-define` path
+  - the reported browser failure `Request header field sentry-trace is not allowed by Access-Control-Allow-Headers` matched the old Nest CORS config and is addressed by this patch
+- Verification completed for this pass:
+  - `cd backend && npm run build`
+  - `cd frontend && flutter analyze`
+
+### Files Modified/Created
+**Backend Files (Modified)**:
+- [app-env.ts](file:///e:/K4NN4N/shield/backend/src/config/app-env.ts)
+- [main.ts](file:///e:/K4NN4N/shield/backend/src/main.ts)
+
+**Frontend Files (Modified)**:
+- [wallet.dart](file:///e:/K4NN4N/shield/frontend/lib/shared/models/wallet.dart)
+- [api_service.dart](file:///e:/K4NN4N/shield/frontend/lib/shared/services/api_service.dart)
+
+**Verification Commands**:
+- `cd backend && npm run build`
+- `cd frontend && flutter analyze`
+
+---
+2026-06-28 18:58:00 IST
+
+## 94. Prisma Client Refresh + Localhost Customer Auth Fallback: Fixed Split-Ledger Delegate Errors and Removed Dev-Time 401s in Customer Portal
+**High-level description**: Resolved two separate but overlapping failures in the active SHIELD customer flow. First, backend TypeScript was still using a stale generated Prisma client that did not expose the newer split-ledger delegates (`cashWalletTransaction`, `rewardPointTransaction`, `benefitLedgerTransaction`, `pricingRuleAudit`, `rewardPointRule`, `commercialSetting`). Second, the customer portal was calling protected backend routes without a Bearer token, so the global JWT guard rejected normal profile and wallet requests during localhost development.
+- Backend changes:
+  - `backend/src/auth/rbac-catalog.ts`
+  - added a small exported role-permission helper so the auth guard can derive the seeded `CUSTOMER` permission set without duplicating permission strings in multiple places
+  - `backend/src/auth/shield-jwt-auth.guard.ts`
+  - added a development-only localhost fallback principal for the active customer portal flow when no Bearer token is sent
+  - fallback is intentionally limited:
+    - only active in `NODE_ENV=development`
+    - only for localhost / `127.0.0.1` requests
+    - only for customer-facing route prefixes currently used by the portal
+    - principal is pinned to seeded customer `1` and role `CUSTOMER`
+  - this keeps production auth locked while allowing the current customer portal to function before the full Firebase -> SHIELD JWT login handoff is wired into the frontend runtime
+- Prisma/runtime actions:
+  - ran `npx prisma generate` in `backend/`
+  - refreshed generated Prisma client types so the split-ledger delegates now exist in `.prisma/client`
+  - this removed the IDE/backend type errors in `wallet.service.ts` that were incorrectly suggesting `walletTransaction` / `creditTransaction` instead of the new ledgers
+- Why this approach was chosen:
+  - the delegate errors were not caused by bad service code; they were caused by a stale generated Prisma client after schema evolution
+  - the 401s were not caused by customer controller logic; they came from the global JWT guard requiring a token for every protected route while the current portal still uses hardcoded customer `1` API calls without an access token
+  - using a localhost-only development principal is a smaller and safer fix than making customer/profile/wallet routes globally public
+- Important operational note:
+  - backend restart is required after this pass so the updated JWT guard and regenerated Prisma client are what the running Nest process actually uses
+  - browser hot restart alone is not enough if the old Nest process is still serving requests
+- Verification completed for this pass:
+  - `cd backend && npx prisma generate`
+  - `cd backend && npm run build`
+
+### Files Modified/Created
+**Backend Files (Modified)**:
+- [rbac-catalog.ts](file:///e:/K4NN4N/shield/backend/src/auth/rbac-catalog.ts)
+- [shield-jwt-auth.guard.ts](file:///e:/K4NN4N/shield/backend/src/auth/shield-jwt-auth.guard.ts)
+
+**Runtime / Generated Artifacts**:
+- refreshed Prisma client under `backend/node_modules/@prisma/client`
+
+**Verification Commands**:
+- `cd backend && npx prisma generate`
+- `cd backend && npm run build`
+
+
+---
+2026-06-28 21:28:00 IST
+
+## 95. Control Artifact Freeze Pass: Added Portal, Route, Ownership, Visibility, and Domain Boundary Docs
+**High-level description**: Added the five requested in-repo control artifacts so the next implementation slices can stay anchored to the already-frozen architecture, the current live frontend router, the active backend module surface, and current_schema.md as the database truth source. This pass intentionally documented the system as it exists now instead of broadening scope into new module implementation.
+- Documentation changes:
+  - docs/SHIELD Portal Navigation Map.md`n  - froze the live frontend route contract around /portal/:role/:section`n  - recorded all customer legacy redirects as compatibility redirects only
+  - documented the current frontend portal-role shell taxonomy and called out that it is not identical to the richer backend RBAC taxonomy
+  - docs/SHIELD Master Data Ownership Matrix.md`n  - assigned live table-backed master-data ownership across auth, org/admin, membership, pricing/commercial, and pharmacy/catalog domains
+  - explicitly separated true master data from operational ledgers, audits, and workflow records so future admin work does not invent feature-local control sources
+  - docs/SHIELD Module-to-Portal Visibility Matrix.md`n  - froze which domains should be primary, secondary, hidden, or future for each live portal shell
+  - preserved the rule that hidden SHIELD benefit balance must not become customer-visible UI state
+  - docs/SHIELD Complete Route Map.md`n  - captured the live GoRouter map and the current backend HTTP surface grouped by controller, including permissions where the controllers already enforce them
+  - documented the current development-only localhost auth bridge boundaries so it is treated as an explicit temporary bridge instead of accidental architecture
+  - docs/SHIELD Backend Domain Boundaries.md`n  - froze backend module responsibilities and non-responsibilities using the current Nest module graph and the split-ledger pricing/wallet model
+  - explicitly noted that wallet_transactions still exists in the live schema snapshot but should be treated as a legacy/coexistence surface rather than the target runtime ledger model
+- Why this approach was chosen:
+  - the repo already had enough live code and schema movement that the highest-value next step was to stabilize control documents before adding more feature breadth
+  - documenting the current frontend-shell-role versus backend-RBAC-role mismatch now prevents later implementation drift and accidental overcoupling
+  - grounding the route map and domain boundaries in the real router/controllers is safer than inheriting older architecture-doc assumptions that no longer exactly match the running codebase
+- Verification completed for this pass:
+  - reviewed the newly added control-artifact files directly after creation
+- Verification notes:
+  - no backend build, Flutter analyze, web build, APK build, or browser retest was run because this was a documentation-only freeze pass
+  - existing runtime/auth/CORS/wallet alignment was documented from the current checked-in code and recent verified log history, not re-executed in this pass
+
+### Files Modified/Created
+**Documentation Files (Created)**:
+- docs/SHIELD Portal Navigation Map.md
+- docs/SHIELD Master Data Ownership Matrix.md
+- docs/SHIELD Module-to-Portal Visibility Matrix.md
+- docs/SHIELD Complete Route Map.md
+- docs/SHIELD Backend Domain Boundaries.md
+
+**Verification Commands**:
+- reviewed created documentation files in-place
+
+
+---
+2026-06-28 21:31:00 IST
+
+## 96. Log Correction: Superseded Entry 95 Formatting Artifact
+**High-level description**: Entry 95 was appended successfully but contained escaped newline artifacts from the shell append command. This correction preserves append-only log rules and supersedes the malformed formatting without changing the underlying implementation record.
+- Correction notes:
+  - supersedes the formatting of entry 95 only; the implementation scope remains unchanged
+  - the affected scope was the creation of these five control artifacts:
+  - docs/SHIELD Portal Navigation Map.md
+  - docs/SHIELD Master Data Ownership Matrix.md
+  - docs/SHIELD Module-to-Portal Visibility Matrix.md
+  - docs/SHIELD Complete Route Map.md
+  - docs/SHIELD Backend Domain Boundaries.md
+- Verification notes:
+  - no code/runtime verification changed from entry 95
+  - this correction exists only to keep the engineer-to-engineer log readable under append-only rules
+
+
+---
+2026-06-28 22:05:00 IST
+
+## 97. Master Data Module Phase 1
+High-level description: Added the first operations-layer backend module as a centralized, read-first master-data surface grounded only in live schema-backed tables. This establishes one admin-facing source for current branches, departments, providers, membership plans, pricing/commercial masters, and RBAC masters without inventing new schema domains yet.
+- Backend:
+  - created backend/src/master-data/master-data.module.ts
+  - created backend/src/master-data/master-data.controller.ts
+  - created backend/src/master-data/master-data.service.ts
+  - wired MasterDataModule in backend/src/app.module.ts
+  - added admin read endpoints:
+    - GET /master-data/admin/catalog
+    - GET /master-data/admin/bootstrap
+    - GET /master-data/admin/:domain
+- Documentation:
+  - updated docs/SHIELD Complete Route Map.md
+  - updated docs/SHIELD Backend Domain Boundaries.md
+  - updated docs/SHIELD Master Data Ownership Matrix.md
+- Scope notes:
+  - this pass centralizes only table-backed masters that already exist in current_schema.md
+  - future master-data areas that are not table-backed yet are exposed as planned gaps, not fake implemented domains
+- Verification:
+  - cd backend && npm run build
+
+
+---
+2026-06-28 22:18:00 IST
+
+## 98. Customer Profile Dropdown Crash Fix
+High-level description: Fixed the customer profile dropdown crash caused by backend enum-style values like MALE not matching the UI dropdown item casing of Male/Female/Other.
+- Frontend:
+  - updated frontend/lib/features/portal/presentation/screens/portal_shell.dart
+  - normalized profile dropdown-backed values during form hydration so backend values are mapped case-insensitively to the UI option list
+  - added a defensive dropdown fallback so out-of-list values resolve to null instead of tripping DropdownButtonFormField assertions
+  - applied the same normalization path to blood-group dropdown hydration for consistency
+- Why:
+  - the customer profile form was trusting backend strings directly, but Flutter dropdowns require the selected value to match exactly one menu item
+  - this fix keeps the UI resilient even if backend casing or legacy stored values differ from display labels
+- Verification:
+  - cd frontend && flutter analyze lib/features/portal/presentation/screens/portal_shell.dart
+
+---
+2026-06-28 21:37:50 IST
+
+## 99. Admin Portal Phase 1 UI Stabilization
+High-level description: Reoriented the super-admin portal toward an operations-center layout and stabilized the new admin dashboard/provider-network widgets so the frontend can drive the next portal slices without analyzer noise or responsive-layout regressions.
+- Frontend Files:
+  - updated frontend/lib/features/portal/presentation/screens/portal_shell.dart
+  - updated frontend/lib/features/portal/presentation/portal_role_data.dart
+- What changed:
+  - routed super-admin navigation through grouped admin portal navigation instead of the generic role sidebar
+  - introduced a custom Admin Operations Center dashboard with KPI, queue, quick-action, and platform-health panels
+  - repurposed the existing admin businesses route into a centralized Provider Network view to match the frozen provider-domain architecture
+  - replaced unsupported `AppColors.surface` references with live theme colors already defined in the app theme
+  - fixed the admin dashboard and provider-network responsive branches so `Expanded` is only applied inside wide-layout rows, avoiding invalid widget reuse in stacked layouts
+- Why this approach was chosen:
+  - the portal shell already acts as the UI contract for frozen role-based navigation, so shaping the admin experience here is safer than adding more backend modules first
+  - keeping the existing route keys while changing the admin presentation prevents route drift during the architecture-freeze phase
+  - stabilizing the new admin widgets now gives us a clean base for the next UI-first slices: provider portal, agent portal, and CRM portal
+- Verification:
+  - cd frontend && flutter analyze lib/features/portal/presentation/screens/portal_shell.dart lib/features/portal/presentation/portal_role_data.dart
+
+---
+2026-06-28 21:41:31 IST
+
+## 100. Portal Sidebar Drawer Toggle Alignment
+High-level description: Changed the non-customer portal shell to use the same drawer-triggered navigation pattern as the customer shell so the sidebar opens only when the menu button is pressed instead of staying pinned on screen.
+- Frontend Files:
+  - updated frontend/lib/features/portal/presentation/screens/portal_shell.dart
+- What changed:
+  - replaced the fixed desktop sidebar branch for non-customer portals with a drawer-backed scaffold
+  - kept the existing `_RoleDrawer` navigation content so admin and staff portals now open their sidebar from the header menu button
+  - removed the obsolete `_RoleSidebar` widget after the shell stopped using pinned side navigation
+  - updated the loading skeleton to stop rendering a desktop sidebar placeholder now that portal navigation is drawer-driven
+- Why:
+  - the visible admin screenshot showed a permanently open sidebar even though the interaction expectation is a button-triggered panel
+  - aligning all portals to the drawer pattern keeps navigation behavior consistent and reduces layout crowding on desktop widths
+- Verification:
+  - cd frontend && flutter analyze lib/features/portal/presentation/screens/portal_shell.dart
+
+---
+2026-06-28 21:46:24 IST
+
+## 101. Admin Portal Phase 2 Master Data Workspace
+High-level description: Added the first true Admin Phase 2 frontend workspace by turning the existing admin `membership-plans` route into a centralized Master Data console without changing the frozen route contract.
+- Frontend Files:
+  - updated frontend/lib/features/portal/presentation/portal_role_data.dart
+  - updated frontend/lib/features/portal/presentation/screens/portal_shell.dart
+- What changed:
+  - repurposed the visible admin section metadata for `membership-plans` into `Master Data` while preserving the underlying route key
+  - added a dedicated admin-only Master Data view with grouped filters, searchable domain rows, readiness watchlist, and control-module side rail
+  - modeled the UI around the core admin master domains: branches, departments, services, provider types, membership plans, benefit rules, referral rules, wallet rules, holiday calendar, and working hours
+  - wired the super-admin shell to render the new Master Data workspace explicitly instead of falling back to the generic hero/metric/list layout
+- Why:
+  - this keeps the architecture frozen while moving the admin portal toward the operations-layer backbone you outlined
+  - using the existing route key avoids frontend route drift while still letting the visible admin UX evolve into the correct module shape
+  - building this surface first gives later customer, provider, CRM, and agent views one centralized configuration story to consume
+- Verification:
+  - cd frontend && flutter analyze lib/features/portal/presentation/screens/portal_shell.dart lib/features/portal/presentation/portal_role_data.dart
+
+---
+2026-06-28 21:59:02 IST
+
+## 102. Split Portal Shell Freeze And Super Admin Desktop Workspace
+High-level description: Split the portal shell into customer mobile-first behavior and internal desktop-first behavior, then applied the first full desktop workspace treatment to Super Admin with a permanent collapsible sidebar and denser operations header.
+- Frontend Files:
+  - updated frontend/lib/features/portal/presentation/screens/portal_shell.dart
+- Documentation Files:
+  - updated docs/SHIELD Portal Navigation Map.md
+- What changed:
+  - customer portal kept the mobile-shaped drawer shell while internal roles now render through a desktop-first row layout with a persistent left workspace rail
+  - added internal sidebar collapse state to the shared portal shell so desktop users can switch between compact and expanded navigation without route changes
+  - introduced a denser generic internal role rail and upgraded the super-admin sidebar into a responsibility-based desktop workspace nav
+  - reorganized super-admin navigation groups around enterprise responsibilities: operations, people, provider network, commercial, reports, and system
+  - reduced the admin dashboard hero height and moved it toward search-first, action-first workspace behavior with tighter KPI summaries
+  - froze the customer/mobile-first versus internal/desktop-first shell rule inside the portal navigation doc to prevent UI architecture drift
+- Why:
+  - customer and internal users have different working environments, so sharing one navigation behavior was starting to actively hurt the product direction
+  - the admin portal needed to feel like an all-day enterprise workspace, not a mobile drawer adapted to desktop widths
+  - preserving the existing route keys keeps the frontend architecture stable while the visible shell behavior becomes role-appropriate
+- Verification:
+  - cd frontend && flutter analyze lib/features/portal/presentation/screens/portal_shell.dart lib/features/portal/presentation/portal_role_data.dart
+
+---
+2026-06-28 22:00:14 IST
+
+## 103. Super Admin Workspace Hierarchy Pass
+High-level description: Rebalanced the Super Admin experience away from tall hero cards and evenly weighted floating panels toward a denser enterprise workspace hierarchy with stronger scanning structure.
+- Frontend Files:
+  - updated frontend/lib/features/portal/presentation/screens/portal_shell.dart
+- What changed:
+  - converted the super-admin left rail into a cleaner responsibility-based desktop sidebar with compact one-line section rows and a stronger collapsed state
+  - reduced the visual weight of the admin top banner and replaced the oversized intro pattern with a tighter search-first workspace header
+  - enriched KPI summaries so each card carries more operational signal without increasing footprint
+  - shifted the admin dashboard toward a clearer workspace hierarchy: top controls first, then KPI strip, then work/monitoring panels beneath
+  - kept internal portal navigation dense and desktop-oriented while preserving the frozen route contract underneath
+- Why:
+  - the previous admin layout still read more like a stack of attractive cards than an all-day operations console
+  - enterprise users need faster scanning, denser summaries, and clearer grouping of what matters now versus what is merely informative
+  - this pass improves hierarchy and workspace feel without expanding backend scope or introducing route churn
+- Verification:
+  - cd frontend && flutter analyze lib/features/portal/presentation/screens/portal_shell.dart lib/features/portal/presentation/portal_role_data.dart
+
+---
+2026-06-28 22:05:42 IST
+
+## 104. Reusable Internal Workspace Layout Freeze
+High-level description: Replaced the old internal fallback page stack with one reusable enterprise workspace body so future internal portals inherit the same desktop-first hierarchy before screen-specific customization.
+- Frontend Files:
+  - updated frontend/lib/features/portal/presentation/screens/portal_shell.dart
+- Documentation Files:
+  - updated docs/SHIELD Portal Navigation Map.md
+- What changed:
+  - swapped the generic internal `Hero -> KPIs -> Queue -> Activity` stack for a shared workspace layout used by internal fallback sections
+  - compacted the top strip into a smaller `Today's Operations` surface with summary counts and lighter action chips
+  - made KPI cards denser and more horizontally scannable for repeated desktop use
+  - introduced a reusable 70/30 desktop body with a main work column, utility rail, and lower analytics/table section
+  - converted repeated queue/activity card stacks into parent work panels with row-based items and denser list treatment
+  - froze the reusable internal workspace-shell rule in the portal navigation doc so new internal screens inherit structure before adding role-specific variation
+- Why:
+  - the internal portals needed one shared workspace grammar before more screens were built, otherwise card-heavy page patterns would keep repeating
+  - this gives admin, CRM, provider, agent, and manager portals a stronger enterprise baseline without changing routes or backend scope
+  - moving to section-based workspace hierarchy makes the UI feel more like software for decisions and tasks, not a landing page made of cards
+- Verification:
+  - cd frontend && flutter analyze lib/features/portal/presentation/screens/portal_shell.dart lib/features/portal/presentation/portal_role_data.dart
+
+
+## 105. Enterprise Workspace Components For Internal Portals
+**High-level description**: Replaced the remaining generic internal dashboard body blocks with reusable enterprise workspace components while keeping the desktop shell frozen.
+- Introduced a shared `Enterprise Work Panel` pattern for row-based operational sections like Today's Work and Approvals & Exceptions.
+- Introduced a shared `Enterprise Right Utility Panel` that consolidates quick actions, notifications, compact daily signals, and recent activity into one reusable rail.
+- Introduced a shared `Enterprise Data Table` block so internal portals can shift from repeated cards toward denser operational summaries without redesigning each portal independently.
+- Kept the customer/mobile path unchanged and avoided further shell restructuring so future portal screens can inherit these components directly.
+
+### Files Modified/Created
+**Frontend Files (Modified)**:
+- frontend/lib/features/portal/presentation/screens/portal_shell.dart
+
+**Backend Files**:
+- None
+
+---
+2026-06-28 22:11:52 IST
+
+
+## 106. Super Admin Sidebar Cleanup
+**High-level description**: Removed non-essential sidebar callout blocks from the Super Admin desktop navigation so the left rail stays focused on identity and navigation only.
+- Removed the Workspace Focus helper card from the admin sidebar header area.
+- Removed the dark footer note about the desktop-first workspace from the bottom of the admin sidebar.
+- Kept the super-admin shell, grouped navigation, and desktop layout unchanged while reducing sidebar noise.
+
+### Files Modified/Created
+**Frontend Files (Modified)**:
+- frontend/lib/features/portal/presentation/screens/portal_shell.dart
+
+**Backend Files**:
+- None
+
+---
+2026-06-28 22:13:15 IST
+
+
+## 107. Customer Wallet Blank Cards And Legacy Ledger Fallback
+**High-level description**: Fixed the customer wallet screen so dark metric tiles render correctly and the backend wallet service can still surface seeded legacy wallet history while split-ledger data is incomplete in development.
+- Frontend wallet metric cards no longer render white content inside white AppCard shells when used in the dark wallet hero.
+- Customer wallet recent activity now shows an explicit empty-state message instead of leaving the section visually blank when no transactions are available.
+- Backend wallet summary and transaction reads now fall back to legacy wallet_transactions rows when the newer split-ledger tables are empty, which matches the current seed state and prevents false-zero wallet views during development.
+- Preserved the split-ledger architecture as the primary read path; the legacy path is a dev/runtime compatibility bridge until data is fully migrated.
+
+### Files Modified/Created
+**Frontend Files (Modified)**:
+- frontend/lib/features/portal/presentation/screens/portal_shell.dart
+
+**Backend Files (Modified)**:
+- backend/src/wallet/wallet.service.ts
+
+---
+2026-06-28 22:21:20 IST
+
+---
+2026-06-28 22:38:00 IST
+
+## 108. Provider Network Management (Admin Portal Phase 2) and Vercel Configuration
+**High-level description**: Implemented full dynamic Provider CRUD operations, branch assignment, live performance tracking, and analytics in the Super Admin portal, and documented the Vercel project deployment IDs and URLs.
+- Created NestJS `ServiceProviderModule` with full database CRUD endpoints, branch assignment mapping, performance calculation, and aggregate analytics.
+- Replaced mock frontend lists in the Admin Provider Network screen with dynamic API loading from NestJS.
+- Added dialogs for creating, editing, and deleting providers, including branch selection.
+- Integrated a live-performance view showing provider appointments, unique patients, completion rate, and revenue on selection.
+- Cleared all flutter analyzer warnings regarding unused variables in the provider dashboard.
+- Documented Vercel project names, project IDs, and deployment URLs in backend README, frontend README, and REST API Specification.
+
+### Files Modified/Created
+**Backend Files (Created)**:
+- backend/src/service-provider/service-provider.module.ts
+- backend/src/service-provider/service-provider.service.ts
+- backend/src/service-provider/service-provider.controller.ts
+
+**Backend Files (Modified)**:
+- backend/src/app.module.ts
+- backend/README.md
+- docs/SHIELD REST API Specification.docx.md
+
+**Frontend Files (Modified)**:
+- frontend/lib/shared/services/api_service.dart
+- frontend/lib/features/portal/presentation/screens/portal_shell.dart
+- frontend/README.md

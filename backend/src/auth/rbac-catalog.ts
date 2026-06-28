@@ -319,3 +319,9 @@ export const RBAC_ROLES: RoleDefinition[] = [
     ],
   },
 ];
+
+export function getRolePermissions(roleCode: string) {
+  return (
+    RBAC_ROLES.find((role) => role.code === roleCode)?.permissions.slice() ?? []
+  );
+}
