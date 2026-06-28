@@ -8,6 +8,7 @@ import {
   getApps,
   initializeApp,
 } from 'firebase-admin/app';
+import { getAuth } from 'firebase-admin/auth';
 import { getMessaging } from 'firebase-admin/messaging';
 
 type ServiceAccountJson = {
@@ -138,5 +139,19 @@ export class FirebaseAdminService {
       },
       data: payload.data,
     });
+  }
+
+  async verifyIdToken(idToken: string) {
+    const normalized = idToken.trim();
+    if (!normalized) {
+      throw new Error('Firebase ID token is required.');
+    }
+
+    const app = this.getOrInitializeApp();
+    if (!app) {
+      throw new Error('Firebase Admin credentials are unavailable.');
+    }
+
+    return getAuth(app).verifyIdToken(normalized, true);
   }
 }

@@ -1,96 +1,55 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { randomUUID } from 'crypto';
+import { ReferralService } from '../referral/referral.service';
+import { PricingService } from '../pricing/pricing.service';
+import { WalletService } from '../wallet/wallet.service';
+import { WALLET_LEDGER_TYPES } from '../pricing/pricing.types';
 
 @Injectable()
 export class CustomerService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly referralService: ReferralService,
+    private readonly pricingService: PricingService,
+    private readonly walletService: WalletService,
+  ) {}
 
   async create(data: any, staffUserId?: bigint) {
-    const customerUuid = randomUUID();
-    const customerCode = `CUST-${Math.floor(100000 + Math.random() * 900000)}`;
+    const result = await this.createCustomerAggregate(data, staffUserId);
+    const preloadConfig = await this.pricingService.getPreloadConfig();
 
-    return this.prisma.$transaction(async (tx) => {
-      // Look up referring customer if referred_by_code is provided
-      let referredById: bigint | null = null;
-      if (data.referred_by_code) {
-        const referrer = await tx.customer.findFirst({
-          where: { referralCode: data.referred_by_code },
-        });
-        if (referrer) {
-          referredById = referrer.id;
-        }
-      }
-
-      // 1. Create Customer
-      const customer = await tx.customer.create({
-        data: {
-          uuid: customerUuid,
-          customerCode,
-          aadhaarNumber: data.aadhaar_number,
-          firstName: data.first_name,
-          lastName: data.last_name,
-          dob: data.dob ? new Date(data.dob) : null,
-          gender: data.gender,
-          mobile: data.mobile,
-          email: data.email || 'Zabnixprivatelimited@gmail.com',
-          addressLine1: data.address_line1 || data.address,
-          addressLine2: data.address_line2,
-          city: data.city,
-          district: data.district,
-          state: data.state,
-          pincode: data.pincode,
-          status: 'PENDING',
-          createdBy: staffUserId,
-          bloodGroup: data.blood_group || null,
-          agentCode: data.agent_code || 'AGT-SAHAKAR-DEFAULT',
-          referralCode: data.referral_code || `REF-${Math.floor(100000 + Math.random() * 900000)}`,
-          referredById: referredById,
+    if (preloadConfig.cashPreloadEnabled && preloadConfig.cashPreloadAmount > 0) {
+      await this.walletService.createLedgerEntry({
+        walletId: result.walletId,
+        transactionType: 'OPENING_BALANCE',
+        subLedgerType: WALLET_LEDGER_TYPES.CASH,
+        amount: preloadConfig.cashPreloadAmount,
+        remarks: 'Admin-configured cash wallet preload',
+        createdBy: staffUserId,
+        metadata: {
+          preloadType: 'CASH',
+          source: 'COMMERCIAL_SETTING',
         },
       });
+    }
 
-      // 2. Fetch standard membership type
-      const stdType = await tx.membershipType.findFirst({
-        where: { code: 'STANDARD' },
-      });
-
-      // 3. Create Membership
-      if (stdType) {
-        await tx.membership.create({
-          data: {
-            uuid: randomUUID(),
-            customerId: customer.id,
-            membershipTypeId: stdType.id,
-            membershipNumber: `SHLD-${new Date().getFullYear()}-${customerCode.split('-')[1]}`,
-            joiningFee: stdType.joiningFee,
-            status: 'INACTIVE',
-          },
-        });
-      }
-
-      // 4. Create Wallet
-      await tx.wallet.create({
-        data: {
-          uuid: randomUUID(),
-          customerId: customer.id,
-          status: 'ACTIVE',
+    if (preloadConfig.benefitPreloadEnabled && preloadConfig.benefitPreloadAmount > 0) {
+      await this.walletService.createLedgerEntry({
+        walletId: result.walletId,
+        transactionType: 'PRELOAD',
+        subLedgerType: WALLET_LEDGER_TYPES.SHIELD_BENEFIT,
+        amount: preloadConfig.benefitPreloadAmount,
+        remarks: 'Admin-configured hidden SHIELD benefit preload',
+        createdBy: staffUserId,
+        metadata: {
+          preloadType: 'BENEFIT',
+          source: 'COMMERCIAL_SETTING',
         },
       });
+    }
 
-      // 5. Create Credit Account
-      await tx.creditAccount.create({
-        data: {
-          uuid: randomUUID(),
-          customerId: customer.id,
-          creditLimit: 3000.00,
-          availableCredit: 3000.00,
-          outstandingAmount: 0.00,
-          status: 'ACTIVE',
-        },
-      });
-
-      return customer;
-    });
+    return result.customer;
   }
 
   async findOne(id: bigint) {
@@ -130,7 +89,12 @@ export class CustomerService {
     });
   }
 
-  async search(query: { mobile?: string; name?: string; aadhaar?: string; membership?: string }) {
+  async search(query: {
+    mobile?: string;
+    name?: string;
+    aadhaar?: string;
+    membership?: string;
+  }) {
     const whereClause: any = {};
 
     if (query.mobile) {
@@ -163,23 +127,21 @@ export class CustomerService {
   async approve(id: bigint, staffUserId: bigint) {
     const customer = await this.findOne(id);
 
-    return this.prisma.$transaction(async (tx) => {
-      // Lookup the staff user's department's business or fall back to Perinthalmanna branch
+    const approvedCustomer = await this.prisma.$transaction(async (tx) => {
       const staffUser = await tx.user.findUnique({
         where: { id: staffUserId },
-        include: { department: true }
+        include: { department: true },
       });
       let issuedBusinessId = staffUser?.department?.businessId || null;
       if (!issuedBusinessId) {
         const defaultBiz = await tx.business.findFirst({
-          where: { code: 'HYP-PERINTHALMANNA' }
+          where: { code: 'HYP-PERINTHALMANNA' },
         });
         if (defaultBiz) {
           issuedBusinessId = defaultBiz.id;
         }
       }
 
-      // Create shield card on approval
       await tx.shieldCard.create({
         data: {
           uuid: randomUUID(),
@@ -187,44 +149,24 @@ export class CustomerService {
           cardNumber: `SHLD-CARD-${customer.customerCode?.split('-')[1]}`,
           qrCode: `SHLD-CARD-${customer.customerCode?.split('-')[1]}-TOKEN`,
           status: 'ACTIVE',
-          issuedBusinessId: issuedBusinessId,
+          issuedBusinessId,
           issuedAt: new Date(),
         },
       });
 
-      // Update membership status to ACTIVE
       if (customer.membership) {
         await tx.membership.update({
           where: { id: customer.membership.id },
           data: {
             status: 'ACTIVE',
             activationDate: new Date(),
-            expiryDate: new Date(new Date().setFullYear(new Date().getFullYear() + 1)),
+            expiryDate: new Date(
+              new Date().setFullYear(new Date().getFullYear() + 1),
+            ),
           },
         });
       }
 
-      // Credit referral points if customer was referred by someone
-      if (customer.referredById) {
-        const referrerWallet = await tx.wallet.findFirst({
-          where: { customerId: customer.referredById }
-        });
-        if (referrerWallet) {
-          await tx.walletTransaction.create({
-            data: {
-              uuid: randomUUID(),
-              walletId: referrerWallet.id,
-              transactionType: 'CREDIT',
-              subLedgerType: 'POINTS',
-              amount: 100.00,
-              remarks: `Referral bonus for onboarding ${customer.firstName} ${customer.lastName}`,
-              createdBy: staffUserId,
-            }
-          });
-        }
-      }
-
-      // Create status history log
       await tx.customerStatusHistory.create({
         data: {
           uuid: randomUUID(),
@@ -244,12 +186,15 @@ export class CustomerService {
         },
       });
     });
+
+    await this.referralService.markReferralVerified(approvedCustomer.id);
+    return approvedCustomer;
   }
 
   async suspend(id: bigint, staffUserId: bigint) {
     const customer = await this.findOne(id);
 
-    return this.prisma.$transaction(async (tx) => {
+    const suspendedCustomer = await this.prisma.$transaction(async (tx) => {
       if (customer.membership) {
         await tx.membership.update({
           where: { id: customer.membership.id },
@@ -279,6 +224,116 @@ export class CustomerService {
         where: { id: customer.id },
         data: { status: 'SUSPENDED' },
       });
+    });
+
+    await this.referralService.rejectReferral({
+      referredCustomerId: customer.id,
+      reason: 'Customer onboarding or membership became inactive before qualification.',
+    });
+
+    return suspendedCustomer;
+  }
+
+  private async createCustomerAggregate(data: any, staffUserId?: bigint) {
+    const customerUuid = randomUUID();
+    const customerCode = `CUST-${Math.floor(100000 + Math.random() * 900000)}`;
+
+    return this.prisma.$transaction(async (tx) => {
+      let referredById: bigint | null = null;
+      if (data.referred_by_code) {
+        const referrer = await tx.customer.findFirst({
+          where: { referralCode: data.referred_by_code },
+        });
+        if (referrer && referrer.mobile !== data.mobile) {
+          referredById = referrer.id;
+        }
+      }
+
+      const customer = await tx.customer.create({
+        data: {
+          uuid: customerUuid,
+          customerCode,
+          aadhaarNumber: data.aadhaar_number,
+          firstName: data.first_name,
+          lastName: data.last_name,
+          dob: data.dob ? new Date(data.dob) : null,
+          gender: data.gender,
+          mobile: data.mobile,
+          email: data.email || null,
+          addressLine1: data.address_line1 || data.address,
+          addressLine2: data.address_line2,
+          city: data.city,
+          district: data.district,
+          state: data.state,
+          pincode: data.pincode,
+          status: 'PENDING',
+          createdBy: staffUserId,
+          bloodGroup: data.blood_group || null,
+          agentCode: data.agent_code || 'AGT-SAHAKAR-DEFAULT',
+          referralCode:
+            data.referral_code ||
+            `REF-${Math.floor(100000 + Math.random() * 900000)}`,
+          referredById,
+        },
+      });
+
+      const stdType = await tx.membershipType.findFirst({
+        where: { code: 'STANDARD' },
+      });
+
+      if (stdType) {
+        await tx.membership.create({
+          data: {
+            uuid: randomUUID(),
+            customerId: customer.id,
+            membershipTypeId: stdType.id,
+            membershipNumber: `SHLD-${new Date().getFullYear()}-${customerCode.split('-')[1]}`,
+            joiningFee: stdType.joiningFee,
+            status: 'INACTIVE',
+          },
+        });
+      }
+
+      const wallet = await tx.wallet.create({
+        data: {
+          uuid: randomUUID(),
+          customerId: customer.id,
+          status: 'ACTIVE',
+        },
+      });
+
+      await tx.creditAccount.create({
+        data: {
+          uuid: randomUUID(),
+          customerId: customer.id,
+          creditLimit: 3000.0,
+          availableCredit: 3000.0,
+          outstandingAmount: 0.0,
+          status: 'ACTIVE',
+        },
+      });
+
+      if (referredById) {
+        await tx.referralRewardEvent.upsert({
+          where: { referredCustomerId: customer.id },
+          update: {
+            referrerCustomerId: referredById,
+            referralCode: data.referred_by_code,
+            status: 'PENDING',
+            rewardPoints: 0,
+          },
+          create: {
+            uuid: randomUUID(),
+            referrerCustomerId: referredById,
+            referredCustomerId: customer.id,
+            referralCode: data.referred_by_code,
+            status: 'PENDING',
+            rewardPoints: 0,
+          },
+        });
+      }
+
+      return { customer, walletId: wallet.id };
     });
   }
 }

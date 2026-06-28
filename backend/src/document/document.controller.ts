@@ -12,12 +12,16 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import * as multer from 'multer';
+import { CurrentPrincipal } from '../auth/current-principal.decorator';
+import { RequirePermissions } from '../auth/permissions.decorator';
+import type { ShieldPrincipal } from '../auth/auth.types';
 import { DocumentService } from './document.service';
 
 @Controller()
 export class DocumentController {
   constructor(private documentService: DocumentService) {}
 
+  @RequirePermissions('documents.create')
   @Post('documents/upload')
   @UseInterceptors(
     FileInterceptor('file', {
@@ -25,8 +29,20 @@ export class DocumentController {
       limits: { fileSize: 15 * 1024 * 1024 },
     }),
   )
-  async upload(@UploadedFile() file: any, @Body() body: any) {
-    const uploaderId = body.uploaded_by ? BigInt(body.uploaded_by) : undefined;
+  async upload(
+    @UploadedFile() file: any,
+    @Body() body: any,
+    @CurrentPrincipal() principal?: ShieldPrincipal,
+  ) {
+    const uploaderId =
+      principal?.userId != null
+        ? BigInt(principal.userId)
+        : body.uploaded_by
+          ? BigInt(body.uploaded_by)
+          : undefined;
+    if (principal?.principalType === 'CUSTOMER') {
+      body.customer_id = principal.customerId;
+    }
     const doc = await this.documentService.upload({
       customerId: BigInt(body.customer_id),
       fileName: file?.originalname || body.file_name || 'prescription.pdf',
@@ -43,9 +59,18 @@ export class DocumentController {
     };
   }
 
+  @RequirePermissions('documents.view')
   @Get('documents')
-  async list(@Query('customer_id') customerId?: string) {
-    const targetCustomerId = customerId ? BigInt(customerId) : undefined;
+  async list(
+    @Query('customer_id') customerId?: string,
+    @CurrentPrincipal() principal?: ShieldPrincipal,
+  ) {
+    const targetCustomerId =
+      principal?.principalType === 'CUSTOMER'
+        ? BigInt(principal.customerId!)
+        : customerId
+          ? BigInt(customerId)
+          : undefined;
     const docs = await this.documentService.list(targetCustomerId);
     return {
       success: true,
@@ -54,6 +79,7 @@ export class DocumentController {
     };
   }
 
+  @RequirePermissions('documents.view')
   @Get('documents/:id')
   async findOne(@Param('id') id: string) {
     const doc = await this.documentService.findOne(BigInt(id));
@@ -64,6 +90,7 @@ export class DocumentController {
     };
   }
 
+  @RequirePermissions('documents.view')
   @Get('documents/:id/download')
   async download(@Param('id') id: string) {
     const url = await this.documentService.getDownloadUrl(BigInt(id));
@@ -76,6 +103,7 @@ export class DocumentController {
     };
   }
 
+  @RequirePermissions('documents.delete')
   @Delete('documents/:id')
   @HttpCode(200)
   async softDelete(@Param('id') id: string) {
@@ -86,6 +114,7 @@ export class DocumentController {
     };
   }
 
+  @RequirePermissions('documents.approve')
   @Post('document-intelligence/classify')
   async classify(@Body() body: any) {
     const doc = await this.documentService.classify(BigInt(body.document_id));
@@ -96,6 +125,7 @@ export class DocumentController {
     };
   }
 
+  @RequirePermissions('documents.view')
   @Post('document-intelligence/extract')
   async extract(@Body() body: any) {
     const doc = await this.documentService.extract(BigInt(body.document_id));
@@ -106,6 +136,7 @@ export class DocumentController {
     };
   }
 
+  @RequirePermissions('documents.view')
   @Post('document-intelligence/validate')
   async validate(@Body() body: any) {
     const staffId = body.staff_id ? BigInt(body.staff_id) : BigInt(1);
@@ -121,6 +152,7 @@ export class DocumentController {
     };
   }
 
+  @RequirePermissions('medical_records.view')
   @Get('document-intelligence/prescription-review/:documentId')
   async getPrescriptionReview(@Param('documentId') documentId: string) {
     const review = await this.documentService.getPrescriptionReview(
@@ -133,6 +165,7 @@ export class DocumentController {
     };
   }
 
+  @RequirePermissions('medical_records.approve')
   @Post('document-intelligence/prescription-review/:documentId/approve')
   async approvePrescriptionReview(
     @Param('documentId') documentId: string,
@@ -152,6 +185,7 @@ export class DocumentController {
     };
   }
 
+  @RequirePermissions('documents.view')
   @Get('document-intelligence/logs/:documentId')
   async getLogs(@Param('documentId') documentId: string) {
     const logs = await this.documentService.getLogs(BigInt(documentId));

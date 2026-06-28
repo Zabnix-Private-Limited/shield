@@ -5,12 +5,14 @@ import {
   Param,
   Body,
 } from '@nestjs/common';
+import { RequirePermissions } from '../auth/permissions.decorator';
 import { CreditService } from './credit.service';
 
 @Controller('credit/accounts')
 export class CreditController {
   constructor(private creditService: CreditService) {}
 
+  @RequirePermissions('wallet.view')
   @Get(':id')
   async getAccount(@Param('id') id: string) {
     const data = await this.creditService.getCreditAccount(BigInt(id));
@@ -21,6 +23,7 @@ export class CreditController {
     };
   }
 
+  @RequirePermissions('wallet.view')
   @Get(':id/transactions')
   async getTransactions(@Param('id') id: string) {
     const txns = await this.creditService.getTransactions(BigInt(id));
@@ -31,6 +34,7 @@ export class CreditController {
     };
   }
 
+  @RequirePermissions('wallet.approve')
   @Post(':id/approve')
   async approve(@Param('id') id: string, @Body() body: any) {
     const account = await this.creditService.approveLimitIncrease(

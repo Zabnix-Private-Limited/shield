@@ -15,11 +15,19 @@ import { DashboardModule } from './dashboard/dashboard.module';
 import { PharmacyModule } from './pharmacy/pharmacy.module';
 import { BigIntInterceptor } from './common/interceptors/bigint.interceptor';
 import { StorageModule } from './storage/storage.module';
+import { SupportModule } from './support/support.module';
+import { RedisModule } from './redis/redis.module';
+import { AuthModule } from './auth/auth.module';
+import { PricingModule } from './pricing/pricing.module';
+import { ReferralModule } from './referral/referral.module';
 
 @Module({
   imports: [
     SentryModule.forRoot(),
+    AuthModule,
     PrismaModule,
+    PricingModule,
+    ReferralModule,
     CustomerModule,
     WalletModule,
     CreditModule,
@@ -30,6 +38,8 @@ import { StorageModule } from './storage/storage.module';
     DashboardModule,
     PharmacyModule,
     StorageModule,
+    SupportModule,
+    RedisModule,
   ],
   controllers: [AppController],
   providers: [
@@ -45,4 +55,3 @@ import { StorageModule } from './storage/storage.module';
   ],
 })
 export class AppModule {}
-

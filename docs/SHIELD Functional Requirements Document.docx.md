@@ -34,19 +34,27 @@ Access:
 
 * **Profile**: Name, Address, Pin Code, Phone Number, Date of Birth, Age, Blood Group
 
-* **Wallet**: Cash, Points, Transaction History
+* **Wallet**: Cash Wallet, Reward Points, Transaction History, Applied SHIELD Benefits
 
 * **Services**: Pharmacy, Lab, Homecare, Dental Consultation, Doctor Consultation, Cosmetic Consultation, Dietitian Consultation
 
 * **Appointments**: Book appointments, Tele-consultation, Online Video consultation
 
+* **Referral**: Referral Code, Referral Tree (own subtree only), Points Summary
+
 ---
 
-## Service Providers (Pharmacy, Clinic, Dental, Cosmetic, Homecare, Dietitian Staff)
+## SHIELD Agent
 
 Access:
 
-* **Customer Card Utilisation**: Scan QR/Card and record service utilization under local rules.
+* Customer Registration
+
+* Membership Creation
+
+* Referral Tree for Owned Customers
+
+* Wallet Recharge / Manual Assistance for Owned Customers
 
 ---
 
@@ -62,45 +70,35 @@ Access:
 
 * Notes
 
----
-
-## Shield Executive
-
-Access:
-
-* Customer Approval (validating agent_code)
-
-* Membership Management
-
-* Balance Adjustments
-
-* Reversal Requests
+* Assigned Customer Retention View
 
 ---
 
-## Manager
+## Service Providers (Pharmacy, Lab, Doctor, Homecare, Dental, Cosmetic, Dietitian)
 
 Access:
 
-* Reports
+* **Customer Card Utilisation**: Scan QR/Card and record service utilization under local rules.
 
-* Analytics
+* **Documents & Medical Records**: View/upload records for assigned or validly-related customers only
 
-* Approvals
+* **Service Workflow**: Appointments, bills, reports, prescriptions, or visit notes based on provider type
 
 ---
 
-## Super Admin / Administrator
+## Admin
 
 Access:
 
-* Branch-wise IDs list
+* Full platform access
 
-* IDs service utilization
+* User / Role / Permission Management
 
-* System reports
+* Business Rules and Benefit Configuration
 
-* Complete System configuration
+* Referral Analytics
+
+* System Reports and Operations Center
 
 ---
 
@@ -110,7 +108,7 @@ Access:
 
 * Customer Mobile OTP Login
 
-* Staff & Service Provider Email Login (Email/Password)
+* Internal User Google Sign-In (Firebase)
 
 * Role & Permission Assignment
 
@@ -126,7 +124,7 @@ System shall authenticate Customers using Mobile OTP.
 
 FR-001.2
 
-System shall authenticate Staff, Service Providers, and Admins using Email and Password credentials.
+System shall authenticate Staff, Service Providers, and Admins using Firebase Google Sign-In and server-side Firebase ID token verification.
 
 FR-002
 
@@ -134,11 +132,11 @@ System shall assign roles during onboarding.
 
 FR-003
 
-System shall restrict access using RBAC.
+System shall restrict access using RBAC with scoped access enforcement.
 
 FR-004
 
-System shall apply ABAC policies on every request.
+System shall apply scope and relationship-based access policies on every request.
 
 FR-005
 
@@ -252,11 +250,13 @@ System shall support configurable discounts.
 
 * Ledger-Based Balance Creation
 
-* Cash & Points Ledger Segregation
+* Cash, Reward Points, and Hidden SHIELD Benefit Ledger Segregation
 
 * Customer Balance Recharge (Cash)
 
-* Referral Points Crediting
+* Delayed Referral Points Crediting
+
+* Benefit Application Tracking (Hidden from customer balance)
 
 * Balance Deduction
 
@@ -274,7 +274,15 @@ System shall track Cash balances separately (recharged or preloaded amounts).
 
 FR-017.2
 
-System shall track Points balances separately (referrals points credited after successful registration of a referred customer).
+System shall track Reward Points separately and only credit them after referral qualification rules have been satisfied.
+
+FR-017.3
+
+System shall maintain a hidden SHIELD Benefit ledger for company-funded promotional credit.
+
+FR-017.4
+
+System shall never expose remaining SHIELD Benefit balance in the customer wallet UI; only applied benefit amounts may be shown per transaction.
 
 FR-018
 
@@ -286,15 +294,15 @@ System shall support recharge transactions.
 
 FR-020
 
-System shall support promotional/referral credits to the Points sub-ledger.
+System shall support promotional and referral credits to the Reward Points sub-ledger and promotional service subsidies to the hidden SHIELD Benefit ledger.
 
 FR-021
 
-System shall support manual adjustments to either Cash or Points sub-ledgers.
+System shall support manual adjustments to Cash, Reward Points, or SHIELD Benefit ledgers based on role and policy.
 
 FR-022
 
-System shall calculate current Cash and Points balances dynamically.
+System shall calculate current Cash, Reward Points, and SHIELD Benefit balances dynamically from ledger entries.
 
 FR-023
 
@@ -306,9 +314,15 @@ Transaction Types:
 
 * Recharge (Cash)
 
-* Referral Credits (Points)
+* Referral Credits (Reward Points)
 
-* Purchase (Debited from Cash or Points)
+* Benefit Grant (Hidden)
+
+* Purchase (Debited from Cash)
+
+* Reward Redemption
+
+* Benefit Application
 
 * Discount
 
@@ -320,7 +334,53 @@ Transaction Types:
 
 ---
 
-# 7. Credit Facility Module
+# 7. Referral & Rewards Module
+
+## Features
+
+* Referral Code per Customer
+
+* Customer Referral Tree (own subtree only)
+
+* Agent Referral Tree for Owned Customers
+
+* Delayed Referral Qualification Workflow
+
+* Reward Points Ledger
+
+* Reward Redemption Rules
+
+FR-024
+
+System shall assign each customer a unique referral code.
+
+FR-025
+
+System shall store customer-to-customer referral relationships using a parent-child graph.
+
+FR-026
+
+System shall support referral reward statuses: Pending, Verified, Qualified, Rewarded, and Rejected.
+
+FR-027
+
+System shall only credit referral reward points after the referred customer completes the first eligible qualifying transaction.
+
+FR-028
+
+System shall allow customers to view only their own referral subtree.
+
+FR-029
+
+System shall allow admins to view platform-wide referral analytics.
+
+FR-030
+
+System shall redeem reward points only through configured business rules and never through bank, UPI, or cash withdrawal.
+
+---
+
+# 8. Credit Facility Module
 
 ## Features
 
@@ -330,25 +390,25 @@ Transaction Types:
 
 * Credit Settlement
 
-FR-024
+FR-031
 
 System shall maintain customer credit accounts.
 
-FR-025
+FR-032
 
 System shall track credit utilization.
 
-FR-026
+FR-033
 
 System shall track outstanding balances.
 
-FR-027
+FR-034
 
 System shall support manager approval workflows.
 
 ---
 
-# 8. Customer Verification Module
+# 9. Customer Verification Module
 
 Methods:
 
@@ -358,25 +418,25 @@ Methods:
 
 * Mobile Number
 
-FR-028
+FR-035
 
 System shall support OTP verification.
 
-FR-029
+FR-036
 
 System shall support QR verification.
 
-FR-030
+FR-037
 
 System shall support card number verification.
 
 ---
 
-# 9. Document Intelligence Engine
+# 10. Document Intelligence Engine
 
 Purpose:
 
-Automated document processing.
+Secure document storage with optional downstream extraction workflows.
 
 ## Supported Documents
 
@@ -392,43 +452,39 @@ Automated document processing.
 
 ### Processing Workflow
 
-Upload ↓ Classification ↓ Extraction ↓ Validation ↓ Approval ↓ Storage
-
-FR-031
-
-System shall support PDF uploads.
-
-FR-032
-
-System shall support image uploads.
-
-FR-033
-
-System shall classify uploaded documents.
-
-FR-034
-
-System shall extract text from PDFs.
-
-FR-035
-
-System shall use OCR for scanned files.
-
-FR-036
-
-System shall allow manual verification.
-
-FR-037
-
-System shall maintain processing logs.
+Upload ↓ Storage ↓ Metadata Capture ↓ Optional Classification/Extraction ↓ Validation ↓ Approval
 
 FR-038
 
-System shall retain original files.
+System shall support PDF uploads.
+
+FR-039
+
+System shall support image uploads.
+
+FR-040
+
+System shall retain the original uploaded file without destructive conversion.
+
+FR-041
+
+System shall capture document metadata and access controls at upload time.
+
+FR-042
+
+System may run optional document classification or extraction workflows outside the critical customer upload path.
+
+FR-043
+
+System shall allow manual review or validation for extracted document intelligence data.
+
+FR-044
+
+System shall maintain processing logs.
 
 ---
 
-# 10. Pharmacy Module
+# 11. Pharmacy Module
 
 ## Features
 
@@ -440,39 +496,43 @@ System shall retain original files.
 
 * Regularly Purchased Products Preloading
 
-* Patient Suggestions (Frequently bought together by similar patients)
+* Centralized Pricing Evaluation
 
-FR-039
+FR-045
 
 System shall allow pharmacy staff to upload bills.
 
-FR-039.1
+FR-045.1
 
 System shall allow customers to upload prescriptions directly from their mobile interface.
 
-FR-040
+FR-046
 
-System shall extract product information.
+System shall store uploaded prescriptions as original medical documents even when no extraction workflow is triggered.
 
-FR-041
+FR-047
 
-System shall categorize products.
+System shall evaluate pharmacy pricing through a centralized pricing engine rather than module-local UI calculations.
 
-FR-042
+FR-048
+
+System shall not apply SHIELD Benefit promotional credit to pharmacy medicine billing.
+
+FR-049
 
 System shall record purchases.
 
-FR-043
+FR-050
 
 System shall maintain purchase history.
 
-FR-043.1
+FR-050.1
 
 System shall preload regularly used products in the customer's interface based on past purchase history.
 
-FR-043.2
+FR-050.2
 
-System shall display suggestions of other patients' products who usually buy the same regular items.
+System may preload customer-specific regular products, but pricing and entitlements must still be evaluated server-side.
 
 ---
 
@@ -696,7 +756,7 @@ System shall support export to Excel.
 
 ---
 
-# 18. Admin Module
+# 19. Admin Module
 
 Features:
 
@@ -710,29 +770,39 @@ Features:
 
 * Discount Rules
 
-FR-073
+* Service Benefit Rules
+
+* Reward Redemption Rules
+
+* Referral Analytics and Referral Operations
+
+FR-079
 
 System shall manage users.
 
-FR-074
+FR-080
 
 System shall manage roles.
 
-FR-075
+FR-081
 
 System shall manage permissions.
 
-FR-076
+FR-082
 
 System shall manage businesses.
 
-FR-077
+FR-083
 
 System shall manage departments.
 
-FR-078
+FR-084
 
 System shall manage membership plans.
+
+FR-085
+
+System shall centrally manage service benefit eligibility, maximum benefit rules, and referral qualification rules.
 
 ---
 

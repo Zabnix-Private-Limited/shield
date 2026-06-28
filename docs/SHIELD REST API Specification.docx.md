@@ -8,7 +8,7 @@ API Style: REST
 
 Data Format: JSON
 
-Authentication: JWT \+ OTP
+Authentication: Firebase ID Token Verification \+ SHIELD JWT
 
 Base URL:
 
@@ -26,46 +26,79 @@ application/json
 
 # 1. Authentication Module
 
-## Request OTP
+## Customer Login
 
 ### Endpoint
 
-POST /auth/request-otp
+POST /auth/customer/login
 
 ### Request
 
-{  
-  "mobile": "9876543210"  
+{
+  "firebase_id_token": "firebase-id-token-from-phone-auth"
 }
 
 ### Response
 
-{  
-  "success": **true**,  
-  "message": "OTP Sent"  
+{
+  "success": **true**,
+  "message": "Customer login successful.",
+  "data": {
+    "access_token": "jwt",
+    "refresh_token": "jwt",
+    "principal": {}
+  }
 }
 
 ---
 
-## Verify OTP
+## Internal User Login
 
 ### Endpoint
 
-POST /auth/verify-otp
+POST /auth/internal/login
 
 ### Request
 
-{  
-  "mobile": "9876543210",  
-  "otp": "123456"  
+{
+  "firebase_id_token": "firebase-id-token-from-google-sign-in"
 }
 
 ### Response
 
-{  
-  "access\_token": "jwt",  
-  "refresh\_token": "jwt",  
-  "user": {}  
+{
+  "success": **true**,
+  "message": "Internal user login successful.",
+  "data": {
+    "access_token": "jwt",
+    "refresh_token": "jwt",
+    "principal": {}
+  }
+}
+
+---
+
+## Refresh Session
+
+### Endpoint
+
+POST /auth/refresh
+
+### Request
+
+{
+  "refresh_token": "jwt"
+}
+
+### Response
+
+{
+  "success": **true**,
+  "message": "Session refreshed successfully.",
+  "data": {
+    "access_token": "jwt",
+    "refresh_token": "jwt"
+  }
 }
 
 ---
@@ -73,6 +106,12 @@ POST /auth/verify-otp
 ## Logout
 
 POST /auth/logout
+
+---
+
+## Authenticated Profile
+
+GET /auth/me
 
 ---
 
@@ -186,8 +225,21 @@ GET /wallets/{customerId}
 ### Response
 
 {  
-  "balance": 14550,  
-  "credit\_available": 5000  
+  "wallet_id": 1,
+  "customer_id": 1,
+  "status": "ACTIVE",
+  "cash_wallet": {
+    "available": 14550,
+    "credited": 16000,
+    "debited": 1450
+  },
+  "reward_points": {
+    "available": 500,
+    "earned": 700,
+    "redeemed": 200
+  },
+  "shield_benefit_applied_total": 150,
+  "credit_available": 5000
 }
 
 ---
@@ -200,7 +252,8 @@ POST /wallets/recharge
 
 {  
   "customer\_id": 1,  
-  "amount": 5000  
+  "amount": 5000,
+  "ledger_type": "CASH"
 }
 
 ---
@@ -223,9 +276,16 @@ POST /wallets/adjustments
 
 ---
 
-## Reversal Request
+## Redeem Reward Points
 
-POST /wallets/reversal-request
+POST /wallets/redeem-points
+
+### Request
+
+{
+  "customer_id": 1,
+  "points": 1000
+}
 
 ---
 
@@ -559,7 +619,68 @@ Admin Only
 
 ---
 
-# 20. Dashboard Module
+# 20. Referral Module
+
+## Referral Tree
+
+GET /referrals/tree/{customerId}
+
+---
+
+## Referral Summary
+
+GET /referrals/summary/{customerId}
+
+---
+
+## Qualify Referral Reward
+
+POST /referrals/qualify
+
+### Request
+
+{
+  "customer_id": 1,
+  "service_type": "LAB",
+  "reference_type": "PURCHASE",
+  "reference_id": 101
+}
+
+---
+
+# 21. Pricing Module
+
+## Evaluate Pricing
+
+POST /pricing/evaluate
+
+### Request
+
+{
+  "customer_id": 1,
+  "service_type": "LAB",
+  "original_amount": 900,
+  "requested_reward_points": 1000
+}
+
+### Response
+
+{
+  "success": **true**,
+  "message": "Pricing evaluation completed successfully.",
+  "data": {
+    "original_amount": 900,
+    "shield_benefit_applied": 300,
+    "membership_discount_applied": 0,
+    "reward_points_applied": 0,
+    "cash_wallet_applied": 0,
+    "final_payable_amount": 600
+  }
+}
+
+---
+
+# 22. Dashboard Module
 
 ## Customer Dashboard
 
@@ -585,7 +706,7 @@ GET /dashboard/management
 
 ---
 
-# 21. Reports Module
+# 23. Reports Module
 
 ## Membership Report
 
@@ -625,7 +746,7 @@ Export Formats
 
 ---
 
-# 22. User Management Module
+# 24. User Management Module
 
 ## Create User
 
@@ -651,7 +772,7 @@ POST /users/{id}/disable
 
 ---
 
-# 23. Role Management Module
+# 25. Role Management Module
 
 ## Create Role
 
@@ -671,7 +792,7 @@ GET /roles/{id}/permissions
 
 ---
 
-# 24. Business Management Module
+# 26. Business Management Module
 
 ## Create Business
 
@@ -691,7 +812,7 @@ GET /businesses/{id}
 
 ---
 
-# 25. Audit Module
+# 27. Audit Module
 
 ## Audit Logs
 
@@ -706,7 +827,7 @@ Filters
 
 ---
 
-# 26. API Standards
+# 28. API Standards
 
 Success Response
 
@@ -737,9 +858,9 @@ Server Error
 
 ---
 
-# 27. Security Requirements
+# 29. Security Requirements
 
-Every API Requires:
+Every protected API Requires:
 
 * JWT
 
@@ -749,15 +870,23 @@ Every API Requires:
 
 * Audit Logging
 
-Except:
+Public Endpoints:
 
-/auth/request-otp
+/auth/customer/login
 
-/auth/verify-otp
+/auth/internal/login
+
+/auth/refresh
+
+/support/contact
+
+/support/feedback
+
+/health
 
 ---
 
-# 28. API Documentation
+# 30. API Documentation
 
 Documentation Tool
 

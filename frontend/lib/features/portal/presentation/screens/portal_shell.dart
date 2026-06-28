@@ -19,6 +19,7 @@ import '../../../../shared/widgets/app_skeleton.dart';
 import '../../../../shared/widgets/shield_date_input_field.dart';
 import '../../../../shared/services/api_service.dart';
 import '../../../../shared/utils/prescription_file_picker.dart';
+import '../../../../shared/widgets/customer_support_sheet.dart';
 import '../../../../shared/widgets/portal_support.dart';
 import '../portal_role_data.dart';
 
@@ -3563,6 +3564,24 @@ class _CustomerSettingsViewState extends State<_CustomerSettingsView> {
               ),
             ),
             _CompactSettingAction(
+              icon: Icons.contact_support_outlined,
+              title: 'Contact us',
+              subtitle: 'Reach SHIELD support for membership or service issues',
+              onTap: () => showCustomerSupportSheet(
+                context,
+                type: SupportSheetType.contact,
+              ),
+            ),
+            _CompactSettingAction(
+              icon: Icons.feedback_outlined,
+              title: 'Feedback',
+              subtitle: 'Share customer app feedback with the SHIELD team',
+              onTap: () => showCustomerSupportSheet(
+                context,
+                type: SupportSheetType.feedback,
+              ),
+            ),
+            _CompactSettingAction(
               icon: Icons.logout_rounded,
               title: 'Back to dashboard',
               subtitle: 'Return to the customer home view',
@@ -4828,11 +4847,10 @@ class _CustomerServicesViewState extends State<_CustomerServicesView> {
 
   String _buildUploadErrorMessage(Object error) {
     if (error is DioException) {
-      final responseMessage =
-          error.response?.data is Map<String, dynamic>
-              ? (error.response!.data['message']?.toString() ??
-                  error.response!.data['error']?.toString())
-              : null;
+      final responseMessage = error.response?.data is Map<String, dynamic>
+          ? (error.response!.data['message']?.toString() ??
+                error.response!.data['error']?.toString())
+          : null;
       if (responseMessage != null && responseMessage.trim().isNotEmpty) {
         return responseMessage.trim();
       }
@@ -4856,10 +4874,9 @@ class _CustomerServicesViewState extends State<_CustomerServicesView> {
       return;
     }
 
-    final fileName =
-        picked.name.isEmpty
-            ? 'Prescription_${DateFormat('yyyy_MM_dd_HHmm').format(DateTime.now())}.pdf'
-            : picked.name;
+    final fileName = picked.name.isEmpty
+        ? 'Prescription_${DateFormat('yyyy_MM_dd_HHmm').format(DateTime.now())}.pdf'
+        : picked.name;
     final fileSize = picked.size <= 0 ? 1024 : picked.size;
 
     setState(() {
@@ -4893,10 +4910,7 @@ class _CustomerServicesViewState extends State<_CustomerServicesView> {
         _uploadStatus =
             'Upload failed for ${_selectedPrescriptionName ?? 'selected file'}. $errorMessage';
       });
-      showPortalSnackBar(
-        context,
-        errorMessage,
-      );
+      showPortalSnackBar(context, errorMessage);
     }
   }
 
@@ -4942,7 +4956,9 @@ class _CustomerServicesViewState extends State<_CustomerServicesView> {
   }
 
   void _submitEditablePrescriptionItems() {
-    final selectedCount = _editablePrescriptionItems.where((item) => item.selected).length;
+    final selectedCount = _editablePrescriptionItems
+        .where((item) => item.selected)
+        .length;
     if (selectedCount == 0) {
       showPortalSnackBar(
         context,
@@ -5026,9 +5042,7 @@ class _CustomerServicesViewState extends State<_CustomerServicesView> {
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(
-                        color: AppColors.shieldBlue,
-                      ),
+                      borderSide: const BorderSide(color: AppColors.shieldBlue),
                     ),
                   ),
                 ),
@@ -5064,17 +5078,25 @@ class _CustomerServicesViewState extends State<_CustomerServicesView> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Review medicines before approval', style: AppTypography.h5),
+                    Text(
+                      'Review medicines before approval',
+                      style: AppTypography.h5,
+                    ),
                     const SizedBox(height: 6),
                     Text(
                       'Keep only the medicines or products you want us to review or prepare.',
-                      style: AppTypography.small.copyWith(color: AppColors.gray),
+                      style: AppTypography.small.copyWith(
+                        color: AppColors.gray,
+                      ),
                     ),
                   ],
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 6,
+                ),
                 decoration: BoxDecoration(
                   color: AppColors.shieldBlue.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(999),
@@ -5132,8 +5154,9 @@ class _CustomerServicesViewState extends State<_CustomerServicesView> {
                 value: item.selected,
                 onChanged: (value) {
                   setState(() {
-                    _editablePrescriptionItems[index] =
-                        item.copyWith(selected: value ?? false);
+                    _editablePrescriptionItems[index] = item.copyWith(
+                      selected: value ?? false,
+                    );
                   });
                 },
                 activeColor: AppColors.shieldBlue,
@@ -5185,9 +5208,7 @@ class _CustomerServicesViewState extends State<_CustomerServicesView> {
           const SizedBox(height: 8),
           TextFormField(
             initialValue: item.name,
-            decoration: const InputDecoration(
-              labelText: 'Medicine or product',
-            ),
+            decoration: const InputDecoration(labelText: 'Medicine or product'),
             onChanged: (value) {
               setState(() {
                 _editablePrescriptionItems[index] = item.copyWith(name: value);
@@ -5203,8 +5224,9 @@ class _CustomerServicesViewState extends State<_CustomerServicesView> {
                   decoration: const InputDecoration(labelText: 'Dosage'),
                   onChanged: (value) {
                     setState(() {
-                      _editablePrescriptionItems[index] =
-                          item.copyWith(dosage: value);
+                      _editablePrescriptionItems[index] = item.copyWith(
+                        dosage: value,
+                      );
                     });
                   },
                 ),
@@ -5216,8 +5238,9 @@ class _CustomerServicesViewState extends State<_CustomerServicesView> {
                   decoration: const InputDecoration(labelText: 'Frequency'),
                   onChanged: (value) {
                     setState(() {
-                      _editablePrescriptionItems[index] =
-                          item.copyWith(frequency: value);
+                      _editablePrescriptionItems[index] = item.copyWith(
+                        frequency: value,
+                      );
                     });
                   },
                 ),
@@ -5230,8 +5253,9 @@ class _CustomerServicesViewState extends State<_CustomerServicesView> {
             decoration: const InputDecoration(labelText: 'Duration'),
             onChanged: (value) {
               setState(() {
-                _editablePrescriptionItems[index] =
-                    item.copyWith(duration: value);
+                _editablePrescriptionItems[index] = item.copyWith(
+                  duration: value,
+                );
               });
             },
           ),
@@ -5252,8 +5276,9 @@ class _CustomerServicesViewState extends State<_CustomerServicesView> {
                 return InkWell(
                   onTap: () {
                     setState(() {
-                      _editablePrescriptionItems[index] =
-                          item.copyWith(name: alternative);
+                      _editablePrescriptionItems[index] = item.copyWith(
+                        name: alternative,
+                      );
                     });
                   },
                   borderRadius: BorderRadius.circular(999),
@@ -5503,7 +5528,9 @@ class _CustomerServicesViewState extends State<_CustomerServicesView> {
                                 width: 42,
                                 height: 42,
                                 decoration: BoxDecoration(
-                                  color: AppColors.shieldBlue.withValues(alpha: 0.1),
+                                  color: AppColors.shieldBlue.withValues(
+                                    alpha: 0.1,
+                                  ),
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                                 child: const Icon(
@@ -5529,9 +5556,10 @@ class _CustomerServicesViewState extends State<_CustomerServicesView> {
                                   color: _isUploadErrorStatus(_uploadStatus)
                                       ? AppColors.error
                                       : _isUploadSuccessStatus(_uploadStatus)
-                                          ? AppColors.shieldGreen
-                                          : AppColors.gray,
-                                  fontWeight: _isUploadErrorStatus(_uploadStatus) ||
+                                      ? AppColors.shieldGreen
+                                      : AppColors.gray,
+                                  fontWeight:
+                                      _isUploadErrorStatus(_uploadStatus) ||
                                           _isUploadSuccessStatus(_uploadStatus)
                                       ? FontWeight.w700
                                       : FontWeight.w500,
@@ -5548,7 +5576,9 @@ class _CustomerServicesViewState extends State<_CustomerServicesView> {
                                 width: 42,
                                 height: 42,
                                 decoration: BoxDecoration(
-                                  color: AppColors.shieldBlue.withValues(alpha: 0.1),
+                                  color: AppColors.shieldBlue.withValues(
+                                    alpha: 0.1,
+                                  ),
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                                 child: const Icon(
@@ -5576,18 +5606,23 @@ class _CustomerServicesViewState extends State<_CustomerServicesView> {
                                     Text(
                                       _uploadStatus,
                                       style: AppTypography.tiny.copyWith(
-                                        color: _isUploadErrorStatus(_uploadStatus)
+                                        color:
+                                            _isUploadErrorStatus(_uploadStatus)
                                             ? AppColors.error
-                                            : _isUploadSuccessStatus(_uploadStatus)
-                                                ? AppColors.shieldGreen
-                                                : AppColors.gray,
+                                            : _isUploadSuccessStatus(
+                                                _uploadStatus,
+                                              )
+                                            ? AppColors.shieldGreen
+                                            : AppColors.gray,
                                         fontWeight:
-                                            _isUploadErrorStatus(_uploadStatus) ||
-                                                    _isUploadSuccessStatus(
-                                                      _uploadStatus,
-                                                    )
-                                                ? FontWeight.w700
-                                                : FontWeight.w500,
+                                            _isUploadErrorStatus(
+                                                  _uploadStatus,
+                                                ) ||
+                                                _isUploadSuccessStatus(
+                                                  _uploadStatus,
+                                                )
+                                            ? FontWeight.w700
+                                            : FontWeight.w500,
                                         height: 1.25,
                                       ),
                                       maxLines: 4,
@@ -5601,13 +5636,17 @@ class _CustomerServicesViewState extends State<_CustomerServicesView> {
                         const SizedBox(height: 14),
                         AppButton(
                           text: _isUploading ? 'Processing...' : 'Choose File',
-                          onPressed: _isUploading ? null : _handlePrescriptionUpload,
+                          onPressed: _isUploading
+                              ? null
+                              : _handlePrescriptionUpload,
                           isLoading: _isUploading,
                         ),
                         const SizedBox(height: 12),
                         Text(
                           'Upload a prescription above, or add the medicines and products you want below.',
-                          style: AppTypography.tiny.copyWith(color: AppColors.gray),
+                          style: AppTypography.tiny.copyWith(
+                            color: AppColors.gray,
+                          ),
                         ),
                       ],
                     ),

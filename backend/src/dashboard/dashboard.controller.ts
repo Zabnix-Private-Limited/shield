@@ -1,13 +1,25 @@
 import { Controller, Get, Param, Query } from '@nestjs/common';
+import { CurrentPrincipal } from '../auth/current-principal.decorator';
+import { RequirePermissions } from '../auth/permissions.decorator';
+import type { ShieldPrincipal } from '../auth/auth.types';
 import { DashboardService } from './dashboard.service';
 
 @Controller('dashboard')
 export class DashboardController {
   constructor(private dashboardService: DashboardService) {}
 
+  @RequirePermissions('analytics.view')
   @Get('customer')
-  async getCustomerDashboard(@Query('customer_id') customerId?: string) {
-    const id = customerId ? BigInt(customerId) : BigInt(1);
+  async getCustomerDashboard(
+    @Query('customer_id') customerId?: string,
+    @CurrentPrincipal() principal?: ShieldPrincipal,
+  ) {
+    const id =
+      principal?.principalType === 'CUSTOMER'
+        ? BigInt(principal.customerId!)
+        : customerId
+          ? BigInt(customerId)
+          : BigInt(1);
     const data = await this.dashboardService.getCustomerDashboard(id);
     return {
       success: true,
@@ -16,6 +28,7 @@ export class DashboardController {
     };
   }
 
+  @RequirePermissions('analytics.view')
   @Get('staff')
   async getStaffDashboard() {
     const data = await this.dashboardService.getStaffDashboard();
@@ -26,6 +39,7 @@ export class DashboardController {
     };
   }
 
+  @RequirePermissions('analytics.view')
   @Get('crm')
   async getCrmDashboard() {
     const data = await this.dashboardService.getCrmDashboard();
@@ -36,6 +50,7 @@ export class DashboardController {
     };
   }
 
+  @RequirePermissions('analytics.view')
   @Get('management')
   async getManagementDashboard() {
     const data = await this.dashboardService.getManagementDashboard();
@@ -46,13 +61,20 @@ export class DashboardController {
     };
   }
 
+  @RequirePermissions('analytics.view')
   @Get('role/:role/:section')
   async getRoleSectionDashboard(
     @Param('role') role: string,
     @Param('section') section: string,
     @Query('customer_id') customerId?: string,
+    @CurrentPrincipal() principal?: ShieldPrincipal,
   ) {
-    const id = customerId ? BigInt(customerId) : BigInt(1);
+    const id =
+      principal?.principalType === 'CUSTOMER'
+        ? BigInt(principal.customerId!)
+        : customerId
+          ? BigInt(customerId)
+          : BigInt(1);
     const data = await this.dashboardService.getRoleSectionDashboard(
       role,
       section,

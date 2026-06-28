@@ -1,20 +1,33 @@
 import {
   Body,
   Controller,
+  ForbiddenException,
   Get,
   Param,
   Post,
   Query,
 } from '@nestjs/common';
+import { CurrentPrincipal } from '../auth/current-principal.decorator';
+import { RequirePermissions } from '../auth/permissions.decorator';
+import type { ShieldPrincipal } from '../auth/auth.types';
 import { NotificationService } from './notification.service';
 
 @Controller('notifications')
 export class NotificationController {
   constructor(private notificationService: NotificationService) {}
 
+  @RequirePermissions('notifications.view')
   @Get()
-  async list(@Query('customer_id') customerId?: string) {
-    const targetCustomerId = customerId ? BigInt(customerId) : undefined;
+  async list(
+    @Query('customer_id') customerId?: string,
+    @CurrentPrincipal() principal?: ShieldPrincipal,
+  ) {
+    const targetCustomerId =
+      principal?.principalType === 'CUSTOMER'
+        ? BigInt(principal.customerId!)
+        : customerId
+          ? BigInt(customerId)
+          : undefined;
     const notifs = await this.notificationService.list(targetCustomerId);
     return {
       success: true,
@@ -23,6 +36,7 @@ export class NotificationController {
     };
   }
 
+  @RequirePermissions('notifications.view')
   @Post(':id/read')
   async markAsRead(@Param('id') id: string) {
     const notif = await this.notificationService.markAsRead(BigInt(id));
@@ -33,11 +47,18 @@ export class NotificationController {
     };
   }
 
+  @RequirePermissions('notifications.create')
   @Post('device-token')
-  async registerDeviceToken(@Body() body: any) {
+  async registerDeviceToken(
+    @Body() body: any,
+    @CurrentPrincipal() principal?: ShieldPrincipal,
+  ) {
     const token = (body.token ?? '').toString().trim();
     const platform = (body.platform ?? '').toString().trim();
-    const customerId = (body.customer_id ?? '').toString().trim();
+    const customerId =
+      principal?.principalType === 'CUSTOMER'
+        ? principal.customerId ?? ''
+        : (body.customer_id ?? '').toString().trim();
 
     if (!token || !platform || !customerId) {
       return {
@@ -60,6 +81,7 @@ export class NotificationController {
     };
   }
 
+  @RequirePermissions('notifications.update')
   @Post('device-token/deactivate')
   async deactivateDeviceToken(@Body() body: any) {
     const token = (body.token ?? '').toString().trim();
@@ -78,6 +100,7 @@ export class NotificationController {
     };
   }
 
+  @RequirePermissions('notifications.create')
   @Post('send')
   async send(@Body() body: any) {
     const result = await this.notificationService.send({

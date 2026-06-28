@@ -9,6 +9,11 @@ class AppConfig {
     defaultValue: '',
   );
 
+  static const String googleMapsApiKey = String.fromEnvironment(
+    'GOOGLE_MAPS_API_KEY',
+    defaultValue: '',
+  );
+
   static const bool enableOcr = bool.fromEnvironment(
     'ENABLE_OCR',
     defaultValue: false,
@@ -27,6 +32,11 @@ class AppConfig {
   static const bool enableSentry = bool.fromEnvironment(
     'ENABLE_SENTRY',
     defaultValue: false,
+  );
+
+  static const String turnstileSiteKey = String.fromEnvironment(
+    'TURNSTILE_SITE_KEY',
+    defaultValue: '',
   );
 
   static const String sentryFlutterDsn = String.fromEnvironment(

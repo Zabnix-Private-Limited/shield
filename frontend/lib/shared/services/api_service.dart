@@ -30,7 +30,9 @@ class ApiService {
     final base = Uri.base;
     final host = base.host.isEmpty ? 'localhost' : base.host;
     final isLocalHost = host == 'localhost' || host == '127.0.0.1';
-    final scheme = isLocalHost ? 'http' : (base.scheme.isEmpty ? 'http' : base.scheme);
+    final scheme = isLocalHost
+        ? 'http'
+        : (base.scheme.isEmpty ? 'http' : base.scheme);
     final resolvedHost = isLocalHost ? '127.0.0.1' : host;
     return '$scheme://$resolvedHost:3000';
   }
@@ -134,15 +136,17 @@ class ApiService {
     return dummyDocuments;
   }
 
-  static Future<List<Document>> getCustomerDocumentsStrict(String customerId) async {
+  static Future<List<Document>> getCustomerDocumentsStrict(
+    String customerId,
+  ) async {
     final response = await _dio.get(
       '/documents',
       queryParameters: {'customer_id': customerId},
       options: Options(receiveTimeout: const Duration(minutes: 1)),
     );
-    return _readEnvelopeList(response)
-        .map((item) => Document.fromJson(item as Map<String, dynamic>))
-        .toList()
+    return _readEnvelopeList(
+        response,
+      ).map((item) => Document.fromJson(item as Map<String, dynamic>)).toList()
       ..sort((a, b) => b.uploadedAt.compareTo(a.uploadedAt));
   }
 
@@ -342,10 +346,7 @@ class ApiService {
       'file_size': fileSize,
       'mime_type': mimeType,
       'document_type': documentType,
-      'file': MultipartFile.fromBytes(
-        fileBytes,
-        filename: fileName,
-      ),
+      'file': MultipartFile.fromBytes(fileBytes, filename: fileName),
     });
 
     final response = await _dio.post(
@@ -411,6 +412,58 @@ class ApiService {
     await _dio.post(
       '/notifications/device-token/deactivate',
       data: {'token': token},
+    );
+  }
+
+  static Future<void> submitSupportContact({
+    required String name,
+    required String phone,
+    required String message,
+    String? email,
+    String? subject,
+    String? turnstileToken,
+    String customerId = '1',
+  }) async {
+    await _dio.post(
+      '/support/contact',
+      data: {
+        'customer_id': customerId,
+        'name': name.trim(),
+        'phone': phone.trim(),
+        'email': email?.trim(),
+        'subject': subject?.trim(),
+        'message': message.trim(),
+        'channel': kIsWeb ? 'WEB' : resolvePushPlatform(),
+        if (turnstileToken != null && turnstileToken.trim().isNotEmpty)
+          'turnstile_token': turnstileToken.trim(),
+      },
+    );
+  }
+
+  static Future<void> submitSupportFeedback({
+    required String message,
+    String? name,
+    String? phone,
+    String? email,
+    String? subject,
+    int? rating,
+    String? turnstileToken,
+    String customerId = '1',
+  }) async {
+    await _dio.post(
+      '/support/feedback',
+      data: {
+        'customer_id': customerId,
+        'name': name?.trim(),
+        'phone': phone?.trim(),
+        'email': email?.trim(),
+        'subject': subject?.trim(),
+        'message': message.trim(),
+        'rating': rating,
+        'channel': kIsWeb ? 'WEB' : resolvePushPlatform(),
+        if (turnstileToken != null && turnstileToken.trim().isNotEmpty)
+          'turnstile_token': turnstileToken.trim(),
+      },
     );
   }
 

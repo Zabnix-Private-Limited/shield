@@ -23,9 +23,9 @@
 - Language: TypeScript
 - ORM: Prisma
 - Database: PostgreSQL 16+
-- Auth: Customers use Mobile OTP login; Staff/Providers/Admins use Email/Password + JWT
+- Auth: Customers use Firebase Phone OTP -> Nest verification -> SHIELD JWT; Staff/Providers/Admins use Firebase Google Sign-In -> Nest verification -> SHIELD JWT
 - API Documentation: Swagger/OpenAPI
-- Caching: Redis
+- Caching: Redis / Valkey
 - Logging: Winston
 
 ### Infrastructure
@@ -48,7 +48,10 @@
 - Use UUIDs for public identifiers
 - Use BIGSERIAL for internal primary keys
 - **NO STORED BALANCE IN WALLET TABLE**: Always calculate dynamically from transactions.
-- Wallet balances are segregated via `sub_ledger_type` ('CASH' vs 'POINTS') in `wallet_transactions` table.
+- Wallet balances are ledger-based via `sub_ledger_type` in `wallet_transactions` and must remain separated across `CASH`, `REWARD_POINTS`, and hidden `SHIELD_BENEFIT` entries.
+- `SHIELD_BENEFIT` is company-funded promotional credit and must never be exposed to customers as a remaining wallet balance; only applied-discount lines are customer-visible.
+- Referral rewards must stay delayed and status-driven (`PENDING -> VERIFIED -> QUALIFIED -> REWARDED/REJECTED`) rather than being credited at registration or approval time.
+- Pricing, benefit application, membership discounts, referral qualification, reward redemption, and final payable calculations should be centralized through a rule engine/service layer, not scattered across individual feature modules.
 - Enforce location constraint check using `issued_business_id` in `shield_cards`.
 - Soft delete support (deleted_at column)
 - Append-only audit logs
@@ -57,7 +60,7 @@
 
 ## Security Rules
 1. RBAC + ABAC authorization
-2. OTP verification (Customers) and Email Credentials verification (Staff / Service Providers)
+2. Firebase Phone OTP verification (Customers) and Firebase Google Sign-In verification (Staff / Service Providers / Admins)
 3. Mandatory `agent_code` check for Customer registration (onboarding agent who initiated creation)
 4. Enforce branch restriction rules on SHIELD card utilization (Hyperpharmacy store cards are locked to their issuing branch, general service providers are cross-compatible)
 5. Encrypt sensitive data at rest
@@ -67,20 +70,25 @@
 9. Input validation and sanitization
 
 ## User Roles
-1. **CUSTOMER**: Access Profile (Name, Address, Pin Code, Phone, DOB/Age, Blood Group), Wallet (Cash, Points, Transactions), Services (Pharmacy, Lab, Homecare, Dental, Doctor, Cosmetic, Dietitian), and Appointments.
-2. **SERVICE_PROVIDER (PHARMACY_STAFF, CLINIC_STAFF, DENTAL_STAFF, etc.)**: Verify customer digital privilege cards, enforce hyperpharmacy local store rules, upload prescriptions/bills, and log card utilization.
-3. **CRM_EXECUTIVE**: View customers, create tasks/follow-ups/complaints
-4. **SHIELD_EXECUTIVE**: Approve customers (validating agent_code), manage memberships, wallet adjustments
-5. **MANAGER**: View reports/analytics, approve overrides/credit requests
-6. **SUPER_ADMIN / ADMINISTRATOR**: View Branch-wise IDs list, IDs service utilization, reports, configure roles/users/permissions.
+1. **ADMIN**: Full-platform access; dashboard layout may vary by assignment, but permissions remain unrestricted.
+2. **SHIELD_AGENT**: Enroll customers, collect KYC, create memberships, assign referrals, recharge wallet manually, and track their own customer/referral graph.
+3. **CRM_EXECUTIVE**: Handle assigned-customer follow-ups, call history, retention, upcoming renewals, and customer-status operations.
+4. **PHARMACY_PROVIDER**: Search customers, upload bills/prescriptions/documents, view wallet usage, and redeem wallet benefits.
+5. **LAB_PROVIDER**: Manage assigned lab requests, report uploads, and related customer documents.
+6. **DOCTOR**: View assigned patients, appointments, consultation-linked records, and prescriptions.
+7. **HOMECARE_PROVIDER**: Manage assigned visits, visit notes, and document updates.
+8. **DENTAL_PROVIDER**: Manage assigned dental visits, documents, and treatment records.
+9. **COSMETIC_PROVIDER**: Manage assigned cosmetic-service visits, records, and uploads.
+10. **DIETITIAN**: Manage assigned customer plans, service notes, and related records.
+11. **CUSTOMER**: Phone OTP only; access wallet, records, services, appointments, referral graph, profile, and notifications.
 
 ## Document Intelligence Pipeline
 1. Upload
-2. Classification
-3. Extraction (PDF text first, OCR fallback)
-4. Validation
-5. Approval
-6. Storage
+2. Storage of original file
+3. Metadata capture and access control
+4. Optional classification / extraction workflow
+5. Validation
+6. Approval
 
 ## Log.md Rules
 1. Initialize/Locate: Check root for log.md first

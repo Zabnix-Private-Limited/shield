@@ -2719,3 +2719,947 @@ otifications inside rontend/lib/features/portal/presentation/screens/portal_she
 **Verification Commands**:
 - npm install @aws-sdk/client-s3 @aws-sdk/s3-request-presigner
 - npm run build
+## 80. Sentry End-to-End Integration: Applied Three-Project Monitoring Across Flutter, Web, and Nest With Env-Driven Build Support
+**High-level description**: Fully wired Sentry into SHIELD's three runtime surfaces instead of leaving the provided DSNs and auth token as static env values. Flutter mobile now initializes Sentry in Dart with navigator tracing, Flutter web now bootstraps the browser SDK plus replay/tracing and uploads source maps during env-driven builds, and the Nest backend now initializes Sentry early with global exception capture and profiling support.
+- Frontend Flutter runtime changes:
+  - frontend/pubspec.yaml and frontend/pubspec.lock
+  - added sentry_flutter and finalized the Flutter package version at 9.22.0 after removing the plugin combination that had forced an older Kotlin-incompatible dependency path during Android build verification
+  - frontend/lib/shared/config/app_config.dart
+  - added build-time config reads for ENABLE_SENTRY, SENTRY_FLUTTER_DSN, SENTRY_ENVIRONMENT, and SENTRY_RELEASE
+  - frontend/lib/main.dart
+  - initializes SentryFlutter only when enabled and when a Flutter/mobile DSN is present
+  - wraps the app in SentryWidget, enables screenshot and view-hierarchy attachments, and sets environment-aware trace sampling
+  - frontend/lib/app/routes/app_router.dart
+  - added SentryNavigatorObserver() so customer portal navigation is visible to Sentry performance and breadcrumb capture without changing the mobile-only customer routing rules
+- Frontend web/browser Sentry changes:
+  - frontend/web/index.html
+  - added the Sentry browser CDN bundle with tracing and replay support before Flutter bootstrap
+  - frontend/web/sentry-init.js
+  - added a generated runtime bootstrap file so the committed web shell always has a known target that local and deployment scripts can rewrite safely
+  - frontend/scripts/generate-web-sentry-config.mjs
+  - generates the browser Sentry.init(...) payload from env values, enabling tracing, replay, release tagging, and API trace propagation without hardcoding the project DSN in source
+  - frontend/scripts/upload-web-sourcemaps.mjs
+  - added Sentry CLI upload flow for uild/web artifact bundles so production stack traces resolve against generated Flutter web JavaScript
+  - frontend/scripts/build-web-with-env.ps1 and frontend/scripts/vercel-build.mjs
+  - updated the existing env-driven web build paths to generate the browser config, build with --source-maps, and upload source maps automatically when the Sentry auth token and project metadata are present
+  - frontend/scripts/run-web-with-env.ps1 and frontend/scripts/flutter-env-defines.mjs
+  - expanded the forwarded define set so the provided Sentry env values become active runtime/build config rather than dormant documentation
+- Backend NestJS Sentry changes:
+  - backend/package.json and backend/package-lock.json
+  - added @sentry/nestjs and @sentry/profiling-node
+  - backend/src/instrument.ts
+  - added early process bootstrap for backend DSN, environment, release, tracing, profiling, and Prisma integration
+  - backend/src/main.ts
+  - imports the instrumentation file before Nest boot and enables shutdown hooks so telemetry and transports can flush cleanly
+  - backend/src/app.module.ts
+  - added SentryModule.forRoot() and SentryGlobalFilter so uncaught controller/application exceptions are captured centrally instead of requiring piecemeal local try/catch instrumentation
+- Environment and operational wiring changes:
+  - backend/.env.example
+  - added the full SHIELD Sentry env surface with placeholders for org, project slugs, three DSNs, auth token, release, environment, and enable flag
+  - backend/.env
+  - applied the supplied SHIELD Sentry values locally so the wrapper scripts and Nest runtime use the same project-level configuration
+  - the three-project split was preserved exactly as requested:
+    - shield-flutter for Android and future iOS Flutter runtime
+    - shield-web for Flutter Web's JavaScript/browser runtime
+    - shield-backend for the NestJS API runtime
+- Why this approach was chosen:
+  - SHIELD has materially different failure surfaces across Flutter, compiled browser JavaScript, and backend Nest services, so separate Sentry projects make triage faster and avoid mixing customer app crashes, web runtime issues, and API exceptions into one stream
+  - keeping the values env-driven preserves the user's rule that provided env/config values must be made operational wherever needed, while still avoiding hardcoded secrets in reusable templates
+  - browser source map upload was included in the same pass because web Sentry without uploaded Flutter web source maps would give much lower debugging value in production
+  - backend instrumentation was added at process start rather than only at module level so boot-time/runtime exceptions are captured as early as practical
+- Verification completed for this pass:
+  - npm run build
+  - flutter analyze
+  - flutter test test/widget_test.dart test/app_responsive_test.dart
+  - powershell -ExecutionPolicy Bypass -File scripts/build-web-with-env.ps1
+  - powershell -ExecutionPolicy Bypass -File scripts/build-apk-with-env.ps1
+- Verification notes:
+  - backend build passed with the Nest Sentry module and instrumentation bootstrap in place
+  - Flutter analyze and the existing customer-portal-focused widget test suite passed cleanly after the Sentry runtime changes
+  - env-driven web build completed successfully, and Sentry artifact-bundle source map upload succeeded for org zabnix, project shield-web, release 1.0.0
+  - the remaining web warnings were the expected missing sourcemaps for some third-party/generated files and the pre-existing lutter_secure_storage_web wasm dry-run warnings, not Sentry integration failures
+  - Android debug APK build succeeded after finalizing sentry_flutter at 9.22.0, which resolved the earlier Kotlin language-version incompatibility seen with the older transitive package path
+  - iOS runtime placement is still blocked by the absence of a generated rontend/ios project in this Windows workspace, so the future shield-flutter iOS side remains a platform-setup task rather than a Sentry wiring gap
+
+### Files Modified/Created
+**Backend Files (Modified)**:
+- backend/.env.example
+- backend/package.json
+- backend/package-lock.json
+- backend/src/app.module.ts
+- backend/src/main.ts
+
+**Backend Files (Created)**:
+- backend/src/instrument.ts
+
+**Frontend Files (Modified)**:
+- frontend/pubspec.yaml
+- frontend/pubspec.lock
+- frontend/lib/main.dart
+- frontend/lib/app/routes/app_router.dart
+- frontend/lib/shared/config/app_config.dart
+- frontend/scripts/flutter-env-defines.mjs
+- frontend/scripts/build-web-with-env.ps1
+- frontend/scripts/run-web-with-env.ps1
+- frontend/scripts/vercel-build.mjs
+- frontend/web/index.html
+
+**Frontend Files (Created)**:
+- frontend/scripts/generate-web-sentry-config.mjs
+- frontend/scripts/upload-web-sourcemaps.mjs
+- frontend/scripts/build-apk-with-env.ps1
+- frontend/web/sentry-init.js
+
+**Verification Commands**:
+- npm run build
+- flutter analyze
+- flutter test test/widget_test.dart test/app_responsive_test.dart
+- powershell -ExecutionPolicy Bypass -File scripts/build-web-with-env.ps1
+- powershell -ExecutionPolicy Bypass -File scripts/build-apk-with-env.ps1
+---2026-06-28 14:31:30 IST
+## 81. Cloudflare Turnstile Integration: Added Web-Only Verification for Customer Support Forms and Reusable Backend Validation for Future OTP/Login Flows
+**High-level description**: Turned the supplied Cloudflare Turnstile site and secret keys into a working SHIELD integration instead of leaving them as unused env values. The current repo does not yet contain a real customer OTP/auth backend to protect, so this pass implemented Turnstile on the existing public customer web support surfaces now and added a reusable Nest verification service that future OTP/login endpoints can call without redoing the Cloudflare wiring.
+- Backend env and configuration changes:
+  - backend/.env.example
+  - added TURNSTILE_SITE_KEY and TURNSTILE_SECRET_KEY to the env template so Turnstile is part of the documented SHIELD deployment surface
+  - backend/.env
+  - applied the provided local site key and secret key so both the Flutter web wrapper scripts and Nest validation path use the live project values
+  - backend/src/config/app-env.ts
+  - added typed env reads for Turnstile site key and secret key so runtime services do not have to read raw process env directly
+- Backend Turnstile validation changes:
+  - backend/src/support/turnstile.service.ts
+  - added a dedicated Cloudflare Siteverify client using the secret key and server-side validation only
+  - verification now happens through Nest, not the browser, matching the requirement that the secret key must never be exposed client-side
+  - the service is reusable and intentionally isolated so future customer web OTP/login endpoints can gate Firebase SMS requests through the same verifier later
+- Backend public support submission flow changes:
+  - backend/src/support/support.service.ts
+  - added a support persistence service that stores public CONTACT_US and FEEDBACK submissions in the existing complaints table instead of inventing a parallel persistence path
+  - backend/src/support/support.controller.ts
+  - added POST /support/contact and POST /support/feedback
+  - these endpoints validate required fields, require Turnstile for channel=WEB when the secret key is configured, and persist the submission with status SUBMITTED
+  - stored submission summaries include channel, whether Turnstile validation passed, and the user-provided contact/feedback content so SHIELD can triage them later
+  - backend/src/support/support.module.ts and backend/src/app.module.ts
+  - registered the support module into the Nest app so the new endpoints are live without touching unrelated service modules
+- Frontend configuration and API changes:
+  - frontend/lib/shared/config/app_config.dart
+  - added build-time TURNSTILE_SITE_KEY access for Flutter web
+  - frontend/lib/shared/services/api_service.dart
+  - added submitSupportContact(...) and submitSupportFeedback(...) methods that send web/mobile channel metadata and include the Turnstile token only when present
+  - frontend/scripts/flutter-env-defines.mjs
+  - added TURNSTILE_SITE_KEY to the forwarded Flutter define set
+  - frontend/scripts/build-web-with-env.ps1, frontend/scripts/run-web-with-env.ps1, and frontend/scripts/build-apk-with-env.ps1
+  - updated the local wrapper scripts so the provided Turnstile site key is actually forwarded wherever relevant instead of being trapped in backend/.env only
+- Frontend web widget changes:
+  - frontend/web/index.html
+  - added the Cloudflare Turnstile browser script and a SHIELD-specific Turnstile host bridge file before Flutter bootstrap
+  - frontend/web/turnstile-host.js
+  - added a small bridge that renders, expires, and removes Turnstile widgets for Flutter web without exposing the secret key
+  - frontend/lib/shared/widgets/turnstile_challenge.dart
+  - added a conditional-export Turnstile widget surface so non-web platforms remain unaffected
+  - frontend/lib/shared/widgets/turnstile_challenge_web.dart
+  - implemented the web renderer using package:web plus Dart JS interop so Flutter web can host Turnstile in a native HtmlElementView cleanly
+  - frontend/lib/shared/widgets/turnstile_challenge_stub.dart
+  - added the non-web no-op implementation because Android and future iOS must not require Turnstile for this use case
+- Customer portal UX changes:
+  - frontend/lib/shared/widgets/customer_support_sheet.dart
+  - added compact mobile-first sheets for Contact SHIELD and Share feedback
+  - web builds now require a successful Turnstile token before form submission; Android keeps the same support forms without Turnstile because the requirement explicitly excluded the mobile apps
+  - frontend/lib/features/portal/presentation/screens/portal_shell.dart
+  - replaced the previous customer support placeholders with real actions for Contact us and Feedback inside the active portal-style customer settings flow, preserving the mobile-only customer experience rule
+- Important architectural note:
+  - SHIELD currently does **not** have a real customer OTP/login backend module in this repo, so this pass did not invent fake OTP endpoints just to attach Turnstile
+  - instead, the Turnstile verifier is now production-ready in Nest and can be plugged directly into future equest OTP / send OTP customer web endpoints once that auth flow is implemented for real
+- Why this approach was chosen:
+  - you asked for complete implementation when env/config values are provided, and the honest way to complete Turnstile in the current repo was to wire it into existing public customer web forms plus make the backend verifier reusable for later auth work
+  - keeping Turnstile web-only avoids degrading Android/iOS UX and matches the stated requirement that mobile and internal authenticated portals do not need CAPTCHA-style checks
+  - using the existing complaints table keeps support/feedback submissions inside the documented SHIELD data model instead of adding a throwaway store
+- Verification completed for this pass:
+  - flutter pub get
+  - npm run build
+  - flutter analyze
+  - flutter test test/widget_test.dart test/app_responsive_test.dart
+  - powershell -ExecutionPolicy Bypass -File scripts/build-web-with-env.ps1
+  - powershell -ExecutionPolicy Bypass -File scripts/build-apk-with-env.ps1
+- Verification notes:
+  - Nest backend build passed with the new support endpoints and Turnstile validation service
+  - Flutter analyze and tests passed after moving the web widget onto the current package:web plus JS interop path
+  - env-driven web build passed, and the built web output now includes 	urnstile-host.js; Sentry source-map upload continued to succeed for the same web build path
+  - Android debug APK build also passed, confirming the shared customer support UI changes did not regress the non-web app build
+  - the only remaining web build warnings were the existing wasm dry-run warnings from lutter_secure_storage_web, not Turnstile integration failures
+
+### Files Modified/Created
+**Backend Files (Modified)**:
+- backend/.env.example
+- backend/src/app.module.ts
+- backend/src/config/app-env.ts
+
+**Backend Files (Created)**:
+- backend/src/support/support.controller.ts
+- backend/src/support/support.module.ts
+- backend/src/support/support.service.ts
+- backend/src/support/turnstile.service.ts
+
+**Frontend Files (Modified)**:
+- frontend/pubspec.yaml
+- frontend/pubspec.lock
+- frontend/lib/features/portal/presentation/screens/portal_shell.dart
+- frontend/lib/shared/config/app_config.dart
+- frontend/lib/shared/services/api_service.dart
+- frontend/scripts/flutter-env-defines.mjs
+- frontend/scripts/build-web-with-env.ps1
+- frontend/scripts/run-web-with-env.ps1
+- frontend/scripts/build-apk-with-env.ps1
+- frontend/web/index.html
+
+**Frontend Files (Created)**:
+- frontend/lib/shared/widgets/customer_support_sheet.dart
+- frontend/lib/shared/widgets/turnstile_challenge.dart
+- frontend/lib/shared/widgets/turnstile_challenge_stub.dart
+- frontend/lib/shared/widgets/turnstile_challenge_web.dart
+- frontend/web/turnstile-host.js
+
+**Verification Commands**:
+- flutter pub get
+- npm run build
+- flutter analyze
+- flutter test test/widget_test.dart test/app_responsive_test.dart
+- powershell -ExecutionPolicy Bypass -File scripts/build-web-with-env.ps1
+- powershell -ExecutionPolicy Bypass -File scripts/build-apk-with-env.ps1
+---2026-06-28 14:58:34 IST
+## 82. Verification Preference Update: Avoid Routine APK Builds Unless Android-Specific Work Justifies Them
+**High-level description**: Recorded a workflow preference for SHIELD verification so future sessions do not default to rebuilding the Android APK after every change. Recent work added several web/backend-focused integrations where repeated APK builds were useful once for confidence, but they are too expensive to keep as the default verification path for routine env, backend, or Flutter-web-only changes.
+- Verified workflow preference now in force for future SHIELD work:
+  - do **not** run lutter build apk or the env-driven APK wrapper on every pass by default
+  - reserve APK builds for cases where the touched changes materially affect Android-specific behavior, mobile-only plugins, Gradle/package configuration, Firebase Android runtime, notification/device integration, or release/build output requirements
+  - for backend-only or web-only configuration work, prefer the lighter verification path first
+- Practical verification guidance captured from the current repo state:
+  - backend-focused changes should usually verify with 
+pm run build
+  - Flutter UI/shared Dart changes should usually verify with lutter analyze
+  - customer-portal behavior changes should usually verify with lutter test test/widget_test.dart test/app_responsive_test.dart
+  - Flutter web env/runtime changes should usually verify with powershell -ExecutionPolicy Bypass -File scripts/build-web-with-env.ps1 when the build path itself is part of the work
+  - APK builds should be treated as selective, higher-cost verification, not the default heartbeat check
+- Why this note was added:
+  - you explicitly asked that APK not be test-run every time
+  - SHIELD now has several heavy build paths, including Sentry source-map upload and Android/Firebase packaging, so keeping verification proportional to the actual change scope improves iteration speed without losing discipline
+  - this note reduces the chance that a future session spends time on Android packaging when the change set is clearly backend-only or web-only
+- Current related context worth preserving for the next engineer:
+  - the Android build path is currently healthy after the Sentry and Turnstile passes, so it does not need to be re-proven on every unrelated change
+  - the env-driven web build remains the more relevant verification path for Cloudflare Turnstile, browser Sentry, and other public web-surface integrations
+  - this is a workflow preference update, not a rollback of the verified Android setup
+
+### Files Modified/Created
+**Log Files (Modified)**:
+- log.md
+
+**Verification Commands**:
+- log append only; no additional runtime/build verification was required for this continuity note
+---2026-06-28 14:59:20 IST
+## 83. JWT Secret Baseline Completed: Generated Cryptographically Secure Access and Refresh Signing Secrets for Local Backend Env
+**High-level description**: Replaced the placeholder JWT signing values in the local SHIELD backend environment with freshly generated cryptographically secure secrets using Node.js crypto.randomBytes(64). This completes the minimum auth-signing env baseline the repo was still missing while keeping the reusable template file unchanged.
+- Local backend env changes:
+  - backend/.env
+  - generated one 64-byte random hex secret for JWT_ACCESS_SECRET
+  - generated a second different 64-byte random hex secret for JWT_REFRESH_SECRET
+  - applied both into the local env file so access and refresh token signing no longer depend on empty placeholders
+- Why this approach was chosen:
+  - you explicitly asked to use the standard Node.js crypto.randomBytes() method, which is appropriate for generating cryptographically secure JWT signing material in a NestJS/Node.js backend
+  - using two distinct secrets keeps access-token and refresh-token signing separated instead of reusing one signing key across both token classes
+  - the repo template file ackend/.env.example remains placeholder-based on purpose, because it should document required keys without embedding live runtime secrets
+- Security note:
+  - the generated values were written into the local env file only and are intentionally not repeated inside the append-only log details as raw secret text
+  - if these values are ever exposed beyond the local protected environment, rotate them immediately and replace both secrets together
+- Verification completed for this pass:
+  - ran the Node.js random-secret generation command twice successfully to produce two separate 64-byte hex values
+- Verification notes:
+  - this pass was env-only; no backend or frontend build was necessary because no runtime code changed
+
+### Files Modified/Created
+**Local Env Files (Modified)**:
+- backend/.env
+
+**Verification Commands**:
+- node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
+- node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
+---2026-06-28 19:07:53 IST
+## 84. Aiven Valkey Integration: Applied REDIS_URL, Added Global Redis Runtime, and Verified Live Connectivity
+**High-level description**: Turned the provided Aiven Valkey/Redis service URI into a real SHIELD backend runtime dependency instead of leaving REDIS_URL as an unused env variable. The backend now has a global Redis service powered by ioredis, exposes Redis status through the backend health response, and was verified against the live Aiven endpoint with a successful PONG response.
+- Backend env changes:
+  - backend/.env
+  - applied the provided Aiven Valkey service URI to REDIS_URL
+  - backend/.env.example
+  - updated the Redis example value to show the expected ediss://... secure Aiven/Valkey shape instead of a generic local Redis URI, while keeping it template-safe
+- Backend dependency and runtime changes:
+  - backend/package.json and backend/package-lock.json
+  - added ioredis as the runtime client library for Valkey/Redis connectivity in NestJS
+  - backend/src/redis/redis.service.ts
+  - added a global Redis service that:
+    - reads the secure Valkey URI from typed env config
+    - creates a lazy ioredis client only when configured
+    - logs connection and error events
+    - supports ping(), get(), and set() helpers for future caching, OTP throttling, session, or queue-adjacent work
+    - shuts down the client cleanly with the Nest app lifecycle
+  - backend/src/redis/redis.module.ts
+  - added a global Redis module so future features can reuse a single Valkey client instead of each module creating its own connection logic
+  - backend/src/app.module.ts
+  - registered the Redis module in the main Nest app
+- Health and operational visibility changes:
+  - backend/src/app.service.ts
+  - added a structured backend health payload that includes Redis configuration and connectivity status
+  - backend/src/app.controller.ts
+  - added GET /health so SHIELD has a clearer backend diagnostics endpoint than the old Hello World root response alone
+  - the health response now reports:
+    - API health
+    - Redis configured/not configured state
+    - Redis healthy/not healthy state
+    - Redis ping message or connection error summary
+- Why this approach was chosen:
+  - you provided a live Aiven Valkey URI and asked to add it properly, and in the current repo REDIS_URL was only parsed from env without any actual runtime consumer
+  - a dedicated global Redis service is the cleanest reusable shape for SHIELD because future OTP throttling, queueing, session storage, notification fanout helpers, or cache layers can all build on the same client
+  - exposing Redis inside a health payload gives the team a quick way to confirm runtime connectivity without creating a one-off script every time
+- Verification completed for this pass:
+  - npm install ioredis
+  - npm run build
+  - direct live ping using ioredis against the provided Aiven Valkey URI
+- Verification notes:
+  - backend build passed after the Redis module integration
+  - the direct ioredis connection test returned PONG, confirming the service URI, TLS transport, credentials, and remote connectivity are valid from this environment
+  - no Flutter/web verification was necessary because this pass only touched backend runtime and env wiring
+
+### Files Modified/Created
+**Backend Files (Modified)**:
+- backend/.env
+- backend/.env.example
+- backend/package.json
+- backend/package-lock.json
+- backend/src/app.controller.ts
+- backend/src/app.module.ts
+- backend/src/app.service.ts
+
+**Backend Files (Created)**:
+- backend/src/redis/redis.module.ts
+- backend/src/redis/redis.service.ts
+
+**Verification Commands**:
+- npm install ioredis
+- npm run build
+- node -e "const Redis=require('ioredis'); const client=new Redis('rediss://default:<redacted>@shield-zabnix-redis-shield-zabnix.l.aivencloud.com:20359'); client.ping().then((result)=>{console.log(result); return client.quit();}).catch((error)=>{console.error(error.message); client.disconnect(); process.exit(1);});"
+---2026-06-28 19:19:02 IST
+## 85. Redis Runtime Hardening: Added TLS, Key Prefix, and Default TTL Support for Temporary SHIELD Operations
+**High-level description**: Refined the new Aiven Valkey integration so it matches the intended SHIELD Redis usage model instead of behaving like a raw unstructured cache client. Redis remains temporary-only, with explicit support for secure transport, namespaced keys, and a default TTL suitable for session, throttling, blacklist, queue, and cache-style workloads while Neon PostgreSQL remains the source of truth for persistent customer data.
+- Backend env/config changes:
+  - backend/.env.example
+  - expanded the Redis section with the recommended additional variables:
+    - REDIS_TLS=true
+    - REDIS_PREFIX=shield:
+    - REDIS_DEFAULT_TTL=300
+  - backend/.env
+  - applied the same values locally so the current backend runtime uses TLS, the shield: namespace prefix, and a 300-second default TTL
+  - backend/src/config/app-env.ts
+  - added typed env reads for:
+    - edisTls
+    - edisPrefix
+    - edisDefaultTtl
+- Backend Redis runtime changes:
+  - backend/src/redis/redis.service.ts
+  - updated the global Redis service so:
+    - secure TLS can be forced through REDIS_TLS in addition to the ediss:// URI scheme
+    - all keys are automatically namespaced under the configured prefix, currently shield:
+    - set() uses the configured default TTL when a feature does not provide one explicitly
+    - ping()/health responses now expose Redis prefix, TLS status, and default TTL metadata for diagnostics
+- Why this approach was chosen:
+  - your infrastructure note correctly treats Redis as a temporary, high-speed operational layer, not a customer-record store
+  - explicit key prefixing protects the SHIELD namespace and makes it safer to share or inspect Redis environments without accidental cross-project key collisions
+  - a default TTL makes Redis behavior safer for future caches, revocation lists, throttling windows, and short-lived coordination keys because values do not silently become permanent when a caller forgets to specify expiry
+  - preserving Neon PostgreSQL as the system of record keeps the persistent data model aligned with the documented SHIELD architecture
+- Current intended Redis usage clarified in code and continuity:
+  - suitable for session cache
+  - JWT/refresh-token revocation or blacklist flows
+  - OTP and login rate limiting
+  - API throttling
+  - background or notification queue helpers
+  - dashboard and appointment cache layers
+  - short-lived locks or coordination primitives
+  - not intended for durable customer profile, wallet, prescription, or medical-record storage
+- Verification completed for this pass:
+  - npx prettier --write src/config/app-env.ts src/redis/redis.service.ts
+  - npm run build
+  - direct live Valkey ping with explicit key prefix and TLS options
+- Verification notes:
+  - backend build passed after the Redis config expansion
+  - the direct connection test again returned PONG, confirming the Aiven Valkey service remains healthy with the intended secure/namespaced runtime shape
+  - no frontend verification was necessary because this pass only touched backend env/config/runtime behavior
+
+### Files Modified/Created
+**Backend Files (Modified)**:
+- backend/.env.example
+- backend/.env
+- backend/src/config/app-env.ts
+- backend/src/redis/redis.service.ts
+
+**Verification Commands**:
+- npx prettier --write src/config/app-env.ts src/redis/redis.service.ts
+- npm run build
+- node -e "const Redis=require('ioredis'); const client=new Redis('rediss://default:<redacted>@shield-zabnix-redis-shield-zabnix.l.aivencloud.com:20359',{keyPrefix:'shield:',tls:{}}); client.ping().then((result)=>{console.log(result); return client.quit();}).catch((error)=>{console.error(error.message); client.disconnect(); process.exit(1);});"
+---2026-06-28 19:20:57 IST
+## 86. Google Maps Env Wiring: Applied Local API Key and Forwarded It Into SHIELD Flutter Build-Time Config
+**High-level description**: Added the provided Google Maps API key to SHIELD's environment/config surfaces so it is operational wherever future map features are introduced, without inventing a new map UI or backend integration before the repo actually needs one. The current codebase does not yet contain a live Google Maps feature, so this pass focused on getting the key into the right env and Flutter define pathways rather than fabricating unused screens or services.
+- Local env changes:
+  - backend/.env
+  - added GOOGLE_MAPS_API_KEY with the provided value so local wrapper scripts and future runtime/build steps have a single source for the key
+- Template/env documentation changes:
+  - backend/.env.example
+  - added GOOGLE_MAPS_API_KEY= near the core app config block so future deploy and onboarding flows know this is part of the supported env surface
+- Flutter build-time config changes:
+  - frontend/lib/shared/config/app_config.dart
+  - added googleMapsApiKey as a Dart build-time define reader
+  - frontend/scripts/flutter-env-defines.mjs
+  - added GOOGLE_MAPS_API_KEY to the shared define-forwarding helper used by deployment/local scripted builds
+- Local wrapper script changes:
+  - frontend/scripts/build-web-with-env.ps1
+  - frontend/scripts/run-web-with-env.ps1
+  - frontend/scripts/build-apk-with-env.ps1
+  - updated the explicit PowerShell define-forwarding lists so local wrapper-driven web/mobile builds also receive the Maps key, not just the shared JS helper path
+- Why this approach was chosen:
+  - you provided the key and SHIELD's established workflow preference is to wire provided env/config values into actual runtime/build surfaces rather than leaving them as passive notes
+  - the repo does not currently have a real map feature to consume the key, so the correct implementation at this stage is env/build readiness instead of speculative UI work
+  - keeping the key available through AppConfig means future customer/provider location or address-assist flows can use it without redesigning the env pipeline again
+- Current limitation intentionally preserved:
+  - no new Google Maps UI, JS loader, or backend geocoding endpoint was added in this pass because the current SHIELD codebase does not yet contain a concrete map/location feature request to attach them to
+  - this is deliberate readiness work, not half-implementation; the key is now fully available when the map feature is actually built
+- Verification completed for this pass:
+  - flutter analyze
+- Verification notes:
+  - Flutter analysis passed after the config additions
+  - no APK build or backend build was necessary for this pass because the change scope was limited to env/config forwarding and the project preference is not to rebuild Android routinely unless the work is Android-specific
+
+### Files Modified/Created
+**Local Env Files (Modified)**:
+- backend/.env
+- backend/.env.example
+
+**Frontend Files (Modified)**:
+- frontend/lib/shared/config/app_config.dart
+- frontend/scripts/flutter-env-defines.mjs
+- frontend/scripts/build-web-with-env.ps1
+- frontend/scripts/run-web-with-env.ps1
+- frontend/scripts/build-apk-with-env.ps1
+
+**Verification Commands**:
+- flutter analyze
+---2026-06-28 19:26:10 IST
+## 87. Env Template Reference Expansion: Mirrored the Live SHIELD Env Surface Into .env.example With Redacted Reference Values
+**High-level description**: Expanded ackend/.env.example from a mixed placeholder file into a near-complete reference template that mirrors the live SHIELD env surface while keeping secrets redacted. This makes the template useful for handoff, deployment setup, and future environment recreation without exposing actual runtime credentials.
+- Template changes applied:
+  - backend/.env.example
+  - aligned the template with the currently supported local env surface so the example now includes the same major categories already in use across SHIELD runtime and build flows:
+    - core app config
+    - database and Redis/Valkey
+    - JWT/auth signing
+    - OTP placeholders
+    - Cloudflare R2 storage
+    - Firebase admin + platform values
+    - Cloudflare Turnstile
+    - Sentry
+    - SMTP placeholders
+    - OCR service values
+  - replaced blank entries with redacted or patterned reference values where useful, so the file reads more like a deployment-ready checklist than a sparse skeleton
+- Redaction approach used:
+  - secrets remain redacted using <redacted-...> patterns rather than copying live values from the local env
+  - public/non-sensitive structural references were preserved where they improve clarity, for example:
+    - local app/API URLs
+    - known SHIELD project slugs such as shield-zabnix, shield-flutter, shield-web, and shield-backend
+    - expected bundle/package identity com.zabnix.shield
+    - bucket name shield-files
+  - DSNs, auth tokens, private keys, access keys, and JWT secrets were intentionally kept redacted
+- Why this approach was chosen:
+  - you asked to add everything from the env into the env example as scrambled or redacted references
+  - SHIELD now has enough integrated providers that a sparse template slows onboarding and handoff, while a redacted mirror-template gives the team the right balance of completeness and safety
+  - keeping the example close to the live env surface reduces drift when new runtime keys are introduced and makes missing deployment variables easier to spot quickly
+- Important behavior preserved:
+  - the template is still safe to commit and share because it does not contain the actual local secret values
+  - this pass did not alter runtime code or local secret files; it only improved the reference template used for setup/documentation
+- Verification completed for this pass:
+  - read back ackend/.env.example after the update to confirm the expanded redacted template contents
+- Verification notes:
+  - no backend or frontend build was necessary because this pass only changed the env template documentation surface
+
+### Files Modified/Created
+**Backend Files (Modified)**:
+- backend/.env.example
+
+**Verification Commands**:
+- Get-Content backend/.env.example
+---2026-06-28 19:27:47 IST
+## 88. Firebase Auth + SHIELD JWT + RBAC Runtime: Implemented Customer OTP Login, Internal Google Sign-In, Permission Guards, and Scoped Identity Foundations
+**High-level description**: Replaced the old placeholder auth assumptions with a real NestJS auth foundation aligned to the current SHIELD direction: customers authenticate through Firebase Phone OTP, internal users authenticate through Firebase Google Sign-In, Nest verifies Firebase ID tokens, and the backend issues SHIELD JWTs backed by Redis session state. The pass also established a concrete RBAC catalog with user types, scopes, and permission-guarded controller coverage so the backend no longer relies on unauthenticated body-driven access patterns for core customer, wallet, document, appointment, CRM, notification, credit, dashboard, and pharmacy routes.
+- Auth architecture implemented in backend runtime:
+  - backend/src/auth/auth.module.ts
+  - added a global auth module with JWT support plus global guards so API routes now participate in SHIELD auth by default unless explicitly marked public
+  - backend/src/auth/auth.controller.ts
+  - added real auth endpoints:
+    - POST /auth/customer/login
+    - POST /auth/internal/login
+    - POST /auth/refresh
+    - POST /auth/logout
+    - GET /auth/me
+  - backend/src/auth/auth.service.ts
+  - implemented the main auth flow:
+    - verify Firebase ID tokens through Firebase Admin
+    - require Firebase Phone OTP for customers
+    - require Firebase Google sign-in for internal users
+    - match only pre-provisioned customers/users in PostgreSQL
+    - update firebase_uid and last_login_at on successful login
+    - issue SHIELD JWT access tokens
+    - issue Redis-backed refresh tokens
+    - support refresh rotation and session revocation/logout
+  - backend/src/auth/shield-jwt-auth.guard.ts
+  - added bearer-token enforcement with public-route bypass support
+  - backend/src/auth/shield-authorization.guard.ts
+  - added permission enforcement using route metadata instead of open authenticated access
+  - backend/src/auth/public.decorator.ts, permissions.decorator.ts, current-principal.decorator.ts, auth.types.ts
+  - added reusable auth metadata/decorator utilities and the shared principal/JWT payload model
+- RBAC, user types, and scope foundations implemented:
+  - backend/src/auth/rbac-catalog.ts
+  - created a seeded RBAC catalog covering:
+    - user types: CUSTOMER, EMPLOYEE, SERVICE_PROVIDER, SYSTEM
+    - scopes: GLOBAL, ORGANIZATION, CLUSTER, BRANCH, SELF
+    - human roles including SUPER_ADMIN, ADMIN, BRANCH_MANAGER, RECEPTIONIST, PHARMACIST, DOCTOR, LAB_TECHNICIAN, HOMECARE_PROVIDER, DENTAL_PROVIDER, COSMETIC_PROVIDER, DIETITIAN, CUSTOMER_SUPPORT, FINANCE, AUDITOR, CUSTOMER
+    - system roles including SYSTEM, BACKGROUND_WORKER, NOTIFICATION_SERVICE, WEBHOOK_SERVICE
+    - resource.action permission codes across customer, appointment, prescription, documents, wallet, credit, CRM, reports, membership, products, pharmacy, notifications, support, settings, roles, and audit
+  - backend/src/auth/auth-bootstrap.service.ts
+  - added startup bootstrap that:
+    - ensures the new auth-support columns/indexes exist even in an existing database without a formal Prisma migration pass yet
+    - seeds roles, permissions, and role-permission links into the current database
+- Prisma/schema identity support added:
+  - backend/prisma/schema.prisma
+  - extended Role with user_type, default_scope, and is_system_role
+  - extended User with firebase_uid, auth_provider, user_type, access_scope, branch_business_id, and related indexes/branch relation
+  - extended Customer with firebase_uid, last_login_at, and index support
+  - preserved the existing domain schema while adding only the auth identity metadata needed for Firebase-backed login + RBAC claims
+- Firebase Admin expanded from notifications-only to identity verification too:
+  - backend/src/notification/firebase-admin.service.ts
+  - added verifyIdToken() so the same Firebase Admin runtime can verify authentication tokens in addition to FCM delivery
+  - backend/src/notification/notification.module.ts
+  - exported FirebaseAdminService so the auth module can reuse the existing Firebase Admin initialization instead of duplicating app bootstrap logic
+- Redis/Valkey session runtime extended for auth use:
+  - backend/src/redis/redis.service.ts
+  - added delete() helper so refresh-token rotation and logout/session revocation can remove and invalidate Redis session keys cleanly
+  - auth session keys now stay namespaced through the existing Redis prefix model, which fits the intended temporary-only Redis usage documented earlier
+- Controller coverage moved toward real permission-aware access:
+  - backend/src/customer/customer.controller.ts
+  - backend/src/wallet/wallet.controller.ts
+  - backend/src/appointment/appointment.controller.ts
+  - backend/src/document/document.controller.ts
+  - backend/src/notification/notification.controller.ts
+  - backend/src/credit/credit.controller.ts
+  - backend/src/crm/crm.controller.ts
+  - backend/src/dashboard/dashboard.controller.ts
+  - backend/src/pharmacy/pharmacy.controller.ts
+  - added route-level permission metadata and principal-aware handling for the current live controller surface
+  - customer self-service routes now stop trusting arbitrary body/query customer identifiers when the authenticated principal is a customer and instead resolve to the principal’s own customer identity where practical
+  - public support and health endpoints remain explicitly public
+- Public-route handling aligned with the current app surface:
+  - backend/src/app.controller.ts
+  - backend/src/support/support.controller.ts
+  - preserved GET /, GET /health, POST /support/contact, and POST /support/feedback as public routes so health checks and current public support flows keep working under the new global auth guards
+- Repo guidance aligned with the implemented auth model:
+  - AGENTS.md
+  - updated the SHIELD agent reference so backend auth guidance now reflects Firebase Phone OTP for customers and Firebase Google Sign-In for internal users instead of the older email/password note
+- Why this approach was chosen:
+  - you explicitly shifted SHIELD to a pre-provisioned identity model with no public signup, no passwords, customer phone+OTP only, and internal Google sign-in only
+  - the backend previously had no real auth module, so the correct implementation was to build the Firebase verification -> SHIELD JWT issuance path rather than adding more placeholder env/config notes
+  - seeding roles/permissions in code keeps the RBAC catalog deterministic and matches the requirement that permissions flow from roles, not direct user grants
+  - using Redis for refresh-token/session state fits the intended SHIELD infrastructure model where PostgreSQL remains the source of truth and Redis handles temporary authentication/session concerns
+- Important architectural honesty note preserved:
+  - this pass establishes RBAC, scope claims, and customer-self enforcement foundations, but fully strict provider-to-patient relationship gating still requires explicit assignment/relationship data in the schema (for example, appointment-based or provider-assignment-based access control tables)
+  - in other words, the backend is now materially more correct and secure than before, but the most granular medical-record relationship policy still needs dedicated domain data to be enforceable everywhere without approximation
+- Verification completed for this pass:
+  - npx prisma generate
+  - npm run build
+- Verification notes:
+  - Prisma Client regenerated successfully after the schema auth additions
+  - Nest backend build passed after the auth module, RBAC bootstrap, Firebase verification, Redis session handling, and controller guard coverage were added
+  - no Flutter/web build was run for this pass because the implementation scope was backend/domain-doc focused and the active workflow preference is to avoid unrelated APK or heavy frontend builds unless the change actually targets those runtimes
+
+### Files Modified/Created
+**Backend Files (Modified)**:
+- backend/package.json
+- backend/package-lock.json
+- backend/prisma/schema.prisma
+- backend/src/app.controller.ts
+- backend/src/app.module.ts
+- backend/src/appointment/appointment.controller.ts
+- backend/src/credit/credit.controller.ts
+- backend/src/crm/crm.controller.ts
+- backend/src/customer/customer.controller.ts
+- backend/src/dashboard/dashboard.controller.ts
+- backend/src/document/document.controller.ts
+- backend/src/notification/firebase-admin.service.ts
+- backend/src/notification/notification.controller.ts
+- backend/src/notification/notification.module.ts
+- backend/src/pharmacy/pharmacy.controller.ts
+- backend/src/redis/redis.service.ts
+- backend/src/support/support.controller.ts
+- backend/src/wallet/wallet.controller.ts
+
+**Backend Files (Created)**:
+- backend/src/auth/auth.module.ts
+- backend/src/auth/auth.controller.ts
+- backend/src/auth/auth.service.ts
+- backend/src/auth/auth-bootstrap.service.ts
+- backend/src/auth/auth.types.ts
+- backend/src/auth/rbac-catalog.ts
+- backend/src/auth/public.decorator.ts
+- backend/src/auth/permissions.decorator.ts
+- backend/src/auth/current-principal.decorator.ts
+- backend/src/auth/shield-jwt-auth.guard.ts
+- backend/src/auth/shield-authorization.guard.ts
+
+**Project Files (Modified)**:
+- AGENTS.md
+
+**Verification Commands**:
+- npx prisma generate
+- npm run build
+---$timestamp
+## 89. Final V1 Role Simplification: Reduced SHIELD Human Roles to the 11 Business Roles and Switched Guards to Resource.Action Permissions
+**High-level description**: Reworked the new auth/RBAC foundation to match the finalized V1 SHIELD operating model more closely. The previous seeded catalog still carried broader/admin-split and support-style roles from the earlier exploratory pass. This update collapses the human role set to the final 11 business roles, keeps the internal system roles for non-human automation, and renames the permission surface to the simpler resource.action structure you chose for long-term maintainability.
+- Final V1 human role model applied in backend seed catalog:
+  - backend/src/auth/rbac-catalog.ts
+  - reduced the primary human-role catalog to:
+    - ADMIN
+    - SHIELD_AGENT
+    - CRM_EXECUTIVE
+    - PHARMACY_PROVIDER
+    - LAB_PROVIDER
+    - DOCTOR
+    - HOMECARE_PROVIDER
+    - DENTAL_PROVIDER
+    - COSMETIC_PROVIDER
+    - DIETITIAN
+    - CUSTOMER
+  - removed the earlier broader human-role variants such as SUPER_ADMIN, BRANCH_MANAGER, RECEPTIONIST, CUSTOMER_SUPPORT, FINANCE, and AUDITOR from the seeded V1 human-role surface
+  - preserved non-human system roles separately for internal services:
+    - SYSTEM
+    - BACKGROUND_WORKER
+    - NOTIFICATION_SERVICE
+    - WEBHOOK_SERVICE
+- Permission model simplified to resource.action as requested:
+  - backend/src/auth/rbac-catalog.ts
+  - replaced the older mixed permission naming style (for example customer.view, prescription.view, products.manage, pharmacy.purchase, notifications.register_device) with a flatter, more governable resource.action catalog
+  - current seeded resources now include:
+    - customers
+    - wallet
+    - membership
+    - appointments
+    - medical_records
+    - documents
+    - reports
+    - crm
+    - agents
+    - providers
+    - referrals
+    - analytics
+    - settings
+    - notifications
+  - each resource now supports the standard action family you specified:
+    - view
+    - create
+    - update
+    - delete
+    - approve
+    - export
+- Role intent aligned to the business model you described:
+  - ADMIN now has full platform access as the single top-level human admin role rather than splitting Admin vs Super Admin permissions
+  - SHIELD_AGENT is scoped around enrollment, wallet/manual operational actions, referrals, and agent-performance visibility instead of broad CRM or provider access
+  - CRM_EXECUTIVE now centers on assigned-customer follow-up, retention, and communication operations rather than sharing broad agent/provider visibility
+  - provider roles are separated by actual business function rather than layered role explosion, while still sharing a consistent branch-scoped service-provider pattern
+  - CUSTOMER remains the self-service role with referrals explicitly included in the permission surface
+- Referral direction carried into the RBAC model:
+  - this pass added referrals as a first-class permission resource so the future referral graph/tree, rewards, analytics, and agent/customer referral surfaces have a dedicated authorization boundary instead of being buried under CRM or customer miscellany
+  - the current customer schema already has the basic parent referral link (`referredById`), so keeping referrals explicit in RBAC reduces future churn when the dedicated referral module/UI is built out
+- Controller permission decorators updated to the simplified resource.action naming:
+  - backend/src/customer/customer.controller.ts
+    - moved to customers.* permissions
+  - backend/src/wallet/wallet.controller.ts
+    - moved wallet mutating actions under wallet.update while wallet reads remain wallet.view
+  - backend/src/appointment/appointment.controller.ts
+    - moved to appointments.* permissions
+  - backend/src/document/document.controller.ts
+    - upload/list/delete/classification/approval routes remapped to documents.* and medical_records.* as appropriate
+  - backend/src/credit/credit.controller.ts
+    - mapped credit-account visibility/approvals under wallet.* because wallet/credit behavior is treated as one operational financial surface in the simplified V1 resource scheme
+  - backend/src/dashboard/dashboard.controller.ts
+    - dashboard/reporting access now maps to analytics.view instead of the older reports.view-only guard style, which better reflects the operations-center direction you described
+  - backend/src/notification/notification.controller.ts
+    - device-token registration, deactivation, read state, and send actions now align to notifications.*
+  - backend/src/pharmacy/pharmacy.controller.ts
+    - product/purchase operations now sit under providers.* in the simplified permission model rather than a separate ad hoc product/pharmacy permission family
+- Repo guidance updated to match the new final role list:
+  - AGENTS.md
+  - refreshed the SHIELD role reference section so future sessions see the final V1 business-role list instead of the earlier, broader role descriptions
+- Why this approach was chosen:
+  - you explicitly finalized the V1 role strategy around a small business-aligned set of human roles and asked to avoid role explosion
+  - keeping the permission layer resource.action-based makes the catalog easier to reason about, easier to seed, and easier to expand consistently when referral dashboards, provider workflows, or analytics surfaces grow
+  - folding the current live backend guards into the new permission names now avoids a future mismatch where the database/catalog says one thing but controller decorators still enforce legacy naming
+- Important implementation honesty note:
+  - this pass intentionally focused on the role/permission simplification and not on inventing a full referral module or relationship-access engine beyond what the current schema can honestly support today
+  - the RBAC model is now prepared for that next slice because referrals and analytics are explicit permission domains, but the full referral graph/dashboard module and strict provider-to-patient relationship enforcement still require dedicated domain work rather than permission naming alone
+- Verification completed for this pass:
+  - npx prisma generate
+  - npm run build
+- Verification notes:
+  - Prisma Client regenerated successfully after the RBAC catalog update
+  - Nest backend build stayed green after the final role reduction and permission-decorator rename pass
+  - no Flutter/web or APK verification was run because this was a backend authorization-catalog adjustment and the current workflow preference is to avoid unrelated heavy mobile builds
+
+### Files Modified/Created
+**Backend Files (Modified)**:
+- backend/src/auth/rbac-catalog.ts
+- backend/src/appointment/appointment.controller.ts
+- backend/src/credit/credit.controller.ts
+- backend/src/customer/customer.controller.ts
+- backend/src/dashboard/dashboard.controller.ts
+- backend/src/document/document.controller.ts
+- backend/src/notification/notification.controller.ts
+- backend/src/pharmacy/pharmacy.controller.ts
+- backend/src/wallet/wallet.controller.ts
+
+**Project Files (Modified)**:
+- AGENTS.md
+
+**Verification Commands**:
+- npx prisma generate
+- npm run build
+---$timestamp
+## 90. Three-Ledger Wallet + Referral Lifecycle + Central Pricing Foundation: Implemented Cash, Reward Points, Hidden SHIELD Benefit, and Rule-Based Service Evaluation
+**High-level description**: Reworked the SHIELD backend away from the old effective single-balance wallet assumption and into the requested three-ledger architecture. The backend now treats customer funds, reward points, and hidden company-funded benefit credit as separate ledgers, delays referral rewards until post-verification and first eligible transaction, and routes service pricing through a centralized pricing engine instead of calculating discounts inline inside service modules.
+- Prisma/domain architecture extended for the new wallet and referral model:
+  - backend/prisma/schema.prisma
+  - added wallet-transaction support for richer ledger behavior:
+    - `sub_ledger_type` now supports the intended three-ledger runtime model through service logic:
+      - `CASH`
+      - `REWARD_POINTS`
+      - `SHIELD_BENEFIT`
+    - added `is_customer_visible` so hidden benefit entries can remain invisible as a remaining balance while still being auditable in the ledger
+    - added `expires_at` and `metadata` for future point-expiry, benefit-policy, and structured event tracking
+  - added `ReferralRewardEvent` as a first-class lifecycle table so referrals are no longer rewarded immediately on customer approval; they now move through a delayed reward flow
+  - added `ServiceBenefitRule` so benefit eligibility and maximum benefit amounts are configurable per service type instead of hardcoded across modules
+  - added `RewardRedemptionRule` so points-to-cash conversion stays admin-configurable rather than implicit in wallet code
+- Wallet runtime refactored into the real three-ledger model:
+  - backend/src/wallet/wallet.service.ts
+  - wallet summary is now split into:
+    - `cashWallet`
+    - `rewardPoints`
+    - hidden `shieldBenefit` ledger
+  - customer-visible wallet responses no longer expose hidden promotional benefit balance by default
+  - admin-capable callers can still inspect the internal benefit ledger when needed for operations/audit
+  - wallet transactions now understand ledger-specific behavior for:
+    - recharge
+    - manual adjustment
+    - point redemption into cash credit
+    - hidden benefit grant/application
+  - added reward-point redemption flow based on the configurable redemption rule rather than treating points as raw money
+- Wallet API updated for the new architecture:
+  - backend/src/wallet/wallet.controller.ts
+  - existing recharge/adjust endpoints now accept `ledger_type`, so SHIELD can intentionally credit:
+    - cash wallet
+    - reward points
+    - hidden benefit ledger
+  - added `POST /wallets/redeem-points` to convert points into SHIELD cash credit under the configured redemption rule
+  - wallet reads now include hidden benefit only for ADMIN callers; customers keep the intended opaque experience
+- Referral lifecycle corrected to match the anti-abuse reward flow:
+  - backend/src/referral/referral.service.ts
+  - backend/src/referral/referral.controller.ts
+  - backend/src/referral/referral.module.ts
+  - customer registration with a referrer now creates a `PENDING` referral reward event instead of instantly crediting points
+  - customer approval now marks the referral `VERIFIED` instead of rewarding it
+  - reward credit happens only when the referred customer completes the first eligible transaction through `qualifyRewardFromTransaction(...)`
+  - points are credited into the `REWARD_POINTS` ledger only when the referral reaches reward status
+  - added referral endpoints for:
+    - referral tree retrieval
+    - referral summary retrieval
+    - explicit qualification hook
+  - referral summary now exposes points and status counts without requiring CRM/provider access
+- Customer onboarding corrected for delayed rewards:
+  - backend/src/customer/customer.service.ts
+  - removed the old immediate referral point credit from approval
+  - customer creation now creates the pending referral event only if a valid referring code exists
+  - customer approval activates card/membership as before, then marks the referral `VERIFIED`
+  - this matches the requested progression where registration and KYC/membership completion are not enough to grant the reward on their own
+- Central pricing/rule-engine foundation added:
+  - backend/src/pricing/pricing.service.ts
+  - backend/src/pricing/pricing.controller.ts
+  - backend/src/pricing/pricing.module.ts
+  - backend/src/pricing/commercial-bootstrap.service.ts
+  - backend/src/pricing/pricing.types.ts
+  - pricing evaluation now follows a centralized sequence instead of module-local math:
+    - original service price
+    - service benefit eligibility and max benefit rule
+    - membership discount
+    - optional reward-point redemption value
+    - final payable amount
+  - the pricing service also exposes wallet ledger balances so all future service modules can evaluate rules from the same source instead of recomputing balances ad hoc
+  - seeded default service rules now preserve the critical pharmacy restriction:
+    - `PHARMACY` -> benefit eligible = false
+    - other configured services -> benefit eligible = true with default caps that can be tuned later
+  - seeded a default points redemption rule:
+    - `1000 points -> ₹100 cash credit`
+    - monthly/threshold fields are now configuration-backed instead of implied only in notes
+- Pharmacy flow moved off inline discount logic and onto the rule engine:
+  - backend/src/pharmacy/pharmacy.service.ts
+  - removed the older inline discount calculation based only on membership percentage
+  - pharmacy purchases now call the centralized pricing engine
+  - because pharmacy is configured as not benefit-eligible, the pricing engine enforces the business rule that medicines do not consume hidden SHIELD benefit
+  - final cash debit is now ledger-aware and validated against available cash balance before purchase completion
+  - referral qualification hook now runs after successful purchase creation, which means the current pharmacy billing flow is the first live service flow capable of promoting a verified referral to rewarded status
+- Bootstrap and seeding support added so the new domain can work against an existing database without waiting on an external migration toolchain:
+  - backend/src/pricing/commercial-bootstrap.service.ts
+  - ensures the new wallet-transaction columns and new commercial/referral tables exist at runtime startup
+  - seeds service benefit defaults and a default reward redemption rule so the backend does not start empty-handed after deployment
+- Repo rules/reference updated:
+  - AGENTS.md
+  - extended the database rules to reflect:
+    - three independent wallet ledgers
+    - hidden SHIELD benefit behavior
+    - delayed referral reward lifecycle
+    - centralized pricing/rule-engine expectation across service modules
+- Why this approach was chosen:
+  - you explicitly defined the wallet as three independent ledgers instead of one balance, and that required more than a controller-level response tweak; the transaction model itself had to change
+  - referral points could no longer be treated as a side effect of onboarding approval because that violates the delayed anti-fraud qualification requirement
+  - pharmacy was the clearest existing example of pricing logic being embedded in a feature module, so moving it onto a pricing service establishes the pattern the rest of SHIELD can follow without duplicating business math screen-by-screen or module-by-module
+  - keeping hidden SHIELD benefit as an internal ledger but only exposing `SHIELD Benefit Applied` lines matches the business requirement that customers should not optimize against a visible promotional-balance counter
+- Important implementation honesty notes:
+  - this pass builds the backend foundation and wires the current pharmacy billing flow into it, but other service billing modules do not yet exist in the same depth, so the centralized pricing engine is ready for them rather than already duplicated into non-existent flows
+  - referral tree and summary APIs are now present, but a richer admin/agent referral analytics UI still remains a frontend/module follow-up rather than something fabricated prematurely here
+  - lifetime purchase, fraud heuristics such as duplicate-device detection, and deeper family-abuse logic still need dedicated domain data and operational policy inputs; they are not being faked in this pass
+- Verification completed for this pass:
+  - npx prisma generate
+  - npm run build
+- Verification notes:
+  - Prisma Client regenerated successfully after the new wallet/referral/pricing schema additions
+  - Nest backend build passed after the three-ledger wallet refactor, referral lifecycle changes, and pricing engine module integration
+  - no Flutter/web or APK verification was run because this pass was backend-domain focused and the current workflow preference is to avoid unrelated heavy mobile builds
+
+### Files Modified/Created
+**Backend Files (Modified)**:
+- backend/prisma/schema.prisma
+- backend/src/app.module.ts
+- backend/src/customer/customer.module.ts
+- backend/src/customer/customer.service.ts
+- backend/src/pharmacy/pharmacy.module.ts
+- backend/src/pharmacy/pharmacy.service.ts
+- backend/src/wallet/wallet.controller.ts
+- backend/src/wallet/wallet.service.ts
+
+**Backend Files (Created)**:
+- backend/src/pricing/pricing.types.ts
+- backend/src/pricing/commercial-bootstrap.service.ts
+- backend/src/pricing/pricing.service.ts
+- backend/src/pricing/pricing.controller.ts
+- backend/src/pricing/pricing.module.ts
+- backend/src/referral/referral.service.ts
+- backend/src/referral/referral.controller.ts
+- backend/src/referral/referral.module.ts
+
+**Project Files (Modified)**:
+- AGENTS.md
+
+**Verification Commands**:
+- npx prisma generate
+- npm run build
+---$timestamp
+## 91. Documentation Alignment Pass: Updated AGENTS, API, Security, Schema, and FRD Docs to Match Live Auth, Wallet, Referral, and Pricing Behavior
+**High-level description**: Brought the written SHIELD documentation back in line with the current implemented backend/runtime decisions. The repo had moved materially on Firebase-based auth, simplified RBAC, three-ledger wallet behavior, delayed referral rewards, centralized pricing, and document-storage flow, but the source docs still described older OTP-only API endpoints, email/password internal auth, a two-ledger wallet model, and customer-facing OCR assumptions. This pass updates the source docs so future implementation work can use them as reliable guidance again instead of inheriting stale architecture.
+- AGENTS/runtime guidance refreshed:
+  - `AGENTS.md`
+  - updated backend auth wording to reflect:
+    - customer auth = Firebase Phone OTP -> Nest verification -> SHIELD JWT
+    - internal auth = Firebase Google Sign-In -> Nest verification -> SHIELD JWT
+  - updated caching wording to `Redis / Valkey`
+  - corrected the document pipeline to emphasize original-file storage first, with optional downstream extraction/classification instead of assuming OCR/extraction is always part of the active upload flow
+- Database schema document refreshed:
+  - `docs/SHIELD Database Schema.docx.md`
+  - updated `roles` to include `user_type`, `default_scope`, and `is_system_role`
+  - updated `users` to include `firebase_uid`, `auth_provider`, `user_type`, `access_scope`, `branch_business_id`, and `deleted_at`
+  - updated `customers` to include `firebase_uid`, `last_login_at`, and `deleted_at`
+  - updated `wallet_transactions` to document the actual three-ledger runtime model:
+    - `CASH`
+    - `REWARD_POINTS`
+    - hidden `SHIELD_BENEFIT`
+  - documented additional wallet-transaction governance fields:
+    - `is_customer_visible`
+    - `expires_at`
+    - `metadata`
+  - added the new schema sections for:
+    - `referral_reward_events`
+    - `service_benefit_rules`
+    - `reward_redemption_rules`
+  - extended reporting-view references so analytics docs now acknowledge wallet-ledger, referral, and benefit-utilization reporting surfaces
+- Security architecture document refreshed:
+  - `docs/SHIELD Security Architecture.docx.md`
+  - replaced the old OTP-only and database-refresh-token wording with the implemented two-path auth model:
+    - Firebase Phone for customers
+    - Firebase Google Sign-In for internal users
+    - Redis/Valkey-backed refresh-session revocation
+  - updated JWT claim expectations to include role/scope/Firebase identity context instead of the older minimal role/business-only claims
+  - replaced the stale role list with the finalized V1 human roles plus system roles
+  - reframed authorization as `RBAC + scoped access + relationship checks`, not naive role checks alone
+  - replaced the old password-security section with wallet/benefit/referral security rules because the implemented internal auth direction is Firebase-verified identity rather than new local-password-first design work
+- REST API spec refreshed:
+  - `docs/SHIELD REST API Specification.docx.md`
+  - changed top-level auth wording from `JWT + OTP` to `Firebase ID Token Verification + SHIELD JWT`
+  - replaced the stale `request-otp` / `verify-otp` auth endpoints with the actual implemented auth endpoints:
+    - `POST /auth/customer/login`
+    - `POST /auth/internal/login`
+    - `POST /auth/refresh`
+    - `POST /auth/logout`
+    - `GET /auth/me`
+  - updated wallet response examples to show the current multi-ledger response shape instead of a single `balance`
+  - documented `POST /wallets/redeem-points`
+  - documented the live referral APIs:
+    - `GET /referrals/tree/{customerId}`
+    - `GET /referrals/summary/{customerId}`
+    - `POST /referrals/qualify`
+  - documented `POST /pricing/evaluate` so the centralized pricing engine is represented in the platform contract
+  - updated public/protected endpoint notes to include the live auth and public support routes instead of the removed OTP request/verify endpoints
+- Functional requirements document refreshed:
+  - `docs/SHIELD Functional Requirements Document.docx.md`
+  - updated the system-user section to reflect the final V1 roles more closely:
+    - `ADMIN`
+    - `SHIELD_AGENT`
+    - `CRM_EXECUTIVE`
+    - service-provider roles
+    - `CUSTOMER`
+  - corrected identity requirements to describe Firebase Phone for customers and Firebase Google Sign-In for internal users
+  - updated the wallet section to describe the true three-ledger architecture and hidden-benefit visibility rule
+  - added a dedicated referral-and-rewards module section covering:
+    - referral graph model
+    - delayed qualification workflow
+    - reward statuses
+    - reward redemption policy
+  - updated the document-intelligence section so it now describes original-file retention plus optional extraction workflows, which matches the current product direction after removing mandatory OCR from active customer upload
+  - updated the pharmacy section to reflect centralized pricing evaluation and the rule that SHIELD benefit must not apply to pharmacy medicines
+  - updated the admin/configuration section to include service benefit rules, reward redemption rules, and referral operations/analytics
+- Why this documentation pass was necessary:
+  - the implemented backend had moved far enough that stale docs were becoming actively misleading, especially around auth endpoints, wallet behavior, and how referral rewards are earned
+  - keeping the generated markdown docs aligned now reduces future implementation drift and prevents future sessions from reintroducing old assumptions such as email/password internal login, single-balance wallet math, or mandatory OCR in customer upload UX
+- Verification completed for this pass:
+  - `git diff --stat -- AGENTS.md docs/SHIELD Database Schema.docx.md docs/SHIELD Security Architecture.docx.md docs/SHIELD REST API Specification.docx.md docs/SHIELD Functional Requirements Document.docx.md`
+- Verification notes:
+  - this was a documentation-only pass, so no backend/frontend builds were run
+  - the diff review confirmed the scope stayed limited to the intended source-of-truth docs and agent guidance files
+
+### Files Modified/Created
+**Project Files (Modified)**:
+- AGENTS.md
+- docs/SHIELD Database Schema.docx.md
+- docs/SHIELD Security Architecture.docx.md
+- docs/SHIELD REST API Specification.docx.md
+- docs/SHIELD Functional Requirements Document.docx.md
+
+**Verification Commands**:
+- git diff --stat -- AGENTS.md docs/SHIELD Database Schema.docx.md docs/SHIELD Security Architecture.docx.md docs/SHIELD REST API Specification.docx.md docs/SHIELD Functional Requirements Document.docx.md
+---
+2026-06-28 20:19:06 IST

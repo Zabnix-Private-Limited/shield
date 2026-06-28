@@ -6,12 +6,16 @@ import {
   Body,
   Query,
 } from '@nestjs/common';
+import { CurrentPrincipal } from '../auth/current-principal.decorator';
+import { RequirePermissions } from '../auth/permissions.decorator';
+import type { ShieldPrincipal } from '../auth/auth.types';
 import { PharmacyService } from './pharmacy.service';
 
 @Controller()
 export class PharmacyController {
   constructor(private pharmacyService: PharmacyService) {}
 
+  @RequirePermissions('providers.update')
   @Post('products')
   async createProduct(@Body() body: any) {
     const prod = await this.pharmacyService.createProduct(body);
@@ -22,6 +26,7 @@ export class PharmacyController {
     };
   }
 
+  @RequirePermissions('providers.view')
   @Get('products/search')
   async searchProducts(@Query('query') query?: string) {
     const prods = await this.pharmacyService.searchProducts(query);
@@ -32,6 +37,7 @@ export class PharmacyController {
     };
   }
 
+  @RequirePermissions('providers.view')
   @Get('products/:id')
   async getProduct(@Param('id') id: string) {
     const prod = await this.pharmacyService.getProduct(BigInt(id));
@@ -42,6 +48,7 @@ export class PharmacyController {
     };
   }
 
+  @RequirePermissions('providers.create')
   @Post('pharmacy/purchases')
   async createPurchase(@Body() body: any) {
     const staffId = body.staff_user_id ? BigInt(body.staff_user_id) : undefined;
@@ -66,9 +73,18 @@ export class PharmacyController {
     };
   }
 
+  @RequirePermissions('providers.view')
   @Get('pharmacy/purchases')
-  async listPurchases(@Query('customer_id') customerId?: string) {
-    const targetCustomerId = customerId ? BigInt(customerId) : undefined;
+  async listPurchases(
+    @Query('customer_id') customerId?: string,
+    @CurrentPrincipal() principal?: ShieldPrincipal,
+  ) {
+    const targetCustomerId =
+      principal?.principalType === 'CUSTOMER'
+        ? BigInt(principal.customerId!)
+        : customerId
+          ? BigInt(customerId)
+          : undefined;
     const purchases = await this.pharmacyService.listPurchases(targetCustomerId);
     return {
       success: true,

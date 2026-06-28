@@ -1,10 +1,19 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { randomUUID } from 'crypto';
+import { PricingService } from '../pricing/pricing.service';
+import { ReferralService } from '../referral/referral.service';
+import { WalletService } from '../wallet/wallet.service';
+import { WALLET_LEDGER_TYPES } from '../pricing/pricing.types';
 
 @Injectable()
 export class PharmacyService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly pricingService: PricingService,
+    private readonly referralService: ReferralService,
+    private readonly walletService: WalletService,
+  ) {}
 
   async createProduct(data: { productName: string; brand: string; productCode: string; unit?: string }) {
     return this.prisma.product.create({
@@ -49,7 +58,6 @@ export class PharmacyService {
     items: Array<{ productId: bigint; quantity: number; unitPrice: number }>;
     staffUserId?: bigint;
   }) {
-    // 1. Calculate raw total
     let totalAmount = 0;
     for (const item of data.items) {
       totalAmount += item.quantity * item.unitPrice;
@@ -68,14 +76,20 @@ export class PharmacyService {
       throw new BadRequestException('Customer does not have a wallet configured.');
     }
 
-    // 3. Compute discount based on membership type discount percentage
-    const discountPercent = Number(customer.membership?.membershipType?.discountPercentage || 0);
-    const discountAmount = Number((totalAmount * (discountPercent / 100)).toFixed(2));
-    const payableAmount = Number((totalAmount - discountAmount).toFixed(2));
+    const evaluation = await this.pricingService.evaluateServicePrice({
+      customerId: customer.id,
+      serviceType: 'PHARMACY',
+      originalAmount: totalAmount,
+      persistAudit: true,
+      referenceType: 'PURCHASE',
+    });
 
-    // 4. Prisma Transaction
+    await this.walletService.ensureSufficientCashBalance(
+      customer.id,
+      evaluation.finalPayableAmount,
+    );
+
     return this.prisma.$transaction(async (tx) => {
-      // a. Create Purchase
       const purchase = await tx.purchase.create({
         data: {
           uuid: randomUUID(),
@@ -83,13 +97,18 @@ export class PharmacyService {
           providerId: data.providerId,
           invoiceNumber: data.invoiceNumber,
           totalAmount,
-          discountAmount,
-          payableAmount,
+          discountAmount: Number(
+            (
+              evaluation.benefitApplied +
+              evaluation.membershipDiscountApplied +
+              evaluation.rewardPointCreditValue
+            ).toFixed(2),
+          ),
+          payableAmount: evaluation.finalPayableAmount,
           purchaseDate: new Date(),
         },
       });
 
-      // b. Create Purchase Items
       for (const item of data.items) {
         await tx.purchaseItem.create({
           data: {
@@ -102,18 +121,30 @@ export class PharmacyService {
         });
       }
 
-      // c. Create Wallet Transaction (Debit)
-      await tx.walletTransaction.create({
+      await tx.cashWalletTransaction.create({
         data: {
           uuid: randomUUID(),
           walletId: customer.wallet!.id,
           transactionType: 'PURCHASE',
-          amount: payableAmount,
+          amount: evaluation.finalPayableAmount,
           remarks: `Pharmacy purchase (Invoice: ${data.invoiceNumber})`,
           createdBy: data.staffUserId,
           referenceType: 'PURCHASE',
           referenceId: purchase.id,
+          metadata: {
+            customerVisibleLines: evaluation.customerVisibleLines,
+          },
         },
+      });
+
+      return purchase;
+    }).then(async (purchase) => {
+      await this.referralService.qualifyRewardFromTransaction({
+        customerId: customer.id,
+        serviceType: 'PHARMACY',
+        referenceType: 'PURCHASE',
+        referenceId: purchase.id,
+        performedBy: data.staffUserId,
       });
 
       return purchase;

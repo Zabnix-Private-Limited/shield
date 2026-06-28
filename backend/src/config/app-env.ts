@@ -7,6 +7,9 @@ type ShieldAppEnv = {
   port: number;
   databaseUrl: string;
   redisUrl: string;
+  redisTls: boolean;
+  redisPrefix: string;
+  redisDefaultTtl: number;
   jwtAccessSecret: string;
   jwtRefreshSecret: string;
   jwtAccessTtl: string;
@@ -29,6 +32,8 @@ type ShieldAppEnv = {
   smtpUser: string;
   smtpPass: string;
   smtpFrom: string;
+  turnstileSiteKey: string;
+  turnstileSecretKey: string;
   prescriptionAiUrl: string;
   ocrEnabled: boolean;
   ocrTimeoutMs: number;
@@ -89,6 +94,9 @@ export function getAppEnv(): ShieldAppEnv {
     port: readNumber('PORT', 3000),
     databaseUrl: readString('DATABASE_URL'),
     redisUrl: readString('REDIS_URL'),
+    redisTls: readBoolean('REDIS_TLS', true),
+    redisPrefix: readString('REDIS_PREFIX', 'shield:'),
+    redisDefaultTtl: readNumber('REDIS_DEFAULT_TTL', 300),
     jwtAccessSecret: readString('JWT_ACCESS_SECRET'),
     jwtRefreshSecret: readString('JWT_REFRESH_SECRET'),
     jwtAccessTtl: readString('JWT_ACCESS_TTL', '15m'),
@@ -104,17 +112,22 @@ export function getAppEnv(): ShieldAppEnv {
     r2PublicBaseUrl: readString('R2_PUBLIC_BASE_URL'),
     firebaseProjectId: readString('FIREBASE_PROJECT_ID'),
     firebaseClientEmail: readString('FIREBASE_CLIENT_EMAIL'),
-    firebasePrivateKey: readString('FIREBASE_PRIVATE_KEY').replace(/\\n/g, '\n'),
+    firebasePrivateKey: readString('FIREBASE_PRIVATE_KEY').replace(
+      /\\n/g,
+      '\n',
+    ),
     firebaseServiceAccountPath: readString('FIREBASE_SERVICE_ACCOUNT_PATH'),
     smtpHost: readString('SMTP_HOST'),
     smtpPort: readNumber('SMTP_PORT', 587),
     smtpUser: readString('SMTP_USER'),
     smtpPass: readString('SMTP_PASS'),
     smtpFrom: readString('SMTP_FROM'),
-    prescriptionAiUrl: readString('PRESCRIPTION_AI_URL', 'http://127.0.0.1:8010').replace(
-      /\/+$/,
-      '',
-    ),
+    turnstileSiteKey: readString('TURNSTILE_SITE_KEY'),
+    turnstileSecretKey: readString('TURNSTILE_SECRET_KEY'),
+    prescriptionAiUrl: readString(
+      'PRESCRIPTION_AI_URL',
+      'http://127.0.0.1:8010',
+    ).replace(/\/+$/, ''),
     ocrEnabled: readBoolean('OCR_ENABLED', false),
     ocrTimeoutMs: readNumber('OCR_TIMEOUT_MS', 120000),
   };

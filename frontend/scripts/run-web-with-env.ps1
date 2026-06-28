@@ -24,8 +24,14 @@ $dartDefines = @()
 foreach ($key in @(
   'APP_ENV',
   'API_BASE_URL',
+  'GOOGLE_MAPS_API_KEY',
   'ENABLE_OCR',
   'ENABLE_NOTIFICATIONS',
+  'ENABLE_SENTRY',
+  'TURNSTILE_SITE_KEY',
+  'SENTRY_FLUTTER_DSN',
+  'SENTRY_ENVIRONMENT',
+  'SENTRY_RELEASE',
   'FIREBASE_WEB_VAPID_KEY'
 )) {
   $value = [Environment]::GetEnvironmentVariable($key, 'Process')

@@ -1,20 +1,38 @@
 import {
   Controller,
+  ForbiddenException,
   Get,
   Post,
   Param,
   Body,
   Query,
 } from '@nestjs/common';
+import { CurrentPrincipal } from '../auth/current-principal.decorator';
+import { RequirePermissions } from '../auth/permissions.decorator';
+import type { ShieldPrincipal } from '../auth/auth.types';
 import { WalletService } from './wallet.service';
+import { WALLET_LEDGER_TYPES } from '../pricing/pricing.types';
 
 @Controller('wallets')
 export class WalletController {
   constructor(private walletService: WalletService) {}
 
+  @RequirePermissions('wallet.view')
   @Get(':customerId')
-  async getWallet(@Param('customerId') customerId: string) {
-    const data = await this.walletService.getWalletByCustomerId(BigInt(customerId));
+  async getWallet(
+    @Param('customerId') customerId: string,
+    @CurrentPrincipal() principal?: ShieldPrincipal,
+  ) {
+    if (
+      principal?.principalType === 'CUSTOMER' &&
+      principal.customerId !== customerId
+    ) {
+      throw new ForbiddenException('Customers can only view their own wallet.');
+    }
+
+    const data = await this.walletService.getWalletByCustomerId(BigInt(customerId), {
+      includeHiddenBenefit: principal?.roleCode === 'ADMIN',
+    });
     return {
       success: true,
       message: 'Wallet profile retrieved successfully',
@@ -22,14 +40,25 @@ export class WalletController {
     };
   }
 
+  @RequirePermissions('wallet.update')
   @Post('recharge')
-  async recharge(@Body() body: any) {
+  async recharge(@Body() body: any, @CurrentPrincipal() principal?: ShieldPrincipal) {
     const staffId = BigInt(1);
+    if (
+      (body.ledger_type || WALLET_LEDGER_TYPES.CASH) ===
+        WALLET_LEDGER_TYPES.SHIELD_BENEFIT &&
+      principal?.roleCode !== 'ADMIN'
+    ) {
+      throw new ForbiddenException(
+        'Only admin may grant or preload SHIELD benefit ledger entries.',
+      );
+    }
     const txn = await this.walletService.recharge(
       BigInt(body.customer_id),
       Number(body.amount),
       staffId,
       body.remarks,
+      body.ledger_type || WALLET_LEDGER_TYPES.CASH,
     );
     return {
       success: true,
@@ -38,15 +67,26 @@ export class WalletController {
     };
   }
 
+  @RequirePermissions('wallet.update')
   @Post('adjustments')
-  async adjust(@Body() body: any) {
+  async adjust(@Body() body: any, @CurrentPrincipal() principal?: ShieldPrincipal) {
     const staffId = BigInt(1);
+    if (
+      (body.ledger_type || WALLET_LEDGER_TYPES.CASH) ===
+        WALLET_LEDGER_TYPES.SHIELD_BENEFIT &&
+      principal?.roleCode !== 'ADMIN'
+    ) {
+      throw new ForbiddenException(
+        'Only admin may adjust SHIELD benefit ledger entries.',
+      );
+    }
     const txn = await this.walletService.adjust(
       BigInt(body.customer_id),
       Number(body.amount),
       body.type,
       staffId,
       body.remarks,
+      body.ledger_type || WALLET_LEDGER_TYPES.CASH,
     );
     return {
       success: true,
@@ -55,6 +95,7 @@ export class WalletController {
     };
   }
 
+  @RequirePermissions('wallet.view')
   @Get(':id/transactions')
   async getTransactions(
     @Param('id') id: string,
@@ -71,6 +112,22 @@ export class WalletController {
       success: true,
       message: 'Transactions feed retrieved',
       data: txns,
+    };
+  }
+
+  @RequirePermissions('wallet.update')
+  @Post('redeem-points')
+  async redeemPoints(@Body() body: any) {
+    const staffId = BigInt(1);
+    const result = await this.walletService.redeemRewardPoints(
+      BigInt(body.customer_id),
+      Number(body.points),
+      staffId,
+    );
+    return {
+      success: true,
+      message: 'Reward points redeemed successfully.',
+      data: result,
     };
   }
 }

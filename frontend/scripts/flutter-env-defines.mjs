@@ -9,9 +9,11 @@ export function withFlutterEnvDefines(args, env = process.env) {
   const nextArgs = [...args];
   pushDefine(nextArgs, 'APP_ENV', env.APP_ENV);
   pushDefine(nextArgs, 'API_BASE_URL', env.API_BASE_URL);
+  pushDefine(nextArgs, 'GOOGLE_MAPS_API_KEY', env.GOOGLE_MAPS_API_KEY);
   pushDefine(nextArgs, 'ENABLE_OCR', env.ENABLE_OCR);
   pushDefine(nextArgs, 'ENABLE_NOTIFICATIONS', env.ENABLE_NOTIFICATIONS);
   pushDefine(nextArgs, 'ENABLE_SENTRY', env.ENABLE_SENTRY);
+  pushDefine(nextArgs, 'TURNSTILE_SITE_KEY', env.TURNSTILE_SITE_KEY);
   pushDefine(
     nextArgs,
     'FIREBASE_WEB_VAPID_KEY',

@@ -7,12 +7,14 @@ import {
   Body,
   Query,
 } from '@nestjs/common';
+import { RequirePermissions } from '../auth/permissions.decorator';
 import { CrmService } from './crm.service';
 
 @Controller()
 export class CrmController {
   constructor(private crmService: CrmService) {}
 
+  @RequirePermissions('crm.view')
   @Get('crm/activities')
   async listActivities(@Query('customer_id') customerId?: string) {
     const list = await this.crmService.listActivities(
@@ -25,6 +27,7 @@ export class CrmController {
     };
   }
 
+  @RequirePermissions('crm.create')
   @Post('crm/activities')
   async createActivity(@Body() body: any) {
     const staffId = body.created_by ? BigInt(body.created_by) : BigInt(1);
@@ -41,6 +44,7 @@ export class CrmController {
     };
   }
 
+  @RequirePermissions('crm.view')
   @Get('crm/tasks')
   async listTasks(
     @Query('customer_id') customerId?: string,
@@ -57,6 +61,7 @@ export class CrmController {
     };
   }
 
+  @RequirePermissions('crm.create')
   @Post('crm/tasks')
   async createTask(@Body() body: any) {
     const task = await this.crmService.createTask({
@@ -72,6 +77,7 @@ export class CrmController {
     };
   }
 
+  @RequirePermissions('crm.update')
   @Put('crm/tasks/:id')
   async updateTask(@Param('id') id: string, @Body() body: any) {
     const task = await this.crmService.updateTask(BigInt(id), body);
@@ -82,6 +88,7 @@ export class CrmController {
     };
   }
 
+  @RequirePermissions('crm.view')
   @Get('crm/complaints')
   async listComplaints(@Query('customer_id') customerId?: string) {
     const list = await this.crmService.listComplaints(
@@ -94,6 +101,7 @@ export class CrmController {
     };
   }
 
+  @RequirePermissions('crm.create')
   @Post('complaints')
   async createComplaint(@Body() body: any) {
     const comp = await this.crmService.createComplaint({
@@ -108,6 +116,7 @@ export class CrmController {
     };
   }
 
+  @RequirePermissions('crm.update')
   @Put('complaints/:id')
   async updateComplaint(@Param('id') id: string, @Body() body: any) {
     const comp = await this.crmService.updateComplaint(BigInt(id), body);
@@ -118,6 +127,7 @@ export class CrmController {
     };
   }
 
+  @RequirePermissions('crm.update')
   @Post('complaints/:id/resolve')
   async resolveComplaint(@Param('id') id: string) {
     const comp = await this.crmService.resolveComplaint(BigInt(id));

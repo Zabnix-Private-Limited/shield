@@ -110,7 +110,13 @@ code VARCHAR(50) UNIQUE,
 
 name VARCHAR(255),
 
-description TEXT
+description TEXT,
+
+user_type VARCHAR(30), -- CUSTOMER | EMPLOYEE | SERVICE_PROVIDER | SYSTEM
+
+default_scope VARCHAR(30), -- GLOBAL | ORGANIZATION | CLUSTER | BRANCH | SELF
+
+is_system_role BOOLEAN DEFAULT FALSE
 
 );
 
@@ -174,7 +180,17 @@ mobile VARCHAR(20) UNIQUE,
 
 email VARCHAR(255) UNIQUE,
 
-password\_hash TEXT,
+password\_hash TEXT, -- retained nullable for compatibility; Firebase is the active auth source
+
+firebase\_uid VARCHAR(128) UNIQUE,
+
+auth\_provider VARCHAR(30), -- FIREBASE_PHONE | FIREBASE_GOOGLE
+
+user\_type VARCHAR(30),
+
+access\_scope VARCHAR(30),
+
+branch\_business\_id BIGINT,
 
 role\_id BIGINT,
 
@@ -188,9 +204,15 @@ created\_at TIMESTAMPTZ DEFAULT NOW(),
 
 updated\_at TIMESTAMPTZ DEFAULT NOW(),
 
+deleted\_at TIMESTAMPTZ,
+
 FOREIGN KEY(role\_id)
 
 REFERENCES roles(id),
+
+FOREIGN KEY(branch\_business\_id)
+
+REFERENCES businesses(id),
 
 FOREIGN KEY(department\_id)
 
@@ -205,6 +227,10 @@ idx\_user\_mobile
 idx\_user\_email
 
 idx\_user\_role
+
+idx\_user\_firebase\_uid
+
+idx\_user\_branch\_business
 
 ---
 
@@ -252,6 +278,10 @@ referral_code VARCHAR(50) UNIQUE,
 
 referred_by_id BIGINT NULL,
 
+firebase\_uid VARCHAR(128) UNIQUE,
+
+last\_login\_at TIMESTAMPTZ,
+
 status VARCHAR(50),
 
 created\_by BIGINT,
@@ -261,6 +291,8 @@ approved\_by BIGINT,
 created\_at TIMESTAMPTZ DEFAULT NOW(),
 
 updated\_at TIMESTAMPTZ DEFAULT NOW(),
+
+deleted\_at TIMESTAMPTZ,
 
 FOREIGN KEY(created\_by)
 
@@ -283,6 +315,8 @@ idx\_customer\_mobile
 idx\_customer\_aadhaar
 
 idx\_customer\_name
+
+idx\_customer\_firebase\_uid
 
 ---
 
@@ -482,7 +516,7 @@ wallet\_id BIGINT,
 
 transaction\_type VARCHAR(50),
 
-sub_ledger_type VARCHAR(50) DEFAULT 'CASH', -- 'CASH' or 'POINTS'
+sub_ledger_type VARCHAR(50) DEFAULT 'CASH', -- 'CASH' | 'REWARD_POINTS' | 'SHIELD_BENEFIT'
 
 amount NUMERIC(15,2),
 
@@ -491,6 +525,12 @@ reference\_type VARCHAR(100),
 reference\_id BIGINT,
 
 remarks TEXT,
+
+is_customer_visible BOOLEAN DEFAULT TRUE,
+
+expires_at TIMESTAMPTZ,
+
+metadata JSONB,
 
 created\_by BIGINT,
 
@@ -513,6 +553,130 @@ idx\_wallet\_transaction\_wallet
 idx\_wallet\_transaction\_type
 
 idx\_wallet\_transaction\_date
+
+---
+
+# referral\_reward\_events
+
+CREATE TABLE referral\_reward\_events (
+
+id BIGSERIAL PRIMARY KEY,
+
+uuid UUID UNIQUE NOT NULL,
+
+referrer\_customer\_id BIGINT NOT NULL,
+
+referred\_customer\_id BIGINT UNIQUE NOT NULL,
+
+referral\_code VARCHAR(50),
+
+status VARCHAR(30) DEFAULT 'PENDING', -- PENDING | VERIFIED | QUALIFIED | REWARDED | REJECTED
+
+reward\_points NUMERIC(15,2) DEFAULT 0,
+
+qualifying\_reference\_type VARCHAR(100),
+
+qualifying\_reference\_id BIGINT,
+
+notes TEXT,
+
+verified\_at TIMESTAMPTZ,
+
+qualified\_at TIMESTAMPTZ,
+
+rewarded\_at TIMESTAMPTZ,
+
+rejected\_at TIMESTAMPTZ,
+
+rejected\_reason TEXT,
+
+created\_at TIMESTAMPTZ DEFAULT NOW(),
+
+updated\_at TIMESTAMPTZ DEFAULT NOW(),
+
+FOREIGN KEY(referrer\_customer\_id)
+
+REFERENCES customers(id),
+
+FOREIGN KEY(referred\_customer\_id)
+
+REFERENCES customers(id)
+
+);
+
+Indexes:
+
+idx\_referral\_reward\_events\_referrer
+
+idx\_referral\_reward\_events\_status
+
+---
+
+# service\_benefit\_rules
+
+CREATE TABLE service\_benefit\_rules (
+
+id BIGSERIAL PRIMARY KEY,
+
+uuid UUID UNIQUE NOT NULL,
+
+service\_type VARCHAR(50) UNIQUE NOT NULL,
+
+is\_benefit\_eligible BOOLEAN DEFAULT FALSE,
+
+max\_benefit\_amount NUMERIC(12,2) DEFAULT 0,
+
+qualifies\_referral\_reward BOOLEAN DEFAULT TRUE,
+
+reward\_points\_on\_service NUMERIC(12,2) DEFAULT 0,
+
+status VARCHAR(50) DEFAULT 'ACTIVE',
+
+created\_at TIMESTAMPTZ DEFAULT NOW(),
+
+updated\_at TIMESTAMPTZ DEFAULT NOW()
+
+);
+
+Important:
+
+Pharmacy medicine billing must keep `is_benefit_eligible = FALSE`.
+
+---
+
+# reward\_redemption\_rules
+
+CREATE TABLE reward\_redemption\_rules (
+
+id BIGSERIAL PRIMARY KEY,
+
+uuid UUID UNIQUE NOT NULL,
+
+code VARCHAR(50) UNIQUE NOT NULL,
+
+points\_required NUMERIC(12,2) NOT NULL,
+
+cash\_credit\_amount NUMERIC(12,2) NOT NULL,
+
+minimum\_points NUMERIC(12,2) DEFAULT 0,
+
+maximum\_points\_per\_month NUMERIC(12,2) DEFAULT 0,
+
+expiry\_months INT DEFAULT 24,
+
+credit\_ledger\_type VARCHAR(50) DEFAULT 'CASH',
+
+status VARCHAR(50) DEFAULT 'ACTIVE',
+
+created\_at TIMESTAMPTZ DEFAULT NOW(),
+
+updated\_at TIMESTAMPTZ DEFAULT NOW()
+
+);
+
+Important:
+
+Reward points are not cash, cannot be transferred, and only convert through explicit redemption rules.
 
 ---
 
@@ -1105,5 +1269,11 @@ vw\_service\_usage
 vw\_document\_processing
 
 vw\_crm\_performance
+
+vw\_wallet\_ledger\_summary
+
+vw\_referral\_performance
+
+vw\_service\_benefit\_utilization
 
 End of Physical Database Design.

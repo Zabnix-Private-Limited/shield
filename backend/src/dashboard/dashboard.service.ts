@@ -1,9 +1,15 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { WalletService } from '../wallet/wallet.service';
+import { PricingService } from '../pricing/pricing.service';
 
 @Injectable()
 export class DashboardService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private walletService: WalletService,
+    private pricingService: PricingService,
+  ) {}
 
   async getCustomerDashboard(customerId: bigint) {
     const customer = await this.prisma.customer.findUnique({
@@ -15,21 +21,9 @@ export class DashboardService {
     }
 
     // Calculate Wallet Balance
-    let balance = 0;
-    if (customer.wallet) {
-      const txns = await this.prisma.walletTransaction.findMany({
-        where: { walletId: customer.wallet.id },
-      });
-      for (const t of txns) {
-        const amount = Number(t.amount || 0);
-        const type = (t.transactionType || '').toUpperCase();
-        if (['CREDIT', 'RECHARGE', 'OPENING_BALANCE', 'PROMOTIONAL_CREDIT'].includes(type)) {
-          balance += amount;
-        } else if (['DEBIT', 'PURCHASE', 'ADJUSTMENT', 'REVERSAL'].includes(type)) {
-          balance -= amount;
-        }
-      }
-    }
+    const walletSummary = customer.wallet
+      ? await this.walletService.getWalletSummary(customer.wallet.id)
+      : null;
 
     const totalAppointments = await this.prisma.appointment.count({
       where: { customerId },
@@ -42,11 +36,7 @@ export class DashboardService {
     });
 
     const recentTransactions = customer.wallet
-      ? await this.prisma.walletTransaction.findMany({
-          where: { walletId: customer.wallet.id },
-          take: 3,
-          orderBy: { createdAt: 'desc' },
-        })
+      ? await this.walletService.getTransactions(customer.wallet.id, {})
       : [];
 
     const recentAppointments = await this.prisma.appointment.findMany({
@@ -71,7 +61,8 @@ export class DashboardService {
           }
         : null,
       wallet: {
-        balance,
+        cashBalance: walletSummary?.cashWallet.available ?? 0,
+        rewardPoints: walletSummary?.rewardPoints.available ?? 0,
         availableCredit: customer.creditAccount ? Number(customer.creditAccount.availableCredit) : 0,
       },
       counts: {
@@ -79,7 +70,7 @@ export class DashboardService {
         upcomingAppointments,
         unreadNotifications,
       },
-      recentTransactions,
+      recentTransactions: recentTransactions.slice(0, 3),
       recentAppointments,
     };
   }
@@ -134,19 +125,20 @@ export class DashboardService {
       where: { status: 'COMPLETED' },
     });
 
-    const creditsSum = await this.prisma.walletTransaction.aggregate({
+    const credits = await this.prisma.cashWalletTransaction.findMany({
       where: {
-        transactionType: { in: ['CREDIT', 'RECHARGE'] },
-      },
-      _sum: {
-        amount: true,
+        transactionType: { in: ['CREDIT', 'RECHARGE', 'OPENING_BALANCE'] },
       },
     });
+    const creditsSum = credits.reduce(
+      (sum, entry) => sum + Number(entry.amount || 0),
+      0,
+    );
 
     return {
       activeCustomers,
       completedAppointments,
-      totalRechargedRevenue: Number(creditsSum._sum.amount || 0),
+      totalRechargedRevenue: Number(creditsSum || 0),
     };
   }
 
@@ -177,18 +169,17 @@ export class DashboardService {
     }
 
     // 2. Compute wallet balance helper
-    const getBalance = async () => {
-      if (!customer.wallet) return 0;
-      const txns = await this.prisma.walletTransaction.findMany({ where: { walletId: customer.wallet.id } });
-      let bal = 0;
-      for (const t of txns) {
-        const amt = Number(t.amount || 0);
-        const ty = (t.transactionType || '').toUpperCase();
-        if (['CREDIT', 'RECHARGE', 'OPENING_BALANCE', 'PROMOTIONAL_CREDIT'].includes(ty)) bal += amt;
-        else if (['DEBIT', 'PURCHASE', 'ADJUSTMENT', 'REVERSAL'].includes(ty)) bal -= amt;
-      }
-      return bal;
-    };
+      const getBalance = async () => {
+        if (!customer.wallet) return 0;
+        const summary = await this.walletService.getWalletSummary(customer.wallet.id);
+        return summary.cashWallet.available;
+      };
+
+      const getRewardPoints = async () => {
+        if (!customer.wallet) return 0;
+        const summary = await this.walletService.getWalletSummary(customer.wallet.id);
+        return summary.rewardPoints.available;
+      };
 
     if (roleKey === 'customer') {
       const balance = await getBalance();
@@ -200,6 +191,7 @@ export class DashboardService {
         data.actions = ['View card', 'Book visit', 'Open wallet'];
         data.metrics = [
           { label: 'Wallet Balance', value: `₹${balance}`, note: 'Available starting balance' },
+          { label: 'Reward Points', value: `${await getRewardPoints()}`, note: 'Available reward points' },
           { label: 'Credit Account', value: `₹${creditAvailable}`, note: 'Instant credit line' },
           { label: 'Active Membership', value: customer.membership?.membershipNumber || 'None', note: 'Founding Member' },
         ];
@@ -219,11 +211,7 @@ export class DashboardService {
 
         // Recent: Wallet transactions
         if (customer.wallet) {
-          const recentTxns = await this.prisma.walletTransaction.findMany({
-            where: { walletId: customer.wallet.id },
-            take: 3,
-            orderBy: { createdAt: 'desc' },
-          });
+          const recentTxns = await this.walletService.getTransactions(customer.wallet.id, {});
           data.recentItems = recentTxns.map((t) => ({
             title: t.remarks || 'Transaction',
             subtitle: `Amount: ₹${t.amount}`,
@@ -236,15 +224,13 @@ export class DashboardService {
         data.summary = 'Calculate balance from ledgers, process recharges, and view historical transactions.';
         data.metrics = [
           { label: 'Total Balance', value: `₹${balance}`, note: 'Calculated from ledger history' },
+          { label: 'Reward Points', value: `${await getRewardPoints()}`, note: 'Available now' },
           { label: 'Credit Limit', value: `₹${customer.creditAccount?.creditLimit || 0}`, note: 'Total line' },
           { label: 'Available Credit', value: `₹${creditAvailable}`, note: 'Usable credit line' },
         ];
 
         if (customer.wallet) {
-          const txns = await this.prisma.walletTransaction.findMany({
-            where: { walletId: customer.wallet.id },
-            orderBy: { createdAt: 'desc' },
-          });
+          const txns = await this.walletService.getTransactions(customer.wallet.id, {});
           data.queueItems = txns.map((t) => ({
             title: t.remarks || 'Wallet Adjustment',
             subtitle: `Type: ${t.transactionType}`,
@@ -346,7 +332,7 @@ export class DashboardService {
           status: a.activityType || 'CALL',
         }));
       }
-    } else if (roleKey === 'super-admin') {
+    } else if (roleKey === 'admin') {
       if (sectionKey === 'audit-trail') {
         data.title = 'Security Audit Trail';
         const audits = await this.prisma.auditLog.findMany({
@@ -358,6 +344,40 @@ export class DashboardService {
           subtitle: `IP: ${a.ipAddress || 'Unknown'} • Entity: ${a.entityType}`,
           meta: a.createdAt.toLocaleDateString(),
           status: 'SUCCESS',
+        }));
+      } else if (sectionKey === 'wallet' || sectionKey === 'benefits') {
+        data.title = 'Commercial Controls';
+        data.summary =
+          'Admin-only commercial configuration for preload, benefit, reward, and redemption behavior.';
+
+        const config = await this.pricingService.getAdminCommercialConfig();
+        data.metrics = [
+          {
+            label: 'Service Rules',
+            value: `${config.serviceRules.length}`,
+            note: 'Benefit and wallet-usage rules',
+          },
+          {
+            label: 'Reward Rules',
+            value: `${config.rewardRules.length}`,
+            note: 'Points master actions',
+          },
+          {
+            label: 'Redemption Rules',
+            value: `${config.redemptionRules.length}`,
+            note: 'Points-to-credit conversions',
+          },
+        ];
+        data.queueItems = config.settings.map((setting) => ({
+          title: setting.code,
+          subtitle:
+            setting.valueBoolean !== null && setting.valueBoolean !== undefined
+              ? `Boolean: ${setting.valueBoolean}`
+              : setting.valueNumber !== null && setting.valueNumber !== undefined
+                ? `Number: ${setting.valueNumber}`
+                : `Text: ${setting.valueText || ''}`,
+          meta: setting.valueType,
+          status: setting.status,
         }));
       }
     } else if (roleKey === 'shield-executive') {

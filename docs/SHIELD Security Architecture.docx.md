@@ -10,125 +10,123 @@ This document contains detailed security architecture specifications for SHIELD.
 
 # Authentication
 
-## OTP-Based Authentication
+## Customer Authentication
 
-- **OTP Length:** 6 digits
-- **OTP Expiry:** 5 minutes
-- **OTP Retry Limit:** 5 attempts
-- **OTP Delivery Channels:** SMS (primary), Push Notification (fallback)
+- Customers authenticate using **Firebase Phone Authentication**
+- The client sends a Firebase ID token to `POST /auth/customer/login`
+- NestJS verifies the Firebase token, confirms that the customer was pre-provisioned in SHIELD, and then issues a SHIELD access token and refresh token
+- No customer password, email login, or self-signup flow exists in V1
 
-## JWT Tokens
+## Internal User Authentication
+
+- Internal users authenticate using **Firebase Google Sign-In**
+- The client sends a Firebase ID token to `POST /auth/internal/login`
+- NestJS verifies the Firebase token, confirms that the internal account was pre-provisioned by an admin, and then issues a SHIELD access token and refresh token
+- Only organization-approved Google identities should be provisioned for internal use
+
+## SHIELD JWT Tokens
 
 ### Access Token
-- **Expiry:** 1 hour (3600 seconds)
+- **Expiry:** short-lived, controlled by env (`JWT_ACCESS_TTL`)
 - **Algorithm:** HS256
 - **Claims:**
-  - sub: user ID
-  - role: user role code
-  - business_id: business ID (if applicable)
-  - department_id: department ID (if applicable)
-  - iat: issued at timestamp
-  - exp: expiry timestamp
+  - `sub`: SHIELD principal ID
+  - `role_code`: RBAC role code
+  - `user_type`: `CUSTOMER | EMPLOYEE | SERVICE_PROVIDER | SYSTEM`
+  - `access_scope`: `GLOBAL | ORGANIZATION | CLUSTER | BRANCH | SELF`
+  - `customer_id`: customer public identifier when principal is a customer
+  - `branch_business_id`: branch scope when applicable
+  - `permissions`: resolved `resource.action` permissions
+  - `firebase_uid`: verified Firebase subject
+  - `iat` and `exp`
 
 ### Refresh Token
-- **Expiry:** 30 days (2592000 seconds)
+- **Expiry:** longer-lived, controlled by env (`JWT_REFRESH_TTL`)
 - **Algorithm:** HS256
 - **Claims:**
-  - sub: user ID
-  - jti: unique token ID (for revocation)
-  - iat: issued at timestamp
-  - exp: expiry timestamp
+  - `sub`: SHIELD principal ID
+  - `session_id`: unique session identifier
+  - `jti`: token identifier for revocation
+  - `iat` and `exp`
 
 ### Token Refresh Flow
 1. Client sends refresh token to `/api/v1/auth/refresh`
-2. Server validates refresh token (expiry, signature, not revoked)
-3. Server issues new access token and new refresh token
-4. Old refresh token is revoked
+2. Server validates signature and expiry
+3. Server checks session state in Redis/Valkey
+4. Server issues a new access token and rotated refresh token
+5. Prior refresh token session entry is revoked
 
 ### Token Revocation
-- Refresh tokens are stored in database with status (active/revoked)
-- On logout, both access and refresh tokens are revoked
-- On password change, all refresh tokens for user are revoked
+- Refresh sessions are stored in Redis/Valkey, not as long-lived database source-of-truth records
+- On logout, the refresh session is revoked
+- On admin-enforced access reset, all known sessions for the principal should be revoked
+- Customer and internal login activity must still be audit logged in PostgreSQL
 
 ---
 
 # Authorization
 
-## RBAC (Role-Based Access Control)
+## RBAC + Scoped Access
 
-### Roles
-1. **CUSTOMER**
-   - View own profile
-   - View own wallet
-   - View own transactions
-   - View own documents
-   - View own appointments
-   - View own notifications
+SHIELD uses role-based permissions with scope and relationship enforcement. Pure role checks are not sufficient for medical and financial data.
 
-2. **PHARMACY_STAFF**
-   - Verify customers
-   - Upload pharmacy bills
-   - Upload prescriptions
-   - View pharmacy history
-   - View own customers
+### Human Roles
+1. **ADMIN**
+2. **SHIELD_AGENT**
+3. **CRM_EXECUTIVE**
+4. **PHARMACY_PROVIDER**
+5. **LAB_PROVIDER**
+6. **DOCTOR**
+7. **HOMECARE_PROVIDER**
+8. **DENTAL_PROVIDER**
+9. **COSMETIC_PROVIDER**
+10. **DIETITIAN**
+11. **CUSTOMER**
 
-3. **CLINIC_STAFF**
-   - Manage appointments
-   - Upload consultation notes
-   - Upload lab reports
-   - View clinic records
-   - View own customers
+### System Roles
+- `SYSTEM`
+- `BACKGROUND_WORKER`
+- `NOTIFICATION_SERVICE`
+- `WEBHOOK_SERVICE`
 
-4. **DENTAL_STAFF**
-   - Manage dental appointments
-   - Upload dental records
-   - View dental records
-   - View own customers
+### Permission Model
+- Permissions use `resource.action`
+- Resources include:
+  - `customers`
+  - `wallet`
+  - `membership`
+  - `appointments`
+  - `medical_records`
+  - `documents`
+  - `reports`
+  - `crm`
+  - `agents`
+  - `providers`
+  - `referrals`
+  - `analytics`
+  - `settings`
+  - `notifications`
 
-5. **CRM_EXECUTIVE**
-   - View customer profiles
-   - Create CRM activities
-   - Create tasks
-   - Create follow-ups
-   - Manage complaints
+### Access Scopes
+- `GLOBAL`
+- `ORGANIZATION`
+- `CLUSTER`
+- `BRANCH`
+- `SELF`
 
-6. **SHIELD_EXECUTIVE**
-   - Create customers
-   - Approve customers
-   - Manage memberships
-   - Manage wallet adjustments
-   - Approve reversals
+### Relationship and Ownership Rules
+- Customers may only access their own records
+- Service providers may only access customers when there is a valid operational relationship such as assignment, appointment, treatment, or referral context
+- Branch-scoped users must not access records outside their assigned branch scope
+- Access to medical records and document downloads should always be auditable
 
-7. **MANAGER**
-   - View all reports
-   - View analytics dashboard
-   - Approve overrides
-   - Approve credit requests
+## Policy Constraints
 
-8. **SUPER_ADMIN**
-   - Full system access
-   - Manage users
-   - Manage roles
-   - Manage permissions
-   - Manage businesses
-   - Manage departments
-   - Manage membership plans
-   - View audit logs
-
-## ABAC (Attribute-Based Access Control)
-
-### Attributes Used
-- **Business:** Which business the user belongs to
-- **Department:** Which department the user belongs to
-- **Record Type:** Type of record being accessed
-- **Ownership:** Whether the user owns the record
-- **Visibility:** Visibility level of the record
-
-### Example ABAC Rules
-- Clinic staff can only access records from their own clinic
-- Pharmacy staff can only access records from their own pharmacy
-- Dental staff can only access dental records
-- Customers can only access their own records
+### Example Constraints
+- Pharmacy providers can view and update only assigned or validly-related pharmacy customers
+- CRM executives can work only on assigned customer follow-up records
+- Customers can only view their own referral subtree, not the full referral network
+- Hidden SHIELD promotional benefit ledger entries must never be exposed to customer-facing wallet views
 
 ---
 
@@ -196,12 +194,12 @@ All critical operations must be logged:
 
 ---
 
-# Password Security
-- **Hashing Algorithm:** Argon2id
-- **Salt Length:** 16 bytes
-- **Iterations:** Configurable (default: 3)
-- **Memory Cost:** Configurable (default: 65536 KB)
-- **Parallelism:** Configurable (default: 4)
+# Wallet, Benefit, and Referral Security
+- Cash wallet, reward points, and hidden SHIELD benefit must be stored as separate ledgers and never collapsed into one exposed customer balance
+- SHIELD benefit is an internal promotional ledger; customers may see only the amount applied to a transaction, never the remaining hidden balance
+- Reward points are not cash, cannot be transferred, cannot be purchased, and may only convert through configured redemption rules
+- Referral rewards must be delayed until qualification rules pass; registration alone must not trigger a reward
+- Pricing, benefit application, reward redemption, and wallet debits must be executed by a centralized service/rule engine rather than ad-hoc UI calculations
 
 ---
 
