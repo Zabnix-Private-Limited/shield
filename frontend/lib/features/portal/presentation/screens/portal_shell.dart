@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:dio/dio.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../../../app/theme/app_colors.dart';
@@ -8,7 +9,6 @@ import '../../../../shared/models/customer.dart';
 import '../../../../shared/models/document.dart';
 import '../../../../shared/models/membership.dart';
 import '../../../../shared/models/notification.dart';
-import '../../../../shared/models/prescription_analysis.dart';
 import '../../../../shared/models/shield_role.dart';
 import '../../../../shared/models/wallet.dart';
 import '../../../../shared/widgets/app_button.dart';
@@ -4788,7 +4788,6 @@ class _CustomerServicesViewState extends State<_CustomerServicesView> {
   bool _isBooking = false;
   String? _lastBookingStatus;
   String? _selectedPrescriptionName;
-  PrescriptionAnalysis? _latestPrescriptionAnalysis;
   final TextEditingController _manualMedicineController =
       TextEditingController();
   final List<_EditablePrescriptionItem> _editablePrescriptionItems = [];
@@ -4817,6 +4816,39 @@ class _CustomerServicesViewState extends State<_CustomerServicesView> {
     return 'application/pdf';
   }
 
+  bool _isUploadSuccessStatus(String status) {
+    final normalized = status.toLowerCase();
+    return normalized.contains('uploaded successfully') ||
+        normalized.contains('saved to your records');
+  }
+
+  bool _isUploadErrorStatus(String status) {
+    return status.toLowerCase().contains('failed');
+  }
+
+  String _buildUploadErrorMessage(Object error) {
+    if (error is DioException) {
+      final responseMessage =
+          error.response?.data is Map<String, dynamic>
+              ? (error.response!.data['message']?.toString() ??
+                  error.response!.data['error']?.toString())
+              : null;
+      if (responseMessage != null && responseMessage.trim().isNotEmpty) {
+        return responseMessage.trim();
+      }
+      if (error.type == DioExceptionType.connectionTimeout ||
+          error.type == DioExceptionType.sendTimeout ||
+          error.type == DioExceptionType.receiveTimeout) {
+        return 'Prescription upload is taking longer than expected. Please check your connection and retry.';
+      }
+      return error.message ?? 'Upload failed unexpectedly.';
+    }
+
+    return error.toString().replaceFirst('Exception: ', '').trim().isEmpty
+        ? 'Upload failed unexpectedly.'
+        : error.toString().replaceFirst('Exception: ', '').trim();
+  }
+
   Future<void> _handlePrescriptionUpload() async {
     final picked = await pickPrescriptionFile();
 
@@ -4832,60 +4864,38 @@ class _CustomerServicesViewState extends State<_CustomerServicesView> {
 
     setState(() {
       _selectedPrescriptionName = fileName;
-      _latestPrescriptionAnalysis = null;
       _isUploading = true;
-      _uploadStatus = 'Uploading $fileName...';
+      _uploadStatus = 'Uploading $fileName to your customer records.';
     });
 
     try {
-      final uploaded = await ApiService.uploadCustomerDocument(
+      await ApiService.uploadCustomerDocument(
         fileName: fileName,
         documentType: 'PRESCRIPTION',
         fileBytes: picked.bytes,
         mimeType: picked.mimeType ?? _inferMimeType(fileName),
         fileSize: fileSize,
       );
-      final analysis = await ApiService.getPrescriptionAnalysis(uploaded.id);
       if (!mounted) return;
       setState(() {
         _isUploading = false;
-        _latestPrescriptionAnalysis = analysis;
-        _editablePrescriptionItems
-          ..clear()
-          ..addAll(
-            analysis.medicineMatches.map(
-              (medicine) => _EditablePrescriptionItem(
-                name: medicine.matchedProductName ?? medicine.rawName,
-                dosage: medicine.dosage,
-                frequency: medicine.frequency,
-                duration: medicine.duration,
-                confidence: medicine.confidence,
-                source: medicine.isMatched ? 'From prescription' : 'Check name',
-                selected: true,
-                alternatives: medicine.candidates
-                    .map((candidate) => candidate.productName)
-                    .toList(),
-              ),
-            ),
-          );
         _uploadStatus =
-            'Prescription received. Review the items below before we send them to the pharmacist.';
+            'Prescription uploaded successfully and saved to your records.';
       });
       showPortalSnackBar(
         context,
-        'Prescription uploaded. Please confirm the items below.',
+        'Prescription uploaded and saved to your records.',
       );
-    } catch (_) {
-      if (!mounted) return;
+    } catch (error) {
+      final errorMessage = _buildUploadErrorMessage(error);
       setState(() {
         _isUploading = false;
-        _latestPrescriptionAnalysis = null;
         _uploadStatus =
-            'Upload failed for ${_selectedPrescriptionName ?? 'selected file'}. Please retry.';
+            'Upload failed for ${_selectedPrescriptionName ?? 'selected file'}. $errorMessage';
       });
       showPortalSnackBar(
         context,
-        'Document upload is unavailable right now. Please retry shortly.',
+        errorMessage,
       );
     }
   }
@@ -4947,96 +4957,6 @@ class _CustomerServicesViewState extends State<_CustomerServicesView> {
     );
   }
 
-  void _showPrescriptionAnalysisSheet(PrescriptionAnalysis analysis) {
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: AppColors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (context) {
-        return SafeArea(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(20, 20, 20, 28),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Center(
-                  child: Container(
-                    width: 44,
-                    height: 5,
-                    decoration: BoxDecoration(
-                      color: AppColors.divider,
-                      borderRadius: BorderRadius.circular(999),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 20),
-                Text('AI Extracted Prescription', style: AppTypography.h4),
-                const SizedBox(height: 8),
-                Text(
-                  '${analysis.structuredData.doctor} • ${analysis.structuredData.date}',
-                  style: AppTypography.body.copyWith(color: AppColors.gray),
-                ),
-                const SizedBox(height: 16),
-                AppCard(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Prescription Summary',
-                        style: AppTypography.small.copyWith(
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      ...analysis.medicineMatches.map(
-                        (medicine) => Padding(
-                          padding: const EdgeInsets.only(bottom: 12),
-                          child: _buildMedicineMatchRow(
-                            medicine,
-                            compact: false,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 16),
-                AppCard(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Original OCR Text',
-                        style: AppTypography.small.copyWith(
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      Text(
-                        analysis.extractedText ?? 'No OCR text available.',
-                        style: AppTypography.small.copyWith(
-                          color: AppColors.darkGray,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 20),
-                AppButton(
-                  text: 'Close',
-                  onPressed: () => Navigator.of(context).pop(),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
   Widget _buildSupportChip(String label) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
@@ -5051,28 +4971,6 @@ class _CustomerServicesViewState extends State<_CustomerServicesView> {
           fontWeight: FontWeight.w700,
         ),
       ),
-    );
-  }
-
-  Widget _buildPipelineStep(PrescriptionPipelineStep step) {
-    return Row(
-      children: [
-        Icon(
-          step.isDone ? Icons.check_circle : Icons.radio_button_unchecked,
-          size: 18,
-          color: step.isDone ? AppColors.shieldGreen : AppColors.gray,
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Text(
-            step.label,
-            style: AppTypography.small.copyWith(
-              color: step.isDone ? AppColors.darkGray : AppColors.gray,
-              fontWeight: step.isDone ? FontWeight.w600 : FontWeight.w500,
-            ),
-          ),
-        ),
-      ],
     );
   }
 
@@ -5386,191 +5284,6 @@ class _CustomerServicesViewState extends State<_CustomerServicesView> {
     );
   }
 
-  Widget _buildMedicineMatchRow(
-    PrescriptionMedicineMatch medicine, {
-    bool compact = true,
-  }) {
-    final highlightColor = medicine.isMatched
-        ? AppColors.shieldGreen
-        : AppColors.warning;
-    final matchedName = medicine.matchedProductName ?? medicine.rawName;
-
-    return Container(
-      padding: EdgeInsets.all(compact ? 12 : 14),
-      decoration: BoxDecoration(
-        color: AppColors.lightGray,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.divider),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Icon(
-                medicine.isMatched ? Icons.check_circle : Icons.pending_actions,
-                size: 18,
-                color: highlightColor,
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      matchedName,
-                      style: AppTypography.small.copyWith(
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.darkGray,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      '${medicine.dosage} • ${medicine.frequency} • ${medicine.duration}',
-                      style: AppTypography.tiny.copyWith(color: AppColors.gray),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 10),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 8,
-                  vertical: 5,
-                ),
-                decoration: BoxDecoration(
-                  color: highlightColor.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(999),
-                ),
-                child: Text(
-                  '${medicine.confidence.toStringAsFixed(0)}%',
-                  style: AppTypography.tiny.copyWith(
-                    color: highlightColor,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          if (!medicine.isMatched && medicine.candidates.isNotEmpty) ...[
-            const SizedBox(height: 10),
-            Text(
-              'Best match: ${medicine.candidates.first.productName}',
-              style: AppTypography.tiny.copyWith(
-                color: AppColors.darkGray,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-
-  Widget _buildAnalysisSummary(PrescriptionAnalysis analysis) {
-    return AppCard(
-      padding: const EdgeInsets.all(18),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Prescription Summary', style: AppTypography.h5),
-                    const SizedBox(height: 6),
-                    Text(
-                      '${analysis.structuredData.doctor} • ${analysis.structuredData.date}',
-                      style: AppTypography.small.copyWith(
-                        color: AppColors.gray,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: AppColors.warning.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(999),
-                ),
-                child: Text(
-                  analysis.reviewStatus == 'APPROVED'
-                      ? 'Approved'
-                      : 'Pending review',
-                  style: AppTypography.tiny.copyWith(
-                    color: analysis.reviewStatus == 'APPROVED'
-                        ? AppColors.shieldGreen
-                        : AppColors.warning,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
-          ...analysis.steps.map(
-            (step) => Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: _buildPipelineStep(step),
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Confidence ${analysis.overallConfidence.toStringAsFixed(0)}%',
-            style: AppTypography.small.copyWith(
-              color: AppColors.shieldBlue,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          const SizedBox(height: 14),
-          ...analysis.medicineMatches.take(3).map(
-            (medicine) => Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: _buildMedicineMatchRow(medicine),
-            ),
-          ),
-          if (analysis.medicineMatches.length > 3)
-            Padding(
-              padding: const EdgeInsets.only(top: 2),
-              child: Text(
-                '+${analysis.medicineMatches.length - 3} more medicines in extracted summary',
-                style: AppTypography.tiny.copyWith(color: AppColors.gray),
-              ),
-            ),
-          const SizedBox(height: 14),
-          Text(
-            '${analysis.cartPrefill.length} items prepared for pharmacy cart review.',
-            style: AppTypography.small.copyWith(
-              color: AppColors.darkGray,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: 12),
-          Align(
-            alignment: Alignment.centerLeft,
-            child: TextButton(
-              onPressed: () => _showPrescriptionAnalysisSheet(analysis),
-              style: TextButton.styleFrom(
-                padding: EdgeInsets.zero,
-                minimumSize: const Size(0, 0),
-                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              ),
-              child: const Text('Open AI summary'),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   Future<void> _handleBookAppointment() async {
     setState(() {
       _isBooking = true;
@@ -5747,108 +5460,167 @@ class _CustomerServicesViewState extends State<_CustomerServicesView> {
         // Upload prescription
         AppCard(
           padding: const EdgeInsets.all(20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Digital Prescription Upload', style: AppTypography.h4),
-              const SizedBox(height: 6),
-              Text(
-                'Upload a prescription or tell us what you need. Our pharmacy team will review and prepare it for you.',
-                style: AppTypography.small.copyWith(color: AppColors.gray),
-              ),
-              const SizedBox(height: 12),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final stackUploadHeader = constraints.maxWidth < 320;
+
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildSupportChip('PDF'),
-                  _buildSupportChip('JPG'),
-                  _buildSupportChip('PNG'),
-                ],
-              ),
-              const SizedBox(height: 16),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: AppColors.lightGray,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: AppColors.divider),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
+                  Text('Digital Prescription Upload', style: AppTypography.h4),
+                  const SizedBox(height: 6),
+                  Text(
+                    'Upload a prescription or tell us what you need. Our pharmacy team will review and prepare it for you.',
+                    style: AppTypography.small.copyWith(color: AppColors.gray),
+                  ),
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      _buildSupportChip('PDF'),
+                      _buildSupportChip('JPG'),
+                      _buildSupportChip('PNG'),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: AppColors.lightGray,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: AppColors.divider),
+                    ),
+                    child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Container(
-                          width: 42,
-                          height: 42,
-                          decoration: BoxDecoration(
-                            color: AppColors.shieldBlue.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: const Icon(
-                            Icons.description_outlined,
-                            color: AppColors.shieldBlue,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
+                        if (stackUploadHeader)
+                          Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
+                              Container(
+                                width: 42,
+                                height: 42,
+                                decoration: BoxDecoration(
+                                  color: AppColors.shieldBlue.withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: const Icon(
+                                  Icons.description_outlined,
+                                  color: AppColors.shieldBlue,
+                                ),
+                              ),
+                              const SizedBox(height: 12),
                               Text(
-                                _selectedPrescriptionName ?? 'Choose a prescription file',
+                                _selectedPrescriptionName ??
+                                    'Choose a prescription file',
                                 style: AppTypography.small.copyWith(
                                   fontWeight: FontWeight.w700,
                                   color: AppColors.darkGray,
                                 ),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
                               ),
                               const SizedBox(height: 4),
                               Text(
                                 _uploadStatus,
                                 style: AppTypography.tiny.copyWith(
-                                  color:
-                                      _uploadStatus.contains('processed.') ||
-                                              _uploadStatus.contains('OCR')
+                                  color: _isUploadErrorStatus(_uploadStatus)
+                                      ? AppColors.error
+                                      : _isUploadSuccessStatus(_uploadStatus)
                                           ? AppColors.shieldGreen
                                           : AppColors.gray,
-                                  fontWeight:
-                                      _uploadStatus.contains('processed.') ||
-                                              _uploadStatus.contains('OCR')
-                                          ? FontWeight.w700
-                                          : FontWeight.w500,
+                                  fontWeight: _isUploadErrorStatus(_uploadStatus) ||
+                                          _isUploadSuccessStatus(_uploadStatus)
+                                      ? FontWeight.w700
+                                      : FontWeight.w500,
+                                  height: 1.25,
+                                ),
+                              ),
+                            ],
+                          )
+                        else
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Container(
+                                width: 42,
+                                height: 42,
+                                decoration: BoxDecoration(
+                                  color: AppColors.shieldBlue.withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: const Icon(
+                                  Icons.description_outlined,
+                                  color: AppColors.shieldBlue,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      _selectedPrescriptionName ??
+                                          'Choose a prescription file',
+                                      style: AppTypography.small.copyWith(
+                                        fontWeight: FontWeight.w700,
+                                        color: AppColors.darkGray,
+                                      ),
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      _uploadStatus,
+                                      style: AppTypography.tiny.copyWith(
+                                        color: _isUploadErrorStatus(_uploadStatus)
+                                            ? AppColors.error
+                                            : _isUploadSuccessStatus(_uploadStatus)
+                                                ? AppColors.shieldGreen
+                                                : AppColors.gray,
+                                        fontWeight:
+                                            _isUploadErrorStatus(_uploadStatus) ||
+                                                    _isUploadSuccessStatus(
+                                                      _uploadStatus,
+                                                    )
+                                                ? FontWeight.w700
+                                                : FontWeight.w500,
+                                        height: 1.25,
+                                      ),
+                                      maxLines: 4,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ],
                                 ),
                               ),
                             ],
                           ),
+                        const SizedBox(height: 14),
+                        AppButton(
+                          text: _isUploading ? 'Processing...' : 'Choose File',
+                          onPressed: _isUploading ? null : _handlePrescriptionUpload,
+                          isLoading: _isUploading,
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          'Upload a prescription above, or add the medicines and products you want below.',
+                          style: AppTypography.tiny.copyWith(color: AppColors.gray),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 14),
-                    AppButton(
-                      text: _isUploading ? 'Processing...' : 'Choose File',
-                      onPressed: _isUploading ? null : _handlePrescriptionUpload,
-                      isLoading: _isUploading,
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      'Upload a prescription above, or add the medicines and products you want below.',
-                      style: AppTypography.tiny.copyWith(color: AppColors.gray),
-                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  _buildManualMedicineComposer(),
+                  if (_editablePrescriptionItems.isNotEmpty) ...[
+                    const SizedBox(height: 16),
+                    _buildEditablePrescriptionList(),
                   ],
-                ),
-              ),
-              const SizedBox(height: 14),
-              _buildManualMedicineComposer(),
-              if (_latestPrescriptionAnalysis != null) ...[
-                const SizedBox(height: 16),
-                _buildAnalysisSummary(_latestPrescriptionAnalysis!),
-                const SizedBox(height: 16),
-                _buildEditablePrescriptionList(),
-              ],
-            ],
+                ],
+              );
+            },
           ),
         ),
         const SizedBox(height: 24),
@@ -5858,14 +5630,17 @@ class _CustomerServicesViewState extends State<_CustomerServicesView> {
         const SizedBox(height: 12),
         LayoutBuilder(
           builder: (context, constraints) {
-            final gridAspectRatio = constraints.maxWidth < 420 ? 2.2 : 2.45;
+            final crossAxisCount = constraints.maxWidth < 340 ? 1 : 2;
+            final gridAspectRatio = crossAxisCount == 1
+                ? 3.1
+                : (constraints.maxWidth < 420 ? 1.75 : 2.05);
 
             return GridView.builder(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               itemCount: regularProducts.length,
               gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
+                crossAxisCount: crossAxisCount,
                 crossAxisSpacing: 12,
                 mainAxisSpacing: 12,
                 childAspectRatio: gridAspectRatio,
@@ -5895,28 +5670,40 @@ class _CustomerServicesViewState extends State<_CustomerServicesView> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           mainAxisAlignment: MainAxisAlignment.center,
+                          mainAxisSize: MainAxisSize.min,
                           children: [
                             Text(
                               prod['name']!,
                               style: AppTypography.small.copyWith(
                                 fontWeight: FontWeight.bold,
+                                height: 1.1,
                               ),
+                              maxLines: 2,
                               overflow: TextOverflow.ellipsis,
                             ),
                             Text(
                               '${prod['qty']} • ${prod['price']}',
                               style: AppTypography.tiny.copyWith(
                                 color: AppColors.gray,
+                                height: 1.1,
                               ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ],
                         ),
                       ),
                       IconButton(
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints.tightFor(
+                          width: 28,
+                          height: 28,
+                        ),
+                        visualDensity: VisualDensity.compact,
                         icon: const Icon(
                           Icons.add_shopping_cart,
                           color: AppColors.shieldGreen,
-                          size: 20,
+                          size: 18,
                         ),
                         onPressed: () {
                           showPortalSnackBar(

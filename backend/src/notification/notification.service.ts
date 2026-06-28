@@ -1,9 +1,59 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { randomUUID } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
+import { FirebaseAdminService } from './firebase-admin.service';
+
+type SendNotificationInput = {
+  customerId: bigint;
+  title: string;
+  message: string;
+  data?: Record<string, string>;
+};
+
+type RegisterTokenInput = {
+  customerId: bigint;
+  token: string;
+  platform: string;
+  deviceLabel?: string;
+};
 
 @Injectable()
-export class NotificationService {
-  constructor(private prisma: PrismaService) {}
+export class NotificationService implements OnModuleInit {
+  private readonly logger = new Logger(NotificationService.name);
+
+  constructor(
+    private prisma: PrismaService,
+    private firebaseAdminService: FirebaseAdminService,
+  ) {}
+
+  async onModuleInit() {
+    await this.ensureDevicePushTokenTable();
+  }
+
+  private async ensureDevicePushTokenTable() {
+    await this.prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS device_push_tokens (
+        id BIGSERIAL PRIMARY KEY,
+        uuid UUID NOT NULL UNIQUE,
+        customer_id BIGINT NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
+        token TEXT NOT NULL UNIQUE,
+        platform VARCHAR(30) NOT NULL,
+        device_label VARCHAR(120),
+        is_active BOOLEAN NOT NULL DEFAULT TRUE,
+        last_seen_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+    `);
+    await this.prisma.$executeRawUnsafe(`
+      CREATE INDEX IF NOT EXISTS idx_device_push_tokens_customer
+      ON device_push_tokens(customer_id);
+    `);
+    await this.prisma.$executeRawUnsafe(`
+      CREATE INDEX IF NOT EXISTS idx_device_push_tokens_platform
+      ON device_push_tokens(platform);
+    `);
+  }
 
   async list(customerId?: bigint) {
     const whereClause: any = {};
@@ -23,8 +73,40 @@ export class NotificationService {
     });
   }
 
-  async send(data: { customerId: bigint; title: string; message: string }) {
-    return this.prisma.notification.create({
+  async registerDeviceToken(input: RegisterTokenInput) {
+    return this.prisma.devicePushToken.upsert({
+      where: { token: input.token },
+      update: {
+        customerId: input.customerId,
+        platform: input.platform.toUpperCase(),
+        deviceLabel: input.deviceLabel,
+        isActive: true,
+        lastSeenAt: new Date(),
+      },
+      create: {
+        uuid: randomUUID(),
+        customerId: input.customerId,
+        token: input.token,
+        platform: input.platform.toUpperCase(),
+        deviceLabel: input.deviceLabel,
+        isActive: true,
+        lastSeenAt: new Date(),
+      },
+    });
+  }
+
+  async deactivateDeviceToken(token: string) {
+    return this.prisma.devicePushToken.updateMany({
+      where: { token },
+      data: {
+        isActive: false,
+        lastSeenAt: new Date(),
+      },
+    });
+  }
+
+  async send(data: SendNotificationInput) {
+    const notification = await this.prisma.notification.create({
       data: {
         customerId: data.customerId,
         title: data.title,
@@ -34,5 +116,53 @@ export class NotificationService {
         sentAt: new Date(),
       },
     });
+
+    const deviceTokens = await this.prisma.devicePushToken.findMany({
+      where: {
+        customerId: data.customerId,
+        isActive: true,
+      },
+      orderBy: { updatedAt: 'desc' },
+    });
+
+    if (deviceTokens.length == 0) {
+      return {
+        notification,
+        push: {
+          attempted: false,
+          configured: this.firebaseAdminService.isConfigured(),
+          reason: 'No active device tokens registered for customer.',
+        },
+      };
+    }
+
+    const result = await this.firebaseAdminService.sendToTokens(
+      deviceTokens.map((item) => item.token),
+      {
+        title: data.title,
+        body: data.message,
+        data: {
+          customerId: data.customerId.toString(),
+          notificationId: notification.id.toString(),
+          ...(data.data ?? {}),
+        },
+      },
+    );
+
+    if (result.failureCount > 0) {
+      this.logger.warn(
+        `FCM delivery reported ${result.failureCount} failures for customer ${data.customerId.toString()}.`,
+      );
+    }
+
+    return {
+      notification,
+      push: {
+        attempted: true,
+        configured: this.firebaseAdminService.isConfigured(),
+        successCount: result.successCount,
+        failureCount: result.failureCount,
+      },
+    };
   }
 }

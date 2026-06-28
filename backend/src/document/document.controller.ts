@@ -66,12 +66,12 @@ export class DocumentController {
 
   @Get('documents/:id/download')
   async download(@Param('id') id: string) {
-    const doc = await this.documentService.findOne(BigInt(id));
+    const url = await this.documentService.getDownloadUrl(BigInt(id));
     return {
       success: true,
       message: 'Document download URL retrieved',
       data: {
-        url: doc.storagePath,
+        url,
       },
     };
   }

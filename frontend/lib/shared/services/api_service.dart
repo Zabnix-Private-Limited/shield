@@ -1,9 +1,9 @@
-import 'dart:typed_data';
-
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 
 import '../../../shared/models/shield_role.dart';
 import '../../features/portal/presentation/portal_role_data.dart';
+import '../config/app_config.dart';
 import '../models/appointment.dart';
 import '../models/customer.dart';
 import '../models/document.dart';
@@ -24,12 +24,15 @@ class ApiService {
   );
 
   static String _resolveBaseUrl() {
+    if (AppConfig.apiBaseUrl.trim().isNotEmpty) {
+      return AppConfig.apiBaseUrl.trim().replaceAll(RegExp(r'/+$'), '');
+    }
     final base = Uri.base;
     final host = base.host.isEmpty ? 'localhost' : base.host;
-    final scheme = host == 'localhost' || host == '127.0.0.1'
-        ? 'http'
-        : (base.scheme.isEmpty ? 'http' : base.scheme);
-    return '$scheme://$host:3000';
+    final isLocalHost = host == 'localhost' || host == '127.0.0.1';
+    final scheme = isLocalHost ? 'http' : (base.scheme.isEmpty ? 'http' : base.scheme);
+    final resolvedHost = isLocalHost ? '127.0.0.1' : host;
+    return '$scheme://$resolvedHost:3000';
   }
 
   static Map<String, dynamic> _readEnvelope(Response<dynamic> response) {
@@ -129,6 +132,18 @@ class ApiService {
         ..sort((a, b) => b.uploadedAt.compareTo(a.uploadedAt));
     }
     return dummyDocuments;
+  }
+
+  static Future<List<Document>> getCustomerDocumentsStrict(String customerId) async {
+    final response = await _dio.get(
+      '/documents',
+      queryParameters: {'customer_id': customerId},
+      options: Options(receiveTimeout: const Duration(minutes: 1)),
+    );
+    return _readEnvelopeList(response)
+        .map((item) => Document.fromJson(item as Map<String, dynamic>))
+        .toList()
+      ..sort((a, b) => b.uploadedAt.compareTo(a.uploadedAt));
   }
 
   static Future<List<NotificationModel>> getNotifications(
@@ -336,7 +351,11 @@ class ApiService {
     final response = await _dio.post(
       '/documents/upload',
       data: formData,
-      options: Options(contentType: 'multipart/form-data'),
+      options: Options(
+        contentType: 'multipart/form-data',
+        sendTimeout: const Duration(minutes: 3),
+        receiveTimeout: const Duration(minutes: 3),
+      ),
     );
     return Document.fromJson(_readEnvelope(response));
   }
@@ -346,6 +365,7 @@ class ApiService {
   ) async {
     final response = await _dio.get(
       '/document-intelligence/prescription-review/$documentId',
+      options: Options(receiveTimeout: const Duration(minutes: 1)),
     );
     return PrescriptionAnalysis.fromJson(_readEnvelope(response));
   }
@@ -367,5 +387,51 @@ class ApiService {
 
   static Future<void> markNotificationRead(String notificationId) async {
     await _dio.post('/notifications/$notificationId/read');
+  }
+
+  static Future<void> registerPushToken({
+    required String token,
+    required String platform,
+    String? deviceLabel,
+    String customerId = '1',
+  }) async {
+    await _dio.post(
+      '/notifications/device-token',
+      data: {
+        'customer_id': customerId,
+        'token': token,
+        'platform': platform,
+        if (deviceLabel != null && deviceLabel.trim().isNotEmpty)
+          'device_label': deviceLabel.trim(),
+      },
+    );
+  }
+
+  static Future<void> deactivatePushToken(String token) async {
+    await _dio.post(
+      '/notifications/device-token/deactivate',
+      data: {'token': token},
+    );
+  }
+
+  static String resolvePushPlatform() {
+    if (kIsWeb) {
+      return 'WEB';
+    }
+
+    switch (defaultTargetPlatform) {
+      case TargetPlatform.android:
+        return 'ANDROID';
+      case TargetPlatform.iOS:
+        return 'IOS';
+      case TargetPlatform.windows:
+        return 'WINDOWS';
+      case TargetPlatform.macOS:
+        return 'MACOS';
+      case TargetPlatform.linux:
+        return 'LINUX';
+      case TargetPlatform.fuchsia:
+        return 'FUCHSIA';
+    }
   }
 }

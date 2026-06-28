@@ -1851,4 +1851,871 @@ otifications inside rontend/lib/features/portal/presentation/screens/portal_she
 - `python -m pip install -r backend/prescription_ai_service/requirements.txt`
 - `python -m uvicorn app.main:app --host 127.0.0.1 --port 8010`
 - `Invoke-WebRequest http://127.0.0.1:8010/health`
+------2026-06-27 14:40:00 IST
+## 60. Prescription OCR Runtime Fixes: PaddleOCR 3.x API Compatibility and Paddle Inference Dependency Wiring
+**High-level description**: Fixed the real customer prescription upload crash path after the backend file upload completed by tracing the Python OCR service failures through live sample execution and patching the actual PaddleOCR/PaddlePaddle runtime mismatches.
+- Root-cause investigation findings:
+  - The attached backend log confirmed uploads were reaching NestJS and creating/classifying `documents`, so the failure was not the web picker anymore.
+  - Direct POST replay against `http://127.0.0.1:3000/documents/upload` returned:
+    - `503 Service Unavailable`
+    - message: `Prescription extraction service returned 500: Internal Server Error`
+  - Running the same uploaded image directly through `backend/prescription_ai_service/app/pipeline.py` exposed three sequential Python-side root causes:
+    1. `PaddleOCR(... show_log=False)` is invalid in installed `paddleocr 3.7.0`
+    2. `engine.predict(..., cls=True)` is invalid in PaddleOCR 3.x
+    3. OCR inference could not start because `paddlepaddle` was not installed
+  - After installing `paddlepaddle`, PaddleOCR still failed on Windows CPU with the known Paddle oneDNN / PIR runtime error:
+    - `ConvertPirAttribute2RuntimeAttribute not support [pir::ArrayAttribute<pir::DoubleAttribute>]`
+- Fixes implemented:
+  - Updated `backend/prescription_ai_service/app/pipeline.py` to be compatible with the installed PaddleOCR 3.x API:
+    - removed the invalid `show_log` constructor flag
+    - changed OCR execution from `engine.ocr(..., cls=True)` to `engine.predict(...)`
+    - added 3.x-compatible result parsing for dictionary-shaped `rec_texts` output
+  - Added a Windows CPU runtime workaround in the OCR bootstrap path:
+    - `FLAGS_enable_pir_api=0`
+    - `enable_mkldnn=False`
+  - Added `paddlepaddle==3.3.1` to `backend/prescription_ai_service/requirements.txt` because PaddleOCR was installed but its actual inference engine dependency was still missing.
+- Live verification of the fix:
+  - Re-ran the same uploaded sample image through `analyze_file()` after the patches and dependency install.
+  - OCR completed successfully and returned:
+    - non-empty `raw_text`
+    - structured JSON response
+    - `engine: paddleocr-image+rapidfuzz`
+  - This confirms the Python OCR pipeline is now functionally executing on the local machine instead of failing during engine construction or inference startup.
+- Remaining quality note:
+  - The uploaded sample is a compounding-style prescription figure, so the current heuristic medicine parser still over-selects some non-medicine lines (doctor/address/phone-style text). That is now a parsing-quality issue, not a runtime failure.
+  - The crash blocker is fixed; the next improvement area is extraction-quality tuning and stronger medicine-line filtering.
+- Why this approach was chosen:
+  - The user asked for the real upload flow to work, so the correct path was to debug the actual OCR runtime instead of masking the upload error in the frontend.
+  - Each fix was validated against the same saved customer-upload image to ensure we were fixing the real failing layer rather than changing unrelated code.
+- Verification completed for this pass:
+  - `python -m py_compile backend/prescription_ai_service/app/pipeline.py`
+  - direct `analyze_file()` execution against the saved uploaded image in `backend/uploads/documents/customer-1/`
+  - confirmed successful OCR output after installing `paddlepaddle` and applying PaddleOCR 3.x compatibility fixes
+
+### Files Modified/Created
+**Backend Files (Modified)**:
+- [pipeline.py](file:///e:/K4NN4N/shield/backend/prescription_ai_service/app/pipeline.py)
+- [requirements.txt](file:///e:/K4NN4N/shield/backend/prescription_ai_service/requirements.txt)
+
+**Verification Commands**:
+- `python -m py_compile backend/prescription_ai_service/app/pipeline.py`
+- `python -m pip install paddlepaddle`
+- direct `python -c "from app.pipeline import analyze_file ..."` sample execution against saved upload
+------2026-06-27 14:55:00 IST
+## 61. Customer Upload Completion Fix: Frontend OCR Timeout Raised and Mobile Product Tile Overflow Removed
+**High-level description**: Fixed the remaining customer prescription upload failure after the OCR service was already succeeding by tracing the frontend flow end-to-end and confirming the upload request was timing out while waiting for long-running OCR work. Also fixed the mobile customer pharmacy product card overflow causing the visible RenderFlex error in the browser console.
+- Root-cause investigation findings:
+  - Direct replay against `/documents/upload` succeeded and returned `status: EXTRACTED` with inserted `document_extractions`, proving NestJS + OCR processing were completing successfully.
+  - Direct replay against `/document-intelligence/prescription-review/:id` also succeeded and returned a valid review payload.
+  - The remaining failure was therefore in the Flutter client layer, not the backend response contract.
+  - `frontend/lib/shared/services/api_service.dart` still used the shared Dio base `receiveTimeout` of 8 seconds for the upload request.
+  - Because `POST /documents/upload` waits for OCR + extraction to finish before responding, first-run or slower prescription analysis could exceed that timeout, causing Flutter to throw and the UI to show:
+    - `Document upload is unavailable right now. Please retry shortly.`
+  - Separately, the browser console RenderFlex error came from the compact pharmacy product tile in `portal_shell.dart`, where the two-line text block plus default `IconButton` constraints could overflow the short customer grid cell height on the clamped mobile viewport.
+- Fixes implemented:
+  - In `frontend/lib/shared/services/api_service.dart`:
+    - raised `uploadCustomerDocument()` `sendTimeout` and `receiveTimeout` to 3 minutes
+    - raised `getPrescriptionAnalysis()` `receiveTimeout` to 1 minute
+  - In `frontend/lib/features/portal/presentation/screens/portal_shell.dart`:
+    - made the product title/meta column `mainAxisSize: MainAxisSize.min`
+    - constrained the title and meta text with `maxLines` and tighter line height
+    - reduced trailing cart `IconButton` padding and constraints so the compact grid card fits the mobile viewport without vertical overflow
+- Why this approach was chosen:
+  - The backend was already doing the real work successfully, so the correct fix was to stop the frontend from timing out while waiting for OCR.
+  - The overflow fix keeps the customer area mobile-first and compact without relaxing the enforced narrow viewport rule.
+- Verification completed for this pass:
+  - `flutter analyze`
+  - `flutter test test/widget_test.dart test/app_responsive_test.dart`
+
+### Files Modified/Created
+**Frontend Files (Modified)**:
+- [api_service.dart](file:///e:/K4NN4N/shield/frontend/lib/shared/services/api_service.dart)
+- [portal_shell.dart](file:///e:/K4NN4N/shield/frontend/lib/features/portal/presentation/screens/portal_shell.dart)
+
+**Verification Commands**:
+- `flutter analyze`
+- `flutter test test/widget_test.dart test/app_responsive_test.dart`
+---## 62. Customer Upload Recovery Hardening: Backend-Success Recovery Path, Specific Error Toasts, and Safer Narrow Product Grid
+**High-level description**: Hardened the customer prescription upload experience after confirming that the OCR backend could finish successfully while the frontend still surfaced a failure state. Added a recovery path that re-checks recent uploaded prescription documents when the original upload request throws, so long-running OCR no longer gets misreported as a hard customer-facing failure. Also made the regularly purchased product grid adapt more safely to the clamped phone viewport.
+- Root-cause refinement beyond the previous timeout fix:
+  - Some failure cases could still leave the UI in a bad state even when backend upload + extraction had already completed, because the customer screen treated any thrown exception as a terminal upload failure.
+  - The previous catch block hid the actual Dio exception details and never attempted to reconcile frontend state against the just-created prescription document.
+  - The compact two-column product grid remained vulnerable on very narrow mobile widths because fixed two-column layout pressure could still compress content too aggressively.
+- Fixes implemented:
+  - In `frontend/lib/shared/services/api_service.dart`:
+    - added `getCustomerDocumentsStrict()` so recovery logic can query the real customer document list without falling back to dummy data.
+  - In `frontend/lib/features/portal/presentation/screens/portal_shell.dart`:
+    - added `_buildUploadErrorMessage()` to surface specific timeout/backend failure messages instead of a generic unavailable toast
+    - added `_recoverUploadedPrescription()` to fetch recent real prescription uploads by filename and load the generated review payload if backend processing already completed
+    - updated `_handlePrescriptionUpload()` to:
+      - show a longer-running processing status up front
+      - attempt recovery after exceptions before marking the upload as failed
+      - restore extracted medicine review items from the recovered analysis when backend work succeeded
+    - updated upload status styling so success turns green and actual failure turns red
+    - changed the regularly purchased product grid to switch to a single column on the narrowest widths and use taller card ratios on small screens, which better respects the enforced phone viewport
+- Why this approach was chosen:
+  - The customer should never be asked to retry blindly when the prescription was already accepted and processed in the backend.
+  - Recovery via the real document list is safer than inventing optimistic success because it only promotes the UI when the persisted prescription review actually exists.
+  - The product grid adaptation preserves the compact premium feel while removing the last width-pressure edge case from the mobile-only customer layout.
+- Verification completed for this pass:
+  - `flutter analyze`
+  - `flutter test test/widget_test.dart test/app_responsive_test.dart`
+  - `flutter build web`
+
+### Files Modified/Created
+**Frontend Files (Modified)**:
+- [api_service.dart](file:///e:/K4NN4N/shield/frontend/lib/shared/services/api_service.dart)
+- [portal_shell.dart](file:///e:/K4NN4N/shield/frontend/lib/features/portal/presentation/screens/portal_shell.dart)
+
+**Verification Commands**:
+- `flutter analyze`
+- `flutter test test/widget_test.dart test/app_responsive_test.dart`
+- `flutter build web`
 ---
+2026-06-27 09:42:27 IST
+
+## 63. Customer OCR-Only Review Flow: Removed Active Product-Table Matching and Show Raw Extracted Medicines
+**High-level description**: Simplified the active customer prescription review flow so it no longer depends on the `products` table. The customer now sees exactly what the OCR pipeline extracted from the uploaded image, and can review or correct those raw medicines directly in the window before pharmacist follow-up.
+- Backend changes:
+  - `backend/src/document/document.service.ts`
+  - stopped sending product-master data into the active OCR analyze-file call by passing an empty `products` list
+  - removed live `products` table matching from `getPrescriptionReview()` for the customer flow
+  - now builds `medicineMatches` directly from the OCR structured medicines with `EXTRACTED` status
+  - now uses extraction confidence directly for the review payload instead of blending OCR confidence with product-match confidence
+  - changed the pipeline step label from medicine-database matching to image extraction so the summary reflects the real behavior
+  - changed pharmacist approval log/notification copy so it describes OCR extracted items rather than cart-ready matched products
+- Frontend changes:
+  - `frontend/lib/features/portal/presentation/screens/portal_shell.dart`
+  - customer editable medicine list now uses `medicine.rawName` directly instead of any matched product name
+  - customer OCR items are labeled `Extracted from image`
+  - removed suggested product alternatives from the customer review window
+  - prescription summary cards now say the medicine is shown exactly as extracted from the uploaded image
+  - summary footer now reports extracted review items instead of pharmacy-cart-prepared items
+- Why this approach was chosen:
+  - you explicitly asked to stop using the `products` table for now
+  - this keeps the current flow honest and easier to trust while OCR extraction is being stabilized
+  - it also avoids fake or premature medicine-master matching before the extraction quality is where it needs to be
+- Verification completed for this pass:
+  - `npm run build`
+  - `flutter analyze`
+  - `flutter test test/widget_test.dart test/app_responsive_test.dart`
+
+### Files Modified/Created
+**Backend Files (Modified)**:
+- [document.service.ts](file:///e:/K4NN4N/shield/backend/src/document/document.service.ts)
+
+**Frontend Files (Modified)**:
+- [portal_shell.dart](file:///e:/K4NN4N/shield/frontend/lib/features/portal/presentation/screens/portal_shell.dart)
+
+**Verification Commands**:
+- `npm run build`
+- `flutter analyze`
+- `flutter test test/widget_test.dart test/app_responsive_test.dart`
+---
+2026-06-27 10:32:25 IST
+---
+2026-06-27 10:48:00 IST
+
+## 64. OCR Extraction Quality Tightening: Filter Clinic Noise and Pair Ingredient Names With Dosage Lines
+**High-level description**: Improved the active prescription OCR parser so customer review now receives cleaner raw extracted medicines instead of doctor/address/contact/instruction noise for compounding-style prescriptions. The fix stays inside the Python extraction pipeline, so the current mobile-only customer portal continues to show raw OCR items without reintroducing product-table matching.
+- Root-cause findings from live sample replay:
+  - the active customer review UI was correctly rendering medicine.rawName, so the junk rows were coming from OCR parsing rather than frontend formatting
+  - the parser still accepted overly broad lines because _looks_like_medicine_line() could promote non-medicine text too easily in scanned prescription images
+  - compounding prescriptions often split ingredient name and dosage onto separate lines, so the old parser missed real items while still promoting unrelated lines like doctor details and instructions
+- Fixes implemented in ackend/prescription_ai_service/app/pipeline.py:
+  - added non-medicine prefix and keyword guards for address/contact/license/instruction text
+  - added doctor-credential filtering so name/signature lines like M.D. no longer enter the extracted medicine list
+  - expanded dosage recognition to include gram-based strengths
+  - normalized hyphen-broken OCR lines before parsing
+  - added pure-measurement detection and paired medicine-name lines with the following dosage line for compound prescriptions
+  - removed the permissive fallback that treated generic 2-4 digit numbers as medicine evidence
+- Live outcome from the saved customer upload sample:
+  - before this pass, the extracted list included noise such as doctor name, street, phone, instruction, and discard lines
+  - after this pass, the same sample reduced to the actual extracted compound ingredients:
+    - Metoclopramide HCL
+    - Methylparaben
+    - Propylparaben
+    - Sodium Chloride
+    - Purified Water, qs ad
+- Why this approach was chosen:
+  - you asked to keep the customer review honest around raw OCR items, so the right fix was to improve extraction quality at the source instead of masking bad rows in Flutter
+  - this preserves the current portal direction: mobile-only, portal-routed, OCR-first, and free of premature product matching
+- Verification completed for this pass:
+  - python -m py_compile app/pipeline.py
+  - direct nalyze_file() replay against ackend/uploads/documents/customer-1/141ad5f6-be40-4dac-87ad-e413e45856ec_images.png
+  - confirmed the extracted medicine list became materially cleaner on the same real saved upload image
+
+### Files Modified/Created
+**Backend Files (Modified)**:
+- [pipeline.py](file:///e:/K4NN4N/shield/backend/prescription_ai_service/app/pipeline.py)
+
+**Verification Commands**:
+- python -m py_compile app/pipeline.py
+- direct python - <<... analyze_file(...) ... replay against saved uploaded image---
+2026-06-27 10:49:00 IST
+
+## 65. Log Correction for Entry 64: Clean File and Command References
+**High-level description**: Appended a correction note because the previous log append introduced command-line escape artifacts into a few file-path and command tokens. This correction preserves the append-only rule and records the authoritative references for the OCR extraction-quality pass.
+- Correct backend file reference:
+  - `backend/prescription_ai_service/app/pipeline.py`
+- Correct verification references for that pass:
+  - `python -m py_compile app/pipeline.py`
+  - direct `analyze_file()` replay against `backend/uploads/documents/customer-1/141ad5f6-be40-4dac-87ad-e413e45856ec_images.png`
+- Why this correction was appended:
+  - `log.md` is append-only in SHIELD, so the safe fix for formatting corruption is a follow-up correction entry rather than editing earlier text.---
+2026-06-27 11:59:47 IST
+
+## 66. Table-Style Prescription OCR Fix: Ignore Hospital Header/Business Details and Parse Only Medicine Rows
+**High-level description**: Fixed the active customer OCR review bug for table-style prescriptions like the uploaded sample, where business address, registration details, timings, complaints, and vitals were being promoted into the extracted medicine list. The parser now explicitly enters the medicine table section and emits only numbered medicine rows for this prescription layout.
+- Root-cause findings:
+  - the broken output was not coming from Flutter rendering; it was already present in `parse_prescription_text()` output
+  - the generic OCR parser had no section-awareness, so any line with enough medicine-like tokens inside the full prescription body could become a medicine
+  - your uploaded layout has a clear table starting at `Medicine Name` and ending before `Advice` / `Follow Up`, but the old parser ignored that structure
+- Fixes implemented in `backend/prescription_ai_service/app/pipeline.py`:
+  - added medicine-section extraction keyed off the `Medicine Name` table header
+  - added explicit section end handling for `Advice`, `Follow Up`, and similar post-prescription blocks
+  - added numbered table-row parsing so only rows like `1) TAB...` become extracted customer medicines in this layout
+  - kept the earlier generic fallback parser in place for non-table prescriptions and compounding-style layouts
+- Verified outcome against the uploaded prescription text shape:
+  - extracted medicines now resolve to:
+    - `TAB. ABCIXIMAB`
+    - `TAB. VOMILAST`
+    - `CAP. ZOCILAR 500`
+    - `TAB. GESTAKIND 10/SR`
+  - address/timing/complaint rows are no longer emitted as medicines for this layout
+- Added regression coverage:
+  - created `backend/prescription_ai_service/tests/test_pipeline.py` with a focused table-style prescription parsing test based on the uploaded sample text structure
+- Why this approach was chosen:
+  - the customer portal is intentionally showing raw OCR review items, so the correct fix is to improve parser accuracy at the source instead of hiding bad rows in the UI
+  - this keeps the mobile-only customer experience intact while making the extracted review list trustworthy
+- Verification completed for this pass:
+  - `python -m py_compile app/pipeline.py tests/test_pipeline.py`
+  - direct `parse_prescription_text()` replay against the uploaded prescription text structure
+  - `python -m unittest discover -s tests`
+
+### Files Modified/Created
+**Backend Files (Modified)**:
+- [pipeline.py](file:///e:/K4NN4N/shield/backend/prescription_ai_service/app/pipeline.py)
+
+**Backend Files (Created)**:
+- [test_pipeline.py](file:///e:/K4NN4N/shield/backend/prescription_ai_service/tests/test_pipeline.py)
+
+**Verification Commands**:
+- `python -m py_compile app/pipeline.py tests/test_pipeline.py`
+- `python -m unittest discover -s tests`
+- direct `python - <<... parse_prescription_text(...) ...` replay against uploaded prescription text structure---
+2026-06-27 12:19:15 IST
+
+## 67. Multi-Mode Prescription OCR Upgrade: Table, Compounding, and Handwritten Medicine-Only Extraction
+**High-level description**: Upgraded the Python prescription OCR pipeline so it now extracts only medicinally relevant lines across the three real prescription shapes we expect in SHIELD: structured tables, compounding-style ingredient lists, and freeform handwritten medicine lines. The backend still serves web OCR, while the parsing logic stays clean enough to reuse later if the APK ships with an on-device PaddleOCR stack.
+- Root-cause findings:
+  - the previous parser was too global and too text-only, so it could still leak business address, timings, vitals, complaints, and review text into customer medicine review for some prescription layouts
+  - freeform handwritten-style lines like `syp DELCON 3 mL TDS x 5d` were being recognized, but dosage/frequency/duration tokens were not being cleanly separated from the medicine name
+  - running multiple OCR preprocessing passes blindly improved robustness but added unnecessary latency even when the raw OCR pass was already good enough
+- Fixes implemented in `backend/prescription_ai_service/app/pipeline.py`:
+  - added section-aware freeform medicine extraction for `Rx` / `Advice` style prescription bodies
+  - added dedicated freeform medicine parsing so dosage, frequency, and duration are stripped out of the name and stored in their own fields
+  - extended frequency and duration recognition to cover patterns like `Q6H`, `x 3 d`, and `x 5d`
+  - added OCR image preprocessing variants using the existing OpenCV stack and a parser-aware scoring function to select the best OCR text when raw extraction is weak
+  - added an early-return guard so strong raw OCR results avoid extra preprocessing passes and keep backend latency more reasonable
+  - preserved the earlier table-style parsing and compounding ingredient filtering paths
+- Regression coverage added in `backend/prescription_ai_service/tests/test_pipeline.py`:
+  - table-style prescription test for medicine rows only
+  - compounding-style prescription test for ingredient-only extraction
+  - handwritten/freeform prescription test for clean medicine names plus separated dosage/frequency/duration
+- Verified outcomes from this pass:
+  - freeform handwritten sample now parses as:
+    - `syp CAPLOL (250/5)` with `4 mL`, `Q6H`, `3 d`
+    - `syp DELCON` with `3 mL`, `TDS`, `5d`
+    - `syp LEVOLIN` with `3 mL`, `TDS`, `5d`
+    - `syp MEFTAL-P (100/5)` with `3 mL`, `SOS`
+  - saved uploaded compounding image still extracts only the true ingredients:
+    - `Metoclopramide HCL`
+    - `Methylparaben`
+    - `Propylparaben`
+    - `Sodium Chloride`
+    - `Purified Water, qs ad`
+- Why this approach was chosen:
+  - the customer portal is deliberately showing OCR-derived items without fake product-master matching, so the highest-value fix is better source extraction rather than UI hiding or hardcoded filtering
+  - this keeps web OCR server-side for now while making the parsing layer reusable if we later embed the OCR stack for APK builds
+- Verification completed for this pass:
+  - `python -m py_compile app/pipeline.py tests/test_pipeline.py`
+  - `python -m unittest discover -s tests`
+  - direct `parse_prescription_text()` replay on table, compounding, and handwritten sample text structures
+  - direct `analyze_file()` replay against `backend/uploads/documents/customer-1/141ad5f6-be40-4dac-87ad-e413e45856ec_images.png`
+
+### Files Modified/Created
+**Backend Files (Modified)**:
+- [pipeline.py](file:///e:/K4NN4N/shield/backend/prescription_ai_service/app/pipeline.py)
+- [test_pipeline.py](file:///e:/K4NN4N/shield/backend/prescription_ai_service/tests/test_pipeline.py)
+
+**Verification Commands**:
+- `python -m py_compile app/pipeline.py tests/test_pipeline.py`
+- `python -m unittest discover -s tests`
+- direct `python - <<... parse_prescription_text(...) ...` sample replays
+- direct `python - <<... analyze_file(...) ...` replay against saved uploaded image---
+2026-06-27 14:49:32 IST
+
+## 68. Prescription Upload Simplification: Save Customer Files Without OCR or Review Flow
+**High-level description**: Removed OCR-driven prescription processing from the active customer upload path. Prescription upload now saves the file to the customer document record and confirms success, without fetching OCR analysis, building extracted medicine review UI, or blocking the customer on prescription-intelligence work.
+- Backend changes:
+  - `backend/src/document/document.service.ts`
+  - changed the active prescription upload pipeline so uploaded prescriptions are saved and marked `UPLOADED` instead of immediately running classification/extraction/OCR
+  - added an upload processing log entry that records the file was saved to the customer record without OCR processing
+- Frontend changes:
+  - `frontend/lib/features/portal/presentation/screens/portal_shell.dart`
+  - simplified `_handlePrescriptionUpload()` so it only uploads the prescription file and shows a success/failure message
+  - removed active OCR recovery/fetch flow from the customer upload path
+  - removed OCR summary/review rendering from the active customer pharmacy upload card
+  - kept the separate manual medicine/product request composer intact
+- Why this approach was chosen:
+  - you explicitly asked to stop OCR for prescription uploading and keep only file upload plus customer document storage
+  - this preserves the existing mobile-only customer portal direction while making upload behavior faster and easier to trust
+- Verification completed for this pass:
+  - `npm run build`
+  - `flutter analyze`
+  - `flutter test test/widget_test.dart test/app_responsive_test.dart`
+
+### Files Modified/Created
+**Backend Files (Modified)**:
+- [document.service.ts](file:///e:/K4NN4N/shield/backend/src/document/document.service.ts)
+
+**Frontend Files (Modified)**:
+- [portal_shell.dart](file:///e:/K4NN4N/shield/frontend/lib/features/portal/presentation/screens/portal_shell.dart)
+
+**Verification Commands**:
+- `npm run build`
+- `flutter analyze`
+- `flutter test test/widget_test.dart test/app_responsive_test.dart`---
+2026-06-27 15:24:56 IST
+
+## 69. Environment Configuration Baseline: Added Typed Backend Env Helper, Example Env File, and Flutter Build-Time API Config
+**High-level description**: Converted the SHIELD env checklist into working repo configuration so backend runtime settings and Flutter web/mobile API targeting no longer depend on scattered literals. Added a typed backend env helper, a checked-in `.env.example`, and Flutter build-time config hooks for API base URL and feature flags.
+- Backend changes:
+  - `backend/src/config/app-env.ts`
+  - added a typed env reader covering backend core, auth, storage, notifications, email, Redis, and OCR-related config names
+  - normalized booleans, numeric values, Firebase multiline private keys, and comma-separated CORS origins in one place
+  - updated `backend/src/main.ts` to read `PORT` and `CORS_ORIGIN` through the env helper instead of hardcoded values
+  - updated `backend/src/document/prescription-intelligence.service.ts` to read `PRESCRIPTION_AI_URL` through the shared env helper
+  - added `backend/.env.example` with the agreed SHIELD env template so setup can be repeated safely without copying secrets from a real `.env`
+- Frontend changes:
+  - `frontend/lib/shared/config/app_config.dart`
+  - added Flutter build-time config for `APP_ENV`, `API_BASE_URL`, `ENABLE_OCR`, and `ENABLE_NOTIFICATIONS` using `String.fromEnvironment` / `bool.fromEnvironment`
+  - updated `frontend/lib/shared/services/api_service.dart` so `API_BASE_URL` overrides the local host-derived default when provided via `--dart-define`
+- Testing changes:
+  - `backend/src/config/app-env.spec.ts`
+  - added unit coverage for backend env parsing defaults and configured overrides so the config contract is checked in code rather than left implicit
+- Why this approach was chosen:
+  - you wanted the env checklist turned into working project configuration, not just a note
+  - this keeps SHIELD flexible for local development, web/mobile targeting, and later deployment without forcing secrets into source files
+  - it also preserves the current local-default developer experience when no extra env values are set
+- Verification completed for this pass:
+  - `npm test -- app-env.spec.ts prescription-intelligence.service.spec.ts`
+  - `npm run build`
+  - `flutter analyze`
+  - `flutter test test/widget_test.dart test/app_responsive_test.dart`
+
+### Files Modified/Created
+**Backend Files (Modified)**:
+- [main.ts](file:///e:/K4NN4N/shield/backend/src/main.ts)
+- [prescription-intelligence.service.ts](file:///e:/K4NN4N/shield/backend/src/document/prescription-intelligence.service.ts)
+
+**Backend Files (Created)**:
+- [app-env.ts](file:///e:/K4NN4N/shield/backend/src/config/app-env.ts)
+- [app-env.spec.ts](file:///e:/K4NN4N/shield/backend/src/config/app-env.spec.ts)
+- [.env.example](file:///e:/K4NN4N/shield/backend/.env.example)
+
+**Frontend Files (Modified/Created)**:
+- [app_config.dart](file:///e:/K4NN4N/shield/frontend/lib/shared/config/app_config.dart)
+- [api_service.dart](file:///e:/K4NN4N/shield/frontend/lib/shared/services/api_service.dart)
+
+**Verification Commands**:
+- `npm test -- app-env.spec.ts prescription-intelligence.service.spec.ts`
+- `npm run build`
+- `flutter analyze`
+- `flutter test test/widget_test.dart test/app_responsive_test.dart`---
+2026-06-27 19:52:55 IST
+
+## 70. Android App Identifier Update: Set SHIELD Package Name to com.zabnix.shield
+**High-level description**: Updated the present Flutter Android app identifiers to use the requested developer organization and app package name `com.zabnix.shield`, and aligned the Android launcher label with the SHIELD brand. Web-facing app naming was already set to `SHIELD`. No iOS bundle identifier change was possible in this pass because the repo does not currently contain a `frontend/ios/` project.
+- Android changes:
+  - `frontend/android/app/build.gradle.kts`
+  - changed Gradle `namespace` to `com.zabnix.shield`
+  - changed Android `applicationId` to `com.zabnix.shield`
+  - `frontend/android/app/src/main/kotlin/com/zabnix/shield/MainActivity.kt`
+  - moved `MainActivity` into the new Kotlin package and updated its package declaration
+  - removed the old default Flutter package file under `com/example/frontend`
+  - `frontend/android/app/src/main/AndroidManifest.xml`
+  - changed Android app label from the default placeholder to `SHIELD`
+- Web / iOS notes:
+  - web metadata already used the SHIELD name, so no package-style identifier change was needed there
+  - there is no `frontend/ios/` directory checked into this repo right now, so there was no Runner bundle identifier to update for iOS in the current workspace
+- Why this approach was chosen:
+  - you want the app identity to consistently reflect the Zabnix organization and SHIELD product name before Android, iOS, and web releases
+  - updating the Android namespace, applicationId, and Kotlin package together avoids the common partial-rename state that breaks app launches or builds
+- Verification completed for this pass:
+  - `flutter analyze`
+  - confirmed updated Android Gradle package values and `MainActivity` package path
+- Verification caveat:
+  - `flutter build apk --debug` did not complete within the 10-minute timeout in this environment, so I am not claiming a finished APK build from this pass
+
+### Files Modified/Created
+**Frontend Android Files (Modified)**:
+- [build.gradle.kts](file:///e:/K4NN4N/shield/frontend/android/app/build.gradle.kts)
+- [AndroidManifest.xml](file:///e:/K4NN4N/shield/frontend/android/app/src/main/AndroidManifest.xml)
+
+**Frontend Android Files (Created/Relocated)**:
+- [MainActivity.kt](file:///e:/K4NN4N/shield/frontend/android/app/src/main/kotlin/com/zabnix/shield/MainActivity.kt)
+
+**Verification Commands**:
+- `flutter analyze`
+- attempted `flutter build apk --debug` (timed out before completion in this environment)---
+2026-06-27 19:58:45 IST
+
+## 71. Web Analytics Setup: Added Firebase Web SDK and Analytics Bootstrap for SHIELD Web
+**High-level description**: Added the provided Firebase Web SDK configuration to the Flutter web entrypoint so SHIELD web initializes the Zabnix Firebase project and enables Analytics in supported browsers without affecting Android or future iOS code paths.
+- Web changes:
+  - `frontend/web/index.html`
+  - added Firebase modular SDK imports from Google-hosted Web SDK modules
+  - initialized the `shield-zabnix` Firebase app using the provided web config
+  - added an Analytics support guard using `isSupported()` so unsupported browser contexts fail softly instead of breaking the app bootstrap
+  - exposed the initialized app and analytics objects on `window` for later web-only integrations if needed
+- Why this approach was chosen:
+  - you explicitly asked to add the SHIELD web Firebase SDK config
+  - placing it in `index.html` keeps the integration web-only and avoids dragging Firebase web setup into the Android/iOS Flutter runtime path
+  - guarding analytics support is safer for browsers where Analytics storage or APIs are unavailable
+- Verification completed for this pass:
+  - `flutter analyze`
+  - `flutter build web`
+- Verification note:
+  - Flutter web build completed successfully
+  - the existing wasm dry-run warnings come from `flutter_secure_storage_web`, not from the Firebase script addition in this pass
+
+### Files Modified/Created
+**Frontend Web Files (Modified)**:
+- [index.html](file:///e:/K4NN4N/shield/frontend/web/index.html)
+
+**Verification Commands**:
+- `flutter analyze`
+- `flutter build web`---
+2026-06-27 20:36:10 IST
+
+## 72. Firebase Messaging Bootstrap: Added FlutterFire Push Setup for Web and Android
+**High-level description**: Wired SHIELD to initialize Firebase from Flutter, enabled Firebase Messaging bootstrap for Android and web, and removed the duplicate manual web Firebase bootstrap so app startup stays single-sourced and ready for push token registration.
+- Frontend changes:
+  - rontend/lib/main.dart
+  - switched app startup to async bootstrap with WidgetsFlutterBinding.ensureInitialized() and Firebase initialization before unApp
+  - rontend/lib/shared/services/firebase_bootstrap_service.dart
+  - added centralized Firebase bootstrap for Analytics and Messaging
+  - added background message handler, permission request flow, foreground/opened-app listeners, and token fetch with safe web VAPID-key guard
+  - rontend/lib/shared/config/app_config.dart
+  - added FIREBASE_WEB_VAPID_KEY build-time config so web push tokens can be enabled without hardcoding browser secrets
+  - rontend/web/index.html
+  - removed the manual Firebase Web SDK bootstrap to avoid duplicate default-app initialization once FlutterFire initializes Firebase in Dart
+  - rontend/web/firebase-messaging-sw.js
+  - added the web Firebase Messaging service worker for background push handling
+- Android changes:
+  - rontend/android/settings.gradle.kts
+  - added the Google Services Gradle plugin version to plugin management
+  - rontend/android/app/build.gradle.kts
+  - applied the Google Services plugin in the Android app module
+  - rontend/android/app/google-services.json
+  - added the SHIELD Android Firebase app configuration for package com.zabnix.shield
+  - rontend/android/app/src/main/AndroidManifest.xml
+  - added POST_NOTIFICATIONS permission for Android notification consent flow
+- Why this approach was chosen:
+  - you asked to add Firebase Messaging wherever needed, and the safest setup is to let FlutterFire own Firebase initialization across Android and web instead of mixing manual web bootstraps with Dart-side initialization
+  - web push requires a dedicated service worker and browser VAPID key, so the code now supports that path without breaking local development when the VAPID key is not provided yet
+  - Android Firebase setup needs both the Gradle plugin and the google-services.json app config to produce a valid push-ready build
+- Verification completed for this pass:
+  - lutter analyze
+  - lutter test test/widget_test.dart test/app_responsive_test.dart
+  - lutter build web
+- Verification caveats:
+  - lutter build apk --debug exceeded the execution timeout in this environment, so I am not claiming a completed Android build from this pass
+  - there is still no rontend/ios/ project in the workspace, so the provided GoogleService-Info.plist could not be installed yet for iOS runtime setup
+
+### Files Modified/Created
+**Frontend Flutter Files (Modified)**:
+- rontend/lib/main.dart
+- rontend/lib/shared/config/app_config.dart
+- rontend/web/index.html
+
+**Frontend Flutter Files (Created)**:
+- rontend/lib/shared/services/firebase_bootstrap_service.dart
+- rontend/web/firebase-messaging-sw.js
+- rontend/android/app/google-services.json
+
+**Frontend Android Files (Modified)**:
+- rontend/android/settings.gradle.kts
+- rontend/android/app/build.gradle.kts
+- rontend/android/app/src/main/AndroidManifest.xml
+
+**Verification Commands**:
+- lutter analyze
+- lutter test test/widget_test.dart test/app_responsive_test.dart
+- lutter build web
+- attempted lutter build apk --debug (timed out before completion in this environment)
+---2026-06-27 20:37:18 IST
+## 73. Log Correction: Plain-Text Restatement of Firebase Messaging Bootstrap Entry
+**High-level description**: Corrected formatting artifacts introduced in log entry 72 when PowerShell interpreted Markdown backticks inside a double-quoted here-string. This entry restates the Firebase messaging work in plain text so the append-only engineering record remains accurate and readable.
+- Frontend changes:
+  - frontend/lib/main.dart
+  - switched app startup to async bootstrap with WidgetsFlutterBinding.ensureInitialized() and Firebase initialization before runApp
+  - frontend/lib/shared/services/firebase_bootstrap_service.dart
+  - added centralized Firebase bootstrap for Analytics and Messaging
+  - added background message handler, permission request flow, foreground/opened-app listeners, and token fetch with safe web VAPID-key guard
+  - frontend/lib/shared/config/app_config.dart
+  - added FIREBASE_WEB_VAPID_KEY build-time config so web push tokens can be enabled without hardcoding browser secrets
+  - frontend/web/index.html
+  - removed the manual Firebase Web SDK bootstrap to avoid duplicate default-app initialization once FlutterFire initializes Firebase in Dart
+  - frontend/web/firebase-messaging-sw.js
+  - added the web Firebase Messaging service worker for background push handling
+- Android changes:
+  - frontend/android/settings.gradle.kts
+  - added the Google Services Gradle plugin version to plugin management
+  - frontend/android/app/build.gradle.kts
+  - applied the Google Services plugin in the Android app module
+  - frontend/android/app/google-services.json
+  - added the SHIELD Android Firebase app configuration for package com.zabnix.shield
+  - frontend/android/app/src/main/AndroidManifest.xml
+  - added POST_NOTIFICATIONS permission for Android notification consent flow
+- Why this approach was chosen:
+  - you asked to add Firebase Messaging wherever needed, and the safest setup is to let FlutterFire own Firebase initialization across Android and web instead of mixing manual web bootstraps with Dart-side initialization
+  - web push requires a dedicated service worker and browser VAPID key, so the code now supports that path without breaking local development when the VAPID key is not provided yet
+  - Android Firebase setup needs both the Gradle plugin and the google-services.json app config to produce a valid push-ready build
+- Verification completed for this pass:
+  - flutter analyze
+  - flutter test test/widget_test.dart test/app_responsive_test.dart
+  - flutter build web
+- Verification caveats:
+  - flutter build apk --debug exceeded the execution timeout in this environment, so I am not claiming a completed Android build from this pass
+  - there is still no frontend/ios/ project in the workspace, so the provided GoogleService-Info.plist could not be installed yet for iOS runtime setup
+
+### Files Modified/Created
+**Frontend Flutter Files (Modified)**:
+- frontend/lib/main.dart
+- frontend/lib/shared/config/app_config.dart
+- frontend/web/index.html
+
+**Frontend Flutter Files (Created)**:
+- frontend/lib/shared/services/firebase_bootstrap_service.dart
+- frontend/web/firebase-messaging-sw.js
+- frontend/android/app/google-services.json
+
+**Frontend Android Files (Modified)**:
+- frontend/android/settings.gradle.kts
+- frontend/android/app/build.gradle.kts
+- frontend/android/app/src/main/AndroidManifest.xml
+
+**Verification Commands**:
+- flutter analyze
+- flutter test test/widget_test.dart test/app_responsive_test.dart
+- flutter build web
+- attempted flutter build apk --debug (timed out before completion in this environment)
+---2026-06-27 21:00:01 IST
+## 74. Firebase Completion Pass: Added Backend FCM Delivery, Device Token Registration, and Verified Android/Web Builds
+**High-level description**: Completed the missing Firebase implementation work so SHIELD now has a real push-notification pipeline instead of only client SDK bootstrap. The frontend registers device tokens with Nest, the backend stores active tokens, Firebase Admin can initialize from env vars or the provided local service-account JSON in firebase env for development, and notifications can now fan out to FCM while still preserving the in-app notification record.
+- Backend changes:
+  - backend/package.json
+  - added firebase-admin dependency for server-side FCM delivery
+  - backend/src/config/app-env.ts
+  - added FIREBASE_SERVICE_ACCOUNT_PATH support so local development can load the provided Firebase Admin JSON file when explicit env var triples are not set yet
+  - backend/.env.example
+  - added FIREBASE_SERVICE_ACCOUNT_PATH placeholder to the env template
+  - backend/prisma/schema.prisma
+  - added DevicePushToken model for customer-linked push tokens with active/inactive tracking and platform metadata
+  - backend/src/notification/firebase-admin.service.ts
+  - added Firebase Admin bootstrap service with env-first credential loading and local fallback to firebase env/shield-zabnix-firebase-adminsdk-fbsvc-02d2d21de6.json
+  - backend/src/notification/notification.service.ts
+  - expanded the notification service to ensure the device_push_tokens table exists, upsert device tokens, deactivate tokens, create in-app notification records, and fan out push payloads through FCM when credentials and active tokens are present
+  - backend/src/notification/notification.controller.ts
+  - added device-token registration and deactivation endpoints and updated send to return both the saved notification and push delivery result
+  - backend/src/notification/notification.module.ts
+  - registered the Firebase Admin service in the Nest notification module
+- Frontend changes:
+  - frontend/lib/shared/services/api_service.dart
+  - added push-token registration and deactivation API helpers plus platform resolution for web, Android, iOS, and desktop targets
+  - frontend/lib/shared/services/firebase_bootstrap_service.dart
+  - after Firebase Messaging token acquisition, the app now registers the token with the backend and also re-registers on token refresh
+- Firebase asset handling status:
+  - frontend/android/app/google-services.json is already in place and is now backed by a verified Android debug APK build
+  - frontend/web/firebase-messaging-sw.js and Firebase web bootstrap remain active for web messaging support
+  - the Firebase Admin service account JSON in firebase env is now actually usable for local backend push delivery through the new fallback loader
+  - GoogleService-Info.plist is still not installable in this Windows workspace because Flutter on Windows does not materialize an iOS Runner project; the repo still has no frontend/ios directory after an attempted flutter create --platforms=ios run
+- Why this approach was chosen:
+  - you explicitly asked for complete implementation rather than partial setup, so the missing backend token storage and FCM delivery path needed to be finished instead of leaving Firebase limited to frontend SDK initialization
+  - env-first plus local-file fallback keeps deployment safe while still making your provided firebase env service-account file immediately useful in local development
+  - retaining the in-app notification row even when push delivery is attempted keeps SHIELD notification history consistent across app states
+- Verification completed for this pass:
+  - npx prisma generate
+  - npm run build
+  - flutter analyze
+  - flutter test test/widget_test.dart test/app_responsive_test.dart
+  - flutter build web
+  - flutter build apk --debug
+- Verification notes:
+  - web build succeeded; the only warnings remain the pre-existing flutter_secure_storage_web wasm dry-run notices
+  - Android debug APK build succeeded at frontend/build/app/outputs/flutter-apk/app-debug.apk
+  - iOS runtime placement of GoogleService-Info.plist is still blocked by the absence of a generated frontend/ios project on this Windows machine, not by missing Firebase config values
+
+### Files Modified/Created
+**Backend Files (Modified)**:
+- backend/package.json
+- backend/package-lock.json
+- backend/.env.example
+- backend/prisma/schema.prisma
+- backend/src/config/app-env.ts
+- backend/src/notification/notification.controller.ts
+- backend/src/notification/notification.module.ts
+- backend/src/notification/notification.service.ts
+
+**Backend Files (Created)**:
+- backend/src/notification/firebase-admin.service.ts
+
+**Frontend Files (Modified)**:
+- frontend/lib/shared/services/api_service.dart
+- frontend/lib/shared/services/firebase_bootstrap_service.dart
+
+**Verification Commands**:
+- npx prisma generate
+- npm run build
+- flutter analyze
+- flutter test test/widget_test.dart test/app_responsive_test.dart
+- flutter build web
+- flutter build apk --debug
+---2026-06-27 21:08:00 IST
+## 75. Firebase Env Expansion: Added Full Firebase Config Surface to Env Template and Local Backend Env
+**High-level description**: Expanded SHIELD's env configuration so the Firebase project settings are represented in env files as well, not only in code and platform config files. This keeps backend admin credentials, platform app identifiers, and web push placeholders visible in the environment layer for deployment and handoff.
+- Backend env template changes:
+  - backend/.env.example
+  - expanded the Firebase section from only the admin credential trio to a fuller project block
+  - added project-level values for sender ID, web app config, Android app ID, iOS app ID, iOS client ID, and iOS bundle ID
+  - kept FIREBASE_PRIVATE_KEY blank in the template while setting FIREBASE_SERVICE_ACCOUNT_PATH to the provided local service-account JSON path under firebase env
+  - added FIREBASE_WEB_VAPID_KEY placeholder so web push can be completed through env-driven configuration instead of hardcoded values
+- Local backend env changes:
+  - backend/.env
+  - appended the same Firebase keys only when missing, without overwriting any existing local values or secrets
+- Why this approach was chosen:
+  - you asked to add the Firebase-related things to the env files too, and SHIELD now has both frontend Firebase runtime setup and backend Firebase Admin support that benefit from a complete env surface
+  - keeping platform identifiers in env form makes future deployment, CI setup, and handoff easier even when some values are also present in generated platform files
+  - the append-if-missing update for backend/.env avoids destructive secret edits in the local environment
+- Verification completed for this pass:
+  - confirmed backend/.env.example contains the expanded Firebase block
+  - confirmed backend/.env update command ran and appended missing Firebase keys
+
+### Files Modified/Created
+**Backend Files (Modified/Created)**:
+- backend/.env.example
+- backend/.env
+
+**Verification Commands**:
+- template readback through Get-Content backend/.env.example
+- append-if-missing backend/.env update command
+---2026-06-27 21:13:25 IST
+## 76. Env Template Sanitization: Replaced Live-Looking Firebase Values in .env.example with Placeholders
+**High-level description**: Cleaned the Firebase block in backend/.env.example so it behaves like a true template instead of looking like a partially populated live config. Public-looking Firebase identifiers were replaced with placeholders to avoid encouraging direct reuse of project-specific values in copied environments.
+- Backend changes:
+  - backend/.env.example
+  - replaced project-specific Firebase IDs, app IDs, auth domain, bucket, and bundle ID with placeholder template values
+  - kept the Firebase key names themselves intact so deployment setup still has a complete checklist
+- Why this approach was chosen:
+  - env.example should document required keys, not serve as a hidden source of environment-specific values
+  - even when some Firebase client-side identifiers are not secrets, keeping the example generic is cleaner and reduces accidental cross-project reuse
+- Verification completed for this pass:
+  - confirmed backend/.env.example now contains placeholder Firebase values instead of SHIELD project-specific populated values
+
+### Files Modified/Created
+**Backend Files (Modified)**:
+- backend/.env.example
+
+**Verification Commands**:
+- template readback through Get-Content backend/.env.example
+---2026-06-28 10:05:10 IST
+## 77. Env-Driven Web Firebase Completion: Added Automatic Flutter Web Define Injection and Applied VAPID Key
+**High-level description**: Upgraded SHIELD's web build/run flow so Firebase web env values are no longer passive documentation. The frontend now reads the relevant values from process env during scripted web build/run commands, and the provided VAPID key was written into the local backend env so the wrapper flow can pass it into Flutter automatically.
+- Frontend changes:
+  - frontend/scripts/flutter-env-defines.mjs
+  - added shared Flutter web dart-define injection helper for APP_ENV, API_BASE_URL, ENABLE_OCR, ENABLE_NOTIFICATIONS, and FIREBASE_WEB_VAPID_KEY
+  - frontend/scripts/vercel-build.mjs
+  - updated the Vercel build path to pass supported env values into flutter build web automatically
+  - frontend/scripts/run-web-with-env.ps1
+  - added local PowerShell wrapper that loads backend/.env into process env and runs flutter web with the supported dart-defines
+  - frontend/scripts/build-web-with-env.ps1
+  - added local PowerShell wrapper that loads backend/.env into process env and builds Flutter web with the supported dart-defines
+- Local env changes:
+  - backend/.env
+  - wrote the supplied Firebase Web VAPID key into FIREBASE_WEB_VAPID_KEY so the local wrapper scripts can pass it through to Flutter web builds and runs automatically
+- Memory update:
+  - added a Codex memory note recording the user preference that provided env values should be applied wherever needed and wired end-to-end by default instead of being left as suggestions
+- Why this approach was chosen:
+  - you asked that env values you provide be implemented completely, not just documented
+  - Flutter web reads FIREBASE_WEB_VAPID_KEY as a build-time define, so a wrapper that sources backend/.env and forwards supported values makes the provided env operational in local development and scripted builds
+  - reusing the same define set for local scripts and the Vercel build path reduces drift between local and deployed web behavior
+- Verification completed for this pass:
+  - powershell -ExecutionPolicy Bypass -File scripts/build-web-with-env.ps1
+  - flutter analyze
+- Verification notes:
+  - env-driven web build completed successfully
+  - the existing flutter_secure_storage_web wasm dry-run warnings remain unchanged and are unrelated to the Firebase env wrapper work
+
+### Files Modified/Created
+**Frontend Files (Modified/Created)**:
+- frontend/scripts/flutter-env-defines.mjs
+- frontend/scripts/vercel-build.mjs
+- frontend/scripts/run-web-with-env.ps1
+- frontend/scripts/build-web-with-env.ps1
+
+**Local Env Files (Modified)**:
+- backend/.env
+
+**Verification Commands**:
+- powershell -ExecutionPolicy Bypass -File scripts/build-web-with-env.ps1
+- flutter analyze
+---2026-06-28 10:06:22 IST
+## 78. Detailed Continuity Snapshot: Firebase, Env Wiring, Verification Baseline, and Remaining Gaps
+**High-level description**: Added a detailed continuity record so the next SHIELD session can resume from the current Firebase/env integration state without re-discovering the moving parts. This entry captures what is already implemented, how local and deployment env values now flow into Flutter web and Nest, what was verified, and what is still intentionally incomplete or platform-blocked.
+- Current customer product-direction constraints still in force:
+  - customer experience must remain mobile-only even on desktop browser widths
+  - keep only portal-style customer routing like /portal/customer/...
+  - do not restore old standalone customer pages or bottom navigation
+  - staff and admin can keep desktop layouts; customer cannot
+  - customer pages should feel premium, compact, mobile-first, and app-like
+- Prescription upload current state:
+  - active customer upload flow no longer performs OCR in the primary path
+  - upload saves the original prescription file into the customer document record and marks it uploaded
+  - OCR-related Python code still exists in the repo but is not part of the active customer upload experience
+- Firebase implementation state now completed for Android and web:
+  - frontend initializes Firebase through FlutterFire in frontend/lib/main.dart and frontend/lib/shared/services/firebase_bootstrap_service.dart
+  - web has firebase messaging service worker support in frontend/web/firebase-messaging-sw.js
+  - Android Firebase package identity is com.zabnix.shield and google-services.json is present at frontend/android/app/google-services.json
+  - Nest backend now stores device push tokens and can send FCM notifications through Firebase Admin using backend/src/notification/firebase-admin.service.ts and backend/src/notification/notification.service.ts
+  - backend notification controller exposes token registration, token deactivation, notification listing, read, and send endpoints
+- Env-flow implementation state:
+  - backend runtime reads typed env values through backend/src/config/app-env.ts
+  - backend local env now includes FIREBASE_WEB_VAPID_KEY and the Firebase Admin path fallback can read firebase env/shield-zabnix-firebase-adminsdk-fbsvc-02d2d21de6.json for development
+  - frontend Flutter web no longer depends on manually typed dart-defines for every run when using the provided wrappers
+  - frontend/scripts/run-web-with-env.ps1 loads backend/.env into process env and forwards APP_ENV, API_BASE_URL, ENABLE_OCR, ENABLE_NOTIFICATIONS, and FIREBASE_WEB_VAPID_KEY into flutter run
+  - frontend/scripts/build-web-with-env.ps1 does the same for flutter build web
+  - frontend/scripts/vercel-build.mjs now forwards the same supported env values into the Vercel web build path through frontend/scripts/flutter-env-defines.mjs
+- Firebase values currently represented in the repo:
+  - frontend/lib/firebase_options.dart contains the Android, web, and iOS Firebase app identifiers for project shield-zabnix
+  - backend/.env.example now uses placeholder values again rather than live-looking project identifiers
+  - backend/.env contains the locally applied FIREBASE_WEB_VAPID_KEY and the expanded Firebase env key surface when missing
+- Verification baseline reached across the recent Firebase/env passes:
+  - backend: npx prisma generate, npm run build
+  - frontend: flutter analyze, flutter test test/widget_test.dart test/app_responsive_test.dart, flutter build web, flutter build apk --debug
+  - env-driven web wrapper verification: powershell -ExecutionPolicy Bypass -File scripts/build-web-with-env.ps1
+  - Android debug APK was verified at frontend/build/app/outputs/flutter-apk/app-debug.apk
+- Known remaining limits or follow-up items:
+  - iOS Firebase runtime placement is still blocked in this workspace because Flutter on Windows did not materialize a frontend/ios Runner project, so GoogleService-Info.plist cannot be placed here yet
+  - backend/.env secrets themselves were not printed or rewritten wholesale because the environment tooling treats .env as a protected path; updates were done append/update style only
+  - several earlier files in the repo are already dirty from prior work and should not be reverted blindly, including OCR-related Python/backend files and portal shell changes that predate this continuity entry
+  - frontend/.metadata changed during Flutter tooling operations; treat that as tool-generated unless the next task explicitly wants to normalize it
+- Current high-value next steps if the next session continues Firebase/push work:
+  - test actual foreground and background push delivery by posting to POST /notifications/send after registering a device token from a running Android or web client
+  - decide whether to persist richer device metadata beyond platform and optional label
+  - if iOS delivery becomes required, generate the iOS Flutter project from a macOS-capable environment and place firebase env/GoogleService-Info.plist under Runner
+  - if deployment env management becomes the next focus, map the Firebase env block into the actual hosting platform instead of relying only on local backend/.env and wrapper scripts
+- Why this continuity entry was added:
+  - you asked for detailed logging and a handoff prompt, and the repo already has enough moving Firebase/env parts that a shallow summary would force the next session to spend time re-grounding
+  - this entry gives the next engineer a stable snapshot of what is implemented, what is verified, and what remains constrained by platform or environment boundaries
+
+### Files Modified/Created
+**Log Files (Modified)**:
+- log.md
+
+**Verification Commands Referenced In This Continuity Entry**:
+- npx prisma generate
+- npm run build
+- flutter analyze
+- flutter test test/widget_test.dart test/app_responsive_test.dart
+- flutter build web
+- flutter build apk --debug
+- powershell -ExecutionPolicy Bypass -File scripts/build-web-with-env.ps1
+---2026-06-28 12:18:46 IST
+## 79. Handoff Artifact Prepared: Detailed Continuation Prompt and Logging Baseline Updated
+**High-level description**: Prepared a detailed handoff artifact for the next SHIELD session and ensured the log now contains both the technical continuity snapshot and the operational expectations needed to resume quickly without rediscovery.
+- Handoff coverage prepared for the next session includes:
+  - exact read-first file list for Firebase, env, notification backend, and Flutter web wrappers
+  - current customer product-direction constraints that must not regress
+  - current Firebase implementation state across Android, web, Nest notification backend, and env-driven build wrappers
+  - exact verification commands already completed and their known outcomes
+  - current limitations, especially the Windows/iOS Runner gap
+  - next-step recommendations focused on real push delivery verification and deployment env mapping
+- Why this artifact matters:
+  - the SHIELD worktree is intentionally dirty across multiple areas, so a strong handoff prevents accidental reversions and duplicate investigation
+  - Firebase/env work spans backend runtime env, Flutter build-time defines, generated platform files, and wrapper scripts; capturing that in one prompt reduces context loss
+- Related continuity support already present:
+  - log entry 78 holds the detailed continuity snapshot inside the repo history
+  - Codex memory was separately updated earlier to treat provided env values as execution requests in future SHIELD sessions
+
+### Files Modified/Created
+**Log Files (Modified)**:
+- log.md
+---2026-06-28 13:21:26 IST
+## 79. R2 Private Storage Integration: Applied Cloudflare Bucket Env, Added Backend Storage Service, and Switched Downloads to Signed URLs
+**High-level description**: Turned the provided Cloudflare R2 bucket details into a working private storage path for SHIELD documents instead of leaving them as dormant env keys. The backend can now upload document binaries to R2 when configured, store private object references, and return short-lived signed download URLs through the existing document API while still preserving a local-disk fallback for development.
+- Backend env changes:
+  - backend/.env
+  - applied the provided R2 runtime values for account ID, access key ID, secret access key, bucket name shield-files, endpoint, and blank public base URL
+  - this keeps the bucket private and aligns with the intended signed-URL access model for prescriptions and medical records
+  - backend/.env.example
+  - kept placeholder keys for R2 values and added a note that R2_PUBLIC_BASE_URL should stay empty when signed URLs are used instead of a public bucket
+- Backend storage implementation changes:
+  - backend/package.json and backend/package-lock.json
+  - added @aws-sdk/client-s3 and @aws-sdk/s3-request-presigner so Nest can talk to Cloudflare R2 through the S3 API and generate signed download URLs
+  - backend/src/storage/storage.service.ts
+  - added a dedicated storage service that:
+    - detects whether R2 is configured
+    - uploads private objects to R2 using the provided S3-compatible endpoint and credentials
+    - generates folder-like object prefixes by document type and customer ID
+    - returns short-lived signed GET URLs for private document downloads
+    - falls back to local uploads/documents storage when R2 is not configured
+  - backend/src/storage/storage.module.ts
+  - added a global storage module so document and future file features can reuse the same storage policy
+  - backend/src/app.module.ts
+  - registered the storage module in the app module
+- Document flow changes:
+  - backend/src/document/document.service.ts
+  - removed the document service's direct local file writer as the primary implementation path
+  - switched upload persistence to the shared storage service
+  - changed stored document storagePath values to private R2 object URIs in the form r2://bucket/key when R2 is active
+  - aligned object prefix layout with the SHIELD-style bucket organization strategy using prefixes such as prescriptions/customerId/year/... and lab-reports/customerId/year/...
+  - added a download-url helper that resolves the stored private path into a signed URL on demand
+  - backend/src/document/document.controller.ts
+  - updated GET /documents/:id/download to return a resolved signed/private access URL instead of echoing the raw storagePath field
+  - backend/src/document/document.module.ts
+  - imported the storage module so document uploads and downloads are now routed through the shared storage service
+- Security and scope notes:
+  - the Cloudflare API token shown in the bucket creation screen was not added to runtime config because SHIELD does not currently need the account-management API token to upload/read objects through the S3 API path; the S3 access key and secret are the correct runtime credentials for the implemented document storage flow
+  - R2_PUBLIC_BASE_URL remains intentionally empty because the bucket is meant to stay private and document access should be brokered by backend-signed URLs
+- Why this approach was chosen:
+  - you provided the R2 bucket details and explicitly asked for them to be added wherever needed, and the actual need in SHIELD was not only env storage but activation of the document persistence path itself
+  - medical files should not be exposed through a public bucket, so signed URLs through the backend fit the privacy requirement better than public development URLs or public custom domains
+  - a dedicated storage service avoids hardcoding Cloudflare details into document logic and gives SHIELD a reusable path for future records, exports, logos, and branch assets
+- Verification completed for this pass:
+  - npm install @aws-sdk/client-s3 @aws-sdk/s3-request-presigner
+  - npm run build
+- Verification notes:
+  - backend build passed after the new storage service integration
+  - this pass did not run a live upload against the R2 bucket or a live signed download request because the current turn focused on wiring and compile verification; the next best runtime verification is to upload a document through the Nest endpoint and call GET /documents/:id/download
+
+### Files Modified/Created
+**Backend Files (Modified)**:
+- backend/.env
+- backend/.env.example
+- backend/package.json
+- backend/package-lock.json
+- backend/src/app.module.ts
+- backend/src/document/document.controller.ts
+- backend/src/document/document.module.ts
+- backend/src/document/document.service.ts
+
+**Backend Files (Created)**:
+- backend/src/storage/storage.service.ts
+- backend/src/storage/storage.module.ts
+
+**Verification Commands**:
+- npm install @aws-sdk/client-s3 @aws-sdk/s3-request-presigner
+- npm run build

@@ -1,9 +1,8 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { mkdir, writeFile } from 'fs/promises';
-import { join } from 'path';
 import { PrismaService } from '../prisma/prisma.service';
 import { randomUUID } from 'crypto';
 import { PrescriptionIntelligenceService } from './prescription-intelligence.service';
+import { StorageService } from '../storage/storage.service';
 
 type ExtractedPrescriptionMedicine = {
   name: string;
@@ -24,9 +23,8 @@ export class DocumentService {
   constructor(
     private prisma: PrismaService,
     private prescriptionIntelligenceService: PrescriptionIntelligenceService,
+    private storageService: StorageService,
   ) {}
-
-  private readonly uploadRoot = join(process.cwd(), 'uploads', 'documents');
 
   private normalizeDocumentType(documentType?: string | null) {
     return (documentType ?? '').trim().toUpperCase().replaceAll(' ', '_');
@@ -361,35 +359,6 @@ export class DocumentService {
       .join('\n');
   }
 
-  private async persistUploadedFile(data: {
-    customerId: bigint;
-    documentUuid: string;
-    fileName: string;
-    buffer?: Buffer;
-  }) {
-    if (!data.buffer?.length) {
-      return null;
-    }
-
-    const safeFileName = data.fileName.replace(/[^a-zA-Z0-9._-]+/g, '_');
-    const customerDirectory = join(
-      this.uploadRoot,
-      `customer-${data.customerId.toString()}`,
-    );
-    await mkdir(customerDirectory, { recursive: true });
-
-    const absolutePath = join(
-      customerDirectory,
-      `${data.documentUuid}_${safeFileName}`,
-    );
-    await writeFile(absolutePath, data.buffer);
-
-    return {
-      absolutePath,
-      relativePath: `/uploads/documents/customer-${data.customerId.toString()}/${data.documentUuid}_${safeFileName}`,
-    };
-  }
-
   private async runAutomatedPrescriptionPipeline(
     documentId: bigint,
     documentType?: string | null,
@@ -404,14 +373,27 @@ export class DocumentService {
       return this.findOne(documentId);
     }
 
-    await this.classify(documentId, 'PRESCRIPTION');
-    await this.extract(documentId, uploadedFile);
-    const refreshedDocument = await this.findOne(documentId);
-    const parsed = this.parsePrescriptionExtraction(
-      this.getLatestExtraction(refreshedDocument)?.extractedText,
-    );
-    await this.ensurePrescriptionRecord(refreshedDocument, parsed.date);
-    return this.findOne(documentId);
+    await this.prisma.documentProcessingLog.create({
+      data: {
+        documentId,
+        stage: 'UPLOAD',
+        status: 'SUCCESS',
+        remarks:
+          'Prescription file uploaded and saved to the customer record without OCR processing.',
+        processedAt: new Date(),
+      },
+    });
+
+    return this.prisma.document.update({
+      where: { id: documentId },
+      data: { status: 'UPLOADED' },
+      include: {
+        customer: true,
+        documentClassifications: true,
+        documentExtractions: true,
+        documentProcessingLogs: true,
+      },
+    });
   }
 
   async upload(data: {
@@ -424,15 +406,17 @@ export class DocumentService {
     fileBuffer?: Buffer;
   }) {
     const docUuid = randomUUID();
-    const persistedFile = await this.persistUploadedFile({
+    const persistedFile = await this.storageService.persistPrivateObject({
       customerId: data.customerId,
       documentUuid: docUuid,
       fileName: data.fileName,
+      documentType: data.documentType,
+      mimeType: data.mimeType,
       buffer: data.fileBuffer,
     });
     const storagePath =
-      persistedFile?.relativePath ??
-      `https://pub-r2.shield.sahakar.com/documents/customer-${data.customerId}/${docUuid}_${data.fileName}`;
+      persistedFile?.storagePath ??
+      `customers/${data.customerId.toString()}/documents/${docUuid}_${data.fileName}`;
 
     const created = await this.prisma.document.create({
       data: {
@@ -489,6 +473,16 @@ export class DocumentService {
       throw new NotFoundException(`Document with ID ${id} not found`);
     }
     return doc;
+  }
+
+  async getDownloadUrl(id: bigint) {
+    const doc = await this.findOne(id);
+    if (!doc.storagePath) {
+      throw new NotFoundException(
+        `Document ${id.toString()} does not have a stored file path`,
+      );
+    }
+    return this.storageService.createDownloadUrl(doc.storagePath);
   }
 
   async softDelete(id: bigint) {
@@ -563,7 +557,7 @@ export class DocumentService {
         fileName: uploadedFile.fileName,
         mimeType: uploadedFile.mimeType,
         buffer: uploadedFile.buffer,
-        products: await this.getPrescriptionProductMaster(),
+        products: [],
       });
 
       extractedText = this.buildCanonicalPrescriptionText({
@@ -640,31 +634,34 @@ Diagnosis Summary: LifeStyle Management & Follow-up`;
     const structuredJson = this.parsePrescriptionExtraction(
       latestExtraction?.extractedText,
     );
-    const medicineMatches = await this.matchMedicines(structuredJson.medicines);
-    const matchAverage =
-      medicineMatches.length === 0
-        ? 0
-        : medicineMatches.reduce((sum, item) => sum + item.confidence, 0) /
-          medicineMatches.length;
     const extractionConfidence = Number(latestExtraction?.confidenceScore ?? 0);
-    const overallConfidence = Number(
-      ((extractionConfidence + matchAverage * 100) / 2).toFixed(1),
-    );
+    const overallConfidence = Number(extractionConfidence.toFixed(1));
 
     await this.ensurePrescriptionRecord(doc, structuredJson.date);
 
-    const cartPrefill = medicineMatches
-      .filter((item) => item.matchedProductId)
-      .map((item) => ({
-        productId: item.matchedProductId,
-        productName: item.matchedProductName,
-        brand: item.matchedBrand,
+    const medicineMatches = structuredJson.medicines.map((medicine) => ({
+      rawName: medicine.name,
+      dosage: medicine.dosage,
+      frequency: medicine.frequency,
+      duration: medicine.duration,
+      status: 'EXTRACTED',
+      confidence: Number(extractionConfidence.toFixed(1)),
+      matchedProductId: null,
+      matchedProductName: null,
+      matchedBrand: null,
+      candidates: [],
+    }));
+
+    const cartPrefill = structuredJson.medicines.map((medicine, index) => ({
+        productId: `ocr-${documentId.toString()}-${index + 1}`,
+        productName: medicine.name,
+        brand: null,
         quantity: 1,
-        dosage: item.dosage,
-        frequency: item.frequency,
-        duration: item.duration,
-        confidence: Number((item.confidence * 100).toFixed(1)),
-        needsReview: item.status !== 'MATCHED',
+        dosage: medicine.dosage,
+        frequency: medicine.frequency,
+        duration: medicine.duration,
+        confidence: Number(extractionConfidence.toFixed(1)),
+        needsReview: true,
       }));
 
     return {
@@ -677,22 +674,15 @@ Diagnosis Summary: LifeStyle Management & Follow-up`;
       extractionConfidence: Number(extractionConfidence.toFixed(1)),
       overallConfidence,
       structuredJson,
-      medicineMatches: medicineMatches.map((item) => ({
-        ...item,
-        confidence: Number((item.confidence * 100).toFixed(1)),
-        candidates: item.candidates.map((candidate) => ({
-          ...candidate,
-          confidence: Number((candidate.confidence * 100).toFixed(1)),
-        })),
-      })),
+      medicineMatches,
       cartPrefill,
       steps: [
         { key: 'UPLOAD', label: 'Uploading prescription', status: 'done' },
         { key: 'VISION', label: 'Reading prescription', status: 'done' },
         { key: 'JSON', label: 'Structuring JSON', status: 'done' },
         {
-          key: 'MATCHING',
-          label: 'Matching medicine database',
+          key: 'EXTRACTION',
+          label: 'Extracted medicines from image',
           status: medicineMatches.length ? 'done' : 'pending',
         },
         {
@@ -718,7 +708,7 @@ Diagnosis Summary: LifeStyle Management & Follow-up`;
         documentId,
         stage: 'PHARMACY_REVIEW',
         status: 'SUCCESS',
-        remarks: `Pharmacist approved ${review.cartPrefill.length} medicine matches${providerId ? ` for provider ${providerId.toString()}` : ''} and prepared cart prefill items.`,
+        remarks: `Pharmacist approved ${review.cartPrefill.length} OCR extracted items${providerId ? ` for provider ${providerId.toString()}` : ''}.`,
         processedAt: new Date(),
       },
     });
@@ -728,7 +718,7 @@ Diagnosis Summary: LifeStyle Management & Follow-up`;
         data: {
           customerId: approvedDocument.customerId,
           title: 'Prescription approved',
-          message: `${review.cartPrefill.length} medicines were recognized and prepared for pharmacy checkout review.`,
+          message: `${review.cartPrefill.length} extracted items are ready for pharmacist follow-up.`,
           channel: 'IN_APP',
           status: 'UNREAD',
           sentAt: new Date(),

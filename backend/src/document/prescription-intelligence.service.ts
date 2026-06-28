@@ -2,6 +2,7 @@ import {
   Injectable,
   ServiceUnavailableException,
 } from '@nestjs/common';
+import { getAppEnv } from '../config/app-env';
 
 type ProductMasterCandidate = {
   productId: string;
@@ -56,13 +57,8 @@ export type PrescriptionAiResponse = {
 
 @Injectable()
 export class PrescriptionIntelligenceService {
-  private readonly defaultUrl = 'http://127.0.0.1:8010';
-
   private resolveBaseUrl() {
-    return (
-      process.env.PRESCRIPTION_AI_URL?.trim().replace(/\/+$/, '') ||
-      this.defaultUrl
-    );
+    return getAppEnv().prescriptionAiUrl;
   }
 
   async analyzeFile(

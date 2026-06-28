@@ -1,4 +1,4 @@
-package com.example.frontend
+package com.zabnix.shield
 
 import io.flutter.embedding.android.FlutterActivity
 

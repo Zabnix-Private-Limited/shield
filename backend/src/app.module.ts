@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
-import { APP_INTERCEPTOR } from '@nestjs/core';
+import { APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core';
+import { SentryModule, SentryGlobalFilter } from '@sentry/nestjs/setup';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { PrismaModule } from './prisma/prisma.module';
@@ -13,9 +14,11 @@ import { NotificationModule } from './notification/notification.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { PharmacyModule } from './pharmacy/pharmacy.module';
 import { BigIntInterceptor } from './common/interceptors/bigint.interceptor';
+import { StorageModule } from './storage/storage.module';
 
 @Module({
   imports: [
+    SentryModule.forRoot(),
     PrismaModule,
     CustomerModule,
     WalletModule,
@@ -26,6 +29,7 @@ import { BigIntInterceptor } from './common/interceptors/bigint.interceptor';
     NotificationModule,
     DashboardModule,
     PharmacyModule,
+    StorageModule,
   ],
   controllers: [AppController],
   providers: [
@@ -33,6 +37,10 @@ import { BigIntInterceptor } from './common/interceptors/bigint.interceptor';
     {
       provide: APP_INTERCEPTOR,
       useClass: BigIntInterceptor,
+    },
+    {
+      provide: APP_FILTER,
+      useClass: SentryGlobalFilter,
     },
   ],
 })

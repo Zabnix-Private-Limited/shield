@@ -5,3 +5,6 @@ insert-rules.js
 test-log.js
 fix-log-order.js
 rebuild-log.js
+backend/uploads/documents/
+firebase env/
+frontend/android/app/google-services.json

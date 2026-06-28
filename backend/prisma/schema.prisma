@@ -172,6 +172,7 @@ model Customer {
   crmTasks      CrmTask[]
   complaints    Complaint[]
   notifications Notification[]
+  devicePushTokens DevicePushToken[]
 
   @@index([mobile], map: "idx_customer_mobile")
   @@index([aadhaarNumber], map: "idx_customer_aadhaar")
@@ -609,6 +610,25 @@ model Notification {
   customer      Customer?  @relation(fields: [customerId], references: [id])
 
   @@map("notifications")
+}
+
+model DevicePushToken {
+  id            BigInt     @id @default(autoincrement())
+  uuid          String     @unique @db.Uuid
+  customerId    BigInt     @map("customer_id")
+  token         String     @unique @db.Text
+  platform      String     @db.VarChar(30)
+  deviceLabel   String?    @db.VarChar(120) @map("device_label")
+  isActive      Boolean    @default(true) @map("is_active")
+  lastSeenAt    DateTime   @default(now()) @db.Timestamptz(6) @map("last_seen_at")
+  createdAt     DateTime   @default(now()) @db.Timestamptz(6) @map("created_at")
+  updatedAt     DateTime   @default(now()) @updatedAt @db.Timestamptz(6) @map("updated_at")
+
+  customer      Customer   @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([customerId], map: "idx_device_push_tokens_customer")
+  @@index([platform], map: "idx_device_push_tokens_platform")
+  @@map("device_push_tokens")
 }
 
 model AuditLog {

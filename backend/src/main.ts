@@ -1,18 +1,17 @@
+import './instrument';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
+import { getAppEnv } from './config/app-env';
 
 async function bootstrap() {
+  const env = getAppEnv();
   const app = await NestFactory.create(AppModule);
+  app.enableShutdownHooks();
   app.enableCors({
-    origin: [
-      'http://localhost:53431',
-      'http://127.0.0.1:53431',
-      'http://localhost:3000',
-      'http://127.0.0.1:3000',
-    ],
+    origin: env.corsOrigins,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'x-role'],
   });
-  await app.listen(process.env.PORT ?? 3000);
+  await app.listen(env.port);
 }
 bootstrap();

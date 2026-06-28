@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:sentry_flutter/sentry_flutter.dart';
 import '../../features/portal/presentation/screens/portal_shell.dart';
 import '../../shared/models/shield_role.dart';
 
@@ -8,6 +9,7 @@ final GlobalKey<NavigatorState> rootNavigatorKey = GlobalKey<NavigatorState>();
 final GoRouter router = GoRouter(
   navigatorKey: rootNavigatorKey,
   initialLocation: '/portal/customer/dashboard',
+  observers: [SentryNavigatorObserver()],
   routes: [
     GoRoute(
       path: '/',
