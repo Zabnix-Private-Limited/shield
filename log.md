@@ -4238,3 +4238,22 @@ High-level description: Replaced the old internal fallback page stack with one r
 **Backend Files (Modified)**:
 - backend/package.json
 - backend/package-lock.json
+
+---
+2026-06-28 23:05:00 IST
+
+## 111. NestJS Vercel Serverless Function Adapter and Prisma Bundling Fix
+**High-level description**: Configured NestJS to execute as a serverless function on Vercel by implementing an Express adapter entry point and resolved the Prisma engine runtime bundling issue.
+- Restored `src/main.ts` to its original standard state to maintain standard development environment execution.
+- Implemented `api/index.ts` containing the Vercel-compatible Express adapter, enabling serverless execution of the NestJS application.
+- Configured Vercel to route all backend requests to `api/index.ts` and removed legacy builds array to use zero-config builder.
+- Added the `functions.includeFiles` configuration to `vercel.json` pointing to `node_modules/.prisma/client/**` to bundle Prisma client models and the binary query engine in the serverless deployment.
+- Deployed the application and verified that the health check (`/health`) and root endpoint (`/`) now execute and respond successfully.
+
+### Files Modified/Created
+**Backend Files (Created)**:
+- backend/api/index.ts
+
+**Backend Files (Modified)**:
+- backend/src/main.ts
+- backend/vercel.json
