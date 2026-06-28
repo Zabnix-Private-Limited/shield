@@ -30,6 +30,9 @@ class ApiService {
     final base = Uri.base;
     final host = base.host.isEmpty ? 'localhost' : base.host;
     final isLocalHost = host == 'localhost' || host == '127.0.0.1';
+    if (!isLocalHost && host.contains('vercel.app')) {
+      return 'https://shield-backend.vercel.app';
+    }
     final scheme = isLocalHost
         ? 'http'
         : (base.scheme.isEmpty ? 'http' : base.scheme);

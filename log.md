@@ -4257,3 +4257,17 @@ High-level description: Replaced the old internal fallback page stack with one r
 **Backend Files (Modified)**:
 - backend/src/main.ts
 - backend/vercel.json
+
+---
+2026-06-28 23:12:00 IST
+
+## 112. Vercel Web Deployment Base URL Fallback and VAPID Key Integration
+**High-level description**: Resolved connection timeout errors on the deployed web frontend by updating the API base URL fallback logic to target the Vercel backend deployment instead of the local port 3000, and configured the default Firebase VAPID key.
+- Updated `_resolveBaseUrl()` in `api_service.dart` to check if the host contains `vercel.app` and automatically target the production backend URL (`https://shield-backend.vercel.app`).
+- Configured the user-supplied Web Push Certificate VAPID public key as the default value for `firebaseWebVapidKey` in `app_config.dart` so push notification setup works without manual env setup during builds.
+- Re-deployed the frontend successfully to `https://shield-zabnix.vercel.app`.
+
+### Files Modified/Created
+**Frontend Files (Modified)**:
+- frontend/lib/shared/services/api_service.dart
+- frontend/lib/shared/config/app_config.dart
