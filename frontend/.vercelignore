@@ -1,0 +1,13 @@
+# Ignore local build outputs and native build folders to reduce Vercel upload size
+.dart_tool/
+build/
+android/
+windows/
+ios/
+macos/
+linux/
+.idea/
+.vscode/
+*.iml
+*.log
+analyze-output.txt

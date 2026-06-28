@@ -4209,3 +4209,32 @@ High-level description: Replaced the old internal fallback page stack with one r
 - frontend/lib/shared/services/api_service.dart
 - frontend/lib/features/portal/presentation/screens/portal_shell.dart
 - frontend/README.md
+
+---
+2026-06-28 22:46:00 IST
+
+## 109. Vercel Ignore Rules for Frontend and Backend
+**High-level description**: Created `.vercelignore` files in both frontend and backend directories to prevent massive local build outputs, platform-specific artifacts, and dependencies from being uploaded to Vercel build servers.
+- Created `frontend/.vercelignore` to exclude `.dart_tool/`, `build/`, `android/`, `windows/`, `ios/`, `macos/`, and other development tools, reducing the upload size from 564.1MB to less than 1MB.
+- Created `backend/.vercelignore` to exclude `node_modules/`, `dist/`, `.env`, and caches from Vercel's initial upload list.
+
+### Files Modified/Created
+**Frontend Files (Created)**:
+- frontend/.vercelignore
+
+**Backend Files (Created)**:
+- backend/.vercelignore
+
+---
+2026-06-28 22:48:00 IST
+
+## 110. Firebase ESM Compatibility Fix for Vercel Serverless Function
+**High-level description**: Downgraded transitive dependency `jwks-rsa` to CommonJS-compatible version `3.2.2` to resolve runtime serverless function crash on Vercel.
+- Addressed runtime crash `ERR_REQUIRE_ESM` when `jwks-rsa` v4+ attempted to require ESM-only package `jose` in the NestJS CommonJS runtime environment.
+- Added `overrides` configuration in `backend/package.json` forcing `jwks-rsa` to lock to version `3.2.2`.
+- Ran `npm install` to update the lockfile and verified that the NestJS backend compiles and builds successfully.
+
+### Files Modified/Created
+**Backend Files (Modified)**:
+- backend/package.json
+- backend/package-lock.json

@@ -1,0 +1,10 @@
+# Ignore local build outputs, node modules and local env configurations
+node_modules/
+dist/
+.env
+.vercel/cache
+npm-debug.log
+yarn-debug.log
+yarn-error.log
+.idea/
+.vscode/
