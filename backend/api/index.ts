@@ -1,11 +1,15 @@
-import './instrument';
+import '../src/instrument';
 import { NestFactory } from '@nestjs/core';
-import { AppModule } from './app.module';
-import { getAppEnv } from './config/app-env';
+import { ExpressAdapter } from '@nestjs/platform-express';
+import { AppModule } from '../src/app.module';
+import { getAppEnv } from '../src/config/app-env';
+import express from 'express';
+
+const expressApp = express();
 
 async function bootstrap() {
   const env = getAppEnv();
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, new ExpressAdapter(expressApp));
   app.enableShutdownHooks();
   app.enableCors({
     origin: env.corsOrigins,
@@ -21,6 +25,9 @@ async function bootstrap() {
       'x-requested-with',
     ],
   });
-  await app.listen(env.port);
+  await app.init();
 }
+
 bootstrap();
+
+export default expressApp;
