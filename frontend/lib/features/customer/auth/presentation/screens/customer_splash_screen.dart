@@ -43,25 +43,32 @@ class _CustomerSplashScreenState extends State<CustomerSplashScreen> {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Container(
-                  width: 96,
-                  height: 96,
+                  width: 112,
+                  height: 112,
+                  padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [AppColors.shieldBlue, AppColors.shieldGreen],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    borderRadius: BorderRadius.circular(28),
-                  ),
-                  child: const Icon(
-                    Icons.favorite_rounded,
                     color: AppColors.white,
-                    size: 42,
+                    borderRadius: BorderRadius.circular(30),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.shieldNavy.withValues(alpha: 0.08),
+                        blurRadius: 22,
+                        offset: const Offset(0, 14),
+                      ),
+                    ],
+                  ),
+                  child: Image.asset(
+                    'assets/logos/shield_mark.png',
+                    fit: BoxFit.contain,
                   ),
                 ),
                 const SizedBox(height: 22),
-                Text('SHIELD', style: AppTypography.h2),
-                const SizedBox(height: 6),
+                Image.asset(
+                  'assets/logos/shield_wordmark.png',
+                  width: 320,
+                  fit: BoxFit.contain,
+                ),
+                const SizedBox(height: 16),
                 Text(
                   'Sahakar Healthcare Member Portal',
                   textAlign: TextAlign.center,

@@ -4798,3 +4798,55 @@ pm run build (backend)
 
 ---
 2026-06-29 16:50:14 IST
+## 133. Added Dev-Only Localhost Customer Sign-In Bypass For Web Testing
+**High-level description**: Added a debug-only localhost customer sign-in path so Flutter web development can keep exercising route guards, session persistence, and customer portal slices even though real Firebase web OTP cannot run on localhost.
+- Extended CustomerAuthSession with a supportsLocalSignIn gate that only activates for Flutter web in debug mode on localhost-style hosts.
+- Added signInLocally(...) plus a persisted local-bypass marker so localhost test sessions survive reloads without needing a real Firebase access or refresh token.
+- Reused the existing backend development customer principal assumption by pinning the local bypass to customer id 1, which matches the backend dev guard already used for /customer/... routes.
+- Updated CustomerLoginScreen so the same Continue action switches to local test-mode sign-in on localhost, while non-localhost builds keep the real Firebase OTP entry flow.
+- Added explicit UI copy so localhost users understand they are entering the customer portal through a debug-only testing path rather than a production authentication flow.
+
+### Files Modified/Created
+**Frontend Files (Modified)**:
+- frontend/lib/shared/services/customer_auth_session.dart
+- frontend/lib/features/customer/auth/presentation/screens/customer_login_screen.dart
+
+**Backend Files**:
+- None
+
+### Verification
+- dart format frontend/lib/shared/services/customer_auth_session.dart frontend/lib/features/customer/auth/presentation/screens/customer_login_screen.dart
+- lutter analyze frontend/lib/shared/services/customer_auth_session.dart frontend/lib/features/customer/auth/presentation/screens/customer_login_screen.dart
+
+---
+2026-06-29 17:01:15 IST
+## 134. Applied Provided SHIELD Logo Assets To Web Icons And Customer Auth Branding
+**High-level description**: Replaced the temporary generic customer auth iconography with the provided SHIELD brand assets and regenerated the web icon set from the square shield mark.
+- Copied the provided square shield image into rontend/assets/logos/shield_mark.png and the full mission lockup into rontend/assets/logos/shield_wordmark.png so the frontend uses stable in-repo branding assets instead of referencing root-level loose files.
+- Regenerated rontend/web/favicon.png plus the rontend/web/icons/* PWA icon set from the square shield mark, making the shorter logo the active favicon and web splash/app icon source as requested.
+- Updated CustomerSplashScreen to use the shield mark as the splash image and the full SHIELD wordmark underneath it, replacing the previous generic gradient-heart treatment.
+- Updated CustomerLoginScreen to use the shield mark and wordmark assets so the first customer auth touchpoint now matches the intended SHIELD identity.
+
+### Files Modified/Created
+**Frontend Files (Created)**:
+- frontend/assets/logos/shield_mark.png
+- frontend/assets/logos/shield_wordmark.png
+
+**Frontend Files (Modified)**:
+- frontend/lib/features/customer/auth/presentation/screens/customer_splash_screen.dart
+- frontend/lib/features/customer/auth/presentation/screens/customer_login_screen.dart
+- frontend/web/favicon.png
+- frontend/web/icons/Icon-192.png
+- frontend/web/icons/Icon-512.png
+- frontend/web/icons/Icon-maskable-192.png
+- frontend/web/icons/Icon-maskable-512.png
+
+**Backend Files**:
+- None
+
+### Verification
+- dart format frontend/lib/features/customer/auth/presentation/screens/customer_splash_screen.dart frontend/lib/features/customer/auth/presentation/screens/customer_login_screen.dart
+- lutter analyze frontend/lib/features/customer/auth/presentation/screens/customer_splash_screen.dart frontend/lib/features/customer/auth/presentation/screens/customer_login_screen.dart
+
+---
+2026-06-29 17:05:24 IST
