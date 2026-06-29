@@ -4850,3 +4850,21 @@ pm run build (backend)
 
 ---
 2026-06-29 17:05:24 IST
+## 135. Refreshed Android Firebase Config From Latest Console Download
+**High-level description**: Replaced the Android google-services.json in the Flutter app with the newer Firebase console download so the local SHIELD Android build uses the config that includes the Android OAuth client and signing-certificate mapping.
+- Compared irebase env/google-services (6).json with rontend/android/app/google-services.json and confirmed the newer file includes the Android OAuth client entry with certificate hash 92e91104c03c45db9e2ea3b07cc5263cd090419, which the older repo copy did not contain.
+- Copied the newer Firebase download into rontend/android/app/google-services.json so the Android app configuration now matches the fingerprints currently registered in Firebase project settings.
+- This is a config-only refresh; no Dart or backend logic changed in this step.
+
+### Files Modified/Created
+**Frontend Files (Modified)**:
+- frontend/android/app/google-services.json
+
+**Backend Files**:
+- None
+
+### Verification
+- Compared irebase env/google-services (6).json against rontend/android/app/google-services.json and confirmed the repo copy now matches the newer Firebase download.
+
+---
+2026-06-29 19:51:09 IST
