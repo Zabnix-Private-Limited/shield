@@ -25,12 +25,15 @@ class ApiService {
 
   static String _resolveBaseUrl() {
     if (AppConfig.apiBaseUrl.trim().isNotEmpty) {
-      if (!kIsWeb && kReleaseMode && (AppConfig.apiBaseUrl.contains('localhost') || AppConfig.apiBaseUrl.contains('127.0.0.1'))) {
+      if (!kIsWeb &&
+          kReleaseMode &&
+          (AppConfig.apiBaseUrl.contains('localhost') ||
+              AppConfig.apiBaseUrl.contains('127.0.0.1'))) {
         return 'https://shield-backend.vercel.app';
       }
       return AppConfig.apiBaseUrl.trim().replaceAll(RegExp(r'/+$'), '');
     }
-    
+
     if (!kIsWeb) {
       if (kReleaseMode) {
         return 'https://shield-backend.vercel.app';
@@ -235,14 +238,12 @@ class ApiService {
       final wallet = _readEnvelope(response);
       final walletId = wallet['walletId'].toString();
       final transactions = await _getWalletTransactionsFromBackend(walletId);
-      final cashWallet =
-          wallet['cashWallet'] is Map<String, dynamic>
-              ? wallet['cashWallet'] as Map<String, dynamic>
-              : const <String, dynamic>{};
-      final rewardPoints =
-          wallet['rewardPoints'] is Map<String, dynamic>
-              ? wallet['rewardPoints'] as Map<String, dynamic>
-              : const <String, dynamic>{};
+      final cashWallet = wallet['cashWallet'] is Map<String, dynamic>
+          ? wallet['cashWallet'] as Map<String, dynamic>
+          : const <String, dynamic>{};
+      final rewardPoints = wallet['rewardPoints'] is Map<String, dynamic>
+          ? wallet['rewardPoints'] as Map<String, dynamic>
+          : const <String, dynamic>{};
       final cashBalance =
           double.tryParse((cashWallet['available'] ?? 0).toString()) ?? 0;
       final pointsBalance =
@@ -298,6 +299,319 @@ class ApiService {
           .where((transaction) => transaction.walletId == walletId)
           .toList()
         ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    }
+  }
+
+  static Future<Map<String, dynamic>> getCustomerWalletBundle(
+    String customerId,
+  ) async {
+    try {
+      final response = await _dio.get(
+        '/customer/wallet',
+        queryParameters: {'customer_id': customerId},
+      );
+      return _readEnvelope(response);
+    } catch (_) {
+      final results = await Future.wait<dynamic>([
+        getWalletProfile(customerId),
+        getCustomerMembership(customerId),
+      ]);
+
+      final wallet = Map<String, dynamic>.from(
+        results[0] as Map<String, dynamic>,
+      );
+      final membership = results[1] as Membership;
+      final transactions = await getWalletTransactions(
+        wallet['walletId']?.toString() ?? dummyWallet.id,
+      );
+
+      double monthlySpend = 0;
+      double rewardCredits = 0;
+      for (final txn in transactions) {
+        if (txn.subLedgerType == 'POINTS') {
+          if (txn.transactionType == 'CREDIT') {
+            rewardCredits += txn.amount;
+          }
+          continue;
+        }
+        if (txn.transactionType == 'DEBIT') {
+          monthlySpend += txn.amount;
+        }
+      }
+
+      return {
+        'walletId': wallet['walletId']?.toString() ?? dummyWallet.id,
+        'customerId': wallet['customerId']?.toString() ?? customerId,
+        'status': wallet['status'] ?? 'ACTIVE',
+        'cashWallet': {
+          'available': wallet['cashBalance'] ?? wallet['balance'] ?? 0,
+          'credited': transactions
+              .where(
+                (txn) =>
+                    txn.subLedgerType != 'POINTS' &&
+                    txn.transactionType == 'CREDIT',
+              )
+              .fold<double>(0, (sum, txn) => sum + txn.amount),
+          'debited': transactions
+              .where(
+                (txn) =>
+                    txn.subLedgerType != 'POINTS' &&
+                    txn.transactionType == 'DEBIT',
+              )
+              .fold<double>(0, (sum, txn) => sum + txn.amount),
+        },
+        'rewardPoints': {
+          'available': wallet['pointsBalance'] ?? 0,
+          'earned': transactions
+              .where(
+                (txn) =>
+                    txn.subLedgerType == 'POINTS' &&
+                    txn.transactionType == 'CREDIT',
+              )
+              .fold<double>(0, (sum, txn) => sum + txn.amount),
+          'redeemed': transactions
+              .where(
+                (txn) =>
+                    txn.subLedgerType == 'POINTS' &&
+                    txn.transactionType == 'DEBIT',
+              )
+              .fold<double>(0, (sum, txn) => sum + txn.amount),
+        },
+        'benefitSummary': const {
+          'benefitsUsed': 0,
+          'grantedTotal': 0,
+          'appliedTotal': 0,
+          'hiddenRemaining': 0,
+        },
+        'recentTransactions': transactions
+            .map(
+              (item) => {
+                'id': item.id,
+                'uuid': item.uuid,
+                'wallet_id': item.walletId,
+                'transaction_type': item.transactionType,
+                'sub_ledger_type': item.subLedgerType,
+                'amount': item.amount,
+                'reference_type': item.referenceType,
+                'reference_id': item.referenceId,
+                'remarks': item.remarks,
+                'created_by': item.createdBy,
+                'created_at': item.createdAt.toIso8601String(),
+              },
+            )
+            .toList(),
+        'statistics': {
+          'monthlySpend': monthlySpend,
+          'rewardCredits': rewardCredits,
+          'creditAvailable': wallet['creditAvailable'] ?? 0,
+        },
+        'membership': {
+          'id': membership.id,
+          'uuid': membership.uuid,
+          'membershipNumber': membership.customerCode,
+          'status': membership.isActive ? 'ACTIVE' : 'INACTIVE',
+          'activationDate': membership.startDate.toIso8601String(),
+          'expiryDate': membership.endDate.toIso8601String(),
+          'createdAt': membership.createdAt.toIso8601String(),
+          'updatedAt': membership.updatedAt.toIso8601String(),
+          'membershipType': {'name': membership.tierLabel},
+        },
+      };
+    }
+  }
+
+  static Future<Map<String, dynamic>> getCustomerMembershipBundle(
+    String customerId,
+  ) async {
+    final response = await _dio.get(
+      '/customer/membership',
+      queryParameters: {'customer_id': customerId},
+    );
+    return _readEnvelope(response);
+  }
+
+  static Future<Map<String, dynamic>> getCustomerDashboardBundle(
+    String customerId,
+  ) async {
+    try {
+      final response = await _dio.get(
+        '/customer/dashboard',
+        queryParameters: {'customer_id': customerId},
+      );
+      return _readEnvelope(response);
+    } catch (_) {
+      final results = await Future.wait<dynamic>([
+        getCustomerProfile(customerId),
+        getWalletProfile(customerId),
+        getCustomerMembership(customerId),
+        getAppointments(SHIELDRole.customer),
+        getNotifications(SHIELDRole.customer),
+        getDocuments(SHIELDRole.customer),
+      ]);
+
+      final customer = results[0] as Customer;
+      final wallet = Map<String, dynamic>.from(
+        results[1] as Map<String, dynamic>,
+      );
+      final membership = results[2] as Membership;
+      final appointments = results[3] as List<Appointment>;
+      final notifications = results[4] as List<NotificationModel>;
+      final documents = results[5] as List<Document>;
+      final transactions = await getWalletTransactions(
+        wallet['walletId']?.toString() ?? dummyWallet.id,
+      );
+
+      return {
+        'customer': {
+          'id': customer.id,
+          'uuid': customer.uuid,
+          'customer_code': customer.customerCode,
+          'aadhaar_number': customer.aadhaarNumber,
+          'first_name': customer.firstName,
+          'last_name': customer.lastName,
+          'dob': customer.dob?.toIso8601String(),
+          'gender': customer.gender,
+          'mobile': customer.mobile,
+          'email': customer.email,
+          'address_line1': customer.addressLine1,
+          'address_line2': customer.addressLine2,
+          'city': customer.city,
+          'district': customer.district,
+          'state': customer.state,
+          'pincode': customer.pincode,
+          'status': customer.status,
+          'created_by': customer.createdBy,
+          'approved_by': customer.approvedBy,
+          'created_at': customer.createdAt.toIso8601String(),
+          'updated_at': customer.updatedAt.toIso8601String(),
+          'blood_group': customer.bloodGroup,
+          'agent_code': customer.agentCode,
+        },
+        'wallet': {
+          'walletId': wallet['walletId']?.toString() ?? dummyWallet.id,
+          'customerId': wallet['customerId']?.toString() ?? customer.id,
+          'balance': wallet['balance'] ?? 0,
+          'cashBalance': wallet['cashBalance'] ?? wallet['balance'] ?? 0,
+          'pointsBalance': wallet['pointsBalance'] ?? 0,
+          'creditAvailable': wallet['creditAvailable'] ?? 0,
+          'status': wallet['status'] ?? 'ACTIVE',
+        },
+        'membership': {
+          'id': membership.id,
+          'uuid': membership.uuid,
+          'membershipNumber': membership.customerCode,
+          'status': membership.isActive ? 'ACTIVE' : 'INACTIVE',
+          'activationDate': membership.startDate.toIso8601String(),
+          'expiryDate': membership.endDate.toIso8601String(),
+          'createdAt': membership.createdAt.toIso8601String(),
+          'updatedAt': membership.updatedAt.toIso8601String(),
+          'membershipType': {'name': membership.tierLabel},
+        },
+        'appointments': appointments
+            .map(
+              (item) => {
+                'id': item.id,
+                'uuid': item.uuid,
+                'customer_id': item.customerId,
+                'provider_id': item.providerId,
+                'appointment_type': item.type.name.toUpperCase(),
+                'appointment_date': item.appointmentDate.toIso8601String(),
+                'status': item.status.name.toUpperCase(),
+                'remarks': item.notes,
+                'provider': {
+                  'providerName': item.doctorName,
+                  'providerType': item.department,
+                },
+              },
+            )
+            .toList(),
+        'notifications': notifications
+            .map(
+              (item) => {
+                'id': item.id,
+                'uuid': item.uuid,
+                'customer_id': item.customerId,
+                'title': item.title,
+                'message': item.body,
+                'status': item.isRead ? 'READ' : 'UNREAD',
+                'sent_at': item.createdAt.toIso8601String(),
+                'channel': item.type.name.toUpperCase(),
+              },
+            )
+            .toList(),
+        'recentActivity': transactions
+            .take(4)
+            .map(
+              (item) => {
+                'id': item.id,
+                'uuid': item.uuid,
+                'wallet_id': item.walletId,
+                'transaction_type': item.transactionType,
+                'sub_ledger_type': item.subLedgerType,
+                'amount': item.amount,
+                'reference_type': item.referenceType,
+                'reference_id': item.referenceId,
+                'remarks': item.remarks,
+                'created_by': item.createdBy,
+                'created_at': item.createdAt.toIso8601String(),
+              },
+            )
+            .toList(),
+        'documents': documents
+            .map(
+              (item) => {
+                'id': item.id,
+                'uuid': item.uuid,
+                'customer_id': item.customerId,
+                'file_name': item.fileName,
+                'storage_path': item.storagePath,
+                'file_size': item.fileSize,
+                'mime_type': item.mimeType,
+                'document_type': item.type?.name.toUpperCase(),
+                'status': item.status.name.toUpperCase(),
+                'uploaded_by': item.uploadedBy,
+                'created_at': item.uploadedAt.toIso8601String(),
+                'processed_at': item.processedAt?.toIso8601String(),
+              },
+            )
+            .toList(),
+        'quickActions': const [
+          {
+            'key': 'view-card',
+            'label': 'View card',
+            'route': '/portal/customer/membership',
+          },
+          {
+            'key': 'book-visit',
+            'label': 'Book visit',
+            'route': '/portal/customer/appointments',
+          },
+          {
+            'key': 'open-wallet',
+            'label': 'Open wallet',
+            'route': '/portal/customer/wallet',
+          },
+        ],
+        'services': const [
+          {
+            'key': 'pharmacy',
+            'label': 'Pharmacy',
+            'description': 'Medicines, repeats, and partner branch orders.',
+          },
+          {
+            'key': 'clinic',
+            'label': 'Clinic',
+            'description':
+                'Consultations, preventive care, and scheduled visits.',
+          },
+          {
+            'key': 'lab',
+            'label': 'Lab',
+            'description':
+                'Diagnostics, sample collections, and health reports.',
+          },
+        ],
+      };
     }
   }
 
@@ -517,12 +831,17 @@ class ApiService {
     }
   }
 
-  static Future<Map<String, dynamic>?> createProvider(Map<String, dynamic> data) async {
+  static Future<Map<String, dynamic>?> createProvider(
+    Map<String, dynamic> data,
+  ) async {
     final response = await _dio.post('/service-providers', data: data);
     return _readEnvelope(response);
   }
 
-  static Future<Map<String, dynamic>?> updateProvider(String id, Map<String, dynamic> data) async {
+  static Future<Map<String, dynamic>?> updateProvider(
+    String id,
+    Map<String, dynamic> data,
+  ) async {
     final response = await _dio.put('/service-providers/$id', data: data);
     return _readEnvelope(response);
   }
@@ -542,6 +861,54 @@ class ApiService {
     return _readEnvelope(response);
   }
 
+  static Future<Map<String, dynamic>?> getProviderWorkspace({
+    String? providerId,
+    String? providerType,
+    String? businessId,
+    int? limit,
+  }) async {
+    final response = await _dio.get(
+      '/service-providers/workspace',
+      queryParameters: {
+        if (providerId != null) 'provider_id': providerId,
+        if (providerType != null) 'provider_type': providerType,
+        if (businessId != null) 'business_id': businessId,
+        if (limit != null) 'limit': limit,
+      },
+    );
+    return _readEnvelope(response);
+  }
+
+  static Future<Map<String, dynamic>?> getCrmOperationsQueue({
+    String? assignedTo,
+    String? customerId,
+    int? limit,
+  }) async {
+    final response = await _dio.get(
+      '/operations-queue/crm',
+      queryParameters: {
+        if (assignedTo != null) 'assigned_to': assignedTo,
+        if (customerId != null) 'customer_id': customerId,
+        if (limit != null) 'limit': limit,
+      },
+    );
+    return _readEnvelope(response);
+  }
+
+  static Future<Map<String, dynamic>?> getAdminOperationsQueue({
+    String? businessId,
+    int? limit,
+  }) async {
+    final response = await _dio.get(
+      '/operations-queue/admin',
+      queryParameters: {
+        if (businessId != null) 'business_id': businessId,
+        if (limit != null) 'limit': limit,
+      },
+    );
+    return _readEnvelope(response);
+  }
+
   static Future<List<Map<String, dynamic>>> getBusinesses() async {
     try {
       final response = await _dio.get('/master-data/admin/businesses');
@@ -555,4 +922,3 @@ class ApiService {
     }
   }
 }
-

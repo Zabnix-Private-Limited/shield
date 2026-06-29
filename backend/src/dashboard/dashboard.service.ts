@@ -75,6 +75,161 @@ export class DashboardService {
     };
   }
 
+  async getCustomerPortalDashboard(customerId: bigint) {
+    const customer = await this.prisma.customer.findUnique({
+      where: { id: customerId },
+      include: {
+        membership: {
+          include: {
+            membershipType: true,
+          },
+        },
+        wallet: true,
+        creditAccount: true,
+      },
+    });
+    if (!customer) {
+      throw new NotFoundException(`Customer with ID ${customerId} not found`);
+    }
+
+    const walletSummary = customer.wallet
+      ? await this.walletService.getWalletSummary(customer.wallet.id)
+      : null;
+    const recentTransactions = customer.wallet
+      ? await this.walletService.getTransactions(customer.wallet.id, {})
+      : [];
+
+    const [appointments, notifications, documents] = await Promise.all([
+      this.prisma.appointment.findMany({
+        where: { customerId },
+        include: { provider: true },
+        orderBy: { appointmentDate: 'desc' },
+        take: 6,
+      }),
+      this.prisma.notification.findMany({
+        where: { customerId },
+        orderBy: [{ sentAt: 'desc' }, { id: 'desc' }],
+        take: 6,
+      }),
+      this.prisma.document.findMany({
+        where: { customerId },
+        include: {
+          documentExtractions: {
+            orderBy: { createdAt: 'asc' },
+          },
+          documentProcessingLogs: {
+            orderBy: { processedAt: 'asc' },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 6,
+      }),
+    ]);
+
+    return {
+      customer: {
+        id: customer.id.toString(),
+        uuid: customer.uuid,
+        customerCode: customer.customerCode,
+        aadhaarNumber: customer.aadhaarNumber,
+        firstName: customer.firstName,
+        lastName: customer.lastName,
+        dob: customer.dob,
+        gender: customer.gender,
+        mobile: customer.mobile,
+        email: customer.email,
+        addressLine1: customer.addressLine1,
+        addressLine2: customer.addressLine2,
+        city: customer.city,
+        district: customer.district,
+        state: customer.state,
+        pincode: customer.pincode,
+        status: customer.status,
+        createdBy: customer.createdBy?.toString(),
+        approvedBy: customer.approvedBy?.toString(),
+        createdAt: customer.createdAt,
+        updatedAt: customer.updatedAt,
+        bloodGroup: customer.bloodGroup,
+        agentCode: customer.agentCode,
+      },
+      wallet: {
+        walletId: customer.wallet?.id.toString(),
+        customerId: customer.id.toString(),
+        balance: walletSummary?.cashWallet.available ?? 0,
+        cashBalance: walletSummary?.cashWallet.available ?? 0,
+        pointsBalance: walletSummary?.rewardPoints.available ?? 0,
+        creditAvailable: customer.creditAccount
+          ? Number(customer.creditAccount.availableCredit)
+          : 0,
+        status: customer.wallet?.status ?? 'ACTIVE',
+      },
+      membership: customer.membership
+        ? {
+            id: customer.membership.id.toString(),
+            uuid: customer.membership.uuid,
+            membershipNumber: customer.membership.membershipNumber,
+            status: customer.membership.status,
+            activationDate: customer.membership.activationDate,
+            expiryDate: customer.membership.expiryDate,
+            createdAt: customer.membership.createdAt,
+            updatedAt: customer.membership.updatedAt,
+            membershipType: customer.membership.membershipType
+              ? {
+                  id: customer.membership.membershipType.id.toString(),
+                  uuid: customer.membership.membershipType.uuid,
+                  code: customer.membership.membershipType.code,
+                  name: customer.membership.membershipType.name,
+                  joiningFee: customer.membership.membershipType.joiningFee,
+                  discountPercentage:
+                    customer.membership.membershipType.discountPercentage,
+                  creditEligible:
+                    customer.membership.membershipType.creditEligible,
+                  status: customer.membership.membershipType.status,
+                }
+              : null,
+          }
+        : null,
+      appointments,
+      notifications,
+      recentActivity: recentTransactions.slice(0, 4),
+      documents,
+      quickActions: [
+        {
+          key: 'view-card',
+          label: 'View card',
+          route: '/portal/customer/membership',
+        },
+        {
+          key: 'book-visit',
+          label: 'Book visit',
+          route: '/portal/customer/appointments',
+        },
+        {
+          key: 'open-wallet',
+          label: 'Open wallet',
+          route: '/portal/customer/wallet',
+        },
+      ],
+      services: [
+        {
+          key: 'pharmacy',
+          label: 'Pharmacy',
+          description: 'Medicines, repeats, and partner branch orders.',
+        },
+        {
+          key: 'clinic',
+          label: 'Clinic',
+          description: 'Consultations and follow-up visits.',
+        },
+        {
+          key: 'lab',
+          label: 'Lab',
+          description: 'Tests, reports, and health checks.',
+        },
+      ],
+    };
+  }
+
   async getStaffDashboard() {
     const totalCustomers = await this.prisma.customer.count();
     const pendingOnboarding = await this.prisma.customer.count({

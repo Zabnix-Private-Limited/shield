@@ -4293,3 +4293,344 @@ High-level description: Replaced the old internal fallback page stack with one r
 
 ---
 2026-06-29 08:59:46 IST
+
+
+## 114. CRM Role-Specific Workspace On Frozen Desktop Shell
+**High-level description**: Implemented the first dedicated CRM operational workspace on top of the frozen internal desktop shell so CRM no longer falls back to the generic inherited enterprise body.
+- Routed all CRM Executive portal sections through a dedicated _CrmWorkspaceView inside portal_shell.dart while preserving the shared desktop shell, route contract, and sidebar behavior.
+- Added a CRM-specific top workspace strip with role-relevant search hints, filter pills, and section-aware headings for Dashboard, Customer List, Tasks, Follow-Ups, Complaints, and Campaigns.
+- Reused the shared enterprise body grammar but specialized the content into CRM-first work panels, a CRM utility rail, and a dense CRM worklist table for faster operational scanning.
+- Added section-aware helper copy for panel titles, search hints, focus labels, and table titles so the CRM portal feels like a real engagement desk instead of a generic dashboard template.
+- Fixed analyzer lint gates introduced during the CRM pass and re-verified the touched frontend files cleanly.
+
+### Files Modified/Created
+**Frontend Files (Modified)**:
+- frontend/lib/features/portal/presentation/screens/portal_shell.dart
+
+**Backend Files**:
+- None
+
+---
+2026-06-29 09:10:59 IST
+
+
+## 115. Remove Shared Desktop Workspace Helper Note
+**High-level description**: Removed the remaining shared desktop-workspace helper note from the portal shell so internal portals no longer show that footer-style guidance block.
+- Deleted the Desktop workspace: optimized for dense navigation, quicker tasks, and all-day use. helper note from the shared portal shell rail.
+- Kept the frozen desktop shell, portal routing, and role-specific workspaces unchanged while reducing repeated sidebar noise across internal portals.
+
+### Files Modified/Created
+**Frontend Files (Modified)**:
+- frontend/lib/features/portal/presentation/screens/portal_shell.dart
+
+**Backend Files**:
+- None
+
+---
+2026-06-29 11:44:26 IST
+
+
+## 116. Shared Operations Queue Foundation And Provider Workspace Backend
+**High-level description**: Added a centralized operations queue backend and a reusable provider workspace endpoint so provider, CRM, and admin workspaces can consume shared operational queues from existing schema-backed domains instead of growing separate role-specific logic.
+- Created a new NestJS operations-queue module that exposes queue payloads for provider, CRM, and admin workspaces.
+- Built provider workspace summaries from live service_providers, ppointments, purchases, usinesses, and departments tables with scope filters for provider, provider type, and branch.
+- Built CRM queue payloads from crm_tasks, complaints, and crm_activities so the follow-up workspace can consume one normalized queue response.
+- Built admin queue payloads for onboarding, document processing, provider readiness, and upcoming appointments using existing operational records only.
+- Added frontend API helpers for the new provider workspace and operations queue endpoints without touching the already-dirty portal shell.
+
+### Files Modified/Created
+**Backend Files (Created)**:
+- backend/src/operations-queue/operations-queue.module.ts
+- backend/src/operations-queue/operations-queue.controller.ts
+- backend/src/operations-queue/operations-queue.service.ts
+
+**Backend Files (Modified)**:
+- backend/src/app.module.ts
+- backend/src/service-provider/service-provider.controller.ts
+- backend/src/service-provider/service-provider.module.ts
+
+**Frontend Files (Modified)**:
+- frontend/lib/shared/services/api_service.dart
+
+---
+2026-06-29 12:56:59 IST
+
+
+## 117. Customer Shell Foundation Extraction And Shared UI Primitives
+**High-level description**: Started the customer-first rebuild by extracting reusable customer shell primitives out of the monolithic portal screen and switching the live customer branch onto those shared components so future auth and feature work lands on a cleaner foundation.
+- Created a new rontend/lib/features/customer/shared/widgets/ foundation with shared customer scaffold, app bar, bottom navigation, loading card, error card, empty state, network error, section header, glass card, and button wrappers.
+- Refactored the customer branch of portal_shell.dart to use the new CustomerScaffold instead of embedding customer-specific shell behavior directly in the generic portal shell.
+- Added dedicated customer loading and error states so the customer portal can move toward backend-first async flows instead of generic fallback presentation.
+- Removed the now-unused generic role drawer wrapper after the customer shell moved to the new shared scaffold path.
+- Kept internal portal behavior unchanged while shrinking the customer-specific responsibilities of the shared portal shell.
+
+### Files Modified/Created
+**Frontend Files (Created)**:
+- frontend/lib/features/customer/shared/widgets/customer_app_bar.dart
+- frontend/lib/features/customer/shared/widgets/customer_scaffold.dart
+- frontend/lib/features/customer/shared/widgets/bottom_navigation.dart
+- frontend/lib/features/customer/shared/widgets/loading_card.dart
+- frontend/lib/features/customer/shared/widgets/error_card.dart
+- frontend/lib/features/customer/shared/widgets/empty_state.dart
+- frontend/lib/features/customer/shared/widgets/network_error.dart
+- frontend/lib/features/customer/shared/widgets/section_header.dart
+- frontend/lib/features/customer/shared/widgets/primary_button.dart
+- frontend/lib/features/customer/shared/widgets/secondary_button.dart
+- frontend/lib/features/customer/shared/widgets/glass_card.dart
+
+**Frontend Files (Modified)**:
+- frontend/lib/features/portal/presentation/screens/portal_shell.dart
+
+**Backend Files**:
+- None
+
+---
+2026-06-29 13:17:50 IST
+
+## 118. Customer Dashboard Vertical Slice Extraction And Bundle Endpoint
+**High-level description**: Extracted the live customer dashboard into a full vertical slice and switched the customer dashboard route over to that feature module, while preserving the current UI behavior and fallback semantics.
+- Added a dedicated GET /customer/dashboard backend endpoint so the customer dashboard can load from one bundled payload instead of fan-out requests from the screen layer.
+- Built the customer dashboard feature as a vertical slice with presentation, controller, repository, remote datasource, local Hive datasource, model, and domain entity layers.
+- Moved dashboard rendering responsibility out of portal_shell.dart and reduced the shell back toward route selection only for the customer dashboard case.
+- Kept the existing visible dashboard behavior intact by preserving current labels, cards, quick actions, appointment previews, recent activity, and fallback-backed API behavior during extraction.
+- Initialized Hive at app startup so the new dashboard repository cache path is valid before the customer slice starts reading local state.
+
+### Files Modified/Created
+**Backend Files (Created)**:
+- backend/src/dashboard/customer-dashboard.controller.ts
+
+**Backend Files (Modified)**:
+- backend/src/dashboard/dashboard.module.ts
+- backend/src/dashboard/dashboard.service.ts
+
+**Frontend Files (Created)**:
+- frontend/lib/features/customer/dashboard/domain/entities/dashboard_entity.dart
+- frontend/lib/features/customer/dashboard/domain/services/dashboard_cache_policy.dart
+- frontend/lib/features/customer/dashboard/data/models/dashboard_model.dart
+- frontend/lib/features/customer/dashboard/data/datasources/dashboard_remote.dart
+- frontend/lib/features/customer/dashboard/data/datasources/dashboard_local.dart
+- frontend/lib/features/customer/dashboard/data/repositories/dashboard_repository.dart
+- frontend/lib/features/customer/dashboard/presentation/controllers/dashboard_controller.dart
+- frontend/lib/features/customer/dashboard/presentation/screens/dashboard_screen.dart
+- frontend/lib/features/customer/dashboard/presentation/widgets/dashboard_shimmer.dart
+- frontend/lib/features/customer/dashboard/presentation/widgets/greeting_header.dart
+- frontend/lib/features/customer/dashboard/presentation/widgets/membership_card.dart
+- frontend/lib/features/customer/dashboard/presentation/widgets/quick_actions.dart
+- frontend/lib/features/customer/dashboard/presentation/widgets/wallet_summary_card.dart
+- frontend/lib/features/customer/dashboard/presentation/widgets/appointment_card.dart
+- frontend/lib/features/customer/dashboard/presentation/widgets/notifications_card.dart
+- frontend/lib/features/customer/dashboard/presentation/widgets/recent_activity.dart
+
+**Frontend Files (Modified)**:
+- frontend/lib/features/portal/presentation/screens/portal_shell.dart
+- frontend/lib/shared/services/api_service.dart
+- frontend/lib/main.dart
+
+### Verification
+- 
+pm run build (backend)
+- lutter analyze lib/features/customer/dashboard lib/features/portal/presentation/screens/portal_shell.dart lib/shared/services/api_service.dart lib/main.dart
+
+---
+2026-06-29 14:05:00 IST
+## 119. Customer Wallet Vertical Slice Extraction And Bundle Endpoint
+**High-level description**: Extracted the live customer wallet into its own vertical slice and moved the customer wallet route off the monolithic portal shell while preserving the current wallet UI flow and fallback behavior.
+- Added a dedicated GET /customer/wallet backend endpoint so the customer wallet can load cash, points, membership, statistics, benefit summary metadata, and transactions from one bundled payload.
+- Built the customer wallet feature as a full slice with domain entities, cache policy, data models, local and remote data sources, repository, controller, widgets, and screen layers.
+- Switched the customer wallet route in portal_shell.dart to the new CustomerWalletScreen and removed the inline wallet fetching, filtering, and transaction rendering logic from the shell.
+- Kept the current customer wallet behavior intact by preserving the existing hero summary, compact balance cards, points rules/details actions, transaction filters, transaction detail sheet, and fallback-backed API behavior.
+- Implemented immediate cached load plus background refresh through Hive so the wallet module now follows the customer cache strategy without coupling UI code to ApiService.
+
+### Files Modified/Created
+**Backend Files (Created)**:
+- backend/src/wallet/customer-wallet.controller.ts
+
+**Backend Files (Modified)**:
+- backend/src/wallet/wallet.module.ts
+- backend/src/wallet/wallet.service.ts
+
+**Frontend Files (Created)**:
+- frontend/lib/features/customer/wallet/domain/entities/wallet_entity.dart
+- frontend/lib/features/customer/wallet/domain/services/wallet_cache_policy.dart
+- frontend/lib/features/customer/wallet/data/models/cash_wallet.dart
+- frontend/lib/features/customer/wallet/data/models/reward_wallet.dart
+- frontend/lib/features/customer/wallet/data/models/transaction_model.dart
+- frontend/lib/features/customer/wallet/data/models/wallet_model.dart
+- frontend/lib/features/customer/wallet/data/datasources/wallet_remote.dart
+- frontend/lib/features/customer/wallet/data/datasources/wallet_local.dart
+- frontend/lib/features/customer/wallet/data/repositories/wallet_repository.dart
+- frontend/lib/features/customer/wallet/presentation/controllers/wallet_controller.dart
+- frontend/lib/features/customer/wallet/presentation/screens/wallet_screen.dart
+- frontend/lib/features/customer/wallet/presentation/widgets/wallet_shimmer.dart
+- frontend/lib/features/customer/wallet/presentation/widgets/balance_card.dart
+- frontend/lib/features/customer/wallet/presentation/widgets/reward_points_card.dart
+- frontend/lib/features/customer/wallet/presentation/widgets/benefit_summary_card.dart
+- frontend/lib/features/customer/wallet/presentation/widgets/wallet_filters.dart
+- frontend/lib/features/customer/wallet/presentation/widgets/wallet_empty_state.dart
+- frontend/lib/features/customer/wallet/presentation/widgets/transaction_tile.dart
+- frontend/lib/features/customer/wallet/presentation/widgets/transaction_list.dart
+
+**Frontend Files (Modified)**:
+- frontend/lib/features/portal/presentation/screens/portal_shell.dart
+- frontend/lib/shared/services/api_service.dart
+
+### Verification
+- 
+pm run build (backend)
+- lutter analyze lib/features/customer/wallet lib/features/portal/presentation/screens/portal_shell.dart lib/shared/services/api_service.dart
+
+---
+2026-06-29 14:06:02 IST
+## 120. Expanded Backend Seed With Five Linked Customer Journeys
+**High-level description**: Expanded the backend seed from a single-customer sample into five realistic customer journeys with linked memberships, wallet ledgers, referrals, visits, purchases, documents, CRM records, and notifications so the customer-facing flows have richer operational test data.
+- Refactored the customer seed portion of ackend/prisma/seed.ts into a multi-customer fixture-driven flow instead of a single hardcoded Nihal-only block.
+- Seeded five customers with varied linked records across membership, shield card, wallet, credit, customer contacts, status history, appointments, consultations, documents, document processing metadata, prescriptions, lab reports, dental records, notifications, complaints, CRM tasks, CRM activities, and purchases.
+- Added referral graph relationships and delayed referral reward lifecycle records so pending, verified, qualified, and rewarded customer referral states now exist in seed data.
+- Seeded product categories and products to support purchase and order history instead of leaving purchase tables disconnected.
+- Added a missing backend seed script so the repository can now run seeded data setup through 
+pm run seed directly.
+
+### Files Modified/Created
+**Backend Files (Modified)**:
+- backend/prisma/seed.ts
+- backend/package.json
+
+**Frontend Files**:
+- None
+
+### Verification
+- 
+pm run seed (backend)
+- 
+pm run build (backend)
+
+---
+2026-06-29 14:22:10 IST
+## 121. Web Push Bootstrap Soft-Fail For Local Backend Downtime
+**High-level description**: Hardened Firebase push bootstrap on Flutter web so local frontend startup no longer treats an unavailable backend as a fatal push initialization failure during development.
+- Added a safe push-token registration helper in `firebase_bootstrap_service.dart` that catches Dio network errors separately from Firebase initialization failures.
+- Changed initial token registration and token-refresh registration to use the safe helper so `http://127.0.0.1:3000` connection failures log as backend-unavailable skips instead of noisy bootstrap failures.
+- Kept the push permission request, token acquisition, and runtime messaging listeners unchanged so customer-visible behavior is preserved while local development becomes more resilient.
+- This does not change the underlying backend requirement for notification registration; it only stops a missing local API from making frontend startup look broken.
+
+### Files Modified/Created
+**Frontend Files (Modified)**:
+- frontend/lib/shared/services/firebase_bootstrap_service.dart
+
+**Backend Files**:
+- None
+
+### Verification
+- `flutter analyze lib/shared/services/firebase_bootstrap_service.dart lib/shared/services/api_service.dart`
+
+---
+2026-06-29 14:28:08 IST
+
+## 122. Removed Runtime RBAC And Commercial Bootstrap From Nest Startup
+**High-level description**: Stopped the backend from re-running heavy RBAC, commercial-default, and notification-table bootstrap SQL on every Nest startup, and moved the one-time initialization responsibility into the Prisma seed path instead.
+- Extracted reusable RBAC seeding into `backend/src/auth/rbac-seed.ts` and commercial default seeding into `backend/src/pricing/commercial-seed.ts` so the same logic can be run explicitly during seeding without attaching it to application boot.
+- Removed `AuthBootstrapService` and `CommercialBootstrapService` from automatic Nest module startup, which eliminates the repeated `ALTER TABLE`, `CREATE TABLE IF NOT EXISTS`, RBAC upserts, and role-permission rebuild traffic during backend launch.
+- Removed the notification service startup DDL for `device_push_tokens`; that table is now expected to come from Prisma schema sync instead of runtime SQL side effects.
+- Updated `backend/prisma/seed.ts` to seed the current uppercase RBAC catalog plus commercial defaults explicitly, and aligned seeded staff users to the new role codes (`ADMIN`, `SHIELD_AGENT`, `CRM_EXECUTIVE`, `PHARMACY_PROVIDER`, `DOCTOR`, `DENTAL_PROVIDER`).
+- Added `npm run db:push` and `npm run db:prepare` scripts so database shape and one-time initialization can be run deliberately outside Nest startup.
+- Redis startup behavior was left functionally unchanged: the backend still logs that Redis is disabled when `REDIS_URL` is missing, because refresh/session storage in `AuthService` still depends on a real Redis/Valkey connection.
+
+### Files Modified/Created
+**Backend Files (Created)**:
+- backend/src/auth/rbac-seed.ts
+- backend/src/pricing/commercial-seed.ts
+
+**Backend Files (Modified)**:
+- backend/src/auth/auth-bootstrap.service.ts
+- backend/src/auth/auth.module.ts
+- backend/src/pricing/commercial-bootstrap.service.ts
+- backend/src/pricing/pricing.module.ts
+- backend/src/notification/notification.service.ts
+- backend/prisma/seed.ts
+- backend/package.json
+
+**Frontend Files**:
+- None
+
+### Verification
+- `npm run build` (backend)
+- `npm run seed` (backend)
+
+---
+2026-06-29 14:39:16 IST
+
+## 123. Fixed Customer Wallet Dev Auth And Nested Customer Scroll Layout
+**High-level description**: Resolved the local customer wallet failure by allowing the new `/customer/...` bundle routes through the development customer guard and removing the nested customer scroll conflict that caused Flutter web viewport assertions.
+- Added `/customer/` to the development-only auth guard allowlist so local wallet and dashboard bundle routes can reuse the existing localhost customer principal without a Bearer token during frontend development.
+- Updated the customer branch of `portal_shell.dart` so extracted customer screens that own their own scroll views (`CustomerDashboardScreen` and `CustomerWalletScreen`) are no longer wrapped in the shell-level `SingleChildScrollView`.
+- This removes the `RenderViewport` unbounded-height / no-size assertion caused by nesting `RefreshIndicator + ListView` inside the shell-level customer scroll container.
+- Kept the legacy shell scroll wrapper in place for older customer portal views that still depend on shell-managed scrolling.
+
+### Files Modified/Created
+**Frontend Files (Modified)**:
+- frontend/lib/features/portal/presentation/screens/portal_shell.dart
+
+**Backend Files (Modified)**:
+- backend/src/auth/shield-jwt-auth.guard.ts
+
+### Verification
+- `npm run build` (backend)
+- `flutter analyze lib/features/portal/presentation/screens/portal_shell.dart`
+
+---
+2026-06-29 15:02:45 IST
+
+## 124. Customer Membership Vertical Slice Extraction And Bundle Endpoint
+**High-level description**: Replaced the last customer-portal membership dummy path with a dedicated backend bundle and a cache-backed frontend slice so the customer membership route no longer rebuilds its card from legacy fallback data inside the shared shell.
+- Added a dedicated GET /customer/membership backend endpoint and service bundle that returns customer membership metadata plus ledger-derived credit totals in one payload.
+- Built a new customer membership frontend slice with remote and local data sources, repository, controller, cache policy, model parsing, and a standalone CustomerMembershipScreen.
+- Switched the customer membership route in portal_shell.dart to the extracted screen and marked the membership slice as self-scrolling alongside dashboard and wallet so the shell stays thin.
+- Added a focused ApiService helper for the new membership bundle without pulling new customer business logic back into portal_shell.dart.
+- Kept the cleanup scoped to the customer portal only; legacy non-portal membership code and broader internal portal demo data were left untouched for later passes.
+
+### Files Modified/Created
+**Frontend Files (Created)**:
+- frontend/lib/features/customer/membership/domain/services/membership_cache_policy.dart
+- frontend/lib/features/customer/membership/data/models/membership_model.dart
+- frontend/lib/features/customer/membership/data/datasources/membership_remote.dart
+- frontend/lib/features/customer/membership/data/datasources/membership_local.dart
+- frontend/lib/features/customer/membership/data/repositories/membership_repository.dart
+- frontend/lib/features/customer/membership/presentation/controllers/membership_controller.dart
+- frontend/lib/features/customer/membership/presentation/screens/membership_screen.dart
+
+**Frontend Files (Modified)**:
+- frontend/lib/features/portal/presentation/screens/portal_shell.dart
+- frontend/lib/shared/services/api_service.dart
+
+**Backend Files (Created)**:
+- backend/src/customer/customer-membership.controller.ts
+
+**Backend Files (Modified)**:
+- backend/src/customer/customer.module.ts
+- backend/src/customer/customer.service.ts
+
+### Verification
+- npm run build (backend)
+- flutter analyze lib/features/customer/membership lib/features/portal/presentation/screens/portal_shell.dart lib/shared/services/api_service.dart
+
+---
+2026-06-29 16:10:00 IST
+
+## 125. Customer Portal Skeleton Overflow Fix
+**High-level description**: Fixed the shared customer portal loading skeleton so the extracted customer dashboard and wallet shimmer states no longer overflow vertically on shorter viewport heights.
+- Updated AppPortalSectionSkeleton in rontend/lib/shared/widgets/app_skeleton.dart to use a scroll-safe wrapper instead of a raw height-bound column.
+- Made the skeleton stats grid responsive through AppResponsive.adaptiveGridCount(...), which reduces the loading layout height on phone-width customer viewports.
+- Kept the change scoped to shared loading presentation only; no customer business logic or portal routing behavior changed.
+
+### Files Modified/Created
+**Frontend Files (Modified)**:
+- frontend/lib/shared/widgets/app_skeleton.dart
+
+**Backend Files**:
+- None
+
+### Verification
+- lutter analyze lib/shared/widgets/app_skeleton.dart lib/features/customer/wallet/presentation/widgets/wallet_shimmer.dart lib/features/customer/dashboard/presentation/widgets/dashboard_shimmer.dart lib/features/portal/presentation/screens/portal_shell.dart
+
+---
+2026-06-29 16:21:00 IST

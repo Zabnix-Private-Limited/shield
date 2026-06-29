@@ -6,13 +6,18 @@ import {
   Delete,
   Param,
   Body,
+  Query,
 } from '@nestjs/common';
+import { OperationsQueueService } from '../operations-queue/operations-queue.service';
 import { RequirePermissions } from '../auth/permissions.decorator';
 import { ServiceProviderService } from './service-provider.service';
 
 @Controller('service-providers')
 export class ServiceProviderController {
-  constructor(private readonly serviceProviderService: ServiceProviderService) {}
+  constructor(
+    private readonly serviceProviderService: ServiceProviderService,
+    private readonly operationsQueueService: OperationsQueueService,
+  ) {}
 
   @RequirePermissions('providers.create')
   @Post()
@@ -44,6 +49,27 @@ export class ServiceProviderController {
       success: true,
       message: 'Provider network analytics retrieved successfully.',
       data: analytics,
+    };
+  }
+
+  @RequirePermissions('providers.view')
+  @Get('workspace')
+  async getWorkspace(
+    @Query('provider_id') providerId?: string,
+    @Query('provider_type') providerType?: string,
+    @Query('business_id') businessId?: string,
+    @Query('limit') limit?: string,
+  ) {
+    const workspace = await this.operationsQueueService.getProviderWorkspace({
+      providerId: providerId ? BigInt(providerId) : undefined,
+      providerType: providerType?.trim() || undefined,
+      businessId: businessId ? BigInt(businessId) : undefined,
+      limit: limit ? Number(limit) : undefined,
+    });
+    return {
+      success: true,
+      message: 'Provider workspace retrieved successfully.',
+      data: workspace,
     };
   }
 

@@ -2,15 +2,19 @@ import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import '../../../customer/dashboard/presentation/screens/dashboard_screen.dart';
+import '../../../customer/membership/presentation/screens/membership_screen.dart';
+import '../../../customer/wallet/presentation/screens/wallet_screen.dart';
+import '../../../customer/shared/widgets/customer_scaffold.dart';
+import '../../../customer/shared/widgets/error_card.dart';
+import '../../../customer/shared/widgets/loading_card.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_typography.dart';
 import '../../../../shared/models/appointment.dart';
 import '../../../../shared/models/customer.dart';
-import '../../../../shared/models/document.dart';
 import '../../../../shared/models/membership.dart';
 import '../../../../shared/models/notification.dart';
 import '../../../../shared/models/shield_role.dart';
-import '../../../../shared/models/wallet.dart';
 import '../../../../shared/widgets/app_button.dart';
 import '../../../../shared/widgets/app_card.dart';
 import '../../../../shared/widgets/app_page_frame.dart';
@@ -91,10 +95,51 @@ class _PortalShellState extends State<PortalShell> {
     final isCustomer = widget.role == SHIELDRole.customer;
 
     if (_isLoading) {
+      if (isCustomer) {
+        final section = portal.sectionFor(activeKey);
+        return CustomerScaffold(
+          portal: portal,
+          section: section,
+          activeSectionKey: activeKey,
+          drawerContent: _CustomerPortalNav(
+            portal: portal,
+            activeSectionKey: activeKey,
+            inDrawer: true,
+          ),
+          body: const Padding(
+            padding: EdgeInsets.fromLTRB(16, 8, 16, 24),
+            child: LoadingCard(
+              title: 'Preparing your space',
+              subtitle: 'Loading the latest SHIELD customer data.',
+            ),
+          ),
+        );
+      }
       return const AppPageSkeleton(showSidebar: false);
     }
 
     if (_error != null || _sectionData == null) {
+      if (isCustomer) {
+        final section = portal.sectionFor(activeKey);
+        return CustomerScaffold(
+          portal: portal,
+          section: section,
+          activeSectionKey: activeKey,
+          drawerContent: _CustomerPortalNav(
+            portal: portal,
+            activeSectionKey: activeKey,
+            inDrawer: true,
+          ),
+          body: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+            child: ErrorCard(
+              title: 'Customer data unavailable',
+              message: _error ?? 'Unknown error occurred',
+              onRetry: _loadData,
+            ),
+          ),
+        );
+      }
       return Scaffold(
         appBar: AppBar(title: Text(portal.role.label)),
         body: Center(
@@ -145,11 +190,14 @@ class _PortalShellState extends State<PortalShell> {
                         data: mediaQuery.copyWith(
                           size: Size(viewportWidth, mediaQuery.size.height),
                         ),
-                        child: Scaffold(
-                          backgroundColor: AppColors.lightGray,
-                          drawer: _RoleDrawer(
+                        child: CustomerScaffold(
+                          portal: portal,
+                          section: section,
+                          activeSectionKey: activeKey,
+                          drawerContent: _CustomerPortalNav(
                             portal: portal,
                             activeSectionKey: activeKey,
+                            inDrawer: true,
                           ),
                           body: _RoleContent(portal: portal, section: section),
                         ),
@@ -321,6 +369,7 @@ class _RoleContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    late final Widget content;
     final isAdminDashboard =
         portal.role == SHIELDRole.superAdmin && section.key == 'dashboard';
     final isCustomerProfile =
@@ -350,10 +399,78 @@ class _RoleContent extends StatelessWidget {
         section.key == 'membership-plans';
     final isAdminAudit =
         portal.role == SHIELDRole.superAdmin && section.key == 'audit';
+    final isCrmSection = portal.role == SHIELDRole.crmExecutive;
     final isReportsSection =
         (portal.role == SHIELDRole.superAdmin ||
             portal.role == SHIELDRole.manager) &&
         section.key == 'reports';
+
+    if (isAdminDashboard) {
+      content = const _AdminOperationsCenterView();
+    } else if (isCustomerProfile) {
+      content = const _CustomerProfilePortalView();
+    } else if (isCustomerDashboard) {
+      content = const CustomerDashboardScreen();
+    } else if (isCustomerMembership) {
+      content = const CustomerMembershipScreen();
+    } else if (isCustomerServices) {
+      content = const _CustomerServicesView();
+    } else if (isCustomerAppointments) {
+      content = _CustomerAppointmentsView(section: section);
+    } else if (isCustomerNotifications) {
+      content = _CustomerNotificationsView(section: section);
+    } else if (isCustomerWallet) {
+      content = const CustomerWalletScreen();
+    } else if (isCustomerSettings) {
+      content = const _CustomerSettingsView();
+    } else if (isCardUtilization) {
+      content = const _CardUtilizationView();
+    } else if (isAdminBusinesses) {
+      content = const _AdminProviderNetworkView();
+    } else if (isAdminMasterData) {
+      content = const _AdminMasterDataView();
+    } else if (isAdminAudit) {
+      content = const _ServiceUtilizationView();
+    } else if (isCrmSection) {
+      content = _CrmWorkspaceView(section: section);
+    } else if (isReportsSection) {
+      content = const _AdminReportsView();
+    } else {
+      content = _EnterpriseWorkspaceView(portal: portal, section: section);
+    }
+
+    final customerContentOwnsScroll =
+        isCustomerDashboard || isCustomerMembership || isCustomerWallet;
+
+    if (portal.role == SHIELDRole.customer && customerContentOwnsScroll) {
+      return AppPageFrame(
+        maxWidth: 760,
+        padding: EdgeInsets.fromLTRB(
+          AppResponsive.horizontalPadding(context),
+          8,
+          AppResponsive.horizontalPadding(context),
+          24,
+        ),
+        child: content,
+      );
+    }
+
+    if (portal.role == SHIELDRole.customer) {
+      return SingleChildScrollView(
+        physics: const BouncingScrollPhysics(),
+        padding: EdgeInsets.fromLTRB(
+          AppResponsive.horizontalPadding(context),
+          8,
+          AppResponsive.horizontalPadding(context),
+          24,
+        ),
+        child: AppPageFrame(
+          maxWidth: 760,
+          padding: EdgeInsets.zero,
+          child: content,
+        ),
+      );
+    }
 
     return CustomScrollView(
       physics: const BouncingScrollPhysics(),
@@ -377,36 +494,7 @@ class _RoleContent extends StatelessWidget {
                   isSidebarExpanded: isSidebarExpanded,
                 ),
                 const SizedBox(height: 20),
-                if (isAdminDashboard)
-                  const _AdminOperationsCenterView()
-                else if (isCustomerProfile)
-                  const _CustomerProfilePortalView()
-                else if (isCustomerDashboard)
-                  const _CustomerDashboardPortalView()
-                else if (isCustomerMembership)
-                  const _CustomerMembershipPortalView()
-                else if (isCustomerServices)
-                  const _CustomerServicesView()
-                else if (isCustomerAppointments)
-                  _CustomerAppointmentsView(section: section)
-                else if (isCustomerNotifications)
-                  _CustomerNotificationsView(section: section)
-                else if (isCustomerWallet)
-                  const _CustomerWalletView()
-                else if (isCustomerSettings)
-                  const _CustomerSettingsView()
-                else if (isCardUtilization)
-                  const _CardUtilizationView()
-                else if (isAdminBusinesses)
-                  const _AdminProviderNetworkView()
-                else if (isAdminMasterData)
-                  const _AdminMasterDataView()
-                else if (isAdminAudit)
-                  const _ServiceUtilizationView()
-                else if (isReportsSection)
-                  const _AdminReportsView()
-                else
-                  _EnterpriseWorkspaceView(portal: portal, section: section),
+                content,
               ],
             ),
           ),
@@ -442,100 +530,6 @@ class _InternalPortalSidebar extends StatelessWidget {
       portal: portal,
       activeSectionKey: activeSectionKey,
       collapsed: collapsed,
-    );
-  }
-}
-
-class _RoleDrawer extends StatelessWidget {
-  final PortalRoleData portal;
-  final String activeSectionKey;
-
-  const _RoleDrawer({required this.portal, required this.activeSectionKey});
-
-  @override
-  Widget build(BuildContext context) {
-    if (portal.role == SHIELDRole.customer) {
-      return Drawer(
-        child: SafeArea(
-          child: _CustomerPortalNav(
-            portal: portal,
-            activeSectionKey: activeSectionKey,
-            inDrawer: true,
-          ),
-        ),
-      );
-    }
-
-    if (portal.role == SHIELDRole.superAdmin) {
-      return Drawer(
-        child: SafeArea(
-          child: _AdminPortalNav(
-            portal: portal,
-            activeSectionKey: activeSectionKey,
-            inDrawer: true,
-          ),
-        ),
-      );
-    }
-
-    return Drawer(
-      child: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'SHIELD',
-                    style: AppTypography.h3.copyWith(color: portal.accentColor),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    portal.role.label,
-                    style: AppTypography.body.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    portal.regionLabel,
-                    style: AppTypography.tiny.copyWith(color: AppColors.gray),
-                  ),
-                ],
-              ),
-            ),
-            const Divider(height: 1),
-            Expanded(
-              child: ListView(
-                children: portal.sections.map((section) {
-                  final isActive = section.key == activeSectionKey;
-                  return ListTile(
-                    selected: isActive,
-                    selectedTileColor: portal.accentColor.withValues(
-                      alpha: 0.12,
-                    ),
-                    title: Text(section.title),
-                    subtitle: Text(
-                      section.summary,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    onTap: () {
-                      Navigator.pop(context);
-                      context.go(
-                        '/portal/${portal.role.routeKey}/${section.key}',
-                      );
-                    },
-                  );
-                }).toList(),
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }
@@ -682,25 +676,6 @@ class _RoleRailNav extends StatelessWidget {
               }).toList(),
             ),
           ),
-          if (!collapsed)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 18),
-              child: Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: AppColors.lightGray,
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Text(
-                  'Desktop workspace: optimized for dense navigation, quicker tasks, and all-day use.',
-                  style: AppTypography.tiny.copyWith(
-                    color: AppColors.gray,
-                    height: 1.35,
-                  ),
-                ),
-              ),
-            ),
         ],
       ),
     );
@@ -2509,6 +2484,529 @@ class _EnterpriseRowItem extends StatelessWidget {
   }
 }
 
+class _CrmWorkspaceView extends StatelessWidget {
+  const _CrmWorkspaceView({required this.section});
+
+  final PortalSectionData section;
+
+  @override
+  Widget build(BuildContext context) {
+    const accentColor = AppColors.shieldNavy;
+    final recentItems = section.recentItems.isNotEmpty
+        ? section.recentItems
+        : section.queueItems;
+    final insightItems = section.insightItems.isNotEmpty
+        ? section.insightItems
+        : recentItems;
+    final workRows = [
+      ...section.queueItems,
+      ...recentItems,
+      ...insightItems,
+    ].take(6).toList();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        AppCard(
+          padding: const EdgeInsets.all(18),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final stack = constraints.maxWidth < 980;
+                  final intro = Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        _crmHeadlineFor(section),
+                        style: AppTypography.h3.copyWith(
+                          color: AppColors.shieldNavy,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        section.summary,
+                        style: AppTypography.small.copyWith(
+                          color: AppColors.gray,
+                          height: 1.35,
+                        ),
+                      ),
+                    ],
+                  );
+
+                  final search = Container(
+                    constraints: const BoxConstraints(maxWidth: 340),
+                    padding: const EdgeInsets.symmetric(horizontal: 14),
+                    decoration: BoxDecoration(
+                      color: AppColors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: AppColors.divider),
+                    ),
+                    child: TextField(
+                      decoration: InputDecoration(
+                        border: InputBorder.none,
+                        icon: const Icon(Icons.search, color: AppColors.gray),
+                        hintText: _crmSearchHintFor(section),
+                      ),
+                    ),
+                  );
+
+                  final filters = Wrap(
+                    spacing: 10,
+                    runSpacing: 10,
+                    children: [
+                      const _AdminFilterPill(
+                        label: 'Today',
+                        icon: Icons.today_outlined,
+                        active: true,
+                      ),
+                      _AdminFilterPill(
+                        label: _crmFocusLabelFor(section),
+                        icon: Icons.task_alt_outlined,
+                      ),
+                      const _AdminFilterPill(
+                        label: 'Retention',
+                        icon: Icons.favorite_border_rounded,
+                      ),
+                      const _AdminFilterPill(
+                        label: 'Escalations',
+                        icon: Icons.flag_outlined,
+                      ),
+                    ],
+                  );
+
+                  if (stack) {
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        intro,
+                        const SizedBox(height: 16),
+                        search,
+                        const SizedBox(height: 12),
+                        filters,
+                      ],
+                    );
+                  }
+
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(child: intro),
+                          const SizedBox(width: 16),
+                          search,
+                        ],
+                      ),
+                      const SizedBox(height: 14),
+                      filters,
+                    ],
+                  );
+                },
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        _MetricGrid(metrics: section.metrics, accentColor: accentColor),
+        const SizedBox(height: 16),
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final stack = constraints.maxWidth < 1040;
+            final left = Column(
+              children: [
+                _EnterpriseWorkPanel(
+                  title: _crmPrimaryPanelTitleFor(section),
+                  subtitle: _crmPrimaryPanelSubtitleFor(section),
+                  items: section.queueItems,
+                  accentColor: accentColor,
+                  viewAllLabel: _crmPrimaryActionFor(section),
+                ),
+                const SizedBox(height: 16),
+                _EnterpriseWorkPanel(
+                  title: _crmSecondaryPanelTitleFor(section),
+                  subtitle: _crmSecondaryPanelSubtitleFor(section),
+                  items: insightItems,
+                  accentColor: AppColors.warning,
+                  viewAllLabel: 'Review insights',
+                ),
+              ],
+            );
+
+            final right = AppCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('CRM Utility Rail', style: AppTypography.h4),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Keep next actions, quick context, and engagement signals visible without pulling attention away from active work.',
+                    style: AppTypography.small.copyWith(color: AppColors.gray),
+                  ),
+                  const SizedBox(height: 14),
+                  _EnterpriseUtilitySection(
+                    title: 'Quick Actions',
+                    child: Column(
+                      children: section.actions
+                          .take(4)
+                          .map(
+                            (action) => Padding(
+                              padding: const EdgeInsets.only(bottom: 8),
+                              child: Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 10,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: AppColors.lightGray,
+                                  borderRadius: BorderRadius.circular(14),
+                                  border: Border.all(color: AppColors.divider),
+                                ),
+                                child: Text(
+                                  action,
+                                  style: AppTypography.small.copyWith(
+                                    color: AppColors.shieldNavy,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          )
+                          .toList(),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  _EnterpriseUtilitySection(
+                    title: 'Today',
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: _WorkspaceMiniStat(
+                            label: 'Due now',
+                            value: section.queueItems.length.toString(),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: _WorkspaceMiniStat(
+                            label: 'Recent notes',
+                            value: recentItems.length.toString(),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  _EnterpriseUtilitySection(
+                    title: 'Recent Notes',
+                    child: Column(
+                      children: recentItems
+                          .take(3)
+                          .map(
+                            (item) => Padding(
+                              padding: const EdgeInsets.only(bottom: 10),
+                              child: _EnterpriseRowItem(
+                                item: item,
+                                accentColor: AppColors.shieldBlue,
+                                compact: true,
+                                showMetaChips: false,
+                              ),
+                            ),
+                          )
+                          .toList(),
+                    ),
+                  ),
+                ],
+              ),
+            );
+
+            if (stack) {
+              return Column(
+                children: [left, const SizedBox(height: 16), right],
+              );
+            }
+
+            return Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(flex: 7, child: left),
+                const SizedBox(width: 16),
+                Expanded(flex: 3, child: right),
+              ],
+            );
+          },
+        ),
+        const SizedBox(height: 16),
+        AppCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(_crmTableTitleFor(section), style: AppTypography.h4),
+              const SizedBox(height: 4),
+              Text(
+                'Dense CRM worklist for faster scanning, triage, and ownership checks.',
+                style: AppTypography.small.copyWith(color: AppColors.gray),
+              ),
+              const SizedBox(height: 16),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(18),
+                child: Container(
+                  decoration: BoxDecoration(
+                    border: Border.all(color: AppColors.divider),
+                    borderRadius: BorderRadius.circular(18),
+                  ),
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: DataTable(
+                      headingRowColor: const WidgetStatePropertyAll(
+                        AppColors.lightGray,
+                      ),
+                      dataRowMinHeight: 58,
+                      dataRowMaxHeight: 72,
+                      columnSpacing: 24,
+                      columns: const [
+                        DataColumn(label: Text('Member / Work Item')),
+                        DataColumn(label: Text('Context')),
+                        DataColumn(label: Text('Status')),
+                        DataColumn(label: Text('Priority')),
+                      ],
+                      rows: workRows
+                          .map(
+                            (item) => DataRow(
+                              cells: [
+                                DataCell(
+                                  SizedBox(
+                                    width: 280,
+                                    child: Column(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          item.title,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: AppTypography.small.copyWith(
+                                            color: AppColors.shieldNavy,
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          item.subtitle,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: AppTypography.tiny.copyWith(
+                                            color: AppColors.gray,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                                DataCell(
+                                  Text(
+                                    item.meta,
+                                    style: AppTypography.tiny.copyWith(
+                                      color: AppColors.darkGray,
+                                    ),
+                                  ),
+                                ),
+                                DataCell(
+                                  _TagChip(
+                                    label: item.status,
+                                    color: accentColor,
+                                  ),
+                                ),
+                                DataCell(
+                                  Text(
+                                    _crmPriorityFor(item.status),
+                                    style: AppTypography.tiny.copyWith(
+                                      color:
+                                          _crmPriorityFor(item.status) == 'High'
+                                          ? AppColors.warning
+                                          : AppColors.success,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          )
+                          .toList(),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+String _crmHeadlineFor(PortalSectionData section) {
+  switch (section.key) {
+    case 'customers':
+      return 'CRM Customer Desk';
+    case 'tasks':
+      return 'CRM Task Board';
+    case 'follow-ups':
+      return 'CRM Follow-Up Queue';
+    case 'complaints':
+      return 'CRM Complaint Resolution';
+    case 'campaigns':
+      return 'CRM Campaign Desk';
+    default:
+      return 'CRM Operations Center';
+  }
+}
+
+String _crmSearchHintFor(PortalSectionData section) {
+  switch (section.key) {
+    case 'customers':
+      return 'Search member, branch, or segment';
+    case 'tasks':
+      return 'Search task, owner, or locality';
+    case 'follow-ups':
+      return 'Search callback, member, or next date';
+    case 'complaints':
+      return 'Search complaint, branch, or issue';
+    case 'campaigns':
+      return 'Search campaign, audience, or branch';
+    default:
+      return 'Search member, issue, or engagement task';
+  }
+}
+
+String _crmFocusLabelFor(PortalSectionData section) {
+  switch (section.key) {
+    case 'customers':
+      return 'At-risk members';
+    case 'tasks':
+      return 'Due tasks';
+    case 'follow-ups':
+      return 'Call backs';
+    case 'complaints':
+      return 'Open cases';
+    case 'campaigns':
+      return 'Audience';
+    default:
+      return 'Follow-ups';
+  }
+}
+
+String _crmPrimaryPanelTitleFor(PortalSectionData section) {
+  switch (section.key) {
+    case 'customers':
+      return 'Priority Members';
+    case 'tasks':
+      return 'Today\'s Tasks';
+    case 'follow-ups':
+      return 'Today\'s Follow-Ups';
+    case 'complaints':
+      return 'Open Complaints';
+    case 'campaigns':
+      return 'Active Campaign Work';
+    default:
+      return 'Today\'s Work';
+  }
+}
+
+String _crmPrimaryPanelSubtitleFor(PortalSectionData section) {
+  switch (section.key) {
+    case 'customers':
+      return 'Members who need CRM attention, activation, or retention handling.';
+    case 'tasks':
+      return 'Assigned CRM work items that should be cleared during this shift.';
+    case 'follow-ups':
+      return 'Callbacks and unresolved journeys scheduled for immediate outreach.';
+    case 'complaints':
+      return 'Cases needing acknowledgment, assignment, or direct recovery action.';
+    case 'campaigns':
+      return 'Outreach drafts, audience prep, and launch-ready campaign tasks.';
+    default:
+      return 'The engagement desk queue that needs action before end of day.';
+  }
+}
+
+String _crmPrimaryActionFor(PortalSectionData section) {
+  switch (section.key) {
+    case 'customers':
+      return 'Open customer list';
+    case 'tasks':
+      return 'Open tasks';
+    case 'follow-ups':
+      return 'Open follow-ups';
+    case 'complaints':
+      return 'Open complaints';
+    case 'campaigns':
+      return 'Open campaigns';
+    default:
+      return 'Open CRM queue';
+  }
+}
+
+String _crmSecondaryPanelTitleFor(PortalSectionData section) {
+  switch (section.key) {
+    case 'campaigns':
+      return 'Message & Segment Signals';
+    case 'complaints':
+      return 'Resolution Insights';
+    default:
+      return 'Retention & Insight Signals';
+  }
+}
+
+String _crmSecondaryPanelSubtitleFor(PortalSectionData section) {
+  switch (section.key) {
+    case 'campaigns':
+      return 'What the audience and recent performance are telling the CRM desk.';
+    case 'complaints':
+      return 'Patterns that explain where service-recovery work is getting stuck.';
+    default:
+      return 'Behavior patterns and engagement clues that guide the next CRM action.';
+  }
+}
+
+String _crmTableTitleFor(PortalSectionData section) {
+  switch (section.key) {
+    case 'customers':
+      return 'CRM Member Worklist';
+    case 'tasks':
+      return 'CRM Task Worklist';
+    case 'follow-ups':
+      return 'CRM Callback Worklist';
+    case 'complaints':
+      return 'CRM Complaint Worklist';
+    case 'campaigns':
+      return 'CRM Campaign Worklist';
+    default:
+      return 'CRM Operations Worklist';
+  }
+}
+
+String _crmPriorityFor(String status) {
+  final normalized = status.toLowerCase();
+  if (normalized.contains('urgent') ||
+      normalized.contains('open') ||
+      normalized.contains('due') ||
+      normalized.contains('assigned')) {
+    return 'High';
+  }
+  if (normalized.contains('ready') ||
+      normalized.contains('scheduled') ||
+      normalized.contains('queued')) {
+    return 'Medium';
+  }
+  return 'Normal';
+}
+
 class _CustomerProfilePortalView extends StatefulWidget {
   const _CustomerProfilePortalView();
 
@@ -3073,351 +3571,6 @@ class _CustomerProfilePortalViewState
   }
 }
 
-class _CustomerDashboardPortalView extends StatefulWidget {
-  const _CustomerDashboardPortalView();
-
-  @override
-  State<_CustomerDashboardPortalView> createState() =>
-      _CustomerDashboardPortalViewState();
-}
-
-class _CustomerDashboardPortalViewState
-    extends State<_CustomerDashboardPortalView> {
-  late Future<Customer> _customerFuture;
-  late Future<Map<String, dynamic>> _walletFuture;
-  late Future<List<WalletTransaction>> _transactionsFuture;
-  late Future<Membership> _membershipFuture;
-  late Future<List<Appointment>> _appointmentsFuture;
-  late Future<List<Document>> _documentsFuture;
-
-  @override
-  void initState() {
-    super.initState();
-    _customerFuture = ApiService.getCustomerProfile('1');
-    _walletFuture = ApiService.getWalletProfile('1');
-    _transactionsFuture = _walletFuture.then(
-      (wallet) =>
-          ApiService.getWalletTransactions(wallet['walletId'].toString()),
-    );
-    _membershipFuture = ApiService.getCustomerMembership('1');
-    _appointmentsFuture = ApiService.getAppointments(SHIELDRole.customer);
-    _documentsFuture = ApiService.getDocuments(SHIELDRole.customer);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return FutureBuilder<List<dynamic>>(
-      future: Future.wait([
-        _customerFuture,
-        _walletFuture,
-        _transactionsFuture,
-        _membershipFuture,
-        _appointmentsFuture,
-        _documentsFuture,
-      ]),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const AppPortalSectionSkeleton(
-            showHero: true,
-            statCards: 4,
-            listItems: 4,
-          );
-        }
-
-        if (snapshot.hasError || !snapshot.hasData) {
-          return AppCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Dashboard unavailable', style: AppTypography.h4),
-                const SizedBox(height: 8),
-                Text(
-                  'The customer dashboard preview could not be loaded.',
-                  style: AppTypography.small.copyWith(color: AppColors.gray),
-                ),
-              ],
-            ),
-          );
-        }
-
-        final customer = snapshot.data![0] as Customer;
-        final wallet = snapshot.data![1] as Map<String, dynamic>;
-        final transactions = snapshot.data![2] as List<WalletTransaction>;
-        final membership = snapshot.data![3] as Membership;
-        final appointments = snapshot.data![4] as List<Appointment>;
-        final documents = snapshot.data![5] as List<Document>;
-        final walletBalance =
-            double.tryParse(wallet['balance']?.toString() ?? '0') ?? 0.0;
-        final pointsBalance =
-            double.tryParse(wallet['pointsBalance']?.toString() ?? '0') ?? 0.0;
-        final upcomingVisits = appointments.length;
-        final documentCount = documents.length;
-
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [AppColors.shieldBlue, AppColors.shieldNavy],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              customer.fullName.toUpperCase(),
-                              style: AppTypography.body.copyWith(
-                                color: AppColors.white,
-                                fontWeight: FontWeight.w700,
-                                letterSpacing: 0.8,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              membership.tierLabel,
-                              style: AppTypography.small.copyWith(
-                                color: AppColors.white.withValues(alpha: 0.8),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppColors.white.withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(999),
-                        ),
-                        child: Text(
-                          customer.status.toUpperCase(),
-                          style: AppTypography.tiny.copyWith(
-                            color: AppColors.white,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: 0.4,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  LayoutBuilder(
-                    builder: (context, constraints) {
-                      final itemWidth = (constraints.maxWidth - 10) / 2;
-                      return Wrap(
-                        spacing: 10,
-                        runSpacing: 10,
-                        children: [
-                          _HeroStatBlock(
-                            width: itemWidth,
-                            label: 'Wallet',
-                            value: '₹${walletBalance.toStringAsFixed(0)}',
-                            secondary:
-                                '${pointsBalance.toStringAsFixed(0)} reward pts',
-                          ),
-                          _HeroStatBlock(
-                            width: itemWidth,
-                            label: 'Activity',
-                            value: '$upcomingVisits visits',
-                            secondary: '$documentCount documents',
-                          ),
-                        ],
-                      );
-                    },
-                  ),
-                  const SizedBox(height: 10),
-                  _HeroActionGrid(
-                    actions: [
-                      _HeroActionGridItem(
-                        label: 'View card',
-                        onTap: () => context.go('/portal/customer/membership'),
-                      ),
-                      _HeroActionGridItem(
-                        label: 'Book visit',
-                        onTap: () =>
-                            context.go('/portal/customer/appointments'),
-                      ),
-                      _HeroActionGridItem(
-                        label: 'Open wallet',
-                        onTap: () => context.go('/portal/customer/wallet'),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 20),
-            LayoutBuilder(
-              builder: (context, constraints) => GridView.count(
-                crossAxisCount: constraints.maxWidth >= 420 ? 2 : 1,
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                crossAxisSpacing: 14,
-                mainAxisSpacing: 14,
-                childAspectRatio: constraints.maxWidth >= 420 ? 2.2 : 2.8,
-                children: [
-                  _KpiTile(
-                    title: 'Wallet',
-                    value: '₹${walletBalance.toStringAsFixed(0)}',
-                    icon: Icons.account_balance_wallet_outlined,
-                    color: AppColors.shieldBlue,
-                  ),
-                  _KpiTile(
-                    title: 'Visits',
-                    value: '$upcomingVisits',
-                    icon: Icons.calendar_month_outlined,
-                    color: AppColors.shieldGreen,
-                  ),
-                  _KpiTile(
-                    title: 'Docs',
-                    value: '$documentCount',
-                    icon: Icons.description_outlined,
-                    color: AppColors.shieldNavy,
-                  ),
-                  _KpiTile(
-                    title: 'Points',
-                    value: '${pointsBalance.toStringAsFixed(0)} pts',
-                    icon: Icons.workspace_premium_outlined,
-                    color: AppColors.warning,
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 24),
-            Text('Upcoming Appointments', style: AppTypography.h4),
-            const SizedBox(height: 12),
-            ...appointments
-                .take(3)
-                .map(
-                  (appointment) => Padding(
-                    padding: const EdgeInsets.only(bottom: 10),
-                    child: AppCard(
-                      padding: const EdgeInsets.all(14),
-                      child: Row(
-                        children: [
-                          const Icon(
-                            Icons.calendar_today_outlined,
-                            color: AppColors.shieldBlue,
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  appointment.doctorName ?? 'Appointment',
-                                  style: AppTypography.body.copyWith(
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  '${DateFormat('dd MMM yyyy').format(appointment.appointmentDate)} • ${appointment.department ?? 'SHIELD care'}',
-                                  style: AppTypography.small.copyWith(
-                                    color: AppColors.gray,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-            const SizedBox(height: 14),
-            Text('Recent Activity', style: AppTypography.h4),
-            const SizedBox(height: 12),
-            ...transactions
-                .take(4)
-                .map(
-                  (txn) => Padding(
-                    padding: const EdgeInsets.only(bottom: 10),
-                    child: AppCard(
-                      padding: const EdgeInsets.all(14),
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 40,
-                            height: 40,
-                            decoration: BoxDecoration(
-                              color:
-                                  (txn.transactionType == 'CREDIT'
-                                          ? AppColors.shieldGreen
-                                          : AppColors.error)
-                                      .withValues(alpha: 0.12),
-                              borderRadius: BorderRadius.circular(14),
-                            ),
-                            child: Icon(
-                              txn.transactionType == 'CREDIT'
-                                  ? Icons.south_west_rounded
-                                  : Icons.north_east_rounded,
-                              color: txn.transactionType == 'CREDIT'
-                                  ? AppColors.shieldGreen
-                                  : AppColors.error,
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  txn.remarks ?? 'Activity',
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: AppTypography.body.copyWith(
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  DateFormat(
-                                    'dd MMM yyyy • hh:mm a',
-                                  ).format(txn.createdAt),
-                                  style: AppTypography.tiny.copyWith(
-                                    color: AppColors.gray,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          Text(
-                            '${txn.transactionType == 'CREDIT' ? '+' : '-'}₹${txn.amount.toStringAsFixed(0)}',
-                            style: AppTypography.body.copyWith(
-                              color: txn.transactionType == 'CREDIT'
-                                  ? AppColors.shieldGreen
-                                  : AppColors.error,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-          ],
-        );
-      },
-    );
-  }
-}
-
 class _CustomerMembershipPortalView extends StatefulWidget {
   const _CustomerMembershipPortalView();
 
@@ -3724,18 +3877,15 @@ class _HeroStatBlock extends StatelessWidget {
     required this.label,
     required this.value,
     required this.secondary,
-    this.width,
   });
 
   final String label;
   final String value;
   final String secondary;
-  final double? width;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: width,
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
         color: AppColors.white.withValues(alpha: 0.1),
@@ -4001,455 +4151,6 @@ class _KpiTile extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-}
-
-class _CustomerWalletView extends StatefulWidget {
-  const _CustomerWalletView();
-
-  @override
-  State<_CustomerWalletView> createState() => _CustomerWalletViewState();
-}
-
-class _CustomerWalletViewState extends State<_CustomerWalletView> {
-  late Future<Map<String, dynamic>> _walletProfileFuture;
-  late Future<List<WalletTransaction>> _transactionsFuture;
-  String _selectedLedger = 'ALL';
-
-  @override
-  void initState() {
-    super.initState();
-    _loadWalletData();
-  }
-
-  void _loadWalletData() {
-    _walletProfileFuture = ApiService.getWalletProfile('1');
-    _transactionsFuture = _walletProfileFuture.then((profile) {
-      return ApiService.getWalletTransactions(profile['walletId'].toString());
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return FutureBuilder<List<dynamic>>(
-      future: Future.wait([_walletProfileFuture, _transactionsFuture]),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const AppPortalSectionSkeleton(
-            showHero: true,
-            statCards: 4,
-            listItems: 5,
-          );
-        }
-
-        if (snapshot.hasError || !snapshot.hasData) {
-          return AppCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Wallet unavailable', style: AppTypography.h4),
-                const SizedBox(height: 8),
-                Text(
-                  'The local wallet preview could not be loaded.',
-                  style: AppTypography.small.copyWith(color: AppColors.gray),
-                ),
-                const SizedBox(height: 16),
-                AppButton(
-                  text: 'Retry',
-                  onPressed: () {
-                    setState(_loadWalletData);
-                  },
-                ),
-              ],
-            ),
-          );
-        }
-
-        final walletProfile = snapshot.data![0] as Map<String, dynamic>;
-        final transactions = snapshot.data![1] as List<WalletTransaction>;
-        double cashBalance = 0;
-        double pointsBalance = 0;
-        double monthlySpend = 0;
-        double rewardCredits = 0;
-        final creditAvailable =
-            double.tryParse(
-              (walletProfile['creditAvailable'] ?? 0).toString(),
-            ) ??
-            0;
-
-        for (final txn in transactions) {
-          final delta = txn.transactionType == 'CREDIT'
-              ? txn.amount
-              : -txn.amount;
-          if (txn.subLedgerType == 'POINTS') {
-            pointsBalance += delta;
-            if (txn.transactionType == 'CREDIT') {
-              rewardCredits += txn.amount;
-            }
-          } else {
-            cashBalance += delta;
-            if (txn.transactionType == 'DEBIT') {
-              monthlySpend += txn.amount;
-            }
-          }
-        }
-
-        final visibleTransactions = transactions.where((txn) {
-          return _selectedLedger == 'ALL' ||
-              txn.subLedgerType == _selectedLedger;
-        }).toList();
-        double ledgerBalanceAfter(WalletTransaction target) {
-          final sameLedger =
-              transactions
-                  .where((txn) => txn.subLedgerType == target.subLedgerType)
-                  .toList()
-                ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
-          var balance = 0.0;
-          for (final txn in sameLedger) {
-            balance += txn.transactionType == 'CREDIT'
-                ? txn.amount
-                : -txn.amount;
-            if (txn.id == target.id) {
-              return balance;
-            }
-          }
-          return balance;
-        }
-
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [AppColors.shieldBlue, AppColors.shieldNavy],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          'Wallet overview',
-                          style: AppTypography.h4.copyWith(
-                            color: AppColors.white,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppColors.white.withValues(alpha: 0.14),
-                          borderRadius: BorderRadius.circular(999),
-                        ),
-                        child: Text(
-                          (walletProfile['status'] ?? 'ACTIVE').toString(),
-                          style: AppTypography.tiny.copyWith(
-                            color: AppColors.white,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    'Cash, points, credit, and ledger movement in one compact customer view.',
-                    style: AppTypography.small.copyWith(
-                      color: AppColors.white.withValues(alpha: 0.84),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  LayoutBuilder(
-                    builder: (context, constraints) {
-                      final itemWidth = (constraints.maxWidth - 10) / 2;
-                      return Wrap(
-                        spacing: 10,
-                        runSpacing: 10,
-                        children: [
-                          _HeroStatBlock(
-                            width: itemWidth,
-                            label: 'Cash',
-                            value: '₹${cashBalance.toStringAsFixed(0)}',
-                            secondary:
-                                '${pointsBalance.toStringAsFixed(0)} reward pts',
-                          ),
-                          _HeroStatBlock(
-                            width: itemWidth,
-                            label: 'Credit',
-                            value: '₹${creditAvailable.toStringAsFixed(0)}',
-                            secondary:
-                                '₹${monthlySpend.toStringAsFixed(0)} spent this cycle',
-                          ),
-                        ],
-                      );
-                    },
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _CompactValueCard(
-                          title: 'Cash balance',
-                          value: '₹${cashBalance.toStringAsFixed(0)}',
-                          caption: 'Redeemable portal cash',
-                          accentColor: AppColors.white,
-                          icon: Icons.currency_rupee,
-                          dark: true,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _CompactValueCard(
-                          title: 'Points balance',
-                          value: '${pointsBalance.toStringAsFixed(0)} pts',
-                          caption: 'Referral + loyalty rewards',
-                          accentColor: AppColors.white,
-                          icon: Icons.stars_rounded,
-                          dark: true,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _CompactValueCard(
-                          title: 'Monthly spend',
-                          value: '₹${monthlySpend.toStringAsFixed(0)}',
-                          caption: 'Pharmacy + services',
-                          accentColor: AppColors.white,
-                          icon: Icons.arrow_upward_rounded,
-                          dark: true,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _CompactValueCard(
-                          title: 'Rewards earned',
-                          value: '${rewardCredits.toStringAsFixed(0)} pts',
-                          caption: 'Approved referrals + promos',
-                          accentColor: AppColors.white,
-                          icon: Icons.card_giftcard_outlined,
-                          dark: true,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 14),
-                  _HeroActionGrid(
-                    actions: [
-                      _HeroActionGridItem(
-                        label: 'Open profile',
-                        onTap: () => context.go('/portal/customer/profile'),
-                      ),
-                      _HeroActionGridItem(
-                        label: 'Open statement',
-                        onTap: () => showPortalDetailsSheet(
-                          context,
-                          title: 'Wallet statement preview',
-                          subtitle:
-                              'Detailed statements stay grouped inside the customer wallet flow until export APIs are wired.',
-                          meta: 'Customer wallet',
-                          status: 'Live ledger',
-                          highlights: const [
-                            'Cash and points entries remain separated by sub-ledger type.',
-                            'Statement export can later connect here without changing the customer route structure.',
-                          ],
-                        ),
-                      ),
-                      _HeroActionGridItem(
-                        label: 'Points rules',
-                        onTap: () => showPortalDetailsSheet(
-                          context,
-                          title: 'Points wallet rules',
-                          subtitle:
-                              'Referral, loyalty, and promotional points stay separate from cash.',
-                          meta: 'Customer wallet',
-                          status: 'Policy',
-                          highlights: const [
-                            'Referral points credit only after the referred member is approved.',
-                            'Wallet cash remains branch-restricted only for Hyper Pharmacy usage where applicable.',
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 20),
-            Text('Recent activity', style: AppTypography.h4),
-            const SizedBox(height: 10),
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: [
-                  _FilterChip(
-                    label: 'All',
-                    selected: _selectedLedger == 'ALL',
-                    onTap: () => setState(() => _selectedLedger = 'ALL'),
-                  ),
-                  const SizedBox(width: 8),
-                  _FilterChip(
-                    label: 'Cash',
-                    selected: _selectedLedger == 'CASH',
-                    onTap: () => setState(() => _selectedLedger = 'CASH'),
-                  ),
-                  const SizedBox(width: 8),
-                  _FilterChip(
-                    label: 'Points',
-                    selected: _selectedLedger == 'POINTS',
-                    onTap: () => setState(() => _selectedLedger = 'POINTS'),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 12),
-            if (visibleTransactions.isEmpty)
-              AppCard(
-                padding: const EdgeInsets.all(14),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 42,
-                      height: 42,
-                      decoration: BoxDecoration(
-                        color: AppColors.lightGray,
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                      child: const Icon(
-                        Icons.receipt_long_outlined,
-                        color: AppColors.gray,
-                        size: 20,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'No wallet activity yet',
-                            style: AppTypography.body.copyWith(
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                          const SizedBox(height: 3),
-                          Text(
-                            'Recent cash and points movements will appear here after ledger entries are available.',
-                            style: AppTypography.tiny.copyWith(
-                              color: AppColors.gray,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              )
-            else
-              ...visibleTransactions.take(6).map((txn) {
-                final isCredit = txn.transactionType == 'CREDIT';
-                final accent = isCredit
-                    ? AppColors.shieldGreen
-                    : AppColors.error;
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 10),
-                  child: AppCard(
-                    padding: const EdgeInsets.all(14),
-                    onTap: () => showPortalDetailsSheet(
-                      context,
-                      title: txn.remarks ?? 'Wallet transaction',
-                      subtitle:
-                          '${txn.subLedgerType} ${txn.transactionType.toLowerCase()} entry for ${txn.amount.toStringAsFixed(0)}.',
-                      meta: DateFormat(
-                        'dd MMM yyyy, hh:mm a',
-                      ).format(txn.createdAt),
-                      status: txn.transactionType,
-                      highlights: [
-                        'Post-transaction balance in ${txn.subLedgerType} ledger is ${ledgerBalanceAfter(txn).toStringAsFixed(0)}.',
-                        'This transaction is loaded from the live customer wallet ledger.',
-                      ],
-                    ),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 42,
-                          height: 42,
-                          decoration: BoxDecoration(
-                            color: accent.withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                          child: Icon(
-                            isCredit
-                                ? Icons.arrow_downward_rounded
-                                : Icons.arrow_upward_rounded,
-                            color: accent,
-                            size: 20,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                txn.remarks ?? 'Wallet transaction',
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: AppTypography.body.copyWith(
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                              const SizedBox(height: 3),
-                              Text(
-                                DateFormat(
-                                  'dd MMM • hh:mm a',
-                                ).format(txn.createdAt),
-                                style: AppTypography.tiny.copyWith(
-                                  color: AppColors.gray,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            Text(
-                              '${isCredit ? '+' : '-'}₹${txn.amount.toStringAsFixed(0)}',
-                              style: AppTypography.body.copyWith(
-                                color: accent,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                            const SizedBox(height: 3),
-                            _LedgerBadge(ledgerType: txn.subLedgerType),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              }),
-          ],
-        );
-      },
     );
   }
 }
@@ -5321,104 +5022,6 @@ IconData _notificationIcon(NotificationType type) {
   }
 }
 
-class _CompactValueCard extends StatelessWidget {
-  final String title;
-  final String value;
-  final String caption;
-  final Color accentColor;
-  final IconData icon;
-  final bool dark;
-
-  const _CompactValueCard({
-    required this.title,
-    required this.value,
-    required this.caption,
-    required this.accentColor,
-    required this.icon,
-    this.dark = false,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    if (dark) {
-      return Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: AppColors.white.withValues(alpha: 0.08),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: AppColors.white.withValues(alpha: 0.10)),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    title,
-                    style: AppTypography.small.copyWith(
-                      color: AppColors.white.withValues(alpha: 0.82),
-                    ),
-                  ),
-                ),
-                Icon(icon, color: accentColor, size: 18),
-              ],
-            ),
-            const SizedBox(height: 10),
-            Text(
-              value,
-              style: AppTypography.h4.copyWith(
-                color: accentColor,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              caption,
-              style: AppTypography.tiny.copyWith(
-                color: AppColors.white.withValues(alpha: 0.78),
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
-    return AppCard(
-      padding: const EdgeInsets.all(14),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  title,
-                  style: AppTypography.small.copyWith(color: AppColors.gray),
-                ),
-              ),
-              Icon(icon, color: accentColor, size: 18),
-            ],
-          ),
-          const SizedBox(height: 10),
-          Text(
-            value,
-            style: AppTypography.h4.copyWith(
-              color: accentColor,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            caption,
-            style: AppTypography.tiny.copyWith(color: AppColors.gray),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class _CustomerTimelineTile extends StatelessWidget {
   final IconData icon;
   final Color accentColor;
@@ -5529,33 +5132,6 @@ class _FilterChip extends StatelessWidget {
             color: selected ? AppColors.white : AppColors.darkGray,
             fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class _LedgerBadge extends StatelessWidget {
-  final String ledgerType;
-
-  const _LedgerBadge({required this.ledgerType});
-
-  @override
-  Widget build(BuildContext context) {
-    final isCash = ledgerType == 'CASH';
-    final color = isCash ? AppColors.shieldNavy : AppColors.shieldBlue;
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Text(
-        ledgerType,
-        style: AppTypography.tiny.copyWith(
-          color: color,
-          fontWeight: FontWeight.w700,
         ),
       ),
     );
@@ -8419,51 +7995,101 @@ class _AdminProviderNetworkViewState extends State<_AdminProviderNetworkView> {
         return StatefulBuilder(
           builder: (context, setDialogState) {
             return AlertDialog(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-              title: Text('Add New Provider', style: AppTypography.h4.copyWith(color: AppColors.shieldNavy)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+              title: Text(
+                'Add New Provider',
+                style: AppTypography.h4.copyWith(color: AppColors.shieldNavy),
+              ),
               content: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Provider Name', style: AppTypography.tiny.copyWith(fontWeight: FontWeight.w700)),
+                    Text(
+                      'Provider Name',
+                      style: AppTypography.tiny.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
                     const SizedBox(height: 6),
                     TextField(
                       controller: nameController,
                       decoration: InputDecoration(
                         hintText: 'Enter provider name',
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 12,
+                        ),
                       ),
                     ),
                     const SizedBox(height: 16),
-                    Text('Provider Type', style: AppTypography.tiny.copyWith(fontWeight: FontWeight.w700)),
+                    Text(
+                      'Provider Type',
+                      style: AppTypography.tiny.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
                     const SizedBox(height: 6),
                     DropdownButtonFormField<String>(
                       initialValue: selectedType,
                       decoration: InputDecoration(
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 14),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                        ),
                       ),
                       items: const [
-                        DropdownMenuItem(value: 'CLINIC', child: Text('Clinic')),
-                        DropdownMenuItem(value: 'PHARMACY', child: Text('Pharmacy')),
-                        DropdownMenuItem(value: 'LABORATORY', child: Text('Laboratory')),
-                        DropdownMenuItem(value: 'DENTAL', child: Text('Dental')),
-                        DropdownMenuItem(value: 'HOME_VISIT', child: Text('Homecare')),
+                        DropdownMenuItem(
+                          value: 'CLINIC',
+                          child: Text('Clinic'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'PHARMACY',
+                          child: Text('Pharmacy'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'LABORATORY',
+                          child: Text('Laboratory'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'DENTAL',
+                          child: Text('Dental'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'HOME_VISIT',
+                          child: Text('Homecare'),
+                        ),
                       ],
                       onChanged: (val) {
-                        if (val != null) setDialogState(() => selectedType = val);
+                        if (val != null) {
+                          setDialogState(() => selectedType = val);
+                        }
                       },
                     ),
                     const SizedBox(height: 16),
-                    Text('Branch / Business Assignment', style: AppTypography.tiny.copyWith(fontWeight: FontWeight.w700)),
+                    Text(
+                      'Branch / Business Assignment',
+                      style: AppTypography.tiny.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
                     const SizedBox(height: 6),
                     DropdownButtonFormField<String>(
                       initialValue: selectedBusinessId,
                       decoration: InputDecoration(
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 14),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                        ),
                       ),
                       items: _businesses.map((biz) {
                         return DropdownMenuItem<String>(
@@ -8472,26 +8098,48 @@ class _AdminProviderNetworkViewState extends State<_AdminProviderNetworkView> {
                         );
                       }).toList(),
                       onChanged: (val) {
-                        if (val != null) setDialogState(() => selectedBusinessId = val);
+                        if (val != null) {
+                          setDialogState(() => selectedBusinessId = val);
+                        }
                       },
                     ),
                     const SizedBox(height: 16),
-                    Text('Initial Status', style: AppTypography.tiny.copyWith(fontWeight: FontWeight.w700)),
+                    Text(
+                      'Initial Status',
+                      style: AppTypography.tiny.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
                     const SizedBox(height: 6),
                     DropdownButtonFormField<String>(
                       initialValue: selectedStatus,
                       decoration: InputDecoration(
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 14),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                        ),
                       ),
                       items: const [
-                        DropdownMenuItem(value: 'ACTIVE', child: Text('Active')),
+                        DropdownMenuItem(
+                          value: 'ACTIVE',
+                          child: Text('Active'),
+                        ),
                         DropdownMenuItem(value: 'SETUP', child: Text('Setup')),
-                        DropdownMenuItem(value: 'INACTIVE', child: Text('Inactive')),
-                        DropdownMenuItem(value: 'SUSPENDED', child: Text('Suspended')),
+                        DropdownMenuItem(
+                          value: 'INACTIVE',
+                          child: Text('Inactive'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'SUSPENDED',
+                          child: Text('Suspended'),
+                        ),
                       ],
                       onChanged: (val) {
-                        if (val != null) setDialogState(() => selectedStatus = val);
+                        if (val != null) {
+                          setDialogState(() => selectedStatus = val);
+                        }
                       },
                     ),
                   ],
@@ -8517,9 +8165,14 @@ class _AdminProviderNetworkViewState extends State<_AdminProviderNetworkView> {
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.shieldBlue,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
-                  child: const Text('Create', style: TextStyle(color: AppColors.white)),
+                  child: const Text(
+                    'Create',
+                    style: TextStyle(color: AppColors.white),
+                  ),
                 ),
               ],
             );
@@ -8529,14 +8182,22 @@ class _AdminProviderNetworkViewState extends State<_AdminProviderNetworkView> {
     );
   }
 
-  void _showEditProviderDialog(BuildContext context, Map<String, dynamic> provider) {
+  void _showEditProviderDialog(
+    BuildContext context,
+    Map<String, dynamic> provider,
+  ) {
     final providerId = provider['id'].toString();
-    final nameController = TextEditingController(text: provider['providerName']?.toString());
+    final nameController = TextEditingController(
+      text: provider['providerName']?.toString(),
+    );
     String selectedType = provider['providerType']?.toString() ?? 'CLINIC';
     String selectedStatus = provider['status']?.toString() ?? 'ACTIVE';
-    String? selectedBusinessId = provider['businessId']?.toString() ?? provider['business']?['id']?.toString();
+    String? selectedBusinessId =
+        provider['businessId']?.toString() ??
+        provider['business']?['id']?.toString();
 
-    if (selectedBusinessId != null && !_businesses.any((b) => b['id'].toString() == selectedBusinessId)) {
+    if (selectedBusinessId != null &&
+        !_businesses.any((b) => b['id'].toString() == selectedBusinessId)) {
       selectedBusinessId = null;
     }
     if (selectedBusinessId == null && _businesses.isNotEmpty) {
@@ -8549,50 +8210,100 @@ class _AdminProviderNetworkViewState extends State<_AdminProviderNetworkView> {
         return StatefulBuilder(
           builder: (context, setDialogState) {
             return AlertDialog(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-              title: Text('Edit Provider Details', style: AppTypography.h4.copyWith(color: AppColors.shieldNavy)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+              title: Text(
+                'Edit Provider Details',
+                style: AppTypography.h4.copyWith(color: AppColors.shieldNavy),
+              ),
               content: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Provider Name', style: AppTypography.tiny.copyWith(fontWeight: FontWeight.w700)),
+                    Text(
+                      'Provider Name',
+                      style: AppTypography.tiny.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
                     const SizedBox(height: 6),
                     TextField(
                       controller: nameController,
                       decoration: InputDecoration(
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 12,
+                        ),
                       ),
                     ),
                     const SizedBox(height: 16),
-                    Text('Provider Type', style: AppTypography.tiny.copyWith(fontWeight: FontWeight.w700)),
+                    Text(
+                      'Provider Type',
+                      style: AppTypography.tiny.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
                     const SizedBox(height: 6),
                     DropdownButtonFormField<String>(
                       initialValue: selectedType,
                       decoration: InputDecoration(
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 14),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                        ),
                       ),
                       items: const [
-                        DropdownMenuItem(value: 'CLINIC', child: Text('Clinic')),
-                        DropdownMenuItem(value: 'PHARMACY', child: Text('Pharmacy')),
-                        DropdownMenuItem(value: 'LABORATORY', child: Text('Laboratory')),
-                        DropdownMenuItem(value: 'DENTAL', child: Text('Dental')),
-                        DropdownMenuItem(value: 'HOME_VISIT', child: Text('Homecare')),
+                        DropdownMenuItem(
+                          value: 'CLINIC',
+                          child: Text('Clinic'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'PHARMACY',
+                          child: Text('Pharmacy'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'LABORATORY',
+                          child: Text('Laboratory'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'DENTAL',
+                          child: Text('Dental'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'HOME_VISIT',
+                          child: Text('Homecare'),
+                        ),
                       ],
                       onChanged: (val) {
-                        if (val != null) setDialogState(() => selectedType = val);
+                        if (val != null) {
+                          setDialogState(() => selectedType = val);
+                        }
                       },
                     ),
                     const SizedBox(height: 16),
-                    Text('Branch / Business Assignment', style: AppTypography.tiny.copyWith(fontWeight: FontWeight.w700)),
+                    Text(
+                      'Branch / Business Assignment',
+                      style: AppTypography.tiny.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
                     const SizedBox(height: 6),
                     DropdownButtonFormField<String>(
                       initialValue: selectedBusinessId,
                       decoration: InputDecoration(
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 14),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                        ),
                       ),
                       items: _businesses.map((biz) {
                         return DropdownMenuItem<String>(
@@ -8601,26 +8312,48 @@ class _AdminProviderNetworkViewState extends State<_AdminProviderNetworkView> {
                         );
                       }).toList(),
                       onChanged: (val) {
-                        if (val != null) setDialogState(() => selectedBusinessId = val);
+                        if (val != null) {
+                          setDialogState(() => selectedBusinessId = val);
+                        }
                       },
                     ),
                     const SizedBox(height: 16),
-                    Text('Status', style: AppTypography.tiny.copyWith(fontWeight: FontWeight.w700)),
+                    Text(
+                      'Status',
+                      style: AppTypography.tiny.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
                     const SizedBox(height: 6),
                     DropdownButtonFormField<String>(
                       initialValue: selectedStatus,
                       decoration: InputDecoration(
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 14),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                        ),
                       ),
                       items: const [
-                        DropdownMenuItem(value: 'ACTIVE', child: Text('Active')),
+                        DropdownMenuItem(
+                          value: 'ACTIVE',
+                          child: Text('Active'),
+                        ),
                         DropdownMenuItem(value: 'SETUP', child: Text('Setup')),
-                        DropdownMenuItem(value: 'INACTIVE', child: Text('Inactive')),
-                        DropdownMenuItem(value: 'SUSPENDED', child: Text('Suspended')),
+                        DropdownMenuItem(
+                          value: 'INACTIVE',
+                          child: Text('Inactive'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'SUSPENDED',
+                          child: Text('Suspended'),
+                        ),
                       ],
                       onChanged: (val) {
-                        if (val != null) setDialogState(() => selectedStatus = val);
+                        if (val != null) {
+                          setDialogState(() => selectedStatus = val);
+                        }
                       },
                     ),
                   ],
@@ -8646,9 +8379,14 @@ class _AdminProviderNetworkViewState extends State<_AdminProviderNetworkView> {
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.shieldBlue,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
-                  child: const Text('Save Changes', style: TextStyle(color: AppColors.white)),
+                  child: const Text(
+                    'Save Changes',
+                    style: TextStyle(color: AppColors.white),
+                  ),
                 ),
               ],
             );
@@ -8658,14 +8396,28 @@ class _AdminProviderNetworkViewState extends State<_AdminProviderNetworkView> {
     );
   }
 
-  void _confirmDeleteProvider(BuildContext context, String providerId, String name) {
+  void _confirmDeleteProvider(
+    BuildContext context,
+    String providerId,
+    String name,
+  ) {
     showDialog<void>(
       context: context,
       builder: (context) {
         return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          title: Text('Delete Provider', style: TextStyle(color: Colors.red[800], fontWeight: FontWeight.bold)),
-          content: Text('Are you sure you want to delete "$name"? This action will remove the provider record from the network.'),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          title: Text(
+            'Delete Provider',
+            style: TextStyle(
+              color: Colors.red[800],
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          content: Text(
+            'Are you sure you want to delete "$name"? This action will remove the provider record from the network.',
+          ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
@@ -8681,9 +8433,14 @@ class _AdminProviderNetworkViewState extends State<_AdminProviderNetworkView> {
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.redAccent,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
-              child: const Text('Delete', style: TextStyle(color: AppColors.white)),
+              child: const Text(
+                'Delete',
+                style: TextStyle(color: AppColors.white),
+              ),
             ),
           ],
         );
@@ -8691,13 +8448,20 @@ class _AdminProviderNetworkViewState extends State<_AdminProviderNetworkView> {
     );
   }
 
-  void _showProviderDetailsSheet(BuildContext context, Map<String, dynamic> provider) {
+  void _showProviderDetailsSheet(
+    BuildContext context,
+    Map<String, dynamic> provider,
+  ) {
     final providerId = provider['id'].toString();
     final name = provider['providerName']?.toString() ?? '';
     final type = provider['providerType']?.toString() ?? '';
     final status = provider['status']?.toString() ?? '';
-    final branchName = provider['business']?['name']?.toString() ?? 'Central Group';
-    final owner = (provider['uuid']?.toString() ?? '').split('-').first.toUpperCase();
+    final branchName =
+        provider['business']?['name']?.toString() ?? 'Central Group';
+    final owner = (provider['uuid']?.toString() ?? '')
+        .split('-')
+        .first
+        .toUpperCase();
 
     showModalBottomSheet<void>(
       context: context,
@@ -8730,25 +8494,44 @@ class _AdminProviderNetworkViewState extends State<_AdminProviderNetworkView> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Expanded(
-                      child: Text(name, style: AppTypography.h4.copyWith(color: AppColors.shieldNavy)),
+                      child: Text(
+                        name,
+                        style: AppTypography.h4.copyWith(
+                          color: AppColors.shieldNavy,
+                        ),
+                      ),
                     ),
                     _AdminStatusBadge(label: status),
                   ],
                 ),
                 const SizedBox(height: 8),
-                Text('Operational Details & Live Performance metrics.', style: AppTypography.small.copyWith(color: AppColors.gray)),
+                Text(
+                  'Operational Details & Live Performance metrics.',
+                  style: AppTypography.small.copyWith(color: AppColors.gray),
+                ),
                 const SizedBox(height: 16),
                 Wrap(
                   spacing: 8,
                   runSpacing: 8,
                   children: [
                     _AdminMetaChip(icon: Icons.category_outlined, label: type),
-                    _AdminMetaChip(icon: Icons.place_outlined, label: branchName),
-                    _AdminMetaChip(icon: Icons.person_outline_rounded, label: 'Owner: $owner'),
+                    _AdminMetaChip(
+                      icon: Icons.place_outlined,
+                      label: branchName,
+                    ),
+                    _AdminMetaChip(
+                      icon: Icons.person_outline_rounded,
+                      label: 'Owner: $owner',
+                    ),
                   ],
                 ),
                 const SizedBox(height: 24),
-                Text('Live Performance Metrics', style: AppTypography.body.copyWith(fontWeight: FontWeight.w700)),
+                Text(
+                  'Live Performance Metrics',
+                  style: AppTypography.body.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
                 const SizedBox(height: 12),
                 FutureBuilder<Map<String, dynamic>?>(
                   future: ApiService.getProviderPerformance(providerId),
@@ -8757,12 +8540,19 @@ class _AdminProviderNetworkViewState extends State<_AdminProviderNetworkView> {
                       return const Center(
                         child: Padding(
                           padding: EdgeInsets.all(16.0),
-                          child: CircularProgressIndicator(color: AppColors.shieldBlue),
+                          child: CircularProgressIndicator(
+                            color: AppColors.shieldBlue,
+                          ),
                         ),
                       );
                     }
                     if (snapshot.hasError || snapshot.data == null) {
-                      return Text('Failed to load performance metrics.', style: AppTypography.small.copyWith(color: AppColors.gray));
+                      return Text(
+                        'Failed to load performance metrics.',
+                        style: AppTypography.small.copyWith(
+                          color: AppColors.gray,
+                        ),
+                      );
                     }
                     final perf = snapshot.data!;
                     return GridView.count(
@@ -8773,10 +8563,26 @@ class _AdminProviderNetworkViewState extends State<_AdminProviderNetworkView> {
                       mainAxisSpacing: 12,
                       childAspectRatio: 2.2,
                       children: [
-                        _buildStatCard('Total Appointments', perf['totalAppointments']?.toString() ?? '0', Icons.event),
-                        _buildStatCard('Unique Patients', perf['uniquePatients']?.toString() ?? '0', Icons.people_outline),
-                        _buildStatCard('Completion Rate', '${(perf['completionRate'] as num?)?.toStringAsFixed(1) ?? '0'}%', Icons.check_circle_outline),
-                        _buildStatCard('Revenue Generated', '₹${perf['revenue']?.toString() ?? '0'}', Icons.currency_rupee),
+                        _buildStatCard(
+                          'Total Appointments',
+                          perf['totalAppointments']?.toString() ?? '0',
+                          Icons.event,
+                        ),
+                        _buildStatCard(
+                          'Unique Patients',
+                          perf['uniquePatients']?.toString() ?? '0',
+                          Icons.people_outline,
+                        ),
+                        _buildStatCard(
+                          'Completion Rate',
+                          '${(perf['completionRate'] as num?)?.toStringAsFixed(1) ?? '0'}%',
+                          Icons.check_circle_outline,
+                        ),
+                        _buildStatCard(
+                          'Revenue Generated',
+                          '₹${perf['revenue']?.toString() ?? '0'}',
+                          Icons.currency_rupee,
+                        ),
                       ],
                     );
                   },
@@ -8794,25 +8600,37 @@ class _AdminProviderNetworkViewState extends State<_AdminProviderNetworkView> {
                         label: const Text('Edit Details'),
                         style: OutlinedButton.styleFrom(
                           padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
                         ),
                       ),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
                       child: ElevatedButton.icon(
-                        onPressed: () => _confirmDeleteProvider(context, providerId, name),
-                        icon: const Icon(Icons.delete_outline, size: 16, color: AppColors.white),
-                        label: const Text('Delete Provider', style: TextStyle(color: AppColors.white)),
+                        onPressed: () =>
+                            _confirmDeleteProvider(context, providerId, name),
+                        icon: const Icon(
+                          Icons.delete_outline,
+                          size: 16,
+                          color: AppColors.white,
+                        ),
+                        label: const Text(
+                          'Delete Provider',
+                          style: TextStyle(color: AppColors.white),
+                        ),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.redAccent,
                           padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
                         ),
                       ),
                     ),
                   ],
-                )
+                ),
               ],
             ),
           ),
@@ -8838,12 +8656,23 @@ class _AdminProviderNetworkViewState extends State<_AdminProviderNetworkView> {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text(title, style: AppTypography.tiny.copyWith(color: AppColors.gray), maxLines: 1, overflow: TextOverflow.ellipsis),
+                Text(
+                  title,
+                  style: AppTypography.tiny.copyWith(color: AppColors.gray),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
                 const SizedBox(height: 2),
-                Text(value, style: AppTypography.small.copyWith(fontWeight: FontWeight.w700, color: AppColors.shieldNavy)),
+                Text(
+                  value,
+                  style: AppTypography.small.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.shieldNavy,
+                  ),
+                ),
               ],
             ),
-          )
+          ),
         ],
       ),
     );
@@ -8861,12 +8690,17 @@ class _AdminProviderNetworkViewState extends State<_AdminProviderNetworkView> {
     }
 
     final filteredProviders = _providers.where((provider) {
-      final matchesType = _selectedType == 'ALL' ||
-          provider['providerType'] == _selectedType;
+      final matchesType =
+          _selectedType == 'ALL' || provider['providerType'] == _selectedType;
       final query = _searchQuery.trim().toLowerCase();
-      final matchesSearch = query.isEmpty ||
-          (provider['providerName']?.toString() ?? '').toLowerCase().contains(query) ||
-          (provider['business']?['name']?.toString() ?? '').toLowerCase().contains(query);
+      final matchesSearch =
+          query.isEmpty ||
+          (provider['providerName']?.toString() ?? '').toLowerCase().contains(
+            query,
+          ) ||
+          (provider['business']?['name']?.toString() ?? '')
+              .toLowerCase()
+              .contains(query);
       return matchesType && matchesSearch;
     }).toList();
 
@@ -8924,10 +8758,22 @@ class _AdminProviderNetworkViewState extends State<_AdminProviderNetworkView> {
                           ),
                         ),
                         const SizedBox(height: 8),
-                        Text('$activeCount active providers', style: AppTypography.body),
-                        Text('${_businesses.length} branches', style: AppTypography.body),
-                        Text('₹$totalRevenue total revenue', style: AppTypography.body),
-                        Text('$totalAppointments total appts', style: AppTypography.body),
+                        Text(
+                          '$activeCount active providers',
+                          style: AppTypography.body,
+                        ),
+                        Text(
+                          '${_businesses.length} branches',
+                          style: AppTypography.body,
+                        ),
+                        Text(
+                          '₹$totalRevenue total revenue',
+                          style: AppTypography.body,
+                        ),
+                        Text(
+                          '$totalAppointments total appts',
+                          style: AppTypography.body,
+                        ),
                       ],
                     ),
                   ),
@@ -8958,12 +8804,27 @@ class _AdminProviderNetworkViewState extends State<_AdminProviderNetworkView> {
                   const SizedBox(width: 12),
                   ElevatedButton.icon(
                     onPressed: () => _showAddProviderDialog(context),
-                    icon: const Icon(Icons.add, color: AppColors.white, size: 18),
-                    label: const Text('Add Provider', style: TextStyle(color: AppColors.white, fontWeight: FontWeight.bold)),
+                    icon: const Icon(
+                      Icons.add,
+                      color: AppColors.white,
+                      size: 18,
+                    ),
+                    label: const Text(
+                      'Add Provider',
+                      style: TextStyle(
+                        color: AppColors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.shieldBlue,
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 16,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
                     ),
                   ),
                 ],
@@ -9033,7 +8894,9 @@ class _AdminProviderNetworkViewState extends State<_AdminProviderNetworkView> {
                   if (filteredProviders.isEmpty)
                     const Padding(
                       padding: EdgeInsets.symmetric(vertical: 40),
-                      child: Center(child: Text('No providers found matching filters.')),
+                      child: Center(
+                        child: Text('No providers found matching filters.'),
+                      ),
                     )
                   else
                     ...filteredProviders.map(
@@ -9041,7 +8904,8 @@ class _AdminProviderNetworkViewState extends State<_AdminProviderNetworkView> {
                         padding: const EdgeInsets.only(bottom: 12),
                         child: _AdminProviderRow(
                           provider: provider,
-                          onTap: () => _showProviderDetailsSheet(context, provider),
+                          onTap: () =>
+                              _showProviderDetailsSheet(context, provider),
                         ),
                       ),
                     ),
@@ -9094,12 +8958,17 @@ class _AdminProviderNetworkViewState extends State<_AdminProviderNetworkView> {
                     children: [
                       Text('Readiness Watchlist', style: AppTypography.h4),
                       const SizedBox(height: 14),
-                      ..._providers.where((p) => p['status'] != 'ACTIVE').map((p) {
-                        String readinessNote = 'Awaiting active setup verification.';
+                      ..._providers.where((p) => p['status'] != 'ACTIVE').map((
+                        p,
+                      ) {
+                        String readinessNote =
+                            'Awaiting active setup verification.';
                         if (p['status'] == 'SETUP') {
-                          readinessNote = 'Timings and operational schedules must be set up.';
+                          readinessNote =
+                              'Timings and operational schedules must be set up.';
                         } else if (p['status'] == 'SUSPENDED') {
-                          readinessNote = 'Provider has been suspended by system administrator.';
+                          readinessNote =
+                              'Provider has been suspended by system administrator.';
                         }
                         return Padding(
                           padding: const EdgeInsets.only(bottom: 12.0),
@@ -9111,7 +8980,9 @@ class _AdminProviderNetworkViewState extends State<_AdminProviderNetworkView> {
                         );
                       }),
                       if (_providers.every((p) => p['status'] == 'ACTIVE'))
-                        const Center(child: Text('All providers are active and ready.')),
+                        const Center(
+                          child: Text('All providers are active and ready.'),
+                        ),
                     ],
                   ),
                 ),
@@ -9864,9 +9735,13 @@ class _AdminProviderRow extends StatelessWidget {
     final name = provider['providerName']?.toString() ?? '';
     final type = provider['providerType']?.toString() ?? '';
     final status = provider['status']?.toString() ?? '';
-    final branchName = provider['business']?['name']?.toString() ?? 'Central Group';
-    final owner = (provider['uuid']?.toString() ?? '').split('-').first.toUpperCase();
-    
+    final branchName =
+        provider['business']?['name']?.toString() ?? 'Central Group';
+    final owner = (provider['uuid']?.toString() ?? '')
+        .split('-')
+        .first
+        .toUpperCase();
+
     String services = 'General Healthcare Services';
     if (type == 'PHARMACY') {
       services = 'Billing, prescriptions, wallet settlement';
@@ -9921,14 +9796,8 @@ class _AdminProviderRow extends StatelessWidget {
               spacing: 8,
               runSpacing: 8,
               children: [
-                _AdminMetaChip(
-                  icon: Icons.category_outlined,
-                  label: type,
-                ),
-                _AdminMetaChip(
-                  icon: Icons.place_outlined,
-                  label: branchName,
-                ),
+                _AdminMetaChip(icon: Icons.category_outlined, label: type),
+                _AdminMetaChip(icon: Icons.place_outlined, label: branchName),
                 _AdminMetaChip(
                   icon: Icons.person_outline_rounded,
                   label: owner,

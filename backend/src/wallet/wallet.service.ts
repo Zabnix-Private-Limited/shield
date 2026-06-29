@@ -36,6 +36,108 @@ export class WalletService {
     };
   }
 
+  async getCustomerWalletBundle(customerId: bigint) {
+    const customer = await this.prisma.customer.findUnique({
+      where: { id: customerId },
+      include: {
+        membership: {
+          include: {
+            membershipType: true,
+          },
+        },
+        creditAccount: true,
+      },
+    });
+    if (!customer) {
+      throw new NotFoundException(`Customer with ID ${customerId} not found`);
+    }
+
+    const wallet = await this.requireWallet(customerId);
+    const [summary, transactions] = await Promise.all([
+      this.getWalletSummary(wallet.id),
+      this.getTransactions(wallet.id, {}),
+    ]);
+
+    const monthlySpend = transactions.reduce((sum, txn) => {
+      if (
+        txn.ledger?.toUpperCase() !== WALLET_LEDGER_TYPES.CASH ||
+        this.isPositiveCashEntry(txn.transactionType)
+      ) {
+        return sum;
+      }
+      return sum + Number(txn.amount || 0);
+    }, 0);
+
+    const rewardCredits = transactions.reduce((sum, txn) => {
+      if (
+        txn.ledger?.toUpperCase() !== WALLET_LEDGER_TYPES.REWARD_POINTS ||
+        !this.isPositiveRewardEntry(txn.transactionType)
+      ) {
+        return sum;
+      }
+      return sum + Number(txn.amount || 0);
+    }, 0);
+
+    return {
+      walletId: wallet.id.toString(),
+      customerId: customer.id.toString(),
+      status: wallet.status,
+      cashWallet: {
+        available: summary.cashWallet.available,
+        credited: summary.cashWallet.credited,
+        debited: summary.cashWallet.debited,
+      },
+      rewardPoints: {
+        available: summary.rewardPoints.available,
+        earned: summary.rewardPoints.earned,
+        redeemed: summary.rewardPoints.redeemed,
+      },
+      benefitSummary: {
+        benefitsUsed: summary.shieldBenefit.appliedTotal,
+        grantedTotal: summary.shieldBenefit.granted,
+        appliedTotal: summary.shieldBenefit.appliedTotal,
+        hiddenRemaining: summary.shieldBenefit.remaining,
+      },
+      recentTransactions: transactions.map((txn) => ({
+        id: txn.id.toString(),
+        uuid: `wallet-txn-${txn.id.toString()}`,
+        wallet_id: wallet.id.toString(),
+        transaction_type: txn.transactionType,
+        sub_ledger_type: txn.ledger,
+        amount: Number(txn.amount || 0),
+        reference_type: txn.referenceType,
+        reference_id: txn.referenceId?.toString(),
+        remarks: txn.remarks,
+        created_at: txn.createdAt,
+      })),
+      statistics: {
+        monthlySpend: Number(monthlySpend.toFixed(2)),
+        rewardCredits: Number(rewardCredits.toFixed(2)),
+        creditAvailable: customer.creditAccount
+          ? Number(customer.creditAccount.availableCredit)
+          : 0,
+      },
+      membership: customer.membership
+        ? {
+            id: customer.membership.id.toString(),
+            uuid: customer.membership.uuid,
+            membershipNumber: customer.membership.membershipNumber,
+            status: customer.membership.status,
+            activationDate: customer.membership.activationDate,
+            expiryDate: customer.membership.expiryDate,
+            membershipType: customer.membership.membershipType
+              ? {
+                  id: customer.membership.membershipType.id.toString(),
+                  uuid: customer.membership.membershipType.uuid,
+                  code: customer.membership.membershipType.code,
+                  name: customer.membership.membershipType.name,
+                }
+              : null,
+          }
+        : null,
+    };
+  }
+
   async recharge(
     customerId: bigint,
     amount: number,

@@ -226,36 +226,46 @@ class AppPortalSectionSkeleton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        if (showHero) ...[
-          const AppSkeletonBlock(height: 172),
+    final gridCount = AppResponsive.adaptiveGridCount(
+      context,
+      phoneCount: 1,
+      tabletCount: 2,
+      desktopCount: 2,
+    );
+
+    return SingleChildScrollView(
+      physics: const NeverScrollableScrollPhysics(),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (showHero) ...[
+            const AppSkeletonBlock(height: 172),
+            const SizedBox(height: 20),
+          ],
+          GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: statCards,
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: gridCount,
+              crossAxisSpacing: 14,
+              mainAxisSpacing: 14,
+              childAspectRatio: gridCount == 1 ? 3.1 : 2.35,
+            ),
+            itemBuilder: (context, index) => const AppSkeletonBlock(height: 88),
+          ),
           const SizedBox(height: 20),
+          const AppSkeletonBlock(height: 24, width: 180),
+          const SizedBox(height: 12),
+          ...List.generate(
+            listItems,
+            (index) => const Padding(
+              padding: EdgeInsets.only(bottom: 10),
+              child: AppSkeletonBlock(height: 76),
+            ),
+          ),
         ],
-        GridView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          itemCount: statCards,
-          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: statCards <= 2 ? 2 : 2,
-            crossAxisSpacing: 14,
-            mainAxisSpacing: 14,
-            childAspectRatio: 2.35,
-          ),
-          itemBuilder: (context, index) => const AppSkeletonBlock(height: 88),
-        ),
-        const SizedBox(height: 20),
-        const AppSkeletonBlock(height: 24, width: 180),
-        const SizedBox(height: 12),
-        ...List.generate(
-          listItems,
-          (index) => const Padding(
-            padding: EdgeInsets.only(bottom: 10),
-            child: AppSkeletonBlock(height: 76),
-          ),
-        ),
-      ],
+      ),
     );
   }
 }

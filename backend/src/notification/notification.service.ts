@@ -1,4 +1,4 @@
-import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { FirebaseAdminService } from './firebase-admin.service';
@@ -18,42 +18,13 @@ type RegisterTokenInput = {
 };
 
 @Injectable()
-export class NotificationService implements OnModuleInit {
+export class NotificationService {
   private readonly logger = new Logger(NotificationService.name);
 
   constructor(
     private prisma: PrismaService,
     private firebaseAdminService: FirebaseAdminService,
   ) {}
-
-  async onModuleInit() {
-    await this.ensureDevicePushTokenTable();
-  }
-
-  private async ensureDevicePushTokenTable() {
-    await this.prisma.$executeRawUnsafe(`
-      CREATE TABLE IF NOT EXISTS device_push_tokens (
-        id BIGSERIAL PRIMARY KEY,
-        uuid UUID NOT NULL UNIQUE,
-        customer_id BIGINT NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
-        token TEXT NOT NULL UNIQUE,
-        platform VARCHAR(30) NOT NULL,
-        device_label VARCHAR(120),
-        is_active BOOLEAN NOT NULL DEFAULT TRUE,
-        last_seen_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-      );
-    `);
-    await this.prisma.$executeRawUnsafe(`
-      CREATE INDEX IF NOT EXISTS idx_device_push_tokens_customer
-      ON device_push_tokens(customer_id);
-    `);
-    await this.prisma.$executeRawUnsafe(`
-      CREATE INDEX IF NOT EXISTS idx_device_push_tokens_platform
-      ON device_push_tokens(platform);
-    `);
-  }
 
   async list(customerId?: bigint) {
     const whereClause: any = {};

@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
@@ -51,6 +52,21 @@ class FirebaseBootstrapService {
     }
   }
 
+  static Future<void> _registerPushTokenSafely(String token) async {
+    try {
+      await ApiService.registerPushToken(
+        token: token,
+        platform: ApiService.resolvePushPlatform(),
+      );
+    } on DioException catch (error) {
+      debugPrint(
+        'SHIELD push token registration skipped because backend is unavailable: ${error.message}',
+      );
+    } catch (error) {
+      debugPrint('SHIELD push token registration failed: $error');
+    }
+  }
+
   static Future<void> _initializeMessaging() async {
     try {
       final messaging = FirebaseMessaging.instance;
@@ -80,19 +96,13 @@ class FirebaseBootstrapService {
         debugPrint('SHIELD device push token: $token');
 
         if (token != null && token.trim().isNotEmpty) {
-          await ApiService.registerPushToken(
-            token: token,
-            platform: ApiService.resolvePushPlatform(),
-          );
+          await _registerPushTokenSafely(token);
         }
       }
 
       messaging.onTokenRefresh.listen((token) async {
         debugPrint('SHIELD push token refreshed: $token');
-        await ApiService.registerPushToken(
-          token: token,
-          platform: ApiService.resolvePushPlatform(),
-        );
+        await _registerPushTokenSafely(token);
       });
 
       FirebaseMessaging.onMessage.listen((message) {

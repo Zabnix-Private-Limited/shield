@@ -65,6 +65,7 @@ export class ShieldJwtAuthGuard implements CanActivate {
     const method = request.method?.toString().toUpperCase() || 'GET';
     const path = request.path?.toString() || '';
     const allowedPathPrefixes = [
+      '/customer/',
       '/customers/',
       '/wallets/',
       '/appointments',

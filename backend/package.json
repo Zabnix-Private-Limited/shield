@@ -10,6 +10,9 @@
   },
   "scripts": {
     "build": "prisma generate && nest build",
+    "db:push": "prisma db push",
+    "db:prepare": "prisma db push && prisma db seed",
+    "seed": "prisma db seed",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "nest start",
     "start:dev": "nest start --watch",

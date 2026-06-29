@@ -68,6 +68,63 @@ export class CustomerService {
     return customer;
   }
 
+  async getCustomerPortalMembership(customerId: bigint) {
+    const customer = await this.prisma.customer.findUnique({
+      where: { id: customerId },
+      include: {
+        membership: {
+          include: {
+            membershipType: true,
+          },
+        },
+        wallet: true,
+      },
+    });
+
+    if (!customer) {
+      throw new NotFoundException(`Customer with ID ${customerId} not found`);
+    }
+
+    const walletSummary = customer.wallet
+      ? await this.walletService.getWalletSummary(customer.wallet.id)
+      : null;
+
+    return {
+      customerId: customer.id.toString(),
+      membership: customer.membership
+        ? {
+            id: customer.membership.id.toString(),
+            uuid: customer.membership.uuid,
+            membershipNumber: customer.membership.membershipNumber,
+            status: customer.membership.status,
+            activationDate: customer.membership.activationDate,
+            expiryDate: customer.membership.expiryDate,
+            createdAt: customer.membership.createdAt,
+            updatedAt: customer.membership.updatedAt,
+            membershipType: customer.membership.membershipType
+              ? {
+                  id: customer.membership.membershipType.id.toString(),
+                  uuid: customer.membership.membershipType.uuid,
+                  code: customer.membership.membershipType.code,
+                  name: customer.membership.membershipType.name,
+                  joiningFee: customer.membership.membershipType.joiningFee,
+                  discountPercentage:
+                    customer.membership.membershipType.discountPercentage,
+                  creditEligible:
+                    customer.membership.membershipType.creditEligible,
+                  status: customer.membership.membershipType.status,
+                }
+              : null,
+          }
+        : null,
+      membershipStats: {
+        totalEarnedCredits: walletSummary?.cashWallet.credited ?? 0,
+        totalRedeemedCredits: walletSummary?.cashWallet.debited ?? 0,
+        availableCredits: walletSummary?.cashWallet.available ?? 0,
+      },
+    };
+  }
+
   async update(id: bigint, data: any) {
     const customer = await this.findOne(id);
     return this.prisma.customer.update({
