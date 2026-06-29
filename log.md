@@ -4888,3 +4888,22 @@ pm run build (backend)
 
 ---
 2026-06-29 20:02:59 IST
+## 137. Matched Vercel Serverless CORS Entry Point With Backend Main App
+**High-level description**: Corrected the deployed backend CORS fix by applying the same origin-allowlist logic to the Vercel serverless entrypoint, which is the code path actually serving shield-backend.vercel.app.
+- Verified that POST https://shield-backend.vercel.app/auth/customer/login returns a real 401 Invalid Firebase ID token response outside the browser, proving the endpoint itself is alive and the remaining problem is browser-side CORS exposure on the deployed serverless path.
+- Identified that ackend/api/index.ts still used the older localhost-only nableCors({ origin: env.corsOrigins }) config, while the earlier fix had only been applied to ackend/src/main.ts.
+- Updated ackend/api/index.ts to use the same normalized allowlist, SHIELD https://shield-*.vercel.app handling, and credentials: true behavior as the main Nest bootstrap.
+- This aligns local backend startup and deployed Vercel backend behavior so the browser should be able to read /auth/customer/login responses after redeploy instead of surfacing a generic XMLHttpRequest onError network failure.
+
+### Files Modified/Created
+**Backend Files (Modified)**:
+- backend/api/index.ts
+
+**Frontend Files**:
+- None
+
+### Verification
+- Confirmed the deployed endpoint itself responds to POST /auth/customer/login with 401 Invalid Firebase ID token outside the browser, which isolated the remaining failure to the deployed CORS entrypoint.
+
+---
+2026-06-29 20:14:02 IST
