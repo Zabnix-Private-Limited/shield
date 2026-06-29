@@ -26,6 +26,7 @@ type ShieldAppEnv = {
   firebaseProjectId: string;
   firebaseClientEmail: string;
   firebasePrivateKey: string;
+  firebaseServiceAccountJson: string;
   firebaseServiceAccountPath: string;
   smtpHost: string;
   smtpPort: number;
@@ -123,6 +124,7 @@ export function getAppEnv(): ShieldAppEnv {
       /\\n/g,
       '\n',
     ),
+    firebaseServiceAccountJson: readString('FIREBASE_SERVICE_ACCOUNT_JSON'),
     firebaseServiceAccountPath: readString('FIREBASE_SERVICE_ACCOUNT_PATH'),
     smtpHost: readString('SMTP_HOST'),
     smtpPort: readNumber('SMTP_PORT', 587),

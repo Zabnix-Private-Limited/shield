@@ -1,7 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { getAppEnv } from '../config/app-env';
 import { readFileSync, existsSync } from 'fs';
-import { resolve } from 'path';
 import {
   App,
   cert,
@@ -61,6 +60,27 @@ export class FirebaseAdminService {
 
   private loadCredentials() {
     const env = getAppEnv();
+    const serviceAccountJson = env.firebaseServiceAccountJson.trim();
+    if (serviceAccountJson) {
+      try {
+        const json = JSON.parse(serviceAccountJson) as ServiceAccountJson;
+        if (json.project_id && json.client_email && json.private_key) {
+          return {
+            projectId: json.project_id,
+            clientEmail: json.client_email,
+            privateKey: json.private_key,
+          };
+        }
+        this.logger.warn(
+          'FIREBASE_SERVICE_ACCOUNT_JSON is present but missing required Firebase Admin fields.',
+        );
+      } catch (error) {
+        this.logger.warn(
+          `FIREBASE_SERVICE_ACCOUNT_JSON could not be parsed: ${error}`,
+        );
+      }
+    }
+
     if (
       env.firebaseProjectId &&
       env.firebaseClientEmail &&
@@ -74,15 +94,7 @@ export class FirebaseAdminService {
     }
 
     const configuredPath = env.firebaseServiceAccountPath.trim();
-    const candidatePaths = [
-      configuredPath,
-      resolve(
-        process.cwd(),
-        '..',
-        'firebase env',
-        'shield-zabnix-firebase-adminsdk-fbsvc-02d2d21de6.json',
-      ),
-    ].filter(Boolean);
+    const candidatePaths = [configuredPath].filter(Boolean);
 
     for (const candidatePath of candidatePaths) {
       if (!existsSync(candidatePath)) {

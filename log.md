@@ -4907,3 +4907,26 @@ pm run build (backend)
 
 ---
 2026-06-29 20:14:02 IST
+
+## 138. Switched Firebase Admin Setup Guidance To Env-First Secrets
+**High-level description**: Removed the repo's default reliance on a local `firebase env` service-account file and aligned SHIELD backend setup around env-based Firebase Admin credentials for both local and deployed environments.
+- Added `FIREBASE_SERVICE_ACCOUNT_JSON` to the backend env contract so the full Firebase Admin service-account payload can be injected as a secret without committing or mounting a JSON file path.
+- Updated Firebase Admin credential loading to prefer the single JSON env blob first, then the split `FIREBASE_PROJECT_ID` / `FIREBASE_CLIENT_EMAIL` / `FIREBASE_PRIVATE_KEY` variables, and only use `FIREBASE_SERVICE_ACCOUNT_PATH` as an explicit local-only fallback when intentionally configured.
+- Removed the implicit repo-relative fallback to `../firebase env/...`, which avoids accidental dependence on an untracked secrets folder that does not exist in git or deployed environments like Vercel.
+- Updated `backend/.env` and `backend/.env.example` so the checked-in setup now points engineers toward env-injected secrets instead of a path into the excluded `firebase env` directory.
+
+### Files Modified/Created
+**Backend Files (Modified)**:
+- backend/src/config/app-env.ts
+- backend/src/notification/firebase-admin.service.ts
+- backend/.env
+- backend/.env.example
+
+**Frontend Files**:
+- None
+
+### Verification
+- `npm run build` (backend)
+
+---
+2026-06-29 20:36:30 IST
