@@ -25,8 +25,20 @@ class ApiService {
 
   static String _resolveBaseUrl() {
     if (AppConfig.apiBaseUrl.trim().isNotEmpty) {
+      if (!kIsWeb && kReleaseMode && (AppConfig.apiBaseUrl.contains('localhost') || AppConfig.apiBaseUrl.contains('127.0.0.1'))) {
+        return 'https://shield-backend.vercel.app';
+      }
       return AppConfig.apiBaseUrl.trim().replaceAll(RegExp(r'/+$'), '');
     }
+    
+    if (!kIsWeb) {
+      if (kReleaseMode) {
+        return 'https://shield-backend.vercel.app';
+      } else {
+        return 'http://10.0.2.2:3000'; // Android emulator host loopback
+      }
+    }
+
     final base = Uri.base;
     final host = base.host.isEmpty ? 'localhost' : base.host;
     final isLocalHost = host == 'localhost' || host == '127.0.0.1';

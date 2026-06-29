@@ -4271,3 +4271,25 @@ High-level description: Replaced the old internal fallback page stack with one r
 **Frontend Files (Modified)**:
 - frontend/lib/shared/services/api_service.dart
 - frontend/lib/shared/config/app_config.dart
+
+
+## 113. Detailed Handoff Baseline And Verified Workspace State
+**High-level description**: Recorded a detailed session handoff baseline with a verified repo snapshot so the next development pass starts from the actual workspace state instead of relying on overstated deploy/commit assumptions.
+- Verified the latest committed change is f61627 fix: resolve frontend vercel base URL fallback and configure VAPID public key.
+- Verified recent log coverage for deployment-related work in entries 108 through 112, including Provider Network Phase 2, Vercel ignore rules, jwks-rsa compatibility override, backend serverless adapter, and frontend Vercel/VAPID updates.
+- Verified the current git tree is **not** fully clean: rontend/lib/shared/services/api_service.dart is modified and rontend/scripts/build-apk-release-with-env.ps1 is untracked.
+- Verified current wallet fixes from entry 107 were built successfully during the session with cd backend && npm run build and cd frontend && flutter analyze lib/features/portal/presentation/screens/portal_shell.dart lib/shared/services/api_service.dart lib/shared/models/wallet.dart.
+- Confirmed that any handoff prompt for the next session must call out the dirty worktree explicitly and should not claim that all changes are committed.
+
+### Files Modified/Created
+**Log Files (Modified)**:
+- log.md
+
+**Frontend Files**:
+- None
+
+**Backend Files**:
+- None
+
+---
+2026-06-29 08:59:46 IST
