@@ -4868,3 +4868,23 @@ pm run build (backend)
 
 ---
 2026-06-29 19:51:09 IST
+## 136. Allowed SHIELD Vercel Frontend Origins In Backend CORS
+**High-level description**: Fixed the deployed customer OTP handoff failure by broadening the backend CORS origin check beyond localhost so the SHIELD Vercel frontend can post its Firebase-backed customer login payload to the backend.
+- The backend CORS defaults previously only allowed localhost-style origins unless extra deployment origins were injected through environment variables, which left https://shield-zabnix.vercel.app blocked at the browser layer during /auth/customer/login.
+- Updated ackend/src/main.ts to normalize exact configured origins from CORS_ORIGIN and APP_URL, and to explicitly allow SHIELD-owned https://shield-*.vercel.app frontend domains.
+- Switched Nest CORS origin handling to a callback so exact allowlist checks and SHIELD Vercel preview-domain checks can coexist cleanly without opening CORS to arbitrary origins.
+- Enabled credentials: true alongside the refined origin callback so browser requests keep the expected cross-origin auth behavior once the backend is redeployed.
+
+### Files Modified/Created
+**Backend Files (Modified)**:
+- backend/src/main.ts
+
+**Frontend Files**:
+- None
+
+### Verification
+- 
+pm run build (backend)
+
+---
+2026-06-29 20:02:59 IST
