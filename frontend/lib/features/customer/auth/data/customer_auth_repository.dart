@@ -34,6 +34,14 @@ class CustomerAuthRepository {
     _webConfirmationResult = null;
 
     if (kIsWeb) {
+      if (_isUnsupportedLocalWebHost(Uri.base.host)) {
+        throw FirebaseAuthException(
+          code: 'web-phone-auth-domain',
+          message:
+              'Firebase web OTP does not work on localhost. Open SHIELD on an authorized domain to continue.',
+        );
+      }
+
       _webConfirmationResult = await _firebaseAuth.signInWithPhoneNumber(
         phoneNumber,
       );
@@ -176,6 +184,14 @@ class CustomerAuthRepository {
     _verificationId = null;
     _pendingPhoneNumber = null;
     _resendAllowedAt = null;
+  }
+
+  bool _isUnsupportedLocalWebHost(String host) {
+    final normalized = host.trim().toLowerCase();
+    return normalized == 'localhost' ||
+        normalized == '127.0.0.1' ||
+        normalized == '0.0.0.0' ||
+        normalized == '::1';
   }
 
   String _normalizeIndianPhone(String rawPhoneNumber) {

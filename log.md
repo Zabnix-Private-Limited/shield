@@ -4721,3 +4721,80 @@ pm run build (backend)
 
 ---
 2026-06-29 16:36:11 IST
+## 130. Removed Temporary Web reCAPTCHA Plumbing From Customer Auth
+**High-level description**: Backed out the temporary web reCAPTCHA-specific customer auth plumbing and replaced the raw browser-side implementation failure with a clear product-facing constraint message.
+- Removed the explicit Firebase Auth web registration helper files and the startup hook that had been added only to force reCAPTCHA support during Flutter web phone-auth experimentation.
+- Reverted the temporary initializeRecaptchaConfig() bootstrap call so the Firebase startup path stays focused on the production customer session and messaging concerns already in place.
+- Simplified the web branch of CustomerAuthRepository.startPhoneVerification(...) to stop attempting browser OTP initiation for now and instead return a clean message that customer OTP sign-in is currently Android-only.
+- This keeps the customer auth codebase honest: Firebase web phone auth requires reCAPTCHA, so removing reCAPTCHA support means web OTP must be disabled rather than silently failing with UnimplementedError.
+
+### Files Modified/Created
+**Frontend Files (Modified)**:
+- frontend/lib/main.dart
+- frontend/lib/shared/services/firebase_bootstrap_service.dart
+- frontend/lib/features/customer/auth/data/customer_auth_repository.dart
+
+**Frontend Files (Deleted)**:
+- frontend/lib/shared/services/firebase_auth_web_registration.dart
+- frontend/lib/shared/services/firebase_auth_web_registration_stub.dart
+- frontend/lib/shared/services/firebase_auth_web_registration_web.dart
+
+**Backend Files**:
+- None
+
+### Verification
+- dart format frontend/lib/main.dart frontend/lib/shared/services/firebase_bootstrap_service.dart frontend/lib/features/customer/auth/data/customer_auth_repository.dart
+- lutter analyze frontend/lib/main.dart frontend/lib/shared/services/firebase_bootstrap_service.dart frontend/lib/features/customer/auth/data/customer_auth_repository.dart frontend/lib/shared/services/customer_auth_session.dart frontend/lib/app/routes/app_router.dart
+
+---
+2026-06-29 16:44:22 IST
+## 131. Restored Proper Firebase Web OTP Flow With reCAPTCHA Support
+**High-level description**: Re-enabled the real Firebase web phone-auth path for the customer portal by restoring web plugin registration and the managed reCAPTCHA-backed OTP flow instead of keeping web OTP disabled.
+- Reintroduced the conditional web registration helper so FirebaseAuthWeb.registerWith(...) runs before app bootstrap, which restores the web reCAPTCHA verifier factory that FlutterFire phone auth depends on.
+- Warmed up Firebase Auth reCAPTCHA configuration during frontend bootstrap on web so the phone-auth path is prepared before the customer sign-in flow begins.
+- Switched the customer web OTP branch back to FirebaseAuth.signInWithPhoneNumber(...), relying on FlutterFire's managed reCAPTCHA flow rather than a broken placeholder path.
+- Added an explicit local-host guard in the customer auth repository because Firebase's current web phone-auth documentation states that localhost is not allowed as a hosted domain for phone authentication; this now fails with a clear message instead of a confusing runtime error.
+- Declared irebase_auth_web and lutter_web_plugins directly in rontend/pubspec.yaml so the manual web registration helper is analyzer-clean and intentional rather than depending on transitive imports.
+
+### Files Modified/Created
+**Frontend Files (Created)**:
+- frontend/lib/shared/services/firebase_auth_web_registration.dart
+- frontend/lib/shared/services/firebase_auth_web_registration_stub.dart
+- frontend/lib/shared/services/firebase_auth_web_registration_web.dart
+
+**Frontend Files (Modified)**:
+- frontend/lib/main.dart
+- frontend/lib/shared/services/firebase_bootstrap_service.dart
+- frontend/lib/features/customer/auth/data/customer_auth_repository.dart
+- frontend/pubspec.yaml
+- frontend/pubspec.lock
+
+**Backend Files**:
+- None
+
+### Verification
+- lutter pub get (frontend)
+- dart format lib/main.dart lib/shared/services/firebase_bootstrap_service.dart lib/features/customer/auth/data/customer_auth_repository.dart lib/shared/services/firebase_auth_web_registration.dart lib/shared/services/firebase_auth_web_registration_stub.dart lib/shared/services/firebase_auth_web_registration_web.dart (frontend)
+- lutter analyze lib/main.dart lib/shared/services/firebase_bootstrap_service.dart lib/features/customer/auth/data/customer_auth_repository.dart lib/shared/services/firebase_auth_web_registration.dart lib/shared/services/firebase_auth_web_registration_stub.dart lib/shared/services/firebase_auth_web_registration_web.dart lib/shared/services/customer_auth_session.dart lib/app/routes/app_router.dart (frontend)
+
+---
+2026-06-29 16:49:00 IST
+## 132. Replaced Stale Customer Sign-In Screen With Compatibility Wrapper
+**High-level description**: Removed analyzer breakage from the older temporary customer sign-in screen by turning it into a thin wrapper over the current Firebase OTP login screen.
+- The legacy rontend/lib/features/auth/presentation/screens/customer_sign_in_screen.dart was still referencing removed local-session helpers (signInLocally and supportsLocalSignIn) from the pre-OTP auth prototype.
+- Replaced that screen with a minimal compatibility wrapper that delegates to CustomerLoginScreen, which keeps any lingering imports compiling without reintroducing deprecated local sign-in behavior.
+- Kept the cleanup scoped to customer auth presentation only; router, backend auth, and session behavior were unchanged.
+
+### Files Modified/Created
+**Frontend Files (Modified)**:
+- frontend/lib/features/auth/presentation/screens/customer_sign_in_screen.dart
+
+**Backend Files**:
+- None
+
+### Verification
+- dart format frontend/lib/features/auth/presentation/screens/customer_sign_in_screen.dart
+- lutter analyze frontend/lib/features/auth/presentation/screens/customer_sign_in_screen.dart frontend/lib/features/customer/auth/presentation/screens/customer_login_screen.dart frontend/lib/shared/services/customer_auth_session.dart frontend/lib/app/routes/app_router.dart
+
+---
+2026-06-29 16:50:14 IST

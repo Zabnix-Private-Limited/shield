@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:firebase_analytics/firebase_analytics.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
@@ -30,6 +31,14 @@ class FirebaseBootstrapService {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
+
+    if (kIsWeb) {
+      try {
+        await FirebaseAuth.instance.initializeRecaptchaConfig();
+      } catch (error) {
+        debugPrint('SHIELD web reCAPTCHA config warmup skipped: $error');
+      }
+    }
 
     if (AppConfig.enableNotifications) {
       FirebaseMessaging.onBackgroundMessage(

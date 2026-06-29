@@ -123,7 +123,7 @@ class _CustomerLoginScreenState extends State<CustomerLoginScreen> {
                       autofillHints: const [AutofillHints.telephoneNumber],
                       decoration: InputDecoration(
                         prefixText: '+91 ',
-                        hintText: '98XXXXXX45',
+                        hintText: '98765 43210',
                         filled: true,
                         fillColor: AppColors.lightGray,
                         contentPadding: const EdgeInsets.symmetric(
