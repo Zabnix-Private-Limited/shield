@@ -22,6 +22,7 @@ import '../../../../shared/widgets/app_responsive.dart';
 import '../../../../shared/widgets/app_skeleton.dart';
 import '../../../../shared/widgets/shield_date_input_field.dart';
 import '../../../../shared/services/api_service.dart';
+import '../../../../shared/services/customer_auth_session.dart';
 import '../../../../shared/utils/prescription_file_picker.dart';
 import '../../../../shared/widgets/customer_support_sheet.dart';
 import '../../../../shared/widgets/portal_support.dart';
@@ -4344,10 +4345,15 @@ class _CustomerSettingsViewState extends State<_CustomerSettingsView> {
             ),
             _CompactSettingAction(
               icon: Icons.logout_rounded,
-              title: 'Back to dashboard',
-              subtitle: 'Return to the customer home view',
+              title: 'Sign out',
+              subtitle: 'Clear the current customer session on this device',
               destructive: true,
-              onTap: () => context.go('/portal/customer/dashboard'),
+              onTap: () async {
+                await CustomerAuthSession.instance.signOut();
+                if (context.mounted) {
+                  context.go('/customer/login');
+                }
+              },
             ),
           ],
         ),

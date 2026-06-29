@@ -14,14 +14,87 @@ import '../models/wallet.dart';
 
 class ApiService {
   static const Duration _mockDelay = Duration(milliseconds: 180);
-  static final Dio _dio = Dio(
-    BaseOptions(
-      baseUrl: _resolveBaseUrl(),
-      connectTimeout: const Duration(seconds: 5),
-      receiveTimeout: const Duration(seconds: 8),
-      headers: const {'Content-Type': 'application/json'},
-    ),
-  );
+  static String? _accessToken;
+  static String? _activeCustomerId;
+  static Future<String?> Function()? _onRefreshToken;
+  static Future<void> Function()? _onSessionExpired;
+  static final Dio _dio =
+      Dio(
+          BaseOptions(
+            baseUrl: _resolveBaseUrl(),
+            connectTimeout: const Duration(seconds: 5),
+            receiveTimeout: const Duration(seconds: 8),
+            headers: const {'Content-Type': 'application/json'},
+          ),
+        )
+        ..interceptors.add(
+          InterceptorsWrapper(
+            onRequest: (options, handler) {
+              final accessToken = _accessToken?.trim();
+              if (accessToken != null && accessToken.isNotEmpty) {
+                options.headers['Authorization'] = 'Bearer $accessToken';
+              } else {
+                options.headers.remove('Authorization');
+              }
+              handler.next(options);
+            },
+            onError: (error, handler) async {
+              final response = error.response;
+              final options = error.requestOptions;
+              final isUnauthorized = response?.statusCode == 401;
+              final isAuthEndpoint = options.path.startsWith('/auth/');
+              final alreadyRetried = options.extra['retried'] == true;
+
+              if (isUnauthorized &&
+                  !isAuthEndpoint &&
+                  !alreadyRetried &&
+                  _onRefreshToken != null) {
+                final refreshedToken = await _onRefreshToken!.call();
+                if (refreshedToken != null &&
+                    refreshedToken.trim().isNotEmpty) {
+                  options.extra['retried'] = true;
+                  options.headers['Authorization'] = 'Bearer $refreshedToken';
+                  final retryResponse = await _dio.fetch<dynamic>(options);
+                  return handler.resolve(retryResponse);
+                }
+                if (_onSessionExpired != null) {
+                  await _onSessionExpired!.call();
+                }
+              }
+
+              handler.next(error);
+            },
+          ),
+        );
+
+  static void configureAuthHandlers({
+    Future<String?> Function()? onRefreshToken,
+    Future<void> Function()? onSessionExpired,
+  }) {
+    _onRefreshToken = onRefreshToken;
+    _onSessionExpired = onSessionExpired;
+  }
+
+  static void setAccessToken(String accessToken) {
+    _accessToken = accessToken.trim();
+  }
+
+  static void clearAccessToken() {
+    _accessToken = null;
+  }
+
+  static void setActiveCustomerId(String? customerId) {
+    _activeCustomerId = customerId?.trim();
+  }
+
+  static String _resolveCustomerId(String customerId) {
+    final activeCustomerId = _activeCustomerId?.trim();
+    if (activeCustomerId != null && activeCustomerId.isNotEmpty) {
+      return activeCustomerId;
+    }
+    final normalized = customerId.trim();
+    return normalized.isEmpty ? '1' : normalized;
+  }
 
   static String _resolveBaseUrl() {
     if (AppConfig.apiBaseUrl.trim().isNotEmpty) {
@@ -87,7 +160,8 @@ class ApiService {
   static Future<Map<String, dynamic>> _getCustomerPayload(
     String customerId,
   ) async {
-    final response = await _dio.get('/customers/$customerId');
+    final resolvedCustomerId = _resolveCustomerId(customerId);
+    final response = await _dio.get('/customers/$resolvedCustomerId');
     return _readEnvelope(response);
   }
 
@@ -109,11 +183,12 @@ class ApiService {
   }
 
   static Future<List<Appointment>> getAppointments(SHIELDRole role) async {
+    final customerId = _resolveCustomerId('1');
     if (role == SHIELDRole.customer) {
       try {
         final response = await _dio.get(
           '/appointments',
-          queryParameters: {'customer_id': '1'},
+          queryParameters: {'customer_id': customerId},
         );
         return _readEnvelopeList(response)
             .map((item) => Appointment.fromJson(item as Map<String, dynamic>))
@@ -124,7 +199,7 @@ class ApiService {
     await Future<void>.delayed(_mockDelay);
     if (role == SHIELDRole.customer) {
       return dummyAppointments
-          .where((appointment) => appointment.customerId == '1')
+          .where((appointment) => appointment.customerId == customerId)
           .toList()
         ..sort((a, b) => b.appointmentDate.compareTo(a.appointmentDate));
     }
@@ -132,11 +207,12 @@ class ApiService {
   }
 
   static Future<List<Document>> getDocuments(SHIELDRole role) async {
+    final customerId = _resolveCustomerId('1');
     if (role == SHIELDRole.customer) {
       try {
         final response = await _dio.get(
           '/documents',
-          queryParameters: {'customer_id': '1'},
+          queryParameters: {'customer_id': customerId},
         );
         return _readEnvelopeList(response)
             .map((item) => Document.fromJson(item as Map<String, dynamic>))
@@ -147,7 +223,7 @@ class ApiService {
     await Future<void>.delayed(_mockDelay);
     if (role == SHIELDRole.customer) {
       return dummyDocuments
-          .where((document) => document.customerId == '1')
+          .where((document) => document.customerId == customerId)
           .toList()
         ..sort((a, b) => b.uploadedAt.compareTo(a.uploadedAt));
     }
@@ -157,9 +233,10 @@ class ApiService {
   static Future<List<Document>> getCustomerDocumentsStrict(
     String customerId,
   ) async {
+    final resolvedCustomerId = _resolveCustomerId(customerId);
     final response = await _dio.get(
       '/documents',
-      queryParameters: {'customer_id': customerId},
+      queryParameters: {'customer_id': resolvedCustomerId},
       options: Options(receiveTimeout: const Duration(minutes: 1)),
     );
     return _readEnvelopeList(
@@ -171,11 +248,12 @@ class ApiService {
   static Future<List<NotificationModel>> getNotifications(
     SHIELDRole role,
   ) async {
+    final customerId = _resolveCustomerId('1');
     if (role == SHIELDRole.customer) {
       try {
         final response = await _dio.get(
           '/notifications',
-          queryParameters: {'customer_id': '1'},
+          queryParameters: {'customer_id': customerId},
         );
         return _readEnvelopeList(response)
             .map(
@@ -189,7 +267,7 @@ class ApiService {
     await Future<void>.delayed(_mockDelay);
     if (role == SHIELDRole.customer) {
       return dummyNotifications
-          .where((notification) => notification.customerId == '1')
+          .where((notification) => notification.customerId == customerId)
           .toList()
         ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
     }
@@ -197,12 +275,13 @@ class ApiService {
   }
 
   static Future<Customer> getCustomerProfile(String customerId) async {
+    final resolvedCustomerId = _resolveCustomerId(customerId);
     try {
-      final payload = await _getCustomerPayload(customerId);
+      final payload = await _getCustomerPayload(resolvedCustomerId);
       return Customer.fromJson(payload);
     } catch (_) {
       await Future<void>.delayed(_mockDelay);
-      return _mockCustomer(customerId);
+      return _mockCustomer(resolvedCustomerId);
     }
   }
 
@@ -210,8 +289,9 @@ class ApiService {
     String customerId,
     Customer customer,
   ) async {
+    final resolvedCustomerId = _resolveCustomerId(customerId);
     final response = await _dio.put(
-      '/customers/$customerId',
+      '/customers/$resolvedCustomerId',
       data: {
         'first_name': customer.firstName,
         'last_name': customer.lastName,
@@ -233,8 +313,9 @@ class ApiService {
   static Future<Map<String, dynamic>> getWalletProfile(
     String customerId,
   ) async {
+    final resolvedCustomerId = _resolveCustomerId(customerId);
     try {
-      final response = await _dio.get('/wallets/$customerId');
+      final response = await _dio.get('/wallets/$resolvedCustomerId');
       final wallet = _readEnvelope(response);
       final walletId = wallet['walletId'].toString();
       final transactions = await _getWalletTransactionsFromBackend(walletId);
@@ -279,7 +360,7 @@ class ApiService {
 
       return {
         'walletId': dummyWallet.id,
-        'customerId': customerId,
+        'customerId': resolvedCustomerId,
         'cashBalance': cashBalance,
         'pointsBalance': pointsBalance,
         'balance': cashBalance,
@@ -305,16 +386,17 @@ class ApiService {
   static Future<Map<String, dynamic>> getCustomerWalletBundle(
     String customerId,
   ) async {
+    final resolvedCustomerId = _resolveCustomerId(customerId);
     try {
       final response = await _dio.get(
         '/customer/wallet',
-        queryParameters: {'customer_id': customerId},
+        queryParameters: {'customer_id': resolvedCustomerId},
       );
       return _readEnvelope(response);
     } catch (_) {
       final results = await Future.wait<dynamic>([
-        getWalletProfile(customerId),
-        getCustomerMembership(customerId),
+        getWalletProfile(resolvedCustomerId),
+        getCustomerMembership(resolvedCustomerId),
       ]);
 
       final wallet = Map<String, dynamic>.from(
@@ -341,7 +423,7 @@ class ApiService {
 
       return {
         'walletId': wallet['walletId']?.toString() ?? dummyWallet.id,
-        'customerId': wallet['customerId']?.toString() ?? customerId,
+        'customerId': wallet['customerId']?.toString() ?? resolvedCustomerId,
         'status': wallet['status'] ?? 'ACTIVE',
         'cashWallet': {
           'available': wallet['cashBalance'] ?? wallet['balance'] ?? 0,
@@ -423,27 +505,76 @@ class ApiService {
   static Future<Map<String, dynamic>> getCustomerMembershipBundle(
     String customerId,
   ) async {
+    final resolvedCustomerId = _resolveCustomerId(customerId);
     final response = await _dio.get(
       '/customer/membership',
-      queryParameters: {'customer_id': customerId},
+      queryParameters: {'customer_id': resolvedCustomerId},
     );
     return _readEnvelope(response);
+  }
+
+  static Future<Map<String, dynamic>> getAuthenticatedProfile() async {
+    final response = await _dio.get('/auth/me');
+    return _readEnvelope(response);
+  }
+
+  static Future<Map<String, dynamic>> customerLogin({
+    required String firebaseIdToken,
+  }) async {
+    final response = await _dio.post(
+      '/auth/customer/login',
+      data: {'firebase_id_token': firebaseIdToken},
+    );
+    return _readEnvelope(response);
+  }
+
+  static Future<Map<String, dynamic>> customerRegister({
+    required String firebaseIdToken,
+    required String name,
+    required DateTime dob,
+    required String gender,
+  }) async {
+    final response = await _dio.post(
+      '/auth/customer/register',
+      data: {
+        'firebase_id_token': firebaseIdToken,
+        'name': name.trim(),
+        'dob': dob.toIso8601String(),
+        'gender': gender,
+      },
+    );
+    return _readEnvelope(response);
+  }
+
+  static Future<Map<String, dynamic>> refreshSession(
+    String refreshToken,
+  ) async {
+    final response = await _dio.post(
+      '/auth/refresh',
+      data: {'refresh_token': refreshToken},
+    );
+    return _readEnvelope(response);
+  }
+
+  static Future<void> logout(String refreshToken) async {
+    await _dio.post('/auth/logout', data: {'refresh_token': refreshToken});
   }
 
   static Future<Map<String, dynamic>> getCustomerDashboardBundle(
     String customerId,
   ) async {
+    final resolvedCustomerId = _resolveCustomerId(customerId);
     try {
       final response = await _dio.get(
         '/customer/dashboard',
-        queryParameters: {'customer_id': customerId},
+        queryParameters: {'customer_id': resolvedCustomerId},
       );
       return _readEnvelope(response);
     } catch (_) {
       final results = await Future.wait<dynamic>([
-        getCustomerProfile(customerId),
-        getWalletProfile(customerId),
-        getCustomerMembership(customerId),
+        getCustomerProfile(resolvedCustomerId),
+        getWalletProfile(resolvedCustomerId),
+        getCustomerMembership(resolvedCustomerId),
         getAppointments(SHIELDRole.customer),
         getNotifications(SHIELDRole.customer),
         getDocuments(SHIELDRole.customer),
@@ -616,8 +747,9 @@ class ApiService {
   }
 
   static Future<Membership> getCustomerMembership(String customerId) async {
+    final resolvedCustomerId = _resolveCustomerId(customerId);
     try {
-      final customerPayload = await _getCustomerPayload(customerId);
+      final customerPayload = await _getCustomerPayload(resolvedCustomerId);
       final customer = Customer.fromJson(customerPayload);
       final walletData = customerPayload['wallet'] as Map<String, dynamic>?;
       final transactions = walletData == null
@@ -643,10 +775,11 @@ class ApiService {
     required DateTime appointmentDate,
     String? remarks,
   }) async {
+    final customerId = _resolveCustomerId('1');
     final response = await _dio.post(
       '/appointments',
       data: {
-        'customer_id': '1',
+        'customer_id': customerId,
         'provider_id': providerId,
         'appointment_type': appointmentType,
         'appointment_date': appointmentDate.toIso8601String(),
@@ -670,8 +803,9 @@ class ApiService {
     String mimeType = 'application/pdf',
     int fileSize = 1024,
   }) async {
+    final customerId = _resolveCustomerId('1');
     final formData = FormData.fromMap({
-      'customer_id': '1',
+      'customer_id': customerId,
       'file_name': fileName,
       'file_size': fileSize,
       'mime_type': mimeType,
@@ -726,10 +860,11 @@ class ApiService {
     String? deviceLabel,
     String customerId = '1',
   }) async {
+    final resolvedCustomerId = _resolveCustomerId(customerId);
     await _dio.post(
       '/notifications/device-token',
       data: {
-        'customer_id': customerId,
+        'customer_id': resolvedCustomerId,
         'token': token,
         'platform': platform,
         if (deviceLabel != null && deviceLabel.trim().isNotEmpty)
@@ -754,10 +889,11 @@ class ApiService {
     String? turnstileToken,
     String customerId = '1',
   }) async {
+    final resolvedCustomerId = _resolveCustomerId(customerId);
     await _dio.post(
       '/support/contact',
       data: {
-        'customer_id': customerId,
+        'customer_id': resolvedCustomerId,
         'name': name.trim(),
         'phone': phone.trim(),
         'email': email?.trim(),
@@ -780,10 +916,11 @@ class ApiService {
     String? turnstileToken,
     String customerId = '1',
   }) async {
+    final resolvedCustomerId = _resolveCustomerId(customerId);
     await _dio.post(
       '/support/feedback',
       data: {
-        'customer_id': customerId,
+        'customer_id': resolvedCustomerId,
         'name': name?.trim(),
         'phone': phone?.trim(),
         'email': email?.trim(),

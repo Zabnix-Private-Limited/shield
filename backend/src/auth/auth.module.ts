@@ -2,6 +2,7 @@ import { Global, Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { JwtModule } from '@nestjs/jwt';
 import { getAppEnv } from '../config/app-env';
+import { CustomerModule } from '../customer/customer.module';
 import { RedisModule } from '../redis/redis.module';
 import { NotificationModule } from '../notification/notification.module';
 import { AuthController } from './auth.controller';
@@ -15,6 +16,7 @@ import { ShieldJwtAuthGuard } from './shield-jwt-auth.guard';
     JwtModule.register({
       secret: getAppEnv().jwtAccessSecret,
     }),
+    CustomerModule,
     RedisModule,
     NotificationModule,
   ],

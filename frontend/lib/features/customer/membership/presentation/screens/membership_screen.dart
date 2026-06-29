@@ -77,7 +77,11 @@ class _CustomerMembershipScreenState extends State<CustomerMembershipScreen> {
                       : constraints.maxWidth >= 420
                       ? 2
                       : 1;
-                  final ratio = columns == 1 ? 3.3 : 2.2;
+                  final ratio = columns == 1
+                      ? 3.0
+                      : columns == 2
+                      ? 1.45
+                      : 1.6;
                   return GridView.count(
                     crossAxisCount: columns,
                     shrinkWrap: true,
@@ -355,6 +359,7 @@ class _MembershipStatCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return AppCard(
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
             width: 42,
@@ -369,10 +374,12 @@ class _MembershipStatCard extends StatelessWidget {
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
                   label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: AppTypography.tiny.copyWith(
                     color: AppColors.gray,
                     fontWeight: FontWeight.w700,
@@ -381,6 +388,8 @@ class _MembershipStatCard extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(
                   value,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: AppTypography.h5.copyWith(
                     color: AppColors.shieldNavy,
                     fontWeight: FontWeight.w800,
@@ -389,6 +398,8 @@ class _MembershipStatCard extends StatelessWidget {
                 const SizedBox(height: 3),
                 Text(
                   note,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                   style: AppTypography.small.copyWith(color: AppColors.gray),
                 ),
               ],

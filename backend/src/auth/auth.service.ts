@@ -8,6 +8,7 @@ import { createHash, randomBytes, randomUUID } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { RedisService } from '../redis/redis.service';
 import { getAppEnv } from '../config/app-env';
+import { CustomerService } from '../customer/customer.service';
 import { FirebaseAdminService } from '../notification/firebase-admin.service';
 import {
   ACCESS_SCOPES,
@@ -33,6 +34,7 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly redisService: RedisService,
     private readonly firebaseAdminService: FirebaseAdminService,
+    private readonly customerService: CustomerService,
   ) {}
 
   async loginCustomer(firebaseIdToken: string) {
@@ -106,6 +108,57 @@ export class AuthService {
     });
 
     return this.issueTokens(principal);
+  }
+
+  async registerCustomer(firebaseIdToken: string, body: any) {
+    const decoded = await this.verifyFirebaseToken(firebaseIdToken);
+    const provider = this.getFirebaseProvider(decoded);
+    if (provider !== 'phone') {
+      throw new UnauthorizedException(
+        'Customer registration must use Firebase phone OTP.',
+      );
+    }
+
+    const mobile = decoded.phone_number?.trim();
+    if (!mobile) {
+      throw new UnauthorizedException(
+        'Firebase phone sign-in did not include a mobile number.',
+      );
+    }
+
+    const existingCustomer = await this.prisma.customer.findFirst({
+      where: {
+        deletedAt: null,
+        OR: [{ firebaseUid: decoded.uid }, { mobile }],
+      },
+      select: { id: true },
+    });
+
+    if (existingCustomer) {
+      return this.loginCustomer(firebaseIdToken);
+    }
+
+    const normalizedName = (body.name ?? '').toString().trim();
+    const [firstName, ...lastNameParts] = normalizedName
+      .split(RegExp('\\s+'))
+      .filter(Boolean);
+
+    if (!firstName) {
+      throw new UnauthorizedException('Customer name is required.');
+    }
+
+    await this.customerService.create({
+      first_name: firstName,
+      last_name: lastNameParts.join(' '),
+      dob: body.dob,
+      gender: body.gender,
+      mobile,
+      email: body.email,
+      agent_code: body.agent_code,
+      referred_by_code: body.referred_by_code,
+    });
+
+    return this.loginCustomer(firebaseIdToken);
   }
 
   async loginInternalUser(firebaseIdToken: string) {

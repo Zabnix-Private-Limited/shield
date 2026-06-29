@@ -7,11 +7,13 @@ import 'package:fluttertoast/fluttertoast.dart';
 import 'app/theme/app_theme.dart';
 import 'app/routes/app_router.dart';
 import 'shared/config/app_config.dart';
+import 'shared/services/customer_auth_session.dart';
 import 'shared/services/firebase_bootstrap_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Hive.initFlutter();
+  await CustomerAuthSession.instance.initialize();
   await FirebaseBootstrapService.initialize();
 
   if (AppConfig.enableSentry &&
@@ -28,13 +30,8 @@ Future<void> main() async {
         options.attachScreenshot = true;
         options.attachViewHierarchy = true;
       },
-      appRunner: () => runApp(
-        SentryWidget(
-          child: const ProviderScope(
-            child: MyApp(),
-          ),
-        ),
-      ),
+      appRunner: () =>
+          runApp(SentryWidget(child: const ProviderScope(child: MyApp()))),
     );
     return;
   }

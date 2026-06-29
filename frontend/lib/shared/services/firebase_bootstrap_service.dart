@@ -7,14 +7,13 @@ import 'package:flutter/foundation.dart';
 import '../../firebase_options.dart';
 import '../config/app_config.dart';
 import 'api_service.dart';
+import 'customer_auth_session.dart';
 
 @pragma('vm:entry-point')
 Future<void> shieldFirebaseMessagingBackgroundHandler(
   RemoteMessage message,
 ) async {
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   debugPrint('SHIELD background push received: ${message.messageId}');
 }
 
@@ -53,10 +52,21 @@ class FirebaseBootstrapService {
   }
 
   static Future<void> _registerPushTokenSafely(String token) async {
+    final customerId = CustomerAuthSession.instance.customerId?.trim();
+    if (!CustomerAuthSession.instance.isAuthenticated ||
+        customerId == null ||
+        customerId.isEmpty) {
+      debugPrint(
+        'SHIELD push token registration skipped until customer auth is active.',
+      );
+      return;
+    }
+
     try {
       await ApiService.registerPushToken(
         token: token,
         platform: ApiService.resolvePushPlatform(),
+        customerId: customerId,
       );
     } on DioException catch (error) {
       debugPrint(
@@ -64,6 +74,27 @@ class FirebaseBootstrapService {
       );
     } catch (error) {
       debugPrint('SHIELD push token registration failed: $error');
+    }
+  }
+
+  static Future<void> registerCurrentPushToken() async {
+    if (!AppConfig.enableNotifications) {
+      return;
+    }
+
+    try {
+      final messaging = FirebaseMessaging.instance;
+      final token = kIsWeb
+          ? await messaging.getToken(vapidKey: AppConfig.firebaseWebVapidKey)
+          : await messaging.getToken();
+
+      debugPrint('SHIELD device push token: $token');
+
+      if (token != null && token.trim().isNotEmpty) {
+        await _registerPushTokenSafely(token);
+      }
+    } catch (error) {
+      debugPrint('SHIELD current push token lookup failed: $error');
     }
   }
 
@@ -87,17 +118,7 @@ class FirebaseBootstrapService {
           'SHIELD web push token skipped because FIREBASE_WEB_VAPID_KEY is empty.',
         );
       } else {
-        final token = kIsWeb
-            ? await messaging.getToken(
-                vapidKey: AppConfig.firebaseWebVapidKey,
-              )
-            : await messaging.getToken();
-
-        debugPrint('SHIELD device push token: $token');
-
-        if (token != null && token.trim().isNotEmpty) {
-          await _registerPushTokenSafely(token);
-        }
+        await registerCurrentPushToken();
       }
 
       messaging.onTokenRefresh.listen((token) async {

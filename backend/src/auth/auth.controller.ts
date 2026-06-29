@@ -27,6 +27,19 @@ export class AuthController {
   }
 
   @Public()
+  @Post('customer/register')
+  async customerRegister(@Body() body: any) {
+    return {
+      success: true,
+      message: 'Customer registration successful.',
+      data: await this.authService.registerCustomer(
+        body.firebase_id_token?.toString().trim() || '',
+        body,
+      ),
+    };
+  }
+
+  @Public()
   @Post('internal/login')
   async internalLogin(@Body() body: any) {
     return {

@@ -4634,3 +4634,90 @@ pm run build (backend)
 
 ---
 2026-06-29 16:21:00 IST
+
+## 126. Prisma Query Log Noise And SSL Warning Guardrail
+**High-level description**: Reduced backend Prisma noise by limiting verbose SQL logging to development and normalized the database connection string to preserve the current stricter SSL behavior without the pg compatibility warning.
+- Updated backend/src/prisma/prisma.service.ts so Prisma only emits query and info logs in development, while non-development environments keep warn and error only.
+- Added a small normalizeDatabaseUrl(...) helper that appends uselibpqcompat=true when the configured connection string uses legacy sslmode values (prefer, require, or verify-ca) without an explicit compatibility flag.
+- Kept the fix code-local so the active .env secret value does not need to be rewritten just to silence the current pg-connection-string warning.
+
+### Files Modified/Created
+**Backend Files (Modified)**:
+- backend/src/prisma/prisma.service.ts
+
+**Frontend Files**:
+- None
+
+### Verification
+- npm run build (backend)
+
+---
+2026-06-29 16:33:00 IST
+## 127. Customer Membership Stat Card Overflow Fix
+**High-level description**: Fixed a narrow-height membership card overflow in the extracted customer membership portal by making the stat card text stack shrink safely inside compact card rows.
+- Updated `_MembershipStatCard` in `frontend/lib/features/customer/membership/presentation/screens/membership_screen.dart` to align content from the top instead of vertically centering it inside a short row.
+- Added line limits and ellipsis behavior for the label, amount, and note text so smaller customer portal viewports no longer overflow inside the membership statistics grid.
+- Kept the fix scoped to the customer membership presentation layer only; no routing, data, or backend behavior changed.
+
+### Files Modified/Created
+**Frontend Files (Modified)**:
+- frontend/lib/features/customer/membership/presentation/screens/membership_screen.dart
+
+**Backend Files**:
+- None
+
+### Verification
+- `flutter analyze lib/features/customer/membership/presentation/screens/membership_screen.dart lib/features/portal/presentation/screens/portal_shell.dart`
+
+---
+2026-06-29 16:41:00 IST
+## 128. Customer Sign-In Entry Flow And Route Guard
+**High-level description**: Added a dedicated customer sign-in entry window, persisted customer session gating, and router redirects so unauthenticated users are sent to sign-in before reaching the customer portal.
+- Created a new customer sign-in screen at `frontend/lib/features/auth/presentation/screens/customer_sign_in_screen.dart` with a polished customer-first layout, mobile/member input fields, and a clear continue action.
+- Added `CustomerAuthSession` in `frontend/lib/shared/services/customer_auth_session.dart` to persist and restore customer session state using `flutter_secure_storage` and to notify the router when auth state changes.
+- Updated `app_router.dart` so `/sign-in` is the dedicated auth entry path and all unauthenticated portal visits redirect there with `next` support.
+- Updated `main.dart` to hydrate the customer auth session before app startup so route protection is active from the first frame.
+- Added bearer-token plumbing helpers in `api_service.dart` for future authenticated API calls and wired the existing customer settings action in `portal_shell.dart` to sign out and return to the sign-in screen.
+- Kept the current sign-in implementation scoped to the present local customer workspace session flow; live Firebase OTP can be layered onto the same session contract later without reworking the router.
+
+### Files Modified/Created
+**Frontend Files (Created)**:
+- frontend/lib/features/auth/presentation/screens/customer_sign_in_screen.dart
+- frontend/lib/shared/services/customer_auth_session.dart
+
+**Frontend Files (Modified)**:
+- frontend/lib/shared/services/api_service.dart
+- frontend/lib/app/routes/app_router.dart
+- frontend/lib/main.dart
+- frontend/lib/features/portal/presentation/screens/portal_shell.dart
+
+**Backend Files**:
+- None
+
+### Verification
+- `flutter analyze lib/shared/services/customer_auth_session.dart lib/features/auth/presentation/screens/customer_sign_in_screen.dart lib/shared/services/api_service.dart lib/app/routes/app_router.dart lib/main.dart lib/features/portal/presentation/screens/portal_shell.dart`
+
+---
+2026-06-29 17:00:00 IST## 129. Customer Auth Bootstrap Ordering And Authenticated Push Registration
+**High-level description**: Tightened the new customer authentication foundation so Firebase messaging waits for restored customer session state and device push tokens are only registered after a real customer login exists.
+- Reordered frontend startup in rontend/lib/main.dart so Hive initializes first, customer session restore runs second, and Firebase bootstrap runs after auth state is known.
+- Updated irebase_bootstrap_service.dart to skip device-token registration until CustomerAuthSession has an authenticated customer id, which prevents anonymous startup from attaching push tokens to the legacy fallback customer path.
+- Added egisterCurrentPushToken() so the app can safely re-register the current FCM token immediately after login or registration instead of waiting for a future token refresh event.
+- Wired the customer OTP login and first-time registration success paths to trigger the authenticated push-token registration step right after completeLogin(...).
+- Kept the change scoped to the customer production auth path only; no internal portal behavior or broader demo data paths were touched.
+
+### Files Modified/Created
+**Frontend Files (Modified)**:
+- frontend/lib/main.dart
+- frontend/lib/shared/services/firebase_bootstrap_service.dart
+- frontend/lib/features/customer/auth/data/customer_auth_repository.dart
+
+**Backend Files**:
+- None
+
+### Verification
+- dart format frontend/lib/main.dart frontend/lib/shared/services/firebase_bootstrap_service.dart frontend/lib/features/customer/auth/data/customer_auth_repository.dart
+- lutter analyze frontend/lib/main.dart frontend/lib/shared/services/firebase_bootstrap_service.dart frontend/lib/features/customer/auth/data/customer_auth_repository.dart frontend/lib/shared/services/customer_auth_session.dart frontend/lib/app/routes/app_router.dart frontend/lib/shared/services/api_service.dart frontend/lib/features/portal/presentation/screens/portal_shell.dart
+
+---
+2026-06-29 16:36:11 IST
