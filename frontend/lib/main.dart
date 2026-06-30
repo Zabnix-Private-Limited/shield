@@ -10,12 +10,14 @@ import 'shared/config/app_config.dart';
 import 'shared/services/customer_auth_session.dart';
 import 'shared/services/firebase_auth_web_registration.dart';
 import 'shared/services/firebase_bootstrap_service.dart';
+import 'shared/services/internal_auth_session.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await ensureFirebaseAuthWebRegistration();
   await Hive.initFlutter();
   await CustomerAuthSession.instance.initialize();
+  await InternalAuthSession.instance.initialize();
   await FirebaseBootstrapService.initialize();
 
   if (AppConfig.enableSentry &&

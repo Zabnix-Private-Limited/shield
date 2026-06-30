@@ -8,6 +8,14 @@ import '../../../customer/membership/presentation/screens/membership_screen.dart
 import '../../../customer/prescriptions/presentation/screens/customer_prescriptions_screen.dart';
 import '../../../customer/shared/domain/customer_access_state.dart';
 import '../../../customer/wallet/presentation/screens/wallet_screen.dart';
+import '../../../provider/appointments/presentation/screens/provider_appointments_screen.dart';
+import '../../../provider/customers/presentation/screens/provider_customers_screen.dart';
+import '../../../provider/dashboard/presentation/screens/provider_dashboard_screen.dart';
+import '../../../provider/documents/presentation/screens/provider_documents_screen.dart';
+import '../../../provider/prescriptions/presentation/screens/provider_prescriptions_screen.dart';
+import '../../../provider/profile/presentation/screens/provider_profile_screen.dart';
+import '../../../provider/queue/presentation/screens/provider_queue_screen.dart';
+import '../../../provider/settings/presentation/screens/provider_settings_screen.dart';
 import '../../../customer/shared/widgets/customer_scaffold.dart';
 import '../../../customer/shared/widgets/error_card.dart';
 import '../../../customer/shared/widgets/loading_card.dart';
@@ -71,7 +79,8 @@ class _PortalShellState extends State<PortalShell> {
 
     try {
       final sectionKey = widget.sectionKey ?? 'dashboard';
-      final data = widget.role == SHIELDRole.customer
+      final data = widget.role == SHIELDRole.customer ||
+              widget.role == SHIELDRole.provider
           ? portalDataForRole(widget.role).sectionFor(sectionKey)
           : await ApiService.getRoleSectionData(widget.role, sectionKey);
       if (!mounted) return;
@@ -313,6 +322,8 @@ IconData _portalSectionIcon(String key) {
     case 'customers':
     case 'patients':
       return Icons.groups_outlined;
+    case 'queue':
+      return Icons.inbox_outlined;
     case 'verification':
       return Icons.verified_user_outlined;
     case 'bills':
@@ -398,6 +409,7 @@ class _RoleContent extends StatelessWidget {
         portal.role == SHIELDRole.customer && section.key == 'wallet';
     final isCustomerSettings =
         portal.role == SHIELDRole.customer && section.key == 'settings';
+    final isProviderRole = portal.role == SHIELDRole.provider;
     final isCardUtilization =
         (portal.role == SHIELDRole.pharmacyStaff && section.key == 'qr-scan') ||
         (portal.role == SHIELDRole.clinicStaff && section.key == 'patients') ||
@@ -446,6 +458,22 @@ class _RoleContent extends StatelessWidget {
       content = const CustomerWalletScreen();
     } else if (isCustomerSettings) {
       content = const _CustomerSettingsView();
+    } else if (isProviderRole && section.key == 'dashboard') {
+      content = const ProviderDashboardScreen();
+    } else if (isProviderRole && section.key == 'queue') {
+      content = const ProviderQueueScreen();
+    } else if (isProviderRole && section.key == 'customers') {
+      content = const ProviderCustomersScreen();
+    } else if (isProviderRole && section.key == 'appointments') {
+      content = const ProviderAppointmentsScreen();
+    } else if (isProviderRole && section.key == 'documents') {
+      content = const ProviderDocumentsScreen();
+    } else if (isProviderRole && section.key == 'prescriptions') {
+      content = const ProviderPrescriptionsScreen();
+    } else if (isProviderRole && section.key == 'profile') {
+      content = const ProviderProfileScreen();
+    } else if (isProviderRole && section.key == 'settings') {
+      content = const ProviderSettingsScreen();
     } else if (isCardUtilization) {
       content = _EnterpriseWorkspaceView(portal: portal, section: section);
     } else if (isAdminBusinesses) {
@@ -1256,7 +1284,7 @@ class _RoleSwitcher extends StatelessWidget {
       child: DropdownButtonHideUnderline(
         child: DropdownButton<SHIELDRole>(
           value: portal.role,
-          items: SHIELDRole.values.map((role) {
+          items: SHIELDRole.switchableRoles.map((role) {
             return DropdownMenuItem(
               value: role,
               child: Text(role.label, style: AppTypography.small),

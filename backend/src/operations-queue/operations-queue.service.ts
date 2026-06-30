@@ -63,6 +63,8 @@ export class OperationsQueueService {
       openAppointments,
       recentPurchases,
       purchaseAggregate,
+      appointmentCustomerRows,
+      purchaseCustomerRows,
       allBusinesses,
       allDepartments,
       providerTypes,
@@ -121,6 +123,24 @@ export class OperationsQueueService {
           payableAmount: true,
         },
       }),
+      this.prisma.appointment.findMany({
+        where: {
+          ...providerWhere,
+          customerId: { not: null },
+        },
+        distinct: ['customerId'],
+        select: { customerId: true },
+        take: 30,
+      }),
+      this.prisma.purchase.findMany({
+        where: {
+          ...purchaseWhere,
+          customerId: { not: null },
+        },
+        distinct: ['customerId'],
+        select: { customerId: true },
+        take: 30,
+      }),
       this.prisma.business.findMany({
         orderBy: [{ name: 'asc' }],
         select: { id: true, name: true, code: true, status: true, businessType: true },
@@ -145,6 +165,33 @@ export class OperationsQueueService {
       distinct: ['customerId'],
       select: { customerId: true },
     });
+    const customerIds = [
+      ...appointmentCustomerRows,
+      ...purchaseCustomerRows,
+    ]
+      .map((row) => row.customerId)
+      .filter((value): value is bigint => value !== null);
+    const uniqueCustomerIds = [...new Set(customerIds.map((id) => id.toString()))].map(
+      (id) => BigInt(id),
+    );
+    const providerCustomers =
+      uniqueCustomerIds.length == 0
+        ? []
+        : await this.prisma.customer.findMany({
+            where: {
+              id: { in: uniqueCustomerIds },
+            },
+            include: {
+              membership: {
+                include: {
+                  membershipType: true,
+                },
+              },
+              shieldCard: true,
+            },
+            orderBy: [{ firstName: 'asc' }, { id: 'asc' }],
+            take: 30,
+          });
 
     return {
       generatedAt: now.toISOString(),
@@ -174,6 +221,24 @@ export class OperationsQueueService {
           .filter((value): value is string => Boolean(value)),
       },
       providers: providerScope.providers,
+      customers: providerCustomers.map((customer) => ({
+        id: customer.id.toString(),
+        uuid: customer.uuid,
+        customerCode: customer.customerCode,
+        firstName: customer.firstName,
+        lastName: customer.lastName,
+        fullName:
+          `${customer.firstName ?? ''} ${customer.lastName ?? ''}`.trim() ||
+          customer.mobile,
+        mobile: customer.mobile,
+        status: customer.status,
+        city: customer.city,
+        district: customer.district,
+        membershipNumber: customer.membership?.membershipNumber ?? null,
+        membershipStatus: customer.membership?.status ?? null,
+        membershipPlan: customer.membership?.membershipType?.name ?? null,
+        shieldCardNumber: customer.shieldCard?.cardNumber ?? null,
+      })),
       queues: {
         appointments: openAppointments.map((appointment) =>
           this.toAppointmentQueueItem(appointment),

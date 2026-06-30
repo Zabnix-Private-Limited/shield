@@ -182,6 +182,25 @@ PortalRoleData portalDataForRole(SHIELDRole role) {
           _PortalSectionFactory.customerNotifications,
         ],
       );
+    case SHIELDRole.provider:
+      return PortalRoleData(
+        role: role,
+        operatorName: 'Provider Workspace',
+        headline: 'Operations queue, customer workspace, and care delivery',
+        regionLabel: 'Unified provider portal',
+        icon: Icons.local_hospital_outlined,
+        accentColor: AppColors.shieldGreen,
+        sections: [
+          _PortalSectionFactory.providerDashboard,
+          _PortalSectionFactory.providerQueue,
+          _PortalSectionFactory.providerCustomers,
+          _PortalSectionFactory.providerAppointments,
+          _PortalSectionFactory.providerDocuments,
+          _PortalSectionFactory.providerPrescriptions,
+          _PortalSectionFactory.providerProfile,
+          _PortalSectionFactory.providerSettings,
+        ],
+      );
     case SHIELDRole.pharmacyStaff:
       return PortalRoleData(
         role: role,
@@ -369,5 +388,46 @@ class _PortalSectionFactory {
   static final PortalSectionData customerNotifications = _section(
     'notifications',
     summary: 'Live alerts, approvals, and engagement messages.',
+  );
+
+  static final PortalSectionData providerDashboard = _section(
+    'dashboard',
+    summary: 'Live provider queue, daily volume, and customer access summary.',
+    actions: const ['Open queue', 'Open customer workspace'],
+  );
+
+  static final PortalSectionData providerQueue = _section(
+    'queue',
+    summary: 'Incoming operational work across appointments and billing.',
+  );
+
+  static final PortalSectionData providerCustomers = _section(
+    'customers',
+    summary: 'Customer workspace with profile, membership, wallet, and history.',
+  );
+
+  static final PortalSectionData providerAppointments = _section(
+    'appointments',
+    summary: 'Assigned appointment activity and customer visit timeline.',
+  );
+
+  static final PortalSectionData providerDocuments = _section(
+    'documents',
+    summary: 'Customer-linked records and uploaded provider documents.',
+  );
+
+  static final PortalSectionData providerPrescriptions = _section(
+    'prescriptions',
+    summary: 'Prescription-linked customer records and care continuity.',
+  );
+
+  static final PortalSectionData providerProfile = _section(
+    'profile',
+    summary: 'Provisioned provider identity, branch scope, and role context.',
+  );
+
+  static final PortalSectionData providerSettings = _section(
+    'settings',
+    summary: 'Session visibility, device history, and sign-out controls.',
   );
 }

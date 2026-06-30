@@ -5,9 +5,11 @@ import '../../features/customer/auth/presentation/screens/customer_login_screen.
 import '../../features/customer/auth/presentation/screens/customer_otp_screen.dart';
 import '../../features/customer/auth/presentation/screens/customer_register_screen.dart';
 import '../../features/customer/auth/presentation/screens/customer_splash_screen.dart';
+import '../../features/provider/auth/presentation/screens/internal_login_screen.dart';
 import '../../features/portal/presentation/screens/portal_shell.dart';
 import '../../shared/models/shield_role.dart';
 import '../../shared/services/customer_auth_session.dart';
+import '../../shared/services/internal_auth_session.dart';
 
 final GlobalKey<NavigatorState> rootNavigatorKey = GlobalKey<NavigatorState>();
 
@@ -15,25 +17,38 @@ final GoRouter router = GoRouter(
   navigatorKey: rootNavigatorKey,
   initialLocation: '/customer/splash',
   observers: [SentryNavigatorObserver()],
-  refreshListenable: CustomerAuthSession.instance,
+  refreshListenable: Listenable.merge([
+    CustomerAuthSession.instance,
+    InternalAuthSession.instance,
+  ]),
   redirect: (context, state) {
-    final isAuthenticated = CustomerAuthSession.instance.isAuthenticated;
+    final isCustomerAuthenticated = CustomerAuthSession.instance.isAuthenticated;
+    final isInternalAuthenticated = InternalAuthSession.instance.isAuthenticated;
+    final isAuthenticated =
+        isCustomerAuthenticated || isInternalAuthenticated;
     final location = state.matchedLocation;
+    final isCustomerPortal =
+        location.startsWith('/customer/') ||
+        location.startsWith('/portal/customer') ||
+        location == '/';
     const publicLocations = {
       '/',
       '/customer/splash',
       '/customer/login',
       '/customer/otp',
       '/customer/register',
+      '/internal/login',
     };
     final isPublicLocation = publicLocations.contains(location);
 
     if (!isAuthenticated && !isPublicLocation) {
       final next = Uri.encodeComponent(state.uri.toString());
-      return '/customer/login?next=$next';
+      return isCustomerPortal
+          ? '/customer/login?next=$next'
+          : '/internal/login?next=$next';
     }
 
-    if (isAuthenticated &&
+    if (isCustomerAuthenticated &&
         (location == '/customer/login' ||
             location == '/customer/otp' ||
             location == '/customer/register')) {
@@ -42,6 +57,30 @@ final GoRouter router = GoRouter(
         return next;
       }
       return '/portal/customer/dashboard';
+    }
+
+    if (isInternalAuthenticated && location == '/internal/login') {
+      final next = state.uri.queryParameters['next'];
+      if (next != null && next.startsWith('/')) {
+        return next;
+      }
+      return '/portal/${InternalAuthSession.instance.homeRole.routeKey}/dashboard';
+    }
+
+    if (isCustomerAuthenticated && location == '/internal/login') {
+      return '/portal/customer/dashboard';
+    }
+
+    if (isCustomerAuthenticated &&
+        location.startsWith('/portal/') &&
+        !location.startsWith('/portal/customer')) {
+      return '/portal/customer/dashboard';
+    }
+
+    if (isInternalAuthenticated &&
+        (location.startsWith('/customer/') ||
+            location.startsWith('/portal/customer'))) {
+      return '/portal/${InternalAuthSession.instance.homeRole.routeKey}/dashboard';
     }
 
     return null;
@@ -67,6 +106,11 @@ final GoRouter router = GoRouter(
       path: '/customer/register',
       name: 'customer-register',
       builder: (context, state) => const CustomerRegisterScreen(),
+    ),
+    GoRoute(
+      path: '/internal/login',
+      name: 'internal-login',
+      builder: (context, state) => const InternalLoginScreen(),
     ),
     GoRoute(
       path: '/portal/:role',

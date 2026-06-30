@@ -213,6 +213,19 @@ class ApiService {
       ..sort((a, b) => a.appointmentDate.compareTo(b.appointmentDate));
   }
 
+  static Future<List<Appointment>> getAppointmentsByCustomerId(
+    String customerId,
+  ) async {
+    final response = await _dio.get(
+      '/appointments',
+      queryParameters: {'customer_id': customerId},
+    );
+    return _readEnvelopeList(response)
+        .map((item) => Appointment.fromJson(item as Map<String, dynamic>))
+        .toList()
+      ..sort((a, b) => a.appointmentDate.compareTo(b.appointmentDate));
+  }
+
   static Future<List<Document>> getDocuments(SHIELDRole role) async {
     if (role != SHIELDRole.customer) {
       throw UnsupportedError(
@@ -363,6 +376,29 @@ class ApiService {
     return _readEnvelope(response);
   }
 
+  static Future<List<Map<String, dynamic>>> getAuthenticatedSessions() async {
+    final response = await _dio.get('/auth/sessions');
+    return _readEnvelopeList(response)
+        .map((item) => Map<String, dynamic>.from(item as Map))
+        .toList();
+  }
+
+  static Future<List<Map<String, dynamic>>> getLoginHistory({
+    int limit = 20,
+  }) async {
+    final response = await _dio.get(
+      '/auth/login-history',
+      queryParameters: {'limit': limit},
+    );
+    return _readEnvelopeList(response)
+        .map((item) => Map<String, dynamic>.from(item as Map))
+        .toList();
+  }
+
+  static Future<void> revokeSession(String sessionId) async {
+    await _dio.post('/auth/sessions/$sessionId/revoke');
+  }
+
   static Future<Map<String, dynamic>> customerLogin({
     required String firebaseIdToken,
     String? deviceId,
@@ -400,6 +436,27 @@ class ApiService {
         'name': name.trim(),
         'dob': dob.toIso8601String(),
         'gender': gender,
+        if (deviceId != null && deviceId.trim().isNotEmpty)
+          'device_id': deviceId.trim(),
+        if (deviceLabel != null && deviceLabel.trim().isNotEmpty)
+          'device_label': deviceLabel.trim(),
+        if (platform != null && platform.trim().isNotEmpty)
+          'platform': platform.trim(),
+      },
+    );
+    return _readEnvelope(response);
+  }
+
+  static Future<Map<String, dynamic>> internalLogin({
+    required String firebaseIdToken,
+    String? deviceId,
+    String? deviceLabel,
+    String? platform,
+  }) async {
+    final response = await _dio.post(
+      '/auth/internal/login',
+      data: {
+        'firebase_id_token': firebaseIdToken,
         if (deviceId != null && deviceId.trim().isNotEmpty)
           'device_id': deviceId.trim(),
         if (deviceLabel != null && deviceLabel.trim().isNotEmpty)
@@ -720,7 +777,7 @@ class ApiService {
     int? limit,
   }) async {
     final response = await _dio.get(
-      '/service-providers/workspace',
+      '/operations-queue/provider',
       queryParameters: {
         if (providerId != null) 'provider_id': providerId,
         if (providerType != null) 'provider_type': providerType,

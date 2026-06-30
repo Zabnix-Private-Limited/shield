@@ -18,7 +18,12 @@ Grounded in:
 
 | Route | Type | Target |
 | --- | --- | --- |
-| `/` | Redirect | `/portal/customer/dashboard` |
+| `/` | Redirect | `/customer/splash` |
+| `/customer/splash` | Live route | Customer splash/session restore |
+| `/customer/login` | Live route | Customer OTP login |
+| `/customer/otp` | Live route | Customer OTP verification |
+| `/customer/register` | Live route | Customer registration |
+| `/internal/login` | Live route | Internal Google sign-in |
 | `/portal/:role` | Redirect | `/portal/:role/dashboard` |
 | `/portal/:role/:section` | Live route | Portal shell |
 | `/documents` | Redirect | `/portal/customer/documents` |

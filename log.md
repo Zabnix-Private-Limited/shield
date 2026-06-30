@@ -1,6 +1,6 @@
 Dev Rahul
 
-# SHIELD Project Log
+### SHIELD Project Log
 ## Log File Rules (For All Future Entries)
 These rules **must** be followed for all log.md updates:
 1. **Initialize/Locate**: If log.md exists in root, read it first. If not, create it.
@@ -2304,7 +2304,8 @@ otifications inside rontend/lib/features/portal/presentation/screens/portal_she
 **High-level description**: Wired SHIELD to initialize Firebase from Flutter, enabled Firebase Messaging bootstrap for Android and web, and removed the duplicate manual web Firebase bootstrap so app startup stays single-sourced and ready for push token registration.
 - Frontend changes:
   - rontend/lib/main.dart
-  - switched app startup to async bootstrap with WidgetsFlutterBinding.ensureInitialized() and Firebase initialization before unApp
+  - switched app startup to async bootstrap with WidgetsFlutterBinding.ensureInitialized() and Firebase initialization before 
+unApp
   - rontend/lib/shared/services/firebase_bootstrap_service.dart
   - added centralized Firebase bootstrap for Analytics and Messaging
   - added background message handler, permission request flow, foreground/opened-app listeners, and token fetch with safe web VAPID-key guard
@@ -2868,7 +2869,8 @@ otifications inside rontend/lib/features/portal/presentation/screens/portal_she
   - replaced the previous customer support placeholders with real actions for Contact us and Feedback inside the active portal-style customer settings flow, preserving the mobile-only customer experience rule
 - Important architectural note:
   - SHIELD currently does **not** have a real customer OTP/login backend module in this repo, so this pass did not invent fake OTP endpoints just to attach Turnstile
-  - instead, the Turnstile verifier is now production-ready in Nest and can be plugged directly into future equest OTP / send OTP customer web endpoints once that auth flow is implemented for real
+  - instead, the Turnstile verifier is now production-ready in Nest and can be plugged directly into future 
+equest OTP / send OTP customer web endpoints once that auth flow is implemented for real
 - Why this approach was chosen:
   - you asked for complete implementation when env/config values are provided, and the honest way to complete Turnstile in the current repo was to wire it into existing public customer web forms plus make the backend verifier reusable for later auth work
   - keeping Turnstile web-only avoids degrading Android/iOS UX and matches the stated requirement that mobile and internal authenticated portals do not need CAPTCHA-style checks
@@ -2988,7 +2990,8 @@ pm run build
   - backend/.env
   - applied the provided Aiven Valkey service URI to REDIS_URL
   - backend/.env.example
-  - updated the Redis example value to show the expected ediss://... secure Aiven/Valkey shape instead of a generic local Redis URI, while keeping it template-safe
+  - updated the Redis example value to show the expected 
+ediss://... secure Aiven/Valkey shape instead of a generic local Redis URI, while keeping it template-safe
 - Backend dependency and runtime changes:
   - backend/package.json and backend/package-lock.json
   - added ioredis as the runtime client library for Valkey/Redis connectivity in NestJS
@@ -3057,13 +3060,17 @@ pm run build
   - applied the same values locally so the current backend runtime uses TLS, the shield: namespace prefix, and a 300-second default TTL
   - backend/src/config/app-env.ts
   - added typed env reads for:
-    - edisTls
-    - edisPrefix
-    - edisDefaultTtl
+    - 
+edisTls
+    - 
+edisPrefix
+    - 
+edisDefaultTtl
 - Backend Redis runtime changes:
   - backend/src/redis/redis.service.ts
   - updated the global Redis service so:
-    - secure TLS can be forced through REDIS_TLS in addition to the ediss:// URI scheme
+    - secure TLS can be forced through REDIS_TLS in addition to the 
+ediss:// URI scheme
     - all keys are automatically namespaced under the configured prefix, currently shield:
     - set() uses the configured default TTL when a feature does not provide one explicitly
     - ping()/health responses now expose Redis prefix, TLS status, and default TTL metadata for diagnostics
@@ -4702,7 +4709,8 @@ pm run build (backend)
 **High-level description**: Tightened the new customer authentication foundation so Firebase messaging waits for restored customer session state and device push tokens are only registered after a real customer login exists.
 - Reordered frontend startup in rontend/lib/main.dart so Hive initializes first, customer session restore runs second, and Firebase bootstrap runs after auth state is known.
 - Updated irebase_bootstrap_service.dart to skip device-token registration until CustomerAuthSession has an authenticated customer id, which prevents anonymous startup from attaching push tokens to the legacy fallback customer path.
-- Added egisterCurrentPushToken() so the app can safely re-register the current FCM token immediately after login or registration instead of waiting for a future token refresh event.
+- Added 
+egisterCurrentPushToken() so the app can safely re-register the current FCM token immediately after login or registration instead of waiting for a future token refresh event.
 - Wired the customer OTP login and first-time registration success paths to trigger the authenticated push-token registration step right after completeLogin(...).
 - Kept the change scoped to the customer production auth path only; no internal portal behavior or broader demo data paths were touched.
 
@@ -5024,7 +5032,8 @@ pm run build (backend)
 
 ## 143. Hardened Customer Auth Session Errors Around Live Redis Outage
 **High-level description**: Traced the deployed customer OTP 500 to the backend auth session store and tightened both backend and customer UI handling so a Redis outage no longer surfaces as an opaque internal-server-error path.
-- Verified the live backend health endpoint at https://shield-backend.vercel.app/health and confirmed the auth dependency state was edis.configured: true, healthy: false, with message Connection is closed., which explains the customer OTP login failure after Firebase verification succeeds.
+- Verified the live backend health endpoint at https://shield-backend.vercel.app/health and confirmed the auth dependency state was 
+edis.configured: true, healthy: false, with message Connection is closed., which explains the customer OTP login failure after Firebase verification succeeds.
 - Updated ackend/src/auth/auth.service.ts so refresh-session reads and session-token writes now log Redis failures explicitly and return a ServiceUnavailableException with a targeted auth-session-store message instead of a generic uncaught 500.
 - Kept the production auth contract intact: SHIELD still requires Redis-backed refresh-session persistence rather than silently degrading into a stateless or partial-login mode.
 - Cleaned the customer OTP and registration screens so backend or repository failures no longer render the raw Bad state: prefix in the customer-facing UI; they now show the underlying message directly.
@@ -5451,3 +5460,75 @@ est build, ackend/vercel.json, ackend/src/auth/auth.service.ts, and uth_devic
 - flutter analyze
 - npm run build
 - Verified the 403 root cause in code: customer portal shell preload was hitting `/dashboard/role/customer/wallet`, which requires `analytics.view`, while the `CUSTOMER` RBAC role only grants `wallet.view` for wallet access.
+
+## 159. Unified Provider Portal Foundation: Internal Auth, Provider Workspace, and Live Queue-Driven Customer Context
+**High-level description**: Shifted SHIELD's next major implementation slice from endless customer-portal polish to a unified Provider Portal foundation, keeping one provider experience across pharmacy, lab, doctor, dental, homecare, cosmetic, and dietitian roles while preserving the existing customer mobile-app UX contract.
+- Added a distinct internal-user auth path on the frontend with Google/Firebase sign-in exchange, long-lived internal session restore, explicit active-session-kind tracking, and routing separation between customer and internal/provider experiences.
+- Introduced `ActiveAuthSession` plus `InternalAuthSession` so the app can restore the correct authenticated experience without mixing customer and internal portal state during startup, refresh, or logout.
+- Added a dedicated internal login screen and repository flow that exchanges the Firebase identity token with `POST /auth/internal/login`, loads `/auth/me`, and persists branch, role, and profile context for provider/staff navigation.
+- Extended the router so `/internal/login` is the canonical entry point for internal users, while customer routes continue through `/customer/*`; redirect logic now pushes authenticated provider/admin/staff users into their own portal home instead of incorrectly flowing through the customer portal.
+- Standardized frontend role handling around one unified `provider` route role so backend provider types can share a common portal shell while still exposing type-specific capability through authenticated backend data rather than separate duplicated portals.
+- Added provider portal metadata and live provider section routing for dashboard, queue, customers, appointments, documents, prescriptions, profile, and settings.
+- Added provider shared repository/controller infrastructure that loads the live provider workspace, `/auth/me`, selected-customer profile data, wallet bundle, membership bundle, documents, appointments, session history, and revocation actions using real backend APIs only.
+- Added the first provider screens under `features/provider/...` so the unified provider portal now has real-data-backed screens for:
+  - dashboard summary and queue preview
+  - incoming operations queue
+  - customer workspace selection and summary
+  - customer appointments
+  - customer documents
+  - customer prescriptions (filtered from real document records)
+  - provider profile
+  - provider session/settings management
+- Rewired the backend provider workspace path to use the operations queue as the central provider workflow source, and made provider scoping derive from the authenticated principal's branch and backend role code instead of hardcoded ids or separate fake provider dashboards.
+- Expanded the provider workspace response to include a live customer list derived from provider-relevant appointments and purchases, so the provider customer workspace can open real customer context without inventing local sample rows.
+- Updated the portal documentation maps to reflect the real current route contract: root via `/customer/splash`, explicit customer auth routes, explicit `/internal/login`, and one unified provider portal instead of separate provider-type portals.
+- Why this approach was chosen:
+  - SHIELD's next architectural bottleneck is provider workflow, not another round of customer-only UI polishing.
+  - one provider portal with role/type-driven capability avoids repeating the earlier multi-portal demo fragmentation and keeps shared workflow infrastructure centered on the operations queue.
+  - internal auth/session separation had to be established before provider features could be built safely without contaminating customer session restore or routing.
+  - the provider customer workspace intentionally reuses live customer APIs first, which gives providers real operational visibility now while leaving room to specialize richer provider-specific modules without reintroducing placeholder data.
+
+### Files Modified/Created
+**Frontend Files (New)**:
+- frontend/lib/shared/services/active_auth_session.dart
+- frontend/lib/shared/services/internal_auth_session.dart
+- frontend/lib/features/provider/auth/data/internal_auth_repository.dart
+- frontend/lib/features/provider/auth/presentation/screens/internal_login_screen.dart
+- frontend/lib/features/provider/shared/data/provider_portal_repository.dart
+- frontend/lib/features/provider/shared/presentation/controllers/provider_portal_controller.dart
+- frontend/lib/features/provider/shared/presentation/controllers/provider_portal_provider.dart
+- frontend/lib/features/provider/shared/presentation/widgets/provider_workspace_scaffold.dart
+- frontend/lib/features/provider/dashboard/presentation/screens/provider_dashboard_screen.dart
+- frontend/lib/features/provider/queue/presentation/screens/provider_queue_screen.dart
+- frontend/lib/features/provider/customers/presentation/screens/provider_customers_screen.dart
+- frontend/lib/features/provider/appointments/presentation/screens/provider_appointments_screen.dart
+- frontend/lib/features/provider/documents/presentation/screens/provider_documents_screen.dart
+- frontend/lib/features/provider/prescriptions/presentation/screens/provider_prescriptions_screen.dart
+- frontend/lib/features/provider/profile/presentation/screens/provider_profile_screen.dart
+- frontend/lib/features/provider/settings/presentation/screens/provider_settings_screen.dart
+
+**Frontend Files (Modified)**:
+- frontend/lib/main.dart
+- frontend/lib/app/routes/app_router.dart
+- frontend/lib/features/portal/presentation/portal_role_data.dart
+- frontend/lib/features/portal/presentation/screens/portal_shell.dart
+- frontend/lib/shared/models/shield_role.dart
+- frontend/lib/shared/services/api_service.dart
+- frontend/lib/shared/services/customer_auth_session.dart
+
+**Backend Files (Modified)**:
+- backend/src/operations-queue/operations-queue.controller.ts
+- backend/src/operations-queue/operations-queue.service.ts
+
+**Documentation Files (Modified)**:
+- docs/SHIELD Portal Navigation Map.md
+- docs/SHIELD Complete Route Map.md
+
+### Verification
+- flutter analyze
+- npm run build
+- Verified the provider frontend compiles against the new internal session, unified provider routing, and provider workspace/controller stack.
+- Verified the backend compiles after provider scope resolution moved to authenticated principal-driven operations-queue logic.
+
+---
+2026-06-30 14:34:40 IST

@@ -16,13 +16,18 @@ Grounded in:
 - Canonical customer URLs stay under `/portal/customer/...`.
 - The live frontend route contract is role-and-section based: `/portal/:role/:section`.
 - Old standalone customer paths remain redirects only; no new standalone customer screens should be introduced.
-- Frontend portal roles are a presentation shell taxonomy, not yet the final backend RBAC taxonomy.
+- Frontend portal roles are a presentation shell taxonomy; the unified `provider` route intentionally groups multiple backend provider RBAC roles into one operational shell.
 
 ## Canonical Frontend Entry
 
 | Route | Behavior | Notes |
 | --- | --- | --- |
-| `/` | Redirects to `/portal/customer/dashboard` | Current app entry |
+| `/` | Redirects to `/customer/splash` | Current app entry and auth bootstrap |
+| `/customer/splash` | Live route | Customer session restore and auth branching |
+| `/customer/login` | Live route | Customer OTP start |
+| `/customer/otp` | Live route | Customer OTP verification |
+| `/customer/register` | Live route | Customer profile completion |
+| `/internal/login` | Live route | Internal Google sign-in for provider and ops users |
 | `/portal/:role` | Redirects to `/portal/:role/dashboard` | Role shell bootstrap |
 | `/portal/:role/:section` | Live portal screen route | Main route contract |
 
@@ -47,9 +52,7 @@ Grounded in:
 | Frontend Role | Route Key | Current Purpose | Backend RBAC Alignment |
 | --- | --- | --- | --- |
 | Customer | `customer` | Self-service member portal | `CUSTOMER` |
-| Pharmacy Staff | `pharmacy-staff` | Pharmacy counter and billing shell | Closest to `PHARMACY_PROVIDER` |
-| Clinic Staff | `clinic-staff` | General clinic and consultation shell | Currently aggregates `DOCTOR`, `LAB_PROVIDER`, `HOMECARE_PROVIDER`, `COSMETIC_PROVIDER`, `DIETITIAN` concerns |
-| Dental Staff | `dental-staff` | Dental workflow shell | Closest to `DENTAL_PROVIDER` |
+| Provider | `provider` | Unified provider operations portal | Maps `PHARMACY_PROVIDER`, `LAB_PROVIDER`, `DOCTOR`, `HOMECARE_PROVIDER`, `DENTAL_PROVIDER`, `COSMETIC_PROVIDER`, and `DIETITIAN` into one shell |
 | CRM Executive | `crm-executive` | Follow-up and complaint shell | `CRM_EXECUTIVE` |
 | SHIELD Executive | `shield-executive` | Central operations shell | Closest to `SHIELD_AGENT` plus central ops responsibilities |
 | Manager | `manager` | Approval and oversight shell | No single exact backend role today; managerial overlay on operational roles |
@@ -60,9 +63,7 @@ Grounded in:
 | Frontend Role | Sections |
 | --- | --- |
 | Customer | `dashboard`, `wallet`, `services`, `appointments`, `documents`, `profile`, `membership`, `prescriptions`, `recharge`, `book-appointment`, `settings`, `notifications` |
-| Pharmacy Staff | `dashboard`, `customers`, `verification`, `bills`, `prescriptions`, `qr-scan`, `history` |
-| Clinic Staff | `dashboard`, `patients`, `appointments`, `consultations`, `reports`, `home-visits` |
-| Dental Staff | `dashboard`, `patients`, `appointments`, `treatments`, `reports`, `history` |
+| Provider | `dashboard`, `queue`, `customers`, `appointments`, `documents`, `prescriptions`, `profile`, `settings` |
 | CRM Executive | `dashboard`, `customers`, `tasks`, `follow-ups`, `complaints`, `campaigns` |
 | SHIELD Executive | `dashboard`, `approvals`, `memberships`, `wallet-ops`, `reversals`, `support` |
 | Manager | `dashboard`, `approvals`, `reports`, `analytics`, `credit`, `retention` |

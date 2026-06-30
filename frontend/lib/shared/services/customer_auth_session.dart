@@ -2,6 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
+import 'active_auth_session.dart';
 import 'api_service.dart';
 import 'customer_cache_service.dart';
 import 'device_identity_service.dart';
@@ -45,7 +46,10 @@ class CustomerAuthSession extends ChangeNotifier {
     _mobile = values[_mobileKey]?.trim();
     _customerId = values[_customerIdKey]?.trim();
 
-    if (_accessToken != null && _accessToken!.isNotEmpty) {
+    final activeKind = await ActiveAuthSession.getActiveKind();
+    final canRestore =
+        activeKind == null || activeKind == ShieldSessionKind.customer;
+    if (canRestore && _accessToken != null && _accessToken!.isNotEmpty) {
       ApiService.setAccessToken(_accessToken!);
       ApiService.setActiveCustomerId(_customerId);
 
@@ -88,6 +92,7 @@ class CustomerAuthSession extends ChangeNotifier {
       ApiService.clearAccessToken();
     }
     ApiService.setActiveCustomerId(_customerId);
+    await ActiveAuthSession.setActiveKind(ShieldSessionKind.customer);
 
     if (_accessToken != null) {
       await _storage.write(key: _accessTokenKey, value: _accessToken);
@@ -190,6 +195,7 @@ class CustomerAuthSession extends ChangeNotifier {
       if (_mobile != null && _mobile!.isNotEmpty) {
         await _storage.write(key: _mobileKey, value: _mobile);
       }
+      await ActiveAuthSession.setActiveKind(ShieldSessionKind.customer);
 
       notifyListeners();
       return _accessToken;
@@ -213,8 +219,12 @@ class CustomerAuthSession extends ChangeNotifier {
     _mobile = null;
     _customerId = null;
 
-    ApiService.clearAccessToken();
-    ApiService.setActiveCustomerId(null);
+    final activeKind = await ActiveAuthSession.getActiveKind();
+    if (activeKind == ShieldSessionKind.customer) {
+      await ActiveAuthSession.clearActiveKind();
+      ApiService.clearAccessToken();
+      ApiService.setActiveCustomerId(null);
+    }
 
     await CustomerCacheService.clearForCustomer(previousCustomerId);
 
