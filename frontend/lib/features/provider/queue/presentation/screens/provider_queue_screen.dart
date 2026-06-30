@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../../../../app/theme/app_colors.dart';
 import '../../../../../../app/theme/app_typography.dart';
+import '../../../shared/presentation/controllers/provider_portal_controller.dart';
 import '../../../shared/presentation/widgets/provider_workspace_scaffold.dart';
 
 class ProviderQueueScreen extends StatelessWidget {
@@ -23,6 +25,8 @@ class ProviderQueueScreen extends StatelessWidget {
         final stageBuckets = controller.queueByStage;
         final counts = controller.queueStageCounts;
         final hasItems = controller.workflowQueue.isNotEmpty;
+        final roleKey =
+            GoRouterState.of(context).pathParameters['role'] ?? 'provider';
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -64,6 +68,8 @@ class ProviderQueueScreen extends StatelessWidget {
                             stage: stage,
                             label: _stageLabel(stage),
                             items: stageBuckets[stage] ?? const [],
+                            controller: controller,
+                            roleKey: roleKey,
                           ),
                         ),
                       )
@@ -120,11 +126,19 @@ class _StagePill extends StatelessWidget {
 }
 
 class _QueueColumn extends StatelessWidget {
-  const _QueueColumn({required this.stage, required this.items, required this.label});
+  const _QueueColumn({
+    required this.stage,
+    required this.items,
+    required this.label,
+    required this.controller,
+    required this.roleKey,
+  });
 
   final String stage;
   final List<Map<String, dynamic>> items;
   final String label;
+  final ProviderPortalController controller;
+  final String roleKey;
 
   @override
   Widget build(BuildContext context) {
@@ -162,7 +176,13 @@ class _QueueColumn extends StatelessWidget {
                   ),
                 )
               else
-                ...items.map((item) => _QueueCard(item: item)),
+                ...items.map(
+                  (item) => _QueueCard(
+                    item: item,
+                    controller: controller,
+                    roleKey: roleKey,
+                  ),
+                ),
             ],
           ),
         ),
@@ -190,9 +210,15 @@ class _QueueColumn extends StatelessWidget {
 }
 
 class _QueueCard extends StatelessWidget {
-  const _QueueCard({required this.item});
+  const _QueueCard({
+    required this.item,
+    required this.controller,
+    required this.roleKey,
+  });
 
   final Map<String, dynamic> item;
+  final ProviderPortalController controller;
+  final String roleKey;
 
   @override
   Widget build(BuildContext context) {
@@ -256,7 +282,10 @@ class _QueueCard extends StatelessWidget {
             children: [
               Expanded(
                 child: OutlinedButton(
-                  onPressed: () {},
+                  onPressed: () => _openQueueAction(
+                    context,
+                    primary: false,
+                  ),
                   style: OutlinedButton.styleFrom(
                     side: const BorderSide(color: AppColors.divider),
                     shape: RoundedRectangleBorder(
@@ -269,7 +298,10 @@ class _QueueCard extends StatelessWidget {
               const SizedBox(width: 10),
               Expanded(
                 child: FilledButton(
-                  onPressed: () {},
+                  onPressed: () => _openQueueAction(
+                    context,
+                    primary: true,
+                  ),
                   style: FilledButton.styleFrom(
                     backgroundColor: AppColors.shieldBlue,
                     shape: RoundedRectangleBorder(
@@ -284,6 +316,30 @@ class _QueueCard extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  Future<void> _openQueueAction(
+    BuildContext context, {
+    required bool primary,
+  }) async {
+    final targetSection = controller.queueTargetSection(item, primary: primary);
+    final targetTab = controller.queueTargetTab(item, primary: primary);
+    final hasPatient = await controller.prepareQueuePatient(item);
+    if (!context.mounted) {
+      return;
+    }
+
+    context.go('/portal/$roleKey/$targetSection?tab=$targetTab');
+
+    if (!hasPatient) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'This queue item is not linked to a patient record yet.',
+          ),
+        ),
+      );
+    }
   }
 }
 

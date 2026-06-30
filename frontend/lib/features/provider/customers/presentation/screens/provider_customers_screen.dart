@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../../../../app/theme/app_colors.dart';
 import '../../../../../../app/theme/app_typography.dart';
@@ -14,7 +15,16 @@ class ProviderCustomersScreen extends StatefulWidget {
 class _ProviderCustomersScreenState extends State<ProviderCustomersScreen> {
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
-  String _activeTab = 'overview';
+  final String _defaultTab = 'overview';
+
+  static const _supportedTabs = <String>{
+    'overview',
+    'timeline',
+    'appointments',
+    'records',
+    'payments',
+    'membership',
+  };
 
   @override
   void dispose() {
@@ -24,6 +34,9 @@ class _ProviderCustomersScreenState extends State<ProviderCustomersScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final routeTab = _routeTab(context);
+    final activeTab = routeTab ?? _defaultTab;
+
     return ProviderWorkspaceScaffold(
       builder: (context, ref, controller) {
         final selected = controller.selectedCustomer;
@@ -168,11 +181,9 @@ class _ProviderCustomersScreenState extends State<ProviderCustomersScreen> {
                               padding: const EdgeInsets.only(right: 10),
                               child: ChoiceChip(
                                 label: Text(_labelForTab(tab)),
-                                selected: _activeTab == tab,
+                                selected: activeTab == tab,
                                 onSelected: (_) {
-                                  setState(() {
-                                    _activeTab = tab;
-                                  });
+                                  _openTab(context, tab);
                                 },
                               ),
                             ),
@@ -180,7 +191,7 @@ class _ProviderCustomersScreenState extends State<ProviderCustomersScreen> {
                       ),
                     ),
                     const SizedBox(height: 18),
-                    _buildTabContent(controller),
+                    _buildTabContent(controller, activeTab),
                   ],
                 ),
               ),
@@ -190,8 +201,8 @@ class _ProviderCustomersScreenState extends State<ProviderCustomersScreen> {
     );
   }
 
-  Widget _buildTabContent(dynamic controller) {
-    switch (_activeTab) {
+  Widget _buildTabContent(dynamic controller, String activeTab) {
+    switch (activeTab) {
       case 'timeline':
         final timeline = controller.selectedTimeline as List<Map<String, dynamic>>;
         if (timeline.isEmpty) {
@@ -349,6 +360,20 @@ class _ProviderCustomersScreenState extends State<ProviderCustomersScreen> {
       return 'Patient ID: $customerCode';
     }
     return 'Patient';
+  }
+
+  String? _routeTab(BuildContext context) {
+    final tab = GoRouterState.of(context).uri.queryParameters['tab'];
+    if (tab == null || !_supportedTabs.contains(tab)) {
+      return null;
+    }
+    return tab;
+  }
+
+  void _openTab(BuildContext context, String tab) {
+    final roleKey =
+        GoRouterState.of(context).pathParameters['role'] ?? 'provider';
+    context.go('/portal/$roleKey/customers?tab=$tab');
   }
 }
 

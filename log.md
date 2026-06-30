@@ -5765,3 +5765,36 @@ est build, ackend/vercel.json, ackend/src/auth/auth.service.ts, and uth_devic
 
 ---
 2026-06-30 17:05:00 IST
+
+## 167. Provider Queue Action Wiring: Backend-Owned Patient Targets And Live Patient Workspace Navigation
+**High-level description**: Turned the redesigned Provider Portal queue from a static board into an actionable working surface by letting backend queue DTOs carry patient and destination semantics, and wiring the frontend to open the correct patient view and tab directly from queue actions.
+- Extended provider queue DTOs in `OperationsQueueService` to include backend-owned patient targeting and destination metadata (`customerId`, target section, target tab) so Flutter no longer has to guess where a workflow item should send staff next.
+- Reworked appointment and payment queue copy to be more patient-first for healthcare staff by emphasizing the patient name and care/payment context instead of leading with technical-looking invoice or workflow wording.
+- Updated backend action labels so queue buttons now read more naturally in daily care flow, such as `Start consultation`, `Continue care`, `Finish visit`, and `Open billing`.
+- Added queue-target helpers to `ProviderPortalController` so the provider frontend can prepare the selected patient context from backend queue data without duplicating workflow inference in multiple widgets.
+- Wired the queue-card buttons to real navigation: selecting a queue action now loads the linked patient in the shared patient workspace and opens the appropriate tab such as Summary, Appointments, History, or Payments.
+- Updated the patient workspace tabs to support route-driven tab opening via query parameters, which allows queue actions to land staff directly in the part of the patient view that matches the work item.
+- Why this approach was chosen:
+  - the provider queue already looked operational, but dead buttons broke the workflow and made the portal feel unfinished.
+  - backend-owned navigation semantics are more consistent with the project rule that frontend should render human-ready contracts instead of reconstructing business meaning locally.
+  - opening the patient workspace directly from queue actions strengthens the intended provider-portal pattern where the patient record becomes the center of daily work.
+
+### Files Modified/Created
+**Frontend Files (Modified)**:
+- frontend/lib/features/provider/shared/presentation/controllers/provider_portal_controller.dart
+- frontend/lib/features/provider/queue/presentation/screens/provider_queue_screen.dart
+- frontend/lib/features/provider/customers/presentation/screens/provider_customers_screen.dart
+
+**Backend Files (Modified)**:
+- backend/src/operations-queue/operations-queue.service.ts
+
+### Verification
+- flutter analyze lib/features/provider/queue/presentation/screens/provider_queue_screen.dart lib/features/provider/customers/presentation/screens/provider_customers_screen.dart lib/features/provider/shared/presentation/controllers/provider_portal_controller.dart
+- npm run build
+- Verified queue actions now compile against backend-owned patient/destination fields and the provider patient workspace accepts direct tab targeting.
+
+### Remaining Blockers / Risks
+- Queue stage-column headings are still frontend-owned labels; if those need to become fully backend-owned too, the next slice should expose stage metadata from the provider workspace API instead of keeping a small local heading map.
+
+---
+2026-06-30 17:40:29 IST

@@ -289,6 +289,38 @@ class ProviderPortalController extends ChangeNotifier {
     await loadSettingsData();
   }
 
+  String? queueCustomerId(Map<String, dynamic> item) {
+    final customerId = item['customerId']?.toString().trim() ?? '';
+    return customerId.isEmpty ? null : customerId;
+  }
+
+  String queueTargetSection(
+    Map<String, dynamic> item, {
+    required bool primary,
+  }) {
+    final key = primary ? 'primaryTargetSection' : 'secondaryTargetSection';
+    final section = item[key]?.toString().trim() ?? '';
+    return section.isEmpty ? 'customers' : section;
+  }
+
+  String queueTargetTab(
+    Map<String, dynamic> item, {
+    required bool primary,
+  }) {
+    final key = primary ? 'primaryTargetTab' : 'secondaryTargetTab';
+    final tab = item[key]?.toString().trim() ?? '';
+    return tab.isEmpty ? 'overview' : tab;
+  }
+
+  Future<bool> prepareQueuePatient(Map<String, dynamic> item) async {
+    final customerId = queueCustomerId(item);
+    if (customerId == null) {
+      return false;
+    }
+    await selectCustomer(customerId);
+    return true;
+  }
+
   String _resolveWorkflowStage(Map<String, dynamic> item) {
     final backendStage = item['stageCode']?.toString().trim().toUpperCase() ?? '';
     if (backendStage.isNotEmpty) {

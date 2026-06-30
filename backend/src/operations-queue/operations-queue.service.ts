@@ -23,6 +23,7 @@ type AdminQueueQuery = {
 type QueueItem = {
   kind: string;
   id: string;
+  customerId: string | null;
   workflowType: string;
   workflowLabel: string;
   title: string;
@@ -34,6 +35,10 @@ type QueueItem = {
   stageLabel: string;
   primaryActionLabel: string;
   secondaryActionLabel: string;
+  primaryTargetSection: string;
+  secondaryTargetSection: string;
+  primaryTargetTab: string;
+  secondaryTargetTab: string;
 };
 
 @Injectable()
@@ -535,6 +540,7 @@ export class OperationsQueueService {
 
   private toAppointmentQueueItem(appointment: {
     id: bigint;
+    customerId: bigint | null;
     appointmentType: string | null;
     appointmentDate: Date | null;
     status: string | null;
@@ -561,10 +567,11 @@ export class OperationsQueueService {
     return {
       kind: 'appointment',
       id: appointment.id.toString(),
+      customerId: appointment.customerId?.toString() ?? null,
       workflowType: 'APPOINTMENT',
       workflowLabel: 'Appointment',
-      title: appointment.appointmentType || 'Appointment',
-      subtitle: customerName || providerName,
+      title: customerName || 'Patient awaiting care',
+      subtitle: `${appointment.appointmentType || 'Appointment'} • ${providerName}`,
       meta: `${branchName} • ${this.formatDateTime(appointment.appointmentDate)}`,
       status: appointment.status || 'PENDING',
       statusLabel: this.getAppointmentStatusLabel(appointment.status),
@@ -572,11 +579,16 @@ export class OperationsQueueService {
       stageLabel: this.getStageLabel(stageCode, appointment.status),
       primaryActionLabel: this.getPrimaryActionLabel(stageCode, 'APPOINTMENT'),
       secondaryActionLabel: 'Open patient',
+      primaryTargetSection: 'customers',
+      secondaryTargetSection: 'customers',
+      primaryTargetTab: this.getPrimaryTargetTab(stageCode, 'APPOINTMENT'),
+      secondaryTargetTab: 'overview',
     };
   }
 
   private toPurchaseQueueItem(purchase: {
     id: bigint;
+    customerId: bigint | null;
     purchaseDate: Date | null;
     payableAmount: Prisma.Decimal | null;
     invoiceNumber: string | null;
@@ -596,12 +608,13 @@ export class OperationsQueueService {
     return {
       kind: 'purchase',
       id: purchase.id.toString(),
+      customerId: purchase.customerId?.toString() ?? null,
       workflowType: 'PAYMENT',
       workflowLabel: 'Payment',
-      title: purchase.invoiceNumber
-        ? `Invoice ${purchase.invoiceNumber}`
-        : `Invoice #${purchase.id.toString()}`,
-      subtitle: `${customerName} • ${purchase.provider?.providerName || 'Provider'}`,
+      title: customerName,
+      subtitle: purchase.invoiceNumber
+        ? `${stageCode === 'COMPLETED' ? 'Payment completed' : 'Payment pending'} • Invoice ${purchase.invoiceNumber}`
+        : `${stageCode === 'COMPLETED' ? 'Payment completed' : 'Payment pending'} • ${purchase.provider?.providerName || 'Provider'}`,
       meta: this.formatDateTime(purchase.purchaseDate),
       status: stageCode,
       statusLabel: this.formatCurrency(Number(purchase.payableAmount ?? 0)),
@@ -609,6 +622,10 @@ export class OperationsQueueService {
       stageLabel: this.getStageLabel(stageCode, null),
       primaryActionLabel: this.getPrimaryActionLabel(stageCode, 'PAYMENT'),
       secondaryActionLabel: 'Open patient',
+      primaryTargetSection: 'customers',
+      secondaryTargetSection: 'customers',
+      primaryTargetTab: this.getPrimaryTargetTab(stageCode, 'PAYMENT'),
+      secondaryTargetTab: 'overview',
     };
   }
 
@@ -664,21 +681,40 @@ export class OperationsQueueService {
 
   private getPrimaryActionLabel(stageCode: string, workflowType: string) {
     if (workflowType === 'PAYMENT') {
-      return stageCode === 'COMPLETED' ? 'View payment' : 'Collect payment';
+      return stageCode === 'COMPLETED' ? 'View payment' : 'Open billing';
     }
     switch (stageCode) {
       case 'ACCEPTED':
-        return 'Open patient';
+        return 'Start consultation';
       case 'CONSULTATION':
         return 'Continue care';
       case 'WAITING':
-        return 'Check patient';
+        return 'Open patient';
       case 'READY_TO_COMPLETE':
-        return 'Complete visit';
+        return 'Finish visit';
       case 'COMPLETED':
         return 'View summary';
       default:
         return 'Open patient';
+    }
+  }
+
+  private getPrimaryTargetTab(stageCode: string, workflowType: string) {
+    if (workflowType === 'PAYMENT') {
+      return 'payments';
+    }
+    switch (stageCode) {
+      case 'ACCEPTED':
+        return 'appointments';
+      case 'CONSULTATION':
+        return 'timeline';
+      case 'READY_TO_COMPLETE':
+        return 'timeline';
+      case 'COMPLETED':
+        return 'timeline';
+      case 'WAITING':
+      default:
+        return 'overview';
     }
   }
 
