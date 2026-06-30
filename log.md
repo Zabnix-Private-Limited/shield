@@ -4977,3 +4977,23 @@ pm run build (backend)
 
 ---
 2026-06-30 03:15:00 IST
+
+## 141. Made Customer Registration Fail-Soft When Commercial Preload Config Is Missing
+**High-level description**: Prevented customer OTP registration from failing with a backend 500 when the pricing/commercial preload configuration cannot be read at runtime.
+- Updated ackend/src/customer/customer.service.ts so the customer aggregate is still created even if PricingService.getPreloadConfig() throws during the post-create preload phase.
+- Added a backend warning log for the preload-config failure and defaulted the registration flow to zero preload entries instead of aborting the entire customer onboarding transaction after customer, wallet, and credit-account creation succeeded.
+- This keeps customer registration resilient against missing or stale commercial-setting seed data in deployed environments while preserving the pricing engine behavior whenever the settings are available.
+
+### Files Modified/Created
+**Backend Files (Modified)**:
+- backend/src/customer/customer.service.ts
+
+**Frontend Files**:
+- None
+
+### Verification
+- 
+pm run build (backend)
+
+---
+2026-06-30 03:40:00 IST
