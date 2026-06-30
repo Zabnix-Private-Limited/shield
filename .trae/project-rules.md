@@ -15,16 +15,23 @@
 6. **Agent-Mediated Customer Onboarding**: Customers can only be registered by Sahakar Group agents. Customer creation requires a valid `agent_code`.
 7. **Hyperpharmacy Card Restrictions**: Store-purchased cards cannot be utilized at other locations in the case of hyperpharmacies (to retain customers locally), but are cross-compatible across all general service providers regardless of location.
 8. **API First Design**: Define API schemas before implementing endpoints.
-9. **Real Data Safety**:
+9. **Database Truth Source**:
+   - The repository-root file `current_schema.md` is the source of truth for the current database situation.
+   - When schema/docs/code/runtime assumptions disagree, reconcile against `current_schema.md` first.
+10. **Real Data Safety**:
    - Do not auto-apply Prisma schema changes during normal build or deploy flows.
    - Treat real database schema changes as explicit infrastructure operations.
    - Do not introduce dummy data in authenticated or production-facing SHIELD flows unless explicitly requested.
-10. **Deployment Path**:
+11. **Deployment Path**:
    - Production Vercel deployments for this repository happen through Git push.
    - Do not use production Vercel CLI deploy commands from this machine/account unless explicitly directed.
-11. **Execution Bias**:
+12. **Execution Bias**:
    - Choose the best project-safe fix by default.
    - Ask for confirmation only when the decision is destructive, unclear, or changes real infrastructure/data.
+13. **Session Persistence**:
+   - Customer and internal-user login should stay signed in by default across app restarts.
+   - Prefer short-lived access tokens plus effectively long-lived refresh sessions over forcing frequent sign-ins.
+   - End sessions only on intentional sign-out, explicit revocation, or security-driven reset.
 
 ## Technology Stack Rules
 ### Frontend

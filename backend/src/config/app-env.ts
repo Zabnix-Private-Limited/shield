@@ -108,7 +108,7 @@ export function getAppEnv(): ShieldAppEnv {
     jwtAccessSecret: readString('JWT_ACCESS_SECRET'),
     jwtRefreshSecret: readString('JWT_REFRESH_SECRET'),
     jwtAccessTtl: readString('JWT_ACCESS_TTL', '15m'),
-    jwtRefreshTtl: readString('JWT_REFRESH_TTL', '30d'),
+    jwtRefreshTtl: readString('JWT_REFRESH_TTL', '3650d'),
     otpProvider: readString('OTP_PROVIDER'),
     otpApiKey: readString('OTP_API_KEY'),
     otpSenderId: readString('OTP_SENDER_ID'),

@@ -5263,3 +5263,38 @@ est build, ackend/vercel.json, ackend/src/auth/auth.service.ts, and uth_devic
 ### Verification
 - npm run build (backend)
 - Verified the diffs remove the automatic Prisma deploy hook and add the new durable workflow rules
+## 153. Extended SHIELD Login Persistence To Long-Lived Refresh Sessions
+**High-level description**: Updated the SHIELD auth policy so customers and internal users stay signed in by default across restarts and normal access-token expiry, with sessions ending only on intentional sign-out, explicit revocation, or security-driven reset.
+- Changed the backend auth default for JWT refresh TTL from 30 days to 3650 days while keeping the short-lived access token model intact, so silent refresh continues to work without forcing regular re-login.
+- Added explicit JWT access and refresh TTL lines to backend/.env so local and shared development behavior matches the intended long-lived session policy instead of relying on hidden defaults.
+- Updated AGENTS.md, project-rules.md, and .trae/project-rules.md so future work preserves persistent login as the product default for both customer and internal-user flows.
+- Updated the security architecture document to reflect the real PostgreSQL-backed auth-session model and to document that normal access-token expiry should refresh silently while the long-lived refresh session remains valid.
+
+### Files Modified/Created
+**Backend Files (Modified)**:
+- backend/src/config/app-env.ts
+- backend/.env
+
+**Project Rule Files (Modified)**:
+- AGENTS.md
+- project-rules.md
+- .trae/project-rules.md
+- docs/SHIELD Security Architecture.docx.md
+
+### Verification
+- npm run build (backend)
+- Verified the backend config default now uses a 3650 day refresh-session TTL while preserving the short-lived access-token pattern
+## 154. Declared current_schema.md As The Database Truth Source
+**High-level description**: Added a durable repo and memory rule that the repository-root file current_schema.md is the source of truth for SHIELD's current database situation, so future schema debugging and backend changes start from the actual captured database state instead of stale assumptions.
+- Updated AGENTS.md to state that current_schema.md is the database truth source and that database-related code, docs, env assumptions, and runtime observations should be reconciled against it first when conflicts appear.
+- Updated project-rules.md and .trae/project-rules.md with the same database truth-source override so both primary and mirrored agent rule sets follow the same schema-grounding order.
+- Added the same guidance to Codex memory as an ad hoc note for future SHIELD sessions.
+
+### Files Modified/Created
+**Project Rule Files (Modified)**:
+- AGENTS.md
+- project-rules.md
+- .trae/project-rules.md
+
+### Verification
+- Verified the repo diffs add current_schema.md as the database truth source in all SHIELD agent rule files

@@ -45,6 +45,7 @@
 8. API-First Design
 
 ## Database Rules
+- `current_schema.md` at the repository root is the source of truth for the current database situation and schema state.
 - Use UUIDs for public identifiers
 - Use BIGSERIAL for internal primary keys
 - **NO STORED BALANCE IN WALLET TABLE**: Always calculate dynamically from transactions.
@@ -59,6 +60,7 @@
 - Use database constraints for data integrity
 - Do not run Prisma schema pushes automatically during normal builds or deployments. Treat production and real shared databases as explicit infrastructure changes, and only run schema-apply commands when the user specifically asks for that step.
 - Do not introduce dummy or placeholder data in real authenticated or production-facing flows unless the user explicitly asks for mock/demo data for that exact task.
+- When database-related code, docs, env assumptions, or runtime observations conflict, reconcile them against `current_schema.md` first before proposing or applying a fix.
 
 ## Security Rules
 1. RBAC + ABAC authorization
@@ -70,6 +72,7 @@
 7. Audit all critical actions
 8. Rate limiting for APIs
 9. Input validation and sanitization
+10. Keep authenticated customer and internal-user sessions persistent by default through long-lived refresh-session policy, and only end sessions on intentional sign-out, explicit revocation, or security-driven invalidation.
 
 ## User Roles
 1. **ADMIN**: Full-platform access; dashboard layout may vary by assignment, but permissions remain unrestricted.
@@ -121,6 +124,7 @@ shield/
 ```
 
 ## Key Documentation Files
+- Current DB Truth Source: current_schema.md
 - PRD: docs/SHIELD Product Requirements Document.docx.md
 - FRD: docs/SHIELD Functional Requirements Document.docx.md
 - ERD: docs/SHIELD Entity Relationship Design.docx.md

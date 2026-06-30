@@ -41,7 +41,7 @@ This document contains detailed security architecture specifications for SHIELD.
   - `iat` and `exp`
 
 ### Refresh Token
-- **Expiry:** longer-lived, controlled by env (`JWT_REFRESH_TTL`)
+- **Expiry:** effectively persistent, controlled by env (`JWT_REFRESH_TTL`), with SHIELD defaulting to a very long-lived refresh session so customers and internal users remain signed in unless they intentionally sign out or security operations revoke access
 - **Algorithm:** HS256
 - **Claims:**
   - `sub`: SHIELD principal ID
@@ -52,14 +52,15 @@ This document contains detailed security architecture specifications for SHIELD.
 ### Token Refresh Flow
 1. Client sends refresh token to `/api/v1/auth/refresh`
 2. Server validates signature and expiry
-3. Server checks session state in Redis/Valkey
+3. Server checks session state in PostgreSQL auth-session storage
 4. Server issues a new access token and rotated refresh token
 5. Prior refresh token session entry is revoked
 
 ### Token Revocation
-- Refresh sessions are stored in Redis/Valkey, not as long-lived database source-of-truth records
+- Refresh sessions are stored in PostgreSQL auth-session records
 - On logout, the refresh session is revoked
 - On admin-enforced access reset, all known sessions for the principal should be revoked
+- Normal access-token expiry should silently refresh and keep the user signed in when the refresh session remains valid
 - Customer and internal login activity must still be audit logged in PostgreSQL
 
 ---
