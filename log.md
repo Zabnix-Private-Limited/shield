@@ -5232,3 +5232,34 @@ est build, ackend/vercel.json, ackend/src/auth/auth.service.ts, and uth_devic
 
 ### Verification
 - append-only correction; no additional runtime/build verification was required for this textual fix
+## 151. Plain Text Restatement For Entry 149
+**High-level description**: Restated the key wording from entry 149 using plain text only, with no backticks or escape-sensitive characters, so the intended deployment and schema notes are readable directly in the append-only log.
+- Entry 149 refers to the vercel-build backend script, the nest build command, the file backend/vercel.json, the file backend/src/auth/auth.service.ts, and the database tables auth_devices, auth_sessions, and login_history.
+- The code changes and verification remain exactly the same as entry 149; this entry exists only to preserve a readable audit trail after shell escaping introduced control characters into the earlier text append.
+
+### Files Modified/Created
+**Log Files (Modified)**:
+- log.md
+
+### Verification
+- append-only correction; no additional runtime/build verification was required for this plain-text restatement
+## 152. Updated SHIELD Agent Rules For Real Data And Git Push Deploy Workflow
+**High-level description**: Aligned the repo's durable agent instructions with the actual SHIELD operating model by removing the temporary auto-Prisma Vercel build path and documenting that production deployments happen through Git push, not production Vercel CLI commands from this machine/account.
+- Reverted the temporary backend package and Vercel config change that would have made Prisma schema application part of the default deployment path.
+- Added durable agent workflow rules in AGENTS.md, project-rules.md, and .trae/project-rules.md to keep real database changes explicit, avoid dummy data in authenticated or production-facing flows unless explicitly requested, and prefer the best project-safe fix without repeated small confirmations.
+- Recorded the user's deployment preference that SHIELD production deploys for this repository happen through Git push and should not use production Vercel CLI deploy commands from this machine/account unless explicitly overridden.
+- Added the same guidance to Codex memory as an ad hoc note so future sessions can pick up the same rules consistently.
+
+### Files Modified/Created
+**Backend Files (Modified)**:
+- backend/package.json
+- backend/vercel.json
+
+**Project Rule Files (Modified)**:
+- AGENTS.md
+- project-rules.md
+- .trae/project-rules.md
+
+### Verification
+- npm run build (backend)
+- Verified the diffs remove the automatic Prisma deploy hook and add the new durable workflow rules

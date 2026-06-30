@@ -15,6 +15,16 @@
 6. **Agent-Mediated Customer Onboarding**: Customers can only be registered by Sahakar Group agents. Customer creation requires a valid `agent_code`.
 7. **Hyperpharmacy Card Restrictions**: Store-purchased cards cannot be utilized at other locations in the case of hyperpharmacies (to retain customers locally), but are cross-compatible across all general service providers regardless of location.
 8. **API First Design**: Define API schemas before implementing endpoints.
+9. **Real Data Safety**:
+   - Do not auto-apply Prisma schema changes during normal build or deploy flows.
+   - Treat real database schema changes as explicit infrastructure operations.
+   - Do not introduce dummy data in authenticated or production-facing SHIELD flows unless explicitly requested.
+10. **Deployment Path**:
+   - Production Vercel deployments for this repository happen through Git push.
+   - Do not use production Vercel CLI deploy commands from this machine/account unless explicitly directed.
+11. **Execution Bias**:
+   - Choose the best project-safe fix by default.
+   - Ask for confirmation only when the decision is destructive, unclear, or changes real infrastructure/data.
 
 ## Technology Stack Rules
 ### Frontend

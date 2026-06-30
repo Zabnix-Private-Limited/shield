@@ -57,6 +57,8 @@
 - Append-only audit logs
 - Index frequently queried columns
 - Use database constraints for data integrity
+- Do not run Prisma schema pushes automatically during normal builds or deployments. Treat production and real shared databases as explicit infrastructure changes, and only run schema-apply commands when the user specifically asks for that step.
+- Do not introduce dummy or placeholder data in real authenticated or production-facing flows unless the user explicitly asks for mock/demo data for that exact task.
 
 ## Security Rules
 1. RBAC + ABAC authorization
@@ -99,6 +101,13 @@
 6. Timestamps: IST format (YYYY-MM-DD HH:mm:ss IST)
 7. Engineer-to-Engineer: Explain *why* choices were made
 8. Method: Use append-log.js or PowerShell append, NEVER full rewrite or Edit tool
+
+## Agent Workflow Rules
+1. Prefer the best project-safe fix without repeatedly asking for confirmation on every small issue.
+2. Escalate only when a choice is destructive, ambiguous, or affects real infrastructure/data.
+3. Deploy SHIELD to Vercel through the Git push workflow for this repository.
+4. Do not run `vercel --prod` or other production Vercel CLI deploy commands from this machine/account for SHIELD unless the user explicitly overrides that rule.
+5. Do not make Prisma schema application part of the default Vercel build path.
 
 ## Project File Structure
 ```

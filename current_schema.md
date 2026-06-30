@@ -21,6 +21,59 @@ CREATE TABLE "audit_logs" (
 	"device_info" text,
 	"created_at" timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
+CREATE TABLE "auth_devices" (
+	"id" bigserial PRIMARY KEY,
+	"uuid" uuid NOT NULL,
+	"owner_type" varchar(30) NOT NULL,
+	"owner_id" varchar(50) NOT NULL,
+	"customer_id" bigint,
+	"user_id" bigint,
+	"fingerprint_hash" varchar(128) NOT NULL,
+	"device_id" varchar(120),
+	"device_name" varchar(255),
+	"platform" varchar(50),
+	"browser" varchar(100),
+	"os" varchar(100),
+	"ip_address" varchar(100),
+	"user_agent" text,
+	"is_trusted" boolean DEFAULT false NOT NULL,
+	"first_seen_at" timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+	"last_seen_at" timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+	"created_at" timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+	"updated_at" timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+CREATE TABLE "auth_sessions" (
+	"id" bigserial PRIMARY KEY,
+	"uuid" uuid NOT NULL,
+	"session_id" uuid NOT NULL,
+	"subject_id" varchar(120) NOT NULL,
+	"owner_type" varchar(30) NOT NULL,
+	"owner_id" varchar(50) NOT NULL,
+	"customer_id" bigint,
+	"user_id" bigint,
+	"auth_device_id" bigint,
+	"principal_type" varchar(30) NOT NULL,
+	"role_code" varchar(50),
+	"user_type" varchar(30),
+	"access_scope" varchar(30),
+	"permissions" jsonb,
+	"firebase_uid" varchar(128),
+	"auth_provider" varchar(30),
+	"email" varchar(255),
+	"mobile" varchar(20),
+	"branch_business_id" varchar(50),
+	"login_method" varchar(50),
+	"refresh_token_hash" varchar(128) NOT NULL,
+	"refresh_token_expires_at" timestamp with time zone NOT NULL,
+	"last_seen_at" timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+	"ip_address" varchar(100),
+	"user_agent" text,
+	"revoked_at" timestamp with time zone,
+	"revoked_reason" text,
+	"is_current" boolean DEFAULT true NOT NULL,
+	"created_at" timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+	"updated_at" timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
 CREATE TABLE "benefit_ledger_transactions" (
 	"id" bigserial PRIMARY KEY,
 	"uuid" uuid NOT NULL,
@@ -196,7 +249,8 @@ CREATE TABLE "device_push_tokens" (
 	"is_active" boolean DEFAULT true NOT NULL,
 	"last_seen_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
-	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"auth_device_id" bigint
 );
 CREATE TABLE "document_classifications" (
 	"id" bigserial PRIMARY KEY,
@@ -239,6 +293,22 @@ CREATE TABLE "lab_reports" (
 	"appointment_id" bigint,
 	"document_id" bigint,
 	"report_date" date
+);
+CREATE TABLE "login_history" (
+	"id" bigserial PRIMARY KEY,
+	"uuid" uuid NOT NULL,
+	"owner_type" varchar(30) NOT NULL,
+	"owner_id" varchar(50) NOT NULL,
+	"customer_id" bigint,
+	"user_id" bigint,
+	"auth_device_id" bigint,
+	"session_id" uuid,
+	"login_method" varchar(50),
+	"status" varchar(30) NOT NULL,
+	"reason" text,
+	"ip_address" varchar(100),
+	"user_agent" text,
+	"created_at" timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
 CREATE TABLE "membership_types" (
 	"id" bigserial PRIMARY KEY,
@@ -427,7 +497,7 @@ CREATE TABLE "service_benefit_rules" (
 	"status" varchar(50) DEFAULT 'ACTIVE' NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
-	"wallets_allowed" varchar(120) DEFAULT 'CASH' NOT NULL,
+	"wallets_allowed" varchar(120) DEFAULT 'CASH',
 	"allow_external_payment" boolean DEFAULT true NOT NULL
 );
 CREATE TABLE "service_providers" (
@@ -500,6 +570,22 @@ CREATE INDEX "idx_appointment_date" ON "appointments" ("appointment_date");
 CREATE INDEX "idx_appointment_provider" ON "appointments" ("provider_id");
 CREATE INDEX "idx_appointment_status" ON "appointments" ("status");
 CREATE UNIQUE INDEX "audit_logs_pkey" ON "audit_logs" ("id");
+CREATE UNIQUE INDEX "auth_devices_pkey" ON "auth_devices" ("id");
+CREATE UNIQUE INDEX "auth_devices_uuid_key" ON "auth_devices" ("uuid");
+CREATE INDEX "idx_auth_devices_customer" ON "auth_devices" ("customer_id");
+CREATE INDEX "idx_auth_devices_last_seen" ON "auth_devices" ("last_seen_at");
+CREATE INDEX "idx_auth_devices_user" ON "auth_devices" ("user_id");
+CREATE UNIQUE INDEX "uq_auth_devices_owner_fingerprint" ON "auth_devices" ("owner_type","owner_id","fingerprint_hash");
+CREATE UNIQUE INDEX "auth_sessions_pkey" ON "auth_sessions" ("id");
+CREATE UNIQUE INDEX "auth_sessions_refresh_token_hash_key" ON "auth_sessions" ("refresh_token_hash");
+CREATE UNIQUE INDEX "auth_sessions_session_id_key" ON "auth_sessions" ("session_id");
+CREATE UNIQUE INDEX "auth_sessions_uuid_key" ON "auth_sessions" ("uuid");
+CREATE INDEX "idx_auth_sessions_auth_device" ON "auth_sessions" ("auth_device_id");
+CREATE INDEX "idx_auth_sessions_current" ON "auth_sessions" ("is_current");
+CREATE INDEX "idx_auth_sessions_customer" ON "auth_sessions" ("customer_id");
+CREATE INDEX "idx_auth_sessions_owner" ON "auth_sessions" ("owner_type","owner_id");
+CREATE INDEX "idx_auth_sessions_refresh_expiry" ON "auth_sessions" ("refresh_token_expires_at");
+CREATE INDEX "idx_auth_sessions_user" ON "auth_sessions" ("user_id");
 CREATE UNIQUE INDEX "benefit_ledger_transactions_pkey" ON "benefit_ledger_transactions" ("id");
 CREATE UNIQUE INDEX "benefit_ledger_transactions_uuid_key" ON "benefit_ledger_transactions" ("uuid");
 CREATE INDEX "idx_benefit_ledger_transactions_date" ON "benefit_ledger_transactions" ("created_at");
@@ -553,6 +639,13 @@ CREATE UNIQUE INDEX "document_processing_logs_pkey" ON "document_processing_logs
 CREATE UNIQUE INDEX "documents_pkey" ON "documents" ("id");
 CREATE UNIQUE INDEX "documents_uuid_key" ON "documents" ("uuid");
 CREATE UNIQUE INDEX "lab_reports_pkey" ON "lab_reports" ("id");
+CREATE INDEX "idx_login_history_auth_device" ON "login_history" ("auth_device_id");
+CREATE INDEX "idx_login_history_created_at" ON "login_history" ("created_at");
+CREATE INDEX "idx_login_history_customer" ON "login_history" ("customer_id");
+CREATE INDEX "idx_login_history_owner" ON "login_history" ("owner_type","owner_id");
+CREATE INDEX "idx_login_history_user" ON "login_history" ("user_id");
+CREATE UNIQUE INDEX "login_history_pkey" ON "login_history" ("id");
+CREATE UNIQUE INDEX "login_history_uuid_key" ON "login_history" ("uuid");
 CREATE UNIQUE INDEX "membership_types_code_key" ON "membership_types" ("code");
 CREATE UNIQUE INDEX "membership_types_pkey" ON "membership_types" ("id");
 CREATE UNIQUE INDEX "membership_types_uuid_key" ON "membership_types" ("uuid");
@@ -649,7 +742,6 @@ ALTER TABLE "customers" ADD CONSTRAINT "customers_referred_by_id_fkey" FOREIGN K
 ALTER TABLE "dental_records" ADD CONSTRAINT "dental_records_appointment_id_fkey" FOREIGN KEY ("appointment_id") REFERENCES "appointments"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 ALTER TABLE "dental_records" ADD CONSTRAINT "dental_records_customer_id_fkey" FOREIGN KEY ("customer_id") REFERENCES "customers"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 ALTER TABLE "departments" ADD CONSTRAINT "departments_business_id_fkey" FOREIGN KEY ("business_id") REFERENCES "businesses"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-ALTER TABLE "device_push_tokens" ADD CONSTRAINT "device_push_tokens_customer_id_fkey" FOREIGN KEY ("customer_id") REFERENCES "customers"("id") ON DELETE CASCADE;
 ALTER TABLE "document_classifications" ADD CONSTRAINT "document_classifications_document_id_fkey" FOREIGN KEY ("document_id") REFERENCES "documents"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 ALTER TABLE "document_extractions" ADD CONSTRAINT "document_extractions_document_id_fkey" FOREIGN KEY ("document_id") REFERENCES "documents"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 ALTER TABLE "document_processing_logs" ADD CONSTRAINT "document_processing_logs_document_id_fkey" FOREIGN KEY ("document_id") REFERENCES "documents"("id") ON DELETE SET NULL ON UPDATE CASCADE;
@@ -671,8 +763,6 @@ ALTER TABLE "purchase_items" ADD CONSTRAINT "purchase_items_product_id_fkey" FOR
 ALTER TABLE "purchase_items" ADD CONSTRAINT "purchase_items_purchase_id_fkey" FOREIGN KEY ("purchase_id") REFERENCES "purchases"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 ALTER TABLE "purchases" ADD CONSTRAINT "purchases_customer_id_fkey" FOREIGN KEY ("customer_id") REFERENCES "customers"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 ALTER TABLE "purchases" ADD CONSTRAINT "purchases_provider_id_fkey" FOREIGN KEY ("provider_id") REFERENCES "service_providers"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-ALTER TABLE "referral_reward_events" ADD CONSTRAINT "referral_reward_events_referred_customer_id_fkey" FOREIGN KEY ("referred_customer_id") REFERENCES "customers"("id") ON DELETE CASCADE;
-ALTER TABLE "referral_reward_events" ADD CONSTRAINT "referral_reward_events_referrer_customer_id_fkey" FOREIGN KEY ("referrer_customer_id") REFERENCES "customers"("id") ON DELETE CASCADE;
 ALTER TABLE "reward_point_transactions" ADD CONSTRAINT "reward_point_transactions_approved_by_fkey" FOREIGN KEY ("approved_by") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 ALTER TABLE "reward_point_transactions" ADD CONSTRAINT "reward_point_transactions_created_by_fkey" FOREIGN KEY ("created_by") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 ALTER TABLE "reward_point_transactions" ADD CONSTRAINT "reward_point_transactions_wallet_id_fkey" FOREIGN KEY ("wallet_id") REFERENCES "wallets"("id") ON DELETE CASCADE ON UPDATE CASCADE;
