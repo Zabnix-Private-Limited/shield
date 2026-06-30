@@ -41,6 +41,16 @@ type QueueItem = {
   secondaryTargetTab: string;
 };
 
+type ProviderWorkflowProfileCode =
+  | 'GENERAL'
+  | 'CLINIC'
+  | 'PHARMACY'
+  | 'DENTAL'
+  | 'LABORATORY'
+  | 'HOME_VISIT'
+  | 'COSMETIC'
+  | 'DIETITIAN';
+
 @Injectable()
 export class OperationsQueueService {
   constructor(private readonly prisma: PrismaService) {}
@@ -48,6 +58,11 @@ export class OperationsQueueService {
   async getProviderWorkspace(query: ProviderWorkspaceQuery) {
     const limit = this.normalizeLimit(query.limit, 8);
     const providerScope = await this.resolveProviderScope(query);
+    const workflowProfile = this.resolveWorkflowProfile(
+      query.providerType,
+      providerScope.providers,
+    );
+    const workspaceMeta = this.buildProviderWorkspaceMeta(workflowProfile);
     const providerIds = providerScope.providers.map((provider) => provider.id);
     const providerWhere =
       providerIds.length > 0
@@ -214,6 +229,7 @@ export class OperationsQueueService {
         businessId: query.businessId?.toString() ?? null,
         matchedProviderCount: providerScope.providers.length,
       },
+      workspaceMeta,
       summary: {
         providerCount: providerScope.providers.length,
         appointmentsToday,
@@ -521,6 +537,372 @@ export class OperationsQueueService {
     });
 
     return { providers, hasExplicitFilter };
+  }
+
+  private resolveWorkflowProfile(
+    providerType: string | undefined,
+    providers: Array<{ providerType: string | null }>,
+  ): ProviderWorkflowProfileCode {
+    const explicit = this.mapProviderTypeToWorkflowProfile(providerType);
+    if (explicit) {
+      return explicit;
+    }
+
+    const detectedTypes = [
+      ...new Set(
+        providers
+          .map((provider) => this.mapProviderTypeToWorkflowProfile(provider.providerType ?? undefined))
+          .filter((value): value is ProviderWorkflowProfileCode => Boolean(value)),
+      ),
+    ];
+
+    if (detectedTypes.length === 1) {
+      return detectedTypes[0];
+    }
+
+    return 'GENERAL';
+  }
+
+  private mapProviderTypeToWorkflowProfile(
+    providerType?: string,
+  ): ProviderWorkflowProfileCode | undefined {
+    switch ((providerType ?? '').trim().toUpperCase()) {
+      case 'CLINIC':
+        return 'CLINIC';
+      case 'PHARMACY':
+        return 'PHARMACY';
+      case 'DENTAL':
+        return 'DENTAL';
+      case 'LAB':
+      case 'LABORATORY':
+        return 'LABORATORY';
+      case 'HOME_VISIT':
+        return 'HOME_VISIT';
+      case 'COSMETIC':
+        return 'COSMETIC';
+      case 'DIETITIAN':
+        return 'DIETITIAN';
+      default:
+        return undefined;
+    }
+  }
+
+  private buildProviderWorkspaceMeta(profile: ProviderWorkflowProfileCode) {
+    const profileLabel = this.getWorkflowProfileLabel(profile);
+    return {
+      workflowProfile: {
+        code: profile,
+        title: profileLabel,
+      },
+      navigationSections: [
+        { code: 'dashboard', title: 'Dashboard', icon: 'dashboard' },
+        { code: 'queue', title: 'Live Queue', icon: 'queue' },
+        { code: 'customers', title: 'Patients', icon: 'patient' },
+        { code: 'appointments', title: 'Appointments', icon: 'calendar' },
+        { code: 'documents', title: 'Medical Records', icon: 'folder' },
+        { code: 'prescriptions', title: 'Prescriptions', icon: 'prescription' },
+        { code: 'profile', title: 'Profile', icon: 'profile' },
+        { code: 'settings', title: 'Settings', icon: 'settings' },
+      ],
+      queueStages: this.buildQueueStages(profile),
+      dashboardHighlights: this.buildDashboardHighlights(profile),
+      patientWorkspace: {
+        title: 'Patient workspace',
+        emptyStateMessage:
+          'Select a patient to open the full care view. Visits, records, benefits, and payments stay together here.',
+        tabs: [
+          {
+            code: 'overview',
+            title: 'Summary',
+            icon: 'summary',
+            order: 1,
+            emptyStateMessage: 'No patient summary is available yet.',
+          },
+          {
+            code: 'timeline',
+            title: 'Timeline',
+            icon: 'timeline',
+            order: 2,
+            emptyStateMessage: 'No patient history is available yet.',
+          },
+          {
+            code: 'appointments',
+            title: 'Appointments',
+            icon: 'calendar',
+            order: 3,
+            emptyStateMessage:
+              'No appointments have been added for this patient yet.',
+          },
+          {
+            code: 'records',
+            title: 'Medical Records',
+            icon: 'folder',
+            order: 4,
+            emptyStateMessage:
+              'No medical records have been uploaded yet. Prescriptions, reports, and supporting files will appear here.',
+          },
+          {
+            code: 'payments',
+            title: 'Payments',
+            icon: 'payments',
+            order: 5,
+            emptyStateMessage:
+              'No patient billing details are available yet.',
+          },
+          {
+            code: 'membership',
+            title: 'Membership',
+            icon: 'membership',
+            order: 6,
+            emptyStateMessage:
+              'No membership details are available yet.',
+          },
+        ],
+      },
+    };
+  }
+
+  private buildQueueStages(profile: ProviderWorkflowProfileCode) {
+    const dictionary = this.getQueueStageDictionary(profile);
+    return [
+      this.toQueueStageMeta('WAITING', 1, dictionary),
+      this.toQueueStageMeta('ACCEPTED', 2, dictionary),
+      this.toQueueStageMeta('CONSULTATION', 3, dictionary),
+      this.toQueueStageMeta('WAITING_PAYMENT', 4, dictionary),
+      this.toQueueStageMeta('READY_TO_COMPLETE', 5, dictionary),
+      this.toQueueStageMeta('COMPLETED', 6, dictionary),
+    ];
+  }
+
+  private buildDashboardHighlights(profile: ProviderWorkflowProfileCode) {
+    const waitingTitle = this.getDashboardWaitingTitle(profile);
+    return [
+      {
+        code: 'URGENT',
+        title: 'Urgent',
+        note: 'needs attention now',
+        icon: 'priority',
+        color: 'red',
+        order: 1,
+        metricKind: 'urgent',
+        stageCodes: [] as string[],
+      },
+      {
+        code: 'WAITING',
+        title: waitingTitle,
+        note: 'patients or billing items pending',
+        icon: 'queue',
+        color: 'orange',
+        order: 2,
+        metricKind: 'stage_count',
+        stageCodes: ['WAITING', 'WAITING_PAYMENT'],
+      },
+      {
+        code: 'CONSULTATION',
+        title: this.getConsultationStageTitle(profile),
+        note: 'care work in progress',
+        icon: 'care',
+        color: 'blue',
+        order: 3,
+        metricKind: 'stage_count',
+        stageCodes: ['CONSULTATION'],
+      },
+      {
+        code: 'READY_TO_COMPLETE',
+        title: this.getReadyStageTitle(profile),
+        note: 'can be finished now',
+        icon: 'checklist',
+        color: 'green',
+        order: 4,
+        metricKind: 'stage_count',
+        stageCodes: ['READY_TO_COMPLETE'],
+      },
+    ];
+  }
+
+  private toQueueStageMeta(
+    code: string,
+    order: number,
+    dictionary: Record<
+      string,
+      {
+        title: string;
+        icon: string;
+        color: string;
+        emptyStateMessage: string;
+        allowedActions: string[];
+      }
+    >,
+  ) {
+    const meta = dictionary[code];
+    return {
+      code,
+      title: meta.title,
+      icon: meta.icon,
+      color: meta.color,
+      order,
+      emptyStateMessage: meta.emptyStateMessage,
+      allowedActions: meta.allowedActions,
+    };
+  }
+
+  private getQueueStageDictionary(profile: ProviderWorkflowProfileCode) {
+    const consultationTitle = this.getConsultationStageTitle(profile);
+    const waitingTitle = this.getDashboardWaitingTitle(profile);
+    const readyTitle = this.getReadyStageTitle(profile);
+
+    return {
+      WAITING: {
+        title: waitingTitle,
+        icon: 'queue',
+        color: 'orange',
+        emptyStateMessage: this.getWaitingEmptyState(profile),
+        allowedActions: ['Open patient'],
+      },
+      ACCEPTED: {
+        title: 'Accepted',
+        icon: 'assignment',
+        color: 'blue',
+        emptyStateMessage: 'No accepted patients are queued here.',
+        allowedActions: ['Open patient', this.getAcceptedPrimaryAction(profile)],
+      },
+      CONSULTATION: {
+        title: consultationTitle,
+        icon: 'care',
+        color: 'blue',
+        emptyStateMessage: this.getConsultationEmptyState(profile),
+        allowedActions: ['Open patient', 'Continue care'],
+      },
+      WAITING_PAYMENT: {
+        title: 'Waiting for Payment',
+        icon: 'payments',
+        color: 'amber',
+        emptyStateMessage: 'No billing items are waiting for payment right now.',
+        allowedActions: ['Open patient', 'Open billing'],
+      },
+      READY_TO_COMPLETE: {
+        title: readyTitle,
+        icon: 'checklist',
+        color: 'green',
+        emptyStateMessage: 'Nothing is waiting to be completed.',
+        allowedActions: ['Open patient', 'Finish visit'],
+      },
+      COMPLETED: {
+        title: 'Completed',
+        icon: 'done',
+        color: 'slate',
+        emptyStateMessage: 'No completed items have been loaded yet.',
+        allowedActions: ['Open patient', 'View summary'],
+      },
+    };
+  }
+
+  private getWorkflowProfileLabel(profile: ProviderWorkflowProfileCode) {
+    switch (profile) {
+      case 'CLINIC':
+        return 'Clinic Care Workflow';
+      case 'PHARMACY':
+        return 'Pharmacy Fulfillment Workflow';
+      case 'DENTAL':
+        return 'Dental Care Workflow';
+      case 'LABORATORY':
+        return 'Laboratory Workflow';
+      case 'HOME_VISIT':
+        return 'Home Care Workflow';
+      case 'COSMETIC':
+        return 'Cosmetic Care Workflow';
+      case 'DIETITIAN':
+        return 'Dietitian Care Workflow';
+      case 'GENERAL':
+      default:
+        return 'Provider Care Workflow';
+    }
+  }
+
+  private getDashboardWaitingTitle(profile: ProviderWorkflowProfileCode) {
+    switch (profile) {
+      case 'PHARMACY':
+        return 'Waiting for Verification';
+      case 'DENTAL':
+        return 'Waiting for Treatment';
+      case 'LABORATORY':
+        return 'Waiting for Sample';
+      case 'HOME_VISIT':
+        return 'Waiting for Visit Start';
+      default:
+        return 'Waiting for Consultation';
+    }
+  }
+
+  private getConsultationStageTitle(profile: ProviderWorkflowProfileCode) {
+    switch (profile) {
+      case 'PHARMACY':
+        return 'Dispensing';
+      case 'DENTAL':
+        return 'Treatment in Progress';
+      case 'LABORATORY':
+        return 'Sample in Progress';
+      case 'HOME_VISIT':
+        return 'Visit in Progress';
+      case 'COSMETIC':
+        return 'Session in Progress';
+      case 'DIETITIAN':
+        return 'Plan Review in Progress';
+      default:
+        return 'Consultation';
+    }
+  }
+
+  private getReadyStageTitle(profile: ProviderWorkflowProfileCode) {
+    switch (profile) {
+      case 'PHARMACY':
+        return 'Ready for Handover';
+      case 'LABORATORY':
+        return 'Ready to Upload Report';
+      case 'HOME_VISIT':
+        return 'Ready to Close Visit';
+      default:
+        return 'Ready to Complete';
+    }
+  }
+
+  private getWaitingEmptyState(profile: ProviderWorkflowProfileCode) {
+    switch (profile) {
+      case 'PHARMACY':
+        return 'No prescriptions or customers are waiting for verification right now.';
+      case 'DENTAL':
+        return 'No patients are waiting for treatment right now.';
+      case 'LABORATORY':
+        return 'No samples are waiting to be collected right now.';
+      default:
+        return 'No patients are waiting right now.';
+    }
+  }
+
+  private getConsultationEmptyState(profile: ProviderWorkflowProfileCode) {
+    switch (profile) {
+      case 'PHARMACY':
+        return 'No dispensing work is in progress.';
+      case 'DENTAL':
+        return 'No dental treatment is in progress.';
+      case 'LABORATORY':
+        return 'No sample processing is in progress.';
+      default:
+        return 'No consultations are in progress.';
+    }
+  }
+
+  private getAcceptedPrimaryAction(profile: ProviderWorkflowProfileCode) {
+    switch (profile) {
+      case 'PHARMACY':
+        return 'Start verification';
+      case 'DENTAL':
+        return 'Start treatment';
+      case 'LABORATORY':
+        return 'Start sample collection';
+      default:
+        return 'Start consultation';
+    }
   }
 
   private filterDepartmentsForBusiness(

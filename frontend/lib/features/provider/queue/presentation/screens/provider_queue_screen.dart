@@ -9,15 +9,6 @@ import '../../../shared/presentation/widgets/provider_workspace_scaffold.dart';
 class ProviderQueueScreen extends StatelessWidget {
   const ProviderQueueScreen({super.key});
 
-  static const _stageOrder = [
-    'NEW',
-    'ASSIGNED',
-    'IN_PROGRESS',
-    'WAITING',
-    'READY',
-    'COMPLETED',
-  ];
-
   @override
   Widget build(BuildContext context) {
     return ProviderWorkspaceScaffold(
@@ -25,6 +16,7 @@ class ProviderQueueScreen extends StatelessWidget {
         final stageBuckets = controller.queueByStage;
         final counts = controller.queueStageCounts;
         final hasItems = controller.workflowQueue.isNotEmpty;
+        final stageMetadata = controller.queueStagesMetadata;
         final roleKey =
             GoRouterState.of(context).pathParameters['role'] ?? 'provider';
 
@@ -41,11 +33,12 @@ class ProviderQueueScreen extends StatelessWidget {
             Wrap(
               spacing: 10,
               runSpacing: 10,
-              children: _stageOrder
+              children: stageMetadata
                   .map(
                     (stage) => _StagePill(
-                      label: _stageLabel(stage),
-                      count: counts[stage] ?? 0,
+                      label: stage['title']?.toString() ?? 'Queue',
+                      count: counts[stage['code']?.toString() ?? ''] ?? 0,
+                      colorId: stage['color']?.toString() ?? 'blue',
                     ),
                   )
                   .toList(),
@@ -58,16 +51,22 @@ class ProviderQueueScreen extends StatelessWidget {
                 scrollDirection: Axis.horizontal,
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  children: _stageOrder
+                  children: stageMetadata
                       .map(
                         (stage) => Padding(
                           padding: EdgeInsets.only(
-                            right: stage == _stageOrder.last ? 0 : 14,
+                            right: stage == stageMetadata.last ? 0 : 14,
                           ),
                           child: _QueueColumn(
-                            stage: stage,
-                            label: _stageLabel(stage),
-                            items: stageBuckets[stage] ?? const [],
+                            label: stage['title']?.toString() ?? 'Queue',
+                            iconId: stage['icon']?.toString() ?? 'queue',
+                            colorId: stage['color']?.toString() ?? 'blue',
+                            emptyStateMessage:
+                                stage['emptyStateMessage']?.toString() ??
+                                'Everything is up to date.',
+                            items:
+                                stageBuckets[stage['code']?.toString() ?? ''] ??
+                                const [],
                             controller: controller,
                             roleKey: roleKey,
                           ),
@@ -82,31 +81,18 @@ class ProviderQueueScreen extends StatelessWidget {
     );
   }
 
-  static String _stageLabel(String stage) {
-    switch (stage) {
-      case 'NEW':
-        return 'Waiting';
-      case 'ASSIGNED':
-        return 'Accepted';
-      case 'IN_PROGRESS':
-        return 'In Consultation';
-      case 'WAITING':
-        return 'Waiting';
-      case 'READY':
-        return 'Ready to Complete';
-      case 'COMPLETED':
-        return 'Completed';
-      default:
-        return stage.replaceAll('_', ' ');
-    }
-  }
 }
 
 class _StagePill extends StatelessWidget {
-  const _StagePill({required this.label, required this.count});
+  const _StagePill({
+    required this.label,
+    required this.count,
+    required this.colorId,
+  });
 
   final String label;
   final int count;
+  final String colorId;
 
   @override
   Widget build(BuildContext context) {
@@ -119,7 +105,10 @@ class _StagePill extends StatelessWidget {
       ),
       child: Text(
         '$label • $count',
-        style: AppTypography.small.copyWith(fontWeight: FontWeight.w700),
+        style: AppTypography.small.copyWith(
+          fontWeight: FontWeight.w700,
+          color: _colorForId(colorId),
+        ),
       ),
     );
   }
@@ -127,16 +116,20 @@ class _StagePill extends StatelessWidget {
 
 class _QueueColumn extends StatelessWidget {
   const _QueueColumn({
-    required this.stage,
     required this.items,
     required this.label,
+    required this.iconId,
+    required this.colorId,
+    required this.emptyStateMessage,
     required this.controller,
     required this.roleKey,
   });
 
-  final String stage;
   final List<Map<String, dynamic>> items;
   final String label;
+  final String iconId;
+  final String colorId;
+  final String emptyStateMessage;
   final ProviderPortalController controller;
   final String roleKey;
 
@@ -155,7 +148,13 @@ class _QueueColumn extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(label, style: AppTypography.h5),
+              Row(
+                children: [
+                  Icon(_iconForId(iconId), size: 18, color: _colorForId(colorId)),
+                  const SizedBox(width: 8),
+                  Expanded(child: Text(label, style: AppTypography.h5)),
+                ],
+              ),
               const SizedBox(height: 4),
               Text(
                 '${items.length} patients',
@@ -171,7 +170,7 @@ class _QueueColumn extends StatelessWidget {
                     borderRadius: BorderRadius.circular(16),
                   ),
                   child: Text(
-                    _emptyStateText(stage),
+                    emptyStateMessage,
                     style: AppTypography.small.copyWith(color: AppColors.gray),
                   ),
                 )
@@ -188,24 +187,6 @@ class _QueueColumn extends StatelessWidget {
         ),
       ),
     );
-  }
-
-  String _emptyStateText(String stage) {
-    switch (stage) {
-      case 'NEW':
-      case 'WAITING':
-        return 'No patients are waiting right now.';
-      case 'ASSIGNED':
-        return 'No accepted patients are queued here.';
-      case 'IN_PROGRESS':
-        return 'No consultations are in progress.';
-      case 'READY':
-        return 'Nothing is waiting to be completed.';
-      case 'COMPLETED':
-        return 'No completed items have been loaded yet.';
-      default:
-        return 'Everything is up to date.';
-    }
   }
 }
 
@@ -340,6 +321,44 @@ class _QueueCard extends StatelessWidget {
         ),
       );
     }
+  }
+}
+
+IconData _iconForId(String iconId) {
+  switch (iconId) {
+    case 'people':
+    case 'patient':
+      return Icons.people_alt_outlined;
+    case 'assignment':
+      return Icons.assignment_ind_outlined;
+    case 'care':
+      return Icons.medical_services_outlined;
+    case 'payments':
+      return Icons.payments_outlined;
+    case 'checklist':
+      return Icons.checklist_rounded;
+    case 'done':
+      return Icons.task_alt_outlined;
+    case 'queue':
+    default:
+      return Icons.local_hospital_outlined;
+  }
+}
+
+Color _colorForId(String colorId) {
+  switch (colorId) {
+    case 'red':
+      return AppColors.error;
+    case 'orange':
+    case 'amber':
+      return AppColors.warning;
+    case 'green':
+      return AppColors.shieldGreen;
+    case 'slate':
+      return AppColors.darkGray;
+    case 'blue':
+    default:
+      return AppColors.shieldBlue;
   }
 }
 

@@ -12,9 +12,9 @@ class ProviderDashboardScreen extends StatelessWidget {
     return ProviderWorkspaceScaffold(
       builder: (context, ref, controller) {
         final summary = controller.summary;
-        final queueCounts = controller.queueStageCounts;
         final schedule = controller.selectedUpcomingAppointments.take(4).toList();
         final urgentItems = controller.urgentQueueItems;
+        final dashboardHighlights = controller.dashboardHighlights;
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -24,38 +24,29 @@ class ProviderDashboardScreen extends StatelessWidget {
               roleLabel: controller.providerRoleLabel,
               branchLabel: controller.providerBranchLabel,
               appointmentsToday: summary['appointmentsToday'] ?? 0,
-              waitingPatients: queueCounts['WAITING'] ?? 0,
+              waitingPatients: controller.queueCountForStages(
+                const ['WAITING', 'WAITING_PAYMENT'],
+              ),
             ),
             const SizedBox(height: 18),
             Wrap(
               spacing: 12,
               runSpacing: 12,
-              children: [
-                _StageMetricCard(
-                  title: 'Urgent',
-                  value: '${urgentItems.length}',
-                  note: 'needs attention now',
-                  accent: AppColors.error,
-                ),
-                _StageMetricCard(
-                  title: 'Waiting',
-                  value: '${queueCounts['WAITING'] ?? 0}',
-                  note: 'patients or payments pending',
-                  accent: AppColors.warning,
-                ),
-                _StageMetricCard(
-                  title: 'In Consultation',
-                  value: '${queueCounts['IN_PROGRESS'] ?? 0}',
-                  note: 'patient care in progress',
-                  accent: AppColors.shieldBlue,
-                ),
-                _StageMetricCard(
-                  title: 'Ready to Complete',
-                  value: '${queueCounts['READY'] ?? 0}',
-                  note: 'can be finished now',
-                  accent: AppColors.shieldGreen,
-                ),
-              ],
+              children: dashboardHighlights
+                  .map(
+                    (meta) => _StageMetricCard(
+                      title: meta['title']?.toString() ?? 'Queue',
+                      value: '${controller.dashboardHighlightValue(meta)}',
+                      note: meta['note']?.toString() ?? '',
+                      accent: _dashboardColorForId(
+                        meta['color']?.toString() ?? 'blue',
+                      ),
+                      icon: _dashboardIconForId(
+                        meta['icon']?.toString() ?? 'queue',
+                      ),
+                    ),
+                  )
+                  .toList(),
             ),
             const SizedBox(height: 22),
             LayoutBuilder(
@@ -215,12 +206,14 @@ class _StageMetricCard extends StatelessWidget {
     required this.value,
     required this.note,
     required this.accent,
+    required this.icon,
   });
 
   final String title;
   final String value;
   final String note;
   final Color accent;
+  final IconData icon;
 
   @override
   Widget build(BuildContext context) {
@@ -235,11 +228,7 @@ class _StageMetricCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 10,
-            height: 10,
-            decoration: BoxDecoration(color: accent, shape: BoxShape.circle),
-          ),
+          Icon(icon, color: accent, size: 18),
           const SizedBox(height: 10),
           Text(title, style: AppTypography.small.copyWith(color: AppColors.gray)),
           const SizedBox(height: 8),
@@ -249,6 +238,34 @@ class _StageMetricCard extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+IconData _dashboardIconForId(String iconId) {
+  switch (iconId) {
+    case 'priority':
+      return Icons.priority_high_rounded;
+    case 'care':
+      return Icons.medical_services_outlined;
+    case 'checklist':
+      return Icons.checklist_rounded;
+    case 'queue':
+    default:
+      return Icons.people_alt_outlined;
+  }
+}
+
+Color _dashboardColorForId(String colorId) {
+  switch (colorId) {
+    case 'red':
+      return AppColors.error;
+    case 'orange':
+      return AppColors.warning;
+    case 'green':
+      return AppColors.shieldGreen;
+    case 'blue':
+    default:
+      return AppColors.shieldBlue;
   }
 }
 

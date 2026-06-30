@@ -15,16 +15,6 @@ class ProviderCustomersScreen extends StatefulWidget {
 class _ProviderCustomersScreenState extends State<ProviderCustomersScreen> {
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
-  final String _defaultTab = 'overview';
-
-  static const _supportedTabs = <String>{
-    'overview',
-    'timeline',
-    'appointments',
-    'records',
-    'payments',
-    'membership',
-  };
 
   @override
   void dispose() {
@@ -34,12 +24,11 @@ class _ProviderCustomersScreenState extends State<ProviderCustomersScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final routeTab = _routeTab(context);
-    final activeTab = routeTab ?? _defaultTab;
-
     return ProviderWorkspaceScaffold(
       builder: (context, ref, controller) {
+        final activeTab = controller.resolvePatientTab(_routeTab(context));
         final selected = controller.selectedCustomer;
+        final workspaceTabs = controller.patientWorkspaceTabs;
         final matchingCustomers = controller.customers.where((customer) {
           final query = _searchQuery.trim().toLowerCase();
           if (query.isEmpty) {
@@ -132,7 +121,9 @@ class _ProviderCustomersScreenState extends State<ProviderCustomersScreen> {
                 child: Center(child: CircularProgressIndicator()),
               )
             else if (selected == null)
-              _WorkspaceEmptyState()
+              _WorkspaceEmptyState(
+                message: controller.patientWorkspaceEmptyStateMessage,
+              )
             else
               Container(
                 width: double.infinity,
@@ -169,21 +160,20 @@ class _ProviderCustomersScreenState extends State<ProviderCustomersScreen> {
                       scrollDirection: Axis.horizontal,
                       child: Row(
                         children: [
-                          for (final tab in const [
-                            'overview',
-                            'timeline',
-                            'appointments',
-                            'records',
-                            'payments',
-                            'membership',
-                          ])
+                          for (final tab in workspaceTabs)
                             Padding(
                               padding: const EdgeInsets.only(right: 10),
                               child: ChoiceChip(
-                                label: Text(_labelForTab(tab)),
-                                selected: activeTab == tab,
+                                label: Text(
+                                  tab['title']?.toString() ?? 'Section',
+                                ),
+                                selected:
+                                    activeTab == tab['code']?.toString(),
                                 onSelected: (_) {
-                                  _openTab(context, tab);
+                                  _openTab(
+                                    context,
+                                    tab['code']?.toString() ?? 'overview',
+                                  );
                                 },
                               ),
                             ),
@@ -206,7 +196,7 @@ class _ProviderCustomersScreenState extends State<ProviderCustomersScreen> {
       case 'timeline':
         final timeline = controller.selectedTimeline as List<Map<String, dynamic>>;
         if (timeline.isEmpty) {
-          return const _PanelText('No patient history is available yet.');
+          return _PanelText(controller.patientTabEmptyState(activeTab));
         }
         return Column(
           children: timeline
@@ -224,9 +214,7 @@ class _ProviderCustomersScreenState extends State<ProviderCustomersScreen> {
       case 'appointments':
         final appointments = controller.selectedAppointments as List<dynamic>;
         if (appointments.isEmpty) {
-          return const _PanelText(
-            'No appointments have been added for this patient yet.',
-          );
+          return _PanelText(controller.patientTabEmptyState(activeTab));
         }
         return Column(
           children: appointments
@@ -243,9 +231,7 @@ class _ProviderCustomersScreenState extends State<ProviderCustomersScreen> {
       case 'records':
         final documents = controller.selectedRecentDocuments as List<dynamic>;
         if (documents.isEmpty) {
-          return const _PanelText(
-            'No medical records have been uploaded yet. Prescriptions, reports, and supporting files will appear here.',
-          );
+          return _PanelText(controller.patientTabEmptyState(activeTab));
         }
         return Column(
           children: documents
@@ -336,24 +322,6 @@ class _ProviderCustomersScreenState extends State<ProviderCustomersScreen> {
     }
   }
 
-  String _labelForTab(String value) {
-    switch (value) {
-      case 'timeline':
-        return 'History';
-      case 'appointments':
-        return 'Appointments';
-      case 'records':
-        return 'Medical Records';
-      case 'payments':
-        return 'Payments';
-      case 'membership':
-        return 'Membership';
-      case 'overview':
-      default:
-        return 'Summary';
-    }
-  }
-
   String _patientLabel(Map<String, dynamic> customer) {
     final customerCode = customer['customerCode']?.toString().trim() ?? '';
     if (customerCode.isNotEmpty) {
@@ -363,11 +331,7 @@ class _ProviderCustomersScreenState extends State<ProviderCustomersScreen> {
   }
 
   String? _routeTab(BuildContext context) {
-    final tab = GoRouterState.of(context).uri.queryParameters['tab'];
-    if (tab == null || !_supportedTabs.contains(tab)) {
-      return null;
-    }
-    return tab;
+    return GoRouterState.of(context).uri.queryParameters['tab'];
   }
 
   void _openTab(BuildContext context, String tab) {
@@ -679,6 +643,10 @@ class _PanelText extends StatelessWidget {
 }
 
 class _WorkspaceEmptyState extends StatelessWidget {
+  const _WorkspaceEmptyState({required this.message});
+
+  final String message;
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -690,7 +658,7 @@ class _WorkspaceEmptyState extends StatelessWidget {
         border: Border.all(color: AppColors.divider),
       ),
       child: Text(
-        'Select a patient to open their profile. Appointments, medical records, payments, membership, and history will stay together here.',
+        message,
         style: AppTypography.body.copyWith(color: AppColors.gray),
       ),
     );

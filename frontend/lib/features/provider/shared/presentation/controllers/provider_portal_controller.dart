@@ -49,6 +49,8 @@ class ProviderPortalController extends ChangeNotifier {
       List<Map<String, dynamic>>.from(workspace['customers'] ?? const []);
   Map<String, dynamic> get summary =>
       Map<String, dynamic>.from(workspace['summary'] ?? const {});
+  Map<String, dynamic> get workspaceMeta =>
+      Map<String, dynamic>.from(workspace['workspaceMeta'] ?? const {});
   Map<String, dynamic> get queues =>
       Map<String, dynamic>.from(workspace['queues'] ?? const {});
   List<Map<String, dynamic>> get appointmentQueue =>
@@ -63,6 +65,52 @@ class ProviderPortalController extends ChangeNotifier {
       (item) => <String, dynamic>{...item},
     ),
   ];
+
+  List<Map<String, dynamic>> get queueStagesMetadata {
+    final stages = List<Map<String, dynamic>>.from(
+      (workspaceMeta['queueStages'] as List? ?? const <dynamic>[])
+          .map((item) => Map<String, dynamic>.from(item as Map)),
+    );
+    stages.sort(
+      (left, right) => (left['order'] as num? ?? 0).compareTo(
+        right['order'] as num? ?? 0,
+      ),
+    );
+    return stages;
+  }
+
+  List<Map<String, dynamic>> get dashboardHighlights {
+    final cards = List<Map<String, dynamic>>.from(
+      (workspaceMeta['dashboardHighlights'] as List? ?? const <dynamic>[])
+          .map((item) => Map<String, dynamic>.from(item as Map)),
+    );
+    cards.sort(
+      (left, right) => (left['order'] as num? ?? 0).compareTo(
+        right['order'] as num? ?? 0,
+      ),
+    );
+    return cards;
+  }
+
+  Map<String, dynamic> get patientWorkspaceMetadata =>
+      Map<String, dynamic>.from(workspaceMeta['patientWorkspace'] ?? const {});
+
+  List<Map<String, dynamic>> get patientWorkspaceTabs {
+    final tabs = List<Map<String, dynamic>>.from(
+      (patientWorkspaceMetadata['tabs'] as List? ?? const <dynamic>[])
+          .map((item) => Map<String, dynamic>.from(item as Map)),
+    );
+    tabs.sort(
+      (left, right) => (left['order'] as num? ?? 0).compareTo(
+        right['order'] as num? ?? 0,
+      ),
+    );
+    return tabs;
+  }
+
+  String get patientWorkspaceEmptyStateMessage =>
+      patientWorkspaceMetadata['emptyStateMessage']?.toString() ??
+      'Select a patient to open the full care view.';
 
   String get providerDisplayName {
     final display = authProfile['display'] as Map<String, dynamic>? ??
@@ -115,13 +163,9 @@ class ProviderPortalController extends ChangeNotifier {
 
   Map<String, List<Map<String, dynamic>>> get queueByStage {
     final buckets = <String, List<Map<String, dynamic>>>{
-      'NEW': <Map<String, dynamic>>[],
-      'ASSIGNED': <Map<String, dynamic>>[],
-      'IN_PROGRESS': <Map<String, dynamic>>[],
-      'WAITING': <Map<String, dynamic>>[],
-      'READY': <Map<String, dynamic>>[],
-      'COMPLETED': <Map<String, dynamic>>[],
-    };
+      for (final stage in queueStagesMetadata)
+        stage['code']?.toString() ?? '': <Map<String, dynamic>>[],
+    }..remove('');
 
     for (final item in workflowQueue) {
       final stage = _resolveWorkflowStage(item);
@@ -289,6 +333,75 @@ class ProviderPortalController extends ChangeNotifier {
     await loadSettingsData();
   }
 
+  String queueStageTitle(String stageCode) {
+    for (final stage in queueStagesMetadata) {
+      if (stage['code']?.toString() == stageCode) {
+        return stage['title']?.toString() ?? stageCode.replaceAll('_', ' ');
+      }
+    }
+    return stageCode.replaceAll('_', ' ');
+  }
+
+  String queueStageEmptyState(String stageCode) {
+    for (final stage in queueStagesMetadata) {
+      if (stage['code']?.toString() == stageCode) {
+        return stage['emptyStateMessage']?.toString() ??
+            'Everything is up to date.';
+      }
+    }
+    return 'Everything is up to date.';
+  }
+
+  int queueCountForStages(List<String> stageCodes) {
+    var total = 0;
+    for (final stageCode in stageCodes) {
+      total += queueStageCounts[stageCode] ?? 0;
+    }
+    return total;
+  }
+
+  String patientTabTitle(String tabCode) {
+    for (final tab in patientWorkspaceTabs) {
+      if (tab['code']?.toString() == tabCode) {
+        return tab['title']?.toString() ?? tabCode;
+      }
+    }
+    return tabCode;
+  }
+
+  String patientTabEmptyState(String tabCode) {
+    for (final tab in patientWorkspaceTabs) {
+      if (tab['code']?.toString() == tabCode) {
+        return tab['emptyStateMessage']?.toString() ??
+            'No information is available yet.';
+      }
+    }
+    return 'No information is available yet.';
+  }
+
+  String resolvePatientTab(String? tabCode) {
+    final tabs = patientWorkspaceTabs;
+    if (tabs.isEmpty) {
+      return 'overview';
+    }
+    final defaultTab = tabs.first['code']?.toString() ?? 'overview';
+    final requested = tabCode?.trim();
+    if (requested == null || requested.isEmpty) {
+      return defaultTab;
+    }
+    final isSupported = tabs.any((tab) => tab['code']?.toString() == requested);
+    return isSupported ? requested : defaultTab;
+  }
+
+  int dashboardHighlightValue(Map<String, dynamic> meta) {
+    final metricKind = meta['metricKind']?.toString() ?? '';
+    if (metricKind == 'urgent') {
+      return urgentQueueItems.length;
+    }
+    final stageCodes = List<String>.from(meta['stageCodes'] ?? const <String>[]);
+    return queueCountForStages(stageCodes);
+  }
+
   String? queueCustomerId(Map<String, dynamic> item) {
     final customerId = item['customerId']?.toString().trim() ?? '';
     return customerId.isEmpty ? null : customerId;
@@ -324,26 +437,14 @@ class ProviderPortalController extends ChangeNotifier {
   String _resolveWorkflowStage(Map<String, dynamic> item) {
     final backendStage = item['stageCode']?.toString().trim().toUpperCase() ?? '';
     if (backendStage.isNotEmpty) {
-      switch (backendStage) {
-        case 'ACCEPTED':
-          return 'ASSIGNED';
-        case 'CONSULTATION':
-          return 'IN_PROGRESS';
-        case 'WAITING_PAYMENT':
-        case 'WAITING':
-          return 'WAITING';
-        case 'READY_TO_COMPLETE':
-          return 'READY';
-        case 'COMPLETED':
-          return 'COMPLETED';
-      }
+      return backendStage;
     }
     final normalized = (item['status']?.toString() ?? '').trim().toUpperCase();
     if (normalized.contains('COMPLETE') || normalized.contains('APPROVED')) {
       return 'COMPLETED';
     }
     if (normalized.contains('READY') || normalized.contains('VALIDATED')) {
-      return 'READY';
+      return 'READY_TO_COMPLETE';
     }
     if (normalized.contains('WAIT')) {
       return 'WAITING';
@@ -351,14 +452,16 @@ class ProviderPortalController extends ChangeNotifier {
     if (normalized.contains('PROGRESS') ||
         normalized.contains('CHECKED') ||
         normalized.contains('PROCESS')) {
-      return 'IN_PROGRESS';
+      return 'CONSULTATION';
     }
     if (normalized.contains('ASSIGN') ||
         normalized.contains('SCHEDULED') ||
         normalized.contains('CONFIRM')) {
-      return 'ASSIGNED';
+      return 'ACCEPTED';
     }
-    return 'NEW';
+    return queueStagesMetadata.isNotEmpty
+        ? queueStagesMetadata.first['code']?.toString() ?? 'WAITING'
+        : 'WAITING';
   }
 
   int _priorityRank(Map<String, dynamic> item) {

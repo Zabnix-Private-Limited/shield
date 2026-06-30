@@ -5798,3 +5798,43 @@ est build, ackend/vercel.json, ackend/src/auth/auth.service.ts, and uth_devic
 
 ---
 2026-06-30 17:40:29 IST
+## 168. Provider Workspace Metadata Foundation: Backend-Owned Queue, Dashboard, And Patient Workspace Configuration
+**High-level description**: Introduced a backend-owned metadata contract for the Provider Portal so Flutter stops deciding queue-stage wording, dashboard highlight semantics, patient-workspace tab labels, ordering, and empty-state copy locally, and instead renders a server-driven provider workspace configuration.
+- Extended the provider workspace API payload in `OperationsQueueService.getProviderWorkspace()` to return `workspaceMeta`, which now includes:
+  - workflow profile identity (`GENERAL`, `CLINIC`, `PHARMACY`, `DENTAL`, `LABORATORY`, etc.)
+  - queue stage configuration (title, icon identifier, color identifier, order, empty-state copy, allowed actions)
+  - dashboard highlight-card configuration (title, note, icon identifier, color identifier, order, and metric type)
+  - patient workspace metadata (title, tab ordering, tab labels, icon identifiers, and empty-state messages)
+  - initial navigation-section metadata for the provider workspace
+- Added workflow-profile-aware queue metadata generation so different provider types can now receive different operational wording from the backend without requiring Flutter code changes. Examples include pharmacy-specific labels such as `Waiting for Verification` and `Dispensing`, dental-specific labels such as `Waiting for Treatment`, and laboratory-specific labels such as `Waiting for Sample`.
+- Reworked `ProviderPortalController` to treat queue stages, dashboard highlights, and patient workspace tabs as backend-provided metadata instead of hardcoded frontend constants. The controller now resolves valid patient tabs, queue-stage counts, dashboard metric values, and empty-state copy from `workspaceMeta`.
+- Updated the Provider Queue screen to render queue columns and queue pills from backend stage metadata rather than local stage-order arrays and switch statements.
+- Updated the Provider Dashboard to render its operational highlight cards from backend metadata rather than local hardcoded `Urgent / Waiting / In Consultation / Ready to Complete` definitions.
+- Updated the Patient Workspace tab strip to render from backend metadata and to use backend-provided empty-state messages instead of local label maps.
+- Why this approach was chosen:
+  - this is the architectural pivot needed before expanding more provider features, because otherwise each new provider module would continue duplicating semantics inside Flutter.
+  - backend-owned workspace metadata makes workflow wording, provider-type specialization, and future localization much easier to evolve without republishing the app for every semantic change.
+  - the patient workspace is intended to become the center of provider work, so moving its navigation semantics into backend contracts now reduces future refactor churn as more clinical modules are added.
+
+### Files Modified/Created
+**Frontend Files (Modified)**:
+- frontend/lib/features/provider/shared/presentation/controllers/provider_portal_controller.dart
+- frontend/lib/features/provider/dashboard/presentation/screens/provider_dashboard_screen.dart
+- frontend/lib/features/provider/queue/presentation/screens/provider_queue_screen.dart
+- frontend/lib/features/provider/customers/presentation/screens/provider_customers_screen.dart
+
+**Backend Files (Modified)**:
+- backend/src/operations-queue/operations-queue.service.ts
+
+### Verification
+- flutter analyze lib/features/provider/dashboard/presentation/screens/provider_dashboard_screen.dart lib/features/provider/queue/presentation/screens/provider_queue_screen.dart lib/features/provider/customers/presentation/screens/provider_customers_screen.dart lib/features/provider/shared/presentation/controllers/provider_portal_controller.dart
+- npm run build
+- Verified the provider frontend compiles cleanly against backend-provided workspace metadata and the backend compiles after the new provider workspace configuration contract was introduced.
+
+### Remaining Blockers / Risks
+- The provider sidebar/navigation shell is still locally defined in Flutter even though `workspaceMeta.navigationSections` now exists in the backend payload. The next architecture pass should move provider navigation rendering onto that backend-owned metadata too.
+- Icon and color semantics are now stable backend identifiers, but Flutter still owns the final identifier-to-widget mapping. That is acceptable as a presentation concern, but any new identifiers should be added deliberately to keep the contract stable.
+- Patient workspace content blocks are still partly local composition; this foundation moves the navigation semantics first, not the full clinical workspace module set.
+
+---
+2026-06-30 18:00:42 IST
