@@ -1,13 +1,69 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { randomUUID } from 'crypto';
+import { PricingService } from '../pricing/pricing.service';
+import { SERVICE_TYPES, type ShieldServiceType } from '../pricing/pricing.types';
+import { WalletService } from '../wallet/wallet.service';
+
+type ConsultationFormState = {
+  chiefComplaint: string;
+  symptoms: string;
+  clinicalFindings: string;
+  advice: string;
+  procedures: string;
+  labOrders: string;
+  followUp: string;
+  providerNotes: string;
+};
+
+type VisitBillingDraftState = {
+  consultationFee: number;
+  proceduresAmount: number;
+  medicinesAmount: number;
+  labTestsAmount: number;
+  otherServicesAmount: number;
+  manualDiscountAmount: number;
+  taxPercent: number;
+  walletUseAmount: number;
+  cashAmount: number;
+  upiAmount: number;
+  cardAmount: number;
+  pendingAmount: number;
+  refundAmount: number;
+  otherServicesLabel: string;
+};
+
+type PaymentSummaryState = {
+  walletUsed: number;
+  cash: number;
+  upi: number;
+  card: number;
+  pending: number;
+  refund: number;
+  paidAmount: number;
+  balanceDue: number;
+  recordedAt: string | null;
+};
+
+type StructuredConsultationState = {
+  form: ConsultationFormState;
+  billingDraft: VisitBillingDraftState;
+};
 
 @Injectable()
 export class AppointmentService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly pricingService: PricingService,
+    private readonly walletService: WalletService,
+  ) {}
 
   async list(customerId?: bigint) {
-    const whereClause: any = {};
+    const whereClause: Record<string, unknown> = {};
     if (customerId) {
       whereClause.customerId = customerId;
     }
@@ -67,55 +123,14 @@ export class AppointmentService {
   }
 
   async getConsultationWorkspace(id: bigint) {
-    const appointment = await this.prisma.appointment.findUnique({
-      where: { id },
-      include: {
-        customer: true,
-        provider: {
-          include: {
-            business: true,
-          },
-        },
-        consultations: {
-          include: {
-            prescriptions: true,
-          },
-          orderBy: [{ id: 'desc' }],
-        },
-      },
-    });
-
-    if (!appointment) {
-      throw new NotFoundException(`Appointment with ID ${id.toString()} not found`);
-    }
-
+    const appointment = await this.getWorkspaceAppointment(id);
     return this.buildConsultationWorkspacePayload(appointment);
   }
 
   async startConsultation(id: bigint) {
-    const appointment = await this.prisma.appointment.findUnique({
-      where: { id },
-      include: {
-        customer: true,
-        provider: {
-          include: {
-            business: true,
-          },
-        },
-        consultations: {
-          include: {
-            prescriptions: true,
-          },
-          orderBy: [{ id: 'desc' }],
-        },
-      },
-    });
+    const appointment = await this.getWorkspaceAppointment(id);
 
-    if (!appointment) {
-      throw new NotFoundException(`Appointment with ID ${id.toString()} not found`);
-    }
-
-    await this.ensureConsultationRecord(appointment, undefined);
+    await this.ensureConsultationRecord(appointment, undefined, undefined);
 
     if (!this.isCompletedAppointmentStatus(appointment.status)) {
       await this.prisma.appointment.update({
@@ -130,36 +145,25 @@ export class AppointmentService {
   async saveConsultation(
     id: bigint,
     data: {
+      chiefComplaint?: string;
       symptoms?: string;
+      clinicalFindings?: string;
       diagnosis?: string;
       advice?: string;
+      procedures?: string;
+      labOrders?: string;
       followUp?: string;
+      providerNotes?: string;
       notes?: string;
     },
   ) {
-    const appointment = await this.prisma.appointment.findUnique({
-      where: { id },
-      include: {
-        customer: true,
-        provider: {
-          include: {
-            business: true,
-          },
-        },
-        consultations: {
-          include: {
-            prescriptions: true,
-          },
-          orderBy: [{ id: 'desc' }],
-        },
-      },
-    });
+    const appointment = await this.getWorkspaceAppointment(id);
 
-    if (!appointment) {
-      throw new NotFoundException(`Appointment with ID ${id.toString()} not found`);
-    }
-
-    await this.ensureConsultationRecord(appointment, data);
+    await this.ensureConsultationRecord(
+      appointment,
+      this.normalizeConsultationInput(data),
+      undefined,
+    );
 
     if (!this.isCompletedAppointmentStatus(appointment.status)) {
       await this.prisma.appointment.update({
@@ -171,16 +175,102 @@ export class AppointmentService {
     return this.getConsultationWorkspace(id);
   }
 
+  async saveVisitBillingDraft(
+    id: bigint,
+    data: Partial<VisitBillingDraftState>,
+  ) {
+    const appointment = await this.getWorkspaceAppointment(id);
+    await this.ensureConsultationRecord(appointment, undefined, data);
+
+    if (!this.isCompletedAppointmentStatus(appointment.status)) {
+      await this.prisma.appointment.update({
+        where: { id: appointment.id },
+        data: { status: 'IN_PROGRESS' },
+      });
+    }
+
+    return this.getConsultationWorkspace(id);
+  }
+
+  async generateVisitInvoice(
+    id: bigint,
+    input?: {
+      formData?: {
+        chiefComplaint?: string;
+        symptoms?: string;
+        clinicalFindings?: string;
+        diagnosis?: string;
+        advice?: string;
+        procedures?: string;
+        labOrders?: string;
+        followUp?: string;
+        providerNotes?: string;
+        notes?: string;
+      };
+      billingDraft?: Partial<VisitBillingDraftState>;
+    },
+  ) {
+    const appointment = await this.getWorkspaceAppointment(id);
+    await this.ensureConsultationRecord(
+      appointment,
+      this.normalizeConsultationInput(input?.formData),
+      input?.billingDraft,
+    );
+    await this.upsertVisitInvoice(appointment.id);
+    return this.getConsultationWorkspace(id);
+  }
+
+  async recordVisitPayment(
+    id: bigint,
+    data: Partial<VisitBillingDraftState>,
+  ) {
+    const appointment = await this.getWorkspaceAppointment(id);
+    await this.ensureConsultationRecord(appointment, undefined, data);
+    await this.upsertVisitInvoice(appointment.id);
+    await this.applyVisitPayment(appointment.id);
+    return this.getConsultationWorkspace(id);
+  }
+
   async completeConsultation(
     id: bigint,
     data: {
+      chiefComplaint?: string;
       symptoms?: string;
+      clinicalFindings?: string;
       diagnosis?: string;
       advice?: string;
+      procedures?: string;
+      labOrders?: string;
       followUp?: string;
+      providerNotes?: string;
       notes?: string;
+      billingDraft?: Partial<VisitBillingDraftState>;
     },
   ) {
+    const appointment = await this.getWorkspaceAppointment(id);
+
+    await this.ensureConsultationRecord(
+      appointment,
+      this.normalizeConsultationInput(data),
+      data.billingDraft,
+    );
+
+    const refreshedAppointment = await this.getWorkspaceAppointment(id);
+    const consultation = refreshedAppointment.consultations?.[0];
+    const state = this.parseStructuredConsultationState(consultation?.notes);
+    if (this.computeVisitChargeItems(state).length > 0) {
+      await this.upsertVisitInvoice(refreshedAppointment.id);
+    }
+
+    await this.prisma.appointment.update({
+      where: { id: refreshedAppointment.id },
+      data: { status: 'COMPLETED' },
+    });
+
+    return this.getConsultationWorkspace(id);
+  }
+
+  private async getWorkspaceAppointment(id: bigint) {
     const appointment = await this.prisma.appointment.findUnique({
       where: { id },
       include: {
@@ -196,6 +286,16 @@ export class AppointmentService {
           },
           orderBy: [{ id: 'desc' }],
         },
+        purchases: {
+          include: {
+            purchaseItems: {
+              include: {
+                product: true,
+              },
+            },
+          },
+          orderBy: [{ purchaseDate: 'desc' }, { id: 'desc' }],
+        },
       },
     });
 
@@ -203,21 +303,13 @@ export class AppointmentService {
       throw new NotFoundException(`Appointment with ID ${id.toString()} not found`);
     }
 
-    await this.ensureConsultationRecord(appointment, data);
-
-    await this.prisma.appointment.update({
-      where: { id: appointment.id },
-      data: { status: 'COMPLETED' },
-    });
-
-    return this.getConsultationWorkspace(id);
+    return appointment;
   }
 
   private async ensureConsultationRecord(
     appointment: {
       id: bigint;
       customerId: bigint | null;
-      status: string | null;
       provider?: { providerName: string | null } | null;
       consultations?: Array<{
         id: bigint;
@@ -225,30 +317,23 @@ export class AppointmentService {
         notes: string | null;
       }>;
     },
-    data?: {
-      symptoms?: string;
-      diagnosis?: string;
-      advice?: string;
-      followUp?: string;
-      notes?: string;
-    },
+    formData?: Partial<ConsultationFormState> & { diagnosis?: string },
+    billingDraft?: Partial<VisitBillingDraftState>,
   ) {
     const existing = appointment.consultations?.[0];
-    const existingForm = this.parseStructuredConsultationNotes(existing?.notes);
-    const mergedForm = {
-      symptoms: this.normalizeText(data?.symptoms, existingForm.symptoms),
-      advice: this.normalizeText(data?.advice, existingForm.advice),
-      followUp: this.normalizeText(data?.followUp, existingForm.followUp),
-      notes: this.normalizeText(data?.notes, existingForm.notes),
+    const existingState = this.parseStructuredConsultationState(existing?.notes);
+    const mergedState = {
+      form: this.mergeConsultationForm(existingState.form, formData),
+      billingDraft: this.mergeBillingDraft(existingState.billingDraft, billingDraft),
     };
 
     if (existing) {
       return this.prisma.consultation.update({
         where: { id: existing.id },
         data: {
-          doctorName: appointment.provider?.providerName ?? existing.id.toString(),
-          diagnosis: this.normalizeText(data?.diagnosis, existing.diagnosis ?? ''),
-          notes: this.serializeStructuredConsultationNotes(mergedForm),
+          doctorName: appointment.provider?.providerName ?? 'Provider',
+          diagnosis: this.normalizeText(formData?.diagnosis, existing.diagnosis ?? ''),
+          notes: this.serializeStructuredConsultationState(mergedState),
         },
       });
     }
@@ -258,49 +343,342 @@ export class AppointmentService {
         customerId: appointment.customerId,
         appointmentId: appointment.id,
         doctorName: appointment.provider?.providerName ?? 'Provider',
-        diagnosis: this.normalizeText(data?.diagnosis),
-        notes: this.serializeStructuredConsultationNotes(mergedForm),
+        diagnosis: this.normalizeText(formData?.diagnosis),
+        notes: this.serializeStructuredConsultationState(mergedState),
+      },
+    });
+  }
+
+  private async upsertVisitInvoice(appointmentId: bigint) {
+    const appointment = await this.getWorkspaceAppointment(appointmentId);
+    const consultation = appointment.consultations?.[0];
+    if (!consultation) {
+      throw new BadRequestException('Consultation must be started before billing.');
+    }
+    if (!appointment.customerId) {
+      throw new BadRequestException('Patient is not attached to this visit.');
+    }
+
+    const state = this.parseStructuredConsultationState(consultation.notes);
+    const lineItems = this.computeVisitChargeItems(state);
+    if (lineItems.length === 0) {
+      throw new BadRequestException(
+        'Add at least one visit charge before generating the invoice.',
+      );
+    }
+
+    const subtotal = Number(
+      lineItems.reduce((sum, item) => sum + item.amount, 0).toFixed(2),
+    );
+    const manualDiscount = Math.min(
+      subtotal,
+      Math.max(0, Number(state.billingDraft.manualDiscountAmount || 0)),
+    );
+    const discountedSubtotal = Number(
+      Math.max(0, subtotal - manualDiscount).toFixed(2),
+    );
+    const serviceType = this.resolveServiceType(appointment);
+    const evaluation = await this.pricingService.evaluateServicePrice({
+      customerId: appointment.customerId,
+      serviceType,
+      originalAmount: discountedSubtotal,
+      persistAudit: true,
+      referenceType: 'APPOINTMENT',
+      referenceId: appointment.id,
+    });
+
+    const taxPercent = Math.max(0, Number(state.billingDraft.taxPercent || 0));
+    const taxAmount = Number(
+      ((evaluation.finalPayableAmount * taxPercent) / 100).toFixed(2),
+    );
+    const grandTotal = Number(
+      (evaluation.finalPayableAmount + taxAmount).toFixed(2),
+    );
+    const payment = this.computePaymentSummary(
+      grandTotal,
+      state.billingDraft,
+      undefined,
+    );
+    const paymentStatus = this.resolvePaymentStatus(payment);
+    const now = new Date();
+
+    const invoiceNumber =
+      appointment.purchases?.find((purchase) =>
+        this.isVisitPurchase(purchase.purchaseKind),
+      )?.invoiceNumber ?? this.buildVisitInvoiceNumber(appointment.id);
+
+    const billingSnapshot = {
+      generatedAt: now.toISOString(),
+      visitStatus: this.getAppointmentStatusLabel(appointment.status),
+      lineItems: lineItems.map((item) => ({
+        type: item.type,
+        title: item.title,
+        description: item.description,
+        amount: item.amount,
+      })),
+      pricing: {
+        serviceType,
+        originalAmount: subtotal,
+        manualDiscountApplied: manualDiscount,
+        discountedSubtotal,
+        benefitApplied: evaluation.benefitApplied,
+        membershipDiscountApplied: evaluation.membershipDiscountApplied,
+        rewardCreditApplied: evaluation.rewardPointCreditValue,
+        taxPercent,
+        taxAmount,
+        grandTotal,
+        customerVisibleLines: evaluation.customerVisibleLines,
+      },
+      totals: {
+        subtotal,
+        manualDiscount,
+        benefitApplied: evaluation.benefitApplied,
+        membershipDiscountApplied: evaluation.membershipDiscountApplied,
+        rewardCreditApplied: evaluation.rewardPointCreditValue,
+        taxAmount,
+        grandTotal,
+      },
+      paymentStatus,
+    };
+
+    const existingInvoice = appointment.purchases?.find((purchase) =>
+      this.isVisitPurchase(purchase.purchaseKind),
+    );
+
+    if (existingInvoice) {
+      await this.prisma.$transaction(async (tx) => {
+        await tx.purchaseItem.deleteMany({ where: { purchaseId: existingInvoice.id } });
+        await tx.purchase.update({
+          where: { id: existingInvoice.id },
+          data: {
+            customerId: appointment.customerId,
+            providerId: appointment.providerId,
+            appointmentId: appointment.id,
+            invoiceNumber,
+            totalAmount: subtotal,
+            discountAmount: Number(
+              (
+                manualDiscount +
+                evaluation.benefitApplied +
+                evaluation.membershipDiscountApplied +
+                evaluation.rewardPointCreditValue
+              ).toFixed(2),
+            ),
+            payableAmount: grandTotal,
+            purchaseDate: now,
+            purchaseKind: 'VISIT',
+            paymentStatus,
+            paymentSummary: payment,
+            billingSnapshot,
+          },
+        });
+        for (const item of lineItems) {
+          await tx.purchaseItem.create({
+            data: {
+              purchaseId: existingInvoice.id,
+              quantity: 1,
+              unitPrice: item.amount,
+              totalPrice: item.amount,
+              itemType: item.type,
+              itemName: item.title,
+              metadata: {
+                description: item.description,
+              },
+            },
+          });
+        }
+      });
+      return;
+    }
+
+    await this.prisma.$transaction(async (tx) => {
+      const purchase = await tx.purchase.create({
+        data: {
+          uuid: randomUUID(),
+          customerId: appointment.customerId,
+          providerId: appointment.providerId,
+          appointmentId: appointment.id,
+          invoiceNumber,
+          totalAmount: subtotal,
+          discountAmount: Number(
+            (
+              manualDiscount +
+              evaluation.benefitApplied +
+              evaluation.membershipDiscountApplied +
+              evaluation.rewardPointCreditValue
+            ).toFixed(2),
+          ),
+          payableAmount: grandTotal,
+          purchaseDate: now,
+          purchaseKind: 'VISIT',
+          paymentStatus,
+          paymentSummary: payment,
+          billingSnapshot,
+        },
+      });
+
+      for (const item of lineItems) {
+        await tx.purchaseItem.create({
+          data: {
+            purchaseId: purchase.id,
+            quantity: 1,
+            unitPrice: item.amount,
+            totalPrice: item.amount,
+            itemType: item.type,
+            itemName: item.title,
+            metadata: {
+              description: item.description,
+            },
+          },
+        });
+      }
+    });
+  }
+
+  private async applyVisitPayment(appointmentId: bigint) {
+    const appointment = await this.getWorkspaceAppointment(appointmentId);
+    const invoice = appointment.purchases?.find((purchase) =>
+      this.isVisitPurchase(purchase.purchaseKind),
+    );
+    if (!invoice) {
+      throw new BadRequestException('Generate the visit invoice before recording payment.');
+    }
+    if (!appointment.customerId) {
+      throw new BadRequestException('Patient is not attached to this visit.');
+    }
+
+    const consultation = appointment.consultations?.[0];
+    const state = this.parseStructuredConsultationState(consultation?.notes);
+    const grandTotal = Number(
+      (
+        (invoice.billingSnapshot as Record<string, any> | null)?.totals?.grandTotal ??
+        invoice.payableAmount ??
+        0
+      ).toString(),
+    );
+    const previousPayment = this.parsePaymentSummary(invoice.paymentSummary);
+    const nextPayment = this.computePaymentSummary(
+      grandTotal,
+      state.billingDraft,
+      previousPayment,
+    );
+    const nextPaymentStatus = this.resolvePaymentStatus(nextPayment);
+
+    const walletDelta = Number(
+      Math.max(0, nextPayment.walletUsed - previousPayment.walletUsed).toFixed(2),
+    );
+
+    if (walletDelta > 0) {
+      await this.walletService.ensureSufficientCashBalance(
+        appointment.customerId,
+        walletDelta,
+      );
+      const balances = await this.pricingService.getWalletLedgerBalances(
+        appointment.customerId,
+      );
+      await this.walletService.createLedgerEntry({
+        walletId: balances.walletId,
+        transactionType: 'PURCHASE',
+        subLedgerType: 'CASH',
+        amount: walletDelta,
+        remarks: `Visit payment applied (${invoice.invoiceNumber ?? 'Visit invoice'})`,
+        referenceType: 'PURCHASE',
+        referenceId: invoice.id,
+        metadata: {
+          appointmentId: appointment.id.toString(),
+          invoiceNumber: invoice.invoiceNumber,
+        },
+      });
+    }
+
+    const billingSnapshot = {
+      ...((invoice.billingSnapshot as Record<string, unknown> | null) ?? {}),
+      paymentStatus: nextPaymentStatus,
+      paymentUpdatedAt: nextPayment.recordedAt,
+    };
+
+    await this.prisma.purchase.update({
+      where: { id: invoice.id },
+      data: {
+        paymentStatus: nextPaymentStatus,
+        paymentSummary: nextPayment,
+        billingSnapshot,
       },
     });
   }
 
   private buildConsultationWorkspacePayload(appointment: {
     id: bigint;
+    customerId: bigint | null;
     appointmentType: string | null;
     appointmentDate: Date | null;
     status: string | null;
     remarks: string | null;
+    providerId?: bigint | null;
+    provider?: {
+      providerName: string | null;
+      providerType?: string | null;
+      business?: { name: string | null } | null;
+    } | null;
     customer?: { firstName: string | null; lastName: string | null } | null;
-    provider?:
-      | {
-          providerName: string | null;
-          providerType?: string | null;
-          business?: { name: string | null } | null;
-        }
-      | null;
     consultations?: Array<{
       id: bigint;
       diagnosis: string | null;
       notes: string | null;
       prescriptions?: Array<{ id: bigint }>;
     }>;
+    purchases?: Array<{
+      id: bigint;
+      invoiceNumber: string | null;
+      purchaseDate: Date | null;
+      purchaseKind: string | null;
+      paymentStatus: string | null;
+      payableAmount: unknown;
+      paymentSummary: unknown;
+      billingSnapshot: unknown;
+      purchaseItems?: Array<{
+        id: bigint;
+        itemType: string | null;
+        itemName: string | null;
+        totalPrice: unknown;
+        metadata: unknown;
+      }>;
+    }>;
   }) {
     const consultation = appointment.consultations?.[0];
-    const form = this.parseStructuredConsultationNotes(consultation?.notes);
+    const state = this.parseStructuredConsultationState(consultation?.notes);
     const statusCode = (appointment.status ?? 'PENDING').toUpperCase();
-    const patientName =
-      appointment.customer
-        ? `${appointment.customer.firstName ?? ''} ${appointment.customer.lastName ?? ''}`.trim()
-        : 'Patient';
+    const patientName = appointment.customer
+      ? `${appointment.customer.firstName ?? ''} ${appointment.customer.lastName ?? ''}`.trim()
+      : 'Patient';
     const visitTitle = `${this.getAppointmentTypeLabel(appointment.appointmentType)} for ${patientName}`;
     const statusLabel = this.getAppointmentStatusLabel(statusCode);
-    const timeline = this.buildConsultationTimeline(appointment, consultation, form);
+    const visitInvoice =
+      appointment.purchases?.find((purchase) =>
+        this.isVisitPurchase(purchase.purchaseKind),
+      ) ?? null;
+    const billingWorkspace = this.buildBillingWorkspace(appointment, state, visitInvoice);
+    const timeline = this.buildConsultationTimeline(
+      appointment,
+      consultation,
+      state,
+      visitInvoice,
+      billingWorkspace,
+    );
+    const statusSummary = this.buildVisitStatusSummary(
+      statusCode,
+      consultation,
+      state,
+      visitInvoice,
+      billingWorkspace,
+    );
 
     return {
       appointmentId: appointment.id.toString(),
       consultationId: consultation?.id?.toString() ?? null,
       statusCode,
       statusLabel,
+      statusSummary,
       visit: {
         title: visitTitle,
         subtitle: `${appointment.provider?.providerName ?? 'Provider'} • ${appointment.provider?.business?.name ?? 'Branch not assigned'}`,
@@ -308,96 +686,341 @@ export class AppointmentService {
         appointmentDateLabel: this.formatDateTime(appointment.appointmentDate),
         reason: appointment.remarks?.trim() || 'Visit reason has not been recorded yet.',
         prescriptionCount: consultation?.prescriptions?.length ?? 0,
+        visitStatusLabel: statusLabel,
+        billingStatusLabel: statusSummary.billingStatus.label,
+        paymentStatusLabel: statusSummary.paymentStatus.label,
       },
-      actions: this.buildConsultationActions(statusCode),
+      actions: this.buildConsultationActions(statusCode, visitInvoice, billingWorkspace),
       formSections: [
+        {
+          code: 'chiefComplaint',
+          title: 'Chief Complaint',
+          placeholder: 'Record the main reason for this visit in plain language.',
+          order: 1,
+        },
         {
           code: 'symptoms',
           title: 'Symptoms',
-          placeholder: 'Record what the patient is experiencing in plain language.',
-          order: 1,
+          placeholder: 'Record what the patient is experiencing today.',
+          order: 2,
+        },
+        {
+          code: 'clinicalFindings',
+          title: 'Clinical Findings',
+          placeholder: 'Record examination notes, vitals, or observed findings.',
+          order: 3,
         },
         {
           code: 'diagnosis',
           title: 'Diagnosis',
-          placeholder: 'Record the clinical finding or working diagnosis.',
-          order: 2,
+          placeholder: 'Record the diagnosis or working diagnosis.',
+          order: 4,
+        },
+        {
+          code: 'procedures',
+          title: 'Procedures',
+          placeholder: 'Record procedures completed or planned during this visit.',
+          order: 5,
+        },
+        {
+          code: 'labOrders',
+          title: 'Lab Orders',
+          placeholder: 'Record tests requested or report follow-ups needed.',
+          order: 6,
         },
         {
           code: 'advice',
           title: 'Advice',
-          placeholder: 'Record the care advice or treatment guidance shared with the patient.',
-          order: 3,
+          placeholder: 'Record care advice or treatment guidance shared with the patient.',
+          order: 7,
         },
         {
           code: 'followUp',
-          title: 'Follow-up',
-          placeholder: 'Record the next visit, review window, or additional action needed.',
-          order: 4,
+          title: 'Follow-up Advice',
+          placeholder: 'Record the next review, return visit, or follow-up timing.',
+          order: 8,
         },
         {
-          code: 'notes',
-          title: 'Clinical Notes',
-          placeholder: 'Add provider notes that should stay with this visit.',
-          order: 5,
+          code: 'providerNotes',
+          title: 'Provider Notes',
+          placeholder: 'Add provider-only notes that should stay with this visit.',
+          order: 9,
         },
       ],
       form: {
-        'symptoms': form.symptoms,
-        'diagnosis': consultation?.diagnosis ?? '',
-        'advice': form.advice,
-        'followUp': form.followUp,
-        'notes': form.notes,
+        chiefComplaint: state.form.chiefComplaint,
+        symptoms: state.form.symptoms,
+        clinicalFindings: state.form.clinicalFindings,
+        diagnosis: consultation?.diagnosis ?? '',
+        advice: state.form.advice,
+        procedures: state.form.procedures,
+        labOrders: state.form.labOrders,
+        followUp: state.form.followUp,
+        providerNotes: state.form.providerNotes,
       },
+      billing: billingWorkspace,
       timeline,
     };
   }
 
-  private buildConsultationActions(statusCode: string) {
-    if (statusCode === 'COMPLETED') {
-      return [
-        {
-          code: 'SAVE_PROGRESS',
-          title: 'Update Visit Notes',
-          emphasis: 'secondary',
-        },
-      ];
-    }
+  private buildVisitStatusSummary(
+    statusCode: string,
+    consultation:
+      | {
+          id: bigint;
+          diagnosis: string | null;
+          prescriptions?: Array<{ id: bigint }>;
+        }
+      | undefined,
+    state: StructuredConsultationState,
+    invoice: {
+      paymentStatus: string | null;
+      purchaseDate: Date | null;
+    } | null,
+    billingWorkspace: Record<string, any>,
+  ) {
+    const consultationStarted =
+      statusCode === 'IN_PROGRESS' ||
+      statusCode === 'COMPLETED' ||
+      Boolean(consultation);
+    const prescriptionCount = consultation?.prescriptions?.length ?? 0;
+    const hasLabWork =
+      state.form.labOrders.trim().length > 0 || state.billingDraft.labTestsAmount > 0;
+    const followUpPlanned = state.form.followUp.trim().length > 0;
+    const paymentSummary = (billingWorkspace['payment'] ?? {}) as Record<
+      string,
+      unknown
+    >;
 
-    if (statusCode === 'IN_PROGRESS') {
-      return [
-        {
-          code: 'SAVE_PROGRESS',
-          title: 'Save Progress',
-          emphasis: 'secondary',
-        },
-        {
-          code: 'COMPLETE_VISIT',
-          title: 'Complete Visit',
-          emphasis: 'primary',
-        },
-      ];
-    }
+    return {
+      consultationStatus: {
+        code: consultationStarted ? 'IN_PROGRESS' : 'WAITING',
+        label: consultationStarted ? 'Consultation In Progress' : 'Waiting to Start',
+      },
+      visitStatus: {
+        code: statusCode,
+        label: this.getAppointmentStatusLabel(statusCode),
+      },
+      billingStatus: {
+        code: invoice ? 'INVOICE_READY' : 'PENDING',
+        label: invoice ? 'Invoice Generated' : 'Billing In Progress',
+      },
+      paymentStatus: {
+        code: invoice?.paymentStatus ?? 'PENDING',
+        label: paymentSummary['statusLabel']?.toString() ?? 'Payment Pending',
+      },
+      prescriptionStatus: {
+        code: prescriptionCount > 0 ? 'AVAILABLE' : 'PENDING',
+        label: prescriptionCount > 0 ? 'Prescription Ready' : 'Prescription Pending',
+      },
+      labStatus: {
+        code: hasLabWork ? 'ORDERED' : 'NOT_REQUIRED',
+        label: hasLabWork ? 'Lab Work Requested' : 'No Lab Work Added',
+      },
+      followUpStatus: {
+        code: followUpPlanned ? 'PLANNED' : 'NOT_PLANNED',
+        label: followUpPlanned ? 'Follow-up Planned' : 'Follow-up Not Planned',
+      },
+    };
+  }
 
-    return [
-      {
+  private buildBillingWorkspace(
+    appointment: {
+      id: bigint;
+      customerId: bigint | null;
+      appointmentType: string | null;
+      provider?: { providerType?: string | null } | null;
+    },
+    state: StructuredConsultationState,
+    invoice:
+      | {
+          id: bigint;
+          invoiceNumber: string | null;
+          purchaseDate: Date | null;
+          paymentStatus: string | null;
+          payableAmount: unknown;
+          paymentSummary: unknown;
+          billingSnapshot: unknown;
+          purchaseItems?: Array<{
+            itemType: string | null;
+            itemName: string | null;
+            totalPrice: unknown;
+            metadata: unknown;
+          }>;
+        }
+      | null,
+  ) {
+    const lineItems = this.computeVisitChargeItems(state);
+    const subtotal = Number(
+      lineItems.reduce((sum, item) => sum + item.amount, 0).toFixed(2),
+    );
+    const manualDiscount = Math.min(
+      subtotal,
+      Math.max(0, Number(state.billingDraft.manualDiscountAmount || 0)),
+    );
+    const serviceType = this.resolveServiceType(appointment);
+    const summary = invoice
+      ? ((invoice.billingSnapshot as Record<string, any> | null)?.totals ?? {})
+      : null;
+    const pricing = invoice
+      ? ((invoice.billingSnapshot as Record<string, any> | null)?.pricing ?? {})
+      : null;
+    const taxPercent = pricing?.taxPercent ?? Number(state.billingDraft.taxPercent || 0);
+    const taxAmount = Number(pricing?.taxAmount ?? 0);
+    const grandTotal = Number(
+      summary?.grandTotal ??
+        invoice?.payableAmount ??
+        Math.max(0, subtotal - manualDiscount),
+    );
+    const payment = this.parsePaymentSummary(invoice?.paymentSummary);
+
+    return {
+      draft: {
+        consultationFee: state.billingDraft.consultationFee,
+        proceduresAmount: state.billingDraft.proceduresAmount,
+        medicinesAmount: state.billingDraft.medicinesAmount,
+        labTestsAmount: state.billingDraft.labTestsAmount,
+        otherServicesAmount: state.billingDraft.otherServicesAmount,
+        manualDiscountAmount: state.billingDraft.manualDiscountAmount,
+        taxPercent: state.billingDraft.taxPercent,
+        walletUseAmount: state.billingDraft.walletUseAmount,
+        cashAmount: state.billingDraft.cashAmount,
+        upiAmount: state.billingDraft.upiAmount,
+        cardAmount: state.billingDraft.cardAmount,
+        pendingAmount: state.billingDraft.pendingAmount,
+        refundAmount: state.billingDraft.refundAmount,
+        otherServicesLabel: state.billingDraft.otherServicesLabel,
+      },
+      serviceTypeLabel: this.humanizeCode(serviceType),
+      lineItems: lineItems.map((item) => ({
+        type: item.type,
+        title: item.title,
+        description: item.description,
+        amount: item.amount,
+        amountLabel: this.formatMoney(item.amount),
+      })),
+      invoice: invoice == null
+          ? null
+          : {
+              purchaseId: invoice.id.toString(),
+              invoiceNumber: invoice.invoiceNumber,
+              generatedAtLabel: this.formatDateTime(invoice.purchaseDate),
+            },
+      totals: {
+        subtotal,
+        subtotalLabel: this.formatMoney(subtotal),
+        manualDiscount,
+        manualDiscountLabel: this.formatMoney(manualDiscount),
+        membershipDiscountApplied: Number(pricing?.membershipDiscountApplied ?? 0),
+        membershipDiscountLabel: this.formatMoney(
+          Number(pricing?.membershipDiscountApplied ?? 0),
+        ),
+        benefitApplied: Number(pricing?.benefitApplied ?? 0),
+        benefitAppliedLabel: this.formatMoney(Number(pricing?.benefitApplied ?? 0)),
+        rewardCreditApplied: Number(pricing?.rewardCreditApplied ?? 0),
+        rewardCreditAppliedLabel: this.formatMoney(
+          Number(pricing?.rewardCreditApplied ?? 0),
+        ),
+        taxPercent,
+        taxPercentLabel: `${Number(taxPercent).toFixed(0)}%`,
+        taxAmount,
+        taxAmountLabel: this.formatMoney(taxAmount),
+        grandTotal,
+        grandTotalLabel: this.formatMoney(grandTotal),
+        balanceDue: payment.balanceDue,
+        balanceDueLabel: this.formatMoney(payment.balanceDue),
+      },
+      payment: {
+        walletUsed: payment.walletUsed,
+        walletUsedLabel: this.formatMoney(payment.walletUsed),
+        cash: payment.cash,
+        cashLabel: this.formatMoney(payment.cash),
+        upi: payment.upi,
+        upiLabel: this.formatMoney(payment.upi),
+        card: payment.card,
+        cardLabel: this.formatMoney(payment.card),
+        pending: payment.pending,
+        pendingLabel: this.formatMoney(payment.pending),
+        refund: payment.refund,
+        refundLabel: this.formatMoney(payment.refund),
+        paidAmount: payment.paidAmount,
+        paidAmountLabel: this.formatMoney(payment.paidAmount),
+        balanceDue: payment.balanceDue,
+        balanceDueLabel: this.formatMoney(payment.balanceDue),
+        statusCode: invoice?.paymentStatus ?? 'PENDING',
+        statusLabel: this.getPaymentStatusLabel(invoice?.paymentStatus),
+        recordedAtLabel: payment.recordedAt == null
+            ? 'Payment not recorded'
+            : this.formatDateTime(new Date(payment.recordedAt)),
+      },
+      statusLabel: invoice == null ? 'Billing In Progress' : 'Invoice Generated',
+      paymentStatusLabel: this.getPaymentStatusLabel(invoice?.paymentStatus),
+    };
+  }
+
+  private buildConsultationActions(
+    statusCode: string,
+    invoice: { paymentStatus: string | null } | null,
+    billingWorkspace: Record<string, any>,
+  ) {
+    const actions: Array<Record<string, string>> = [];
+
+    if (statusCode !== 'IN_PROGRESS' && statusCode !== 'COMPLETED') {
+      actions.push({
         code: 'START_CONSULTATION',
         title: 'Start Consultation',
         emphasis: 'primary',
-      },
-      {
-        code: 'SAVE_PROGRESS',
-        title: 'Save Notes',
+      });
+    }
+
+    actions.push({
+      code: 'SAVE_PROGRESS',
+      title: 'Save Progress',
+      emphasis: statusCode === 'IN_PROGRESS' ? 'secondary' : 'primary',
+    });
+
+    actions.push({
+      code: 'SAVE_BILLING',
+      title: 'Save Billing',
+      emphasis: 'secondary',
+    });
+
+    if (
+      Array.isArray(billingWorkspace['lineItems']) &&
+      (billingWorkspace['lineItems'] as Array<unknown>).length > 0
+    ) {
+      actions.push({
+        code: 'GENERATE_INVOICE',
+        title: invoice == null ? 'Generate Invoice' : 'Refresh Invoice',
         emphasis: 'secondary',
-      },
-    ];
+      });
+    }
+
+    if (invoice != null &&
+        (invoice.paymentStatus ?? '').toUpperCase() !== 'PAID') {
+      actions.push({
+        code: 'RECORD_PAYMENT',
+        title: 'Record Payment',
+        emphasis: 'primary',
+      });
+    }
+
+    actions.push({
+      code: 'COMPLETE_VISIT',
+      title: statusCode === 'COMPLETED' ? 'Update Visit' : 'Complete Visit',
+      emphasis: invoice != null ? 'primary' : 'secondary',
+    });
+
+    return actions;
   }
 
   private buildConsultationTimeline(
     appointment: {
+      id: bigint;
       appointmentDate: Date | null;
       status: string | null;
       remarks: string | null;
+      provider?: { providerName: string | null } | null;
     },
     consultation:
       | {
@@ -405,69 +1028,513 @@ export class AppointmentService {
           notes: string | null;
         }
       | undefined,
-    form: {
-      symptoms: string;
-      advice: string;
-      followUp: string;
-      notes: string;
-    },
+    state: StructuredConsultationState,
+    invoice:
+      | {
+          id: bigint;
+          invoiceNumber: string | null;
+          purchaseDate: Date | null;
+          paymentStatus: string | null;
+          paymentSummary: unknown;
+        }
+      | null,
+    billingWorkspace: Record<string, any>,
   ) {
     const timestamp = appointment.appointmentDate ?? new Date();
+    const providerName = appointment.provider?.providerName ?? 'Provider';
     const items = [
       {
-        code: 'APPOINTMENT',
+        code: 'VISIT_CREATED',
         title: 'Visit scheduled',
-        subtitle: appointment.remarks?.trim() || 'Visit has been added to the provider schedule.',
+        subtitle:
+          appointment.remarks?.trim() || 'Visit has been added to the provider schedule.',
         timestamp: timestamp.toISOString(),
+        icon: 'event',
+        color: 'blue',
+        actor: providerName,
+        referenceId: appointment.id.toString(),
       },
     ];
 
     if (this.isConsultationStarted(appointment.status, consultation)) {
       items.push({
-        code: 'CONSULTATION',
+        code: 'CONSULTATION_STARTED',
         title: 'Consultation started',
         subtitle: 'Provider visit is in progress.',
         timestamp: timestamp.toISOString(),
+        icon: 'stethoscope',
+        color: 'blue',
+        actor: providerName,
+        referenceId: appointment.id.toString(),
+      });
+    }
+
+    if (state.form.chiefComplaint.trim().length > 0) {
+      items.push({
+        code: 'CHIEF_COMPLAINT_RECORDED',
+        title: 'Chief complaint recorded',
+        subtitle: state.form.chiefComplaint.trim(),
+        timestamp: timestamp.toISOString(),
+        icon: 'notes',
+        color: 'teal',
+        actor: providerName,
+        referenceId: appointment.id.toString(),
       });
     }
 
     if ((consultation?.diagnosis ?? '').trim().length > 0) {
       items.push({
-        code: 'DIAGNOSIS',
+        code: 'DIAGNOSIS_RECORDED',
         title: 'Diagnosis recorded',
         subtitle: consultation?.diagnosis?.trim() ?? '',
         timestamp: timestamp.toISOString(),
+        icon: 'clinical_notes',
+        color: 'indigo',
+        actor: providerName,
+        referenceId: appointment.id.toString(),
       });
     }
 
-    if (form.advice.trim().length > 0) {
+    if (state.form.procedures.trim().length > 0) {
       items.push({
-        code: 'ADVICE',
-        title: 'Care advice updated',
-        subtitle: form.advice.trim(),
+        code: 'PROCEDURE_RECORDED',
+        title: 'Procedure updated',
+        subtitle: state.form.procedures.trim(),
         timestamp: timestamp.toISOString(),
+        icon: 'medical_services',
+        color: 'amber',
+        actor: providerName,
+        referenceId: appointment.id.toString(),
       });
     }
 
-    if (form.followUp.trim().length > 0) {
+    if (state.form.labOrders.trim().length > 0) {
       items.push({
-        code: 'FOLLOW_UP',
+        code: 'LAB_ORDERED',
+        title: 'Lab work requested',
+        subtitle: state.form.labOrders.trim(),
+        timestamp: timestamp.toISOString(),
+        icon: 'biotech',
+        color: 'purple',
+        actor: providerName,
+        referenceId: appointment.id.toString(),
+      });
+    }
+
+    if (invoice != null) {
+      const totals = (billingWorkspace['totals'] ?? {}) as Record<string, unknown>;
+      items.push({
+        code: 'INVOICE_GENERATED',
+        title: 'Invoice generated',
+        subtitle:
+          `${invoice.invoiceNumber ?? 'Visit invoice'} • ${totals['grandTotalLabel']?.toString() ?? ''}`,
+        timestamp: (invoice.purchaseDate ?? timestamp).toISOString(),
+        icon: 'receipt_long',
+        color: 'amber',
+        actor: providerName,
+        referenceId: invoice.id.toString(),
+      });
+
+      const payment = this.parsePaymentSummary(invoice.paymentSummary);
+      if (payment.paidAmount > 0) {
+        items.push({
+          code: 'PAYMENT_RECORDED',
+          title: 'Payment recorded',
+          subtitle:
+            '${this.formatMoney(payment.paidAmount)} collected • ${this.getPaymentStatusLabel(invoice.paymentStatus)}',
+          timestamp:
+            payment.recordedAt ?? (invoice.purchaseDate ?? timestamp).toISOString(),
+          icon: 'payments',
+          color: 'green',
+          actor: providerName,
+          referenceId: invoice.id.toString(),
+        });
+      }
+    }
+
+    if (state.form.followUp.trim().length > 0) {
+      items.push({
+        code: 'FOLLOW_UP_PLANNED',
         title: 'Follow-up planned',
-        subtitle: form.followUp.trim(),
+        subtitle: state.form.followUp.trim(),
         timestamp: timestamp.toISOString(),
+        icon: 'event_repeat',
+        color: 'teal',
+        actor: providerName,
+        referenceId: appointment.id.toString(),
       });
     }
 
     if (this.isCompletedAppointmentStatus(appointment.status)) {
       items.push({
-        code: 'COMPLETED',
+        code: 'VISIT_COMPLETED',
         title: 'Visit completed',
         subtitle: 'This patient visit has been marked as completed.',
         timestamp: timestamp.toISOString(),
+        icon: 'task_alt',
+        color: 'green',
+        actor: providerName,
+        referenceId: appointment.id.toString(),
       });
     }
 
     return items;
+  }
+
+  private normalizeConsultationInput(
+    data:
+      | {
+          chiefComplaint?: string;
+          symptoms?: string;
+          clinicalFindings?: string;
+          diagnosis?: string;
+          advice?: string;
+          procedures?: string;
+          labOrders?: string;
+          followUp?: string;
+          providerNotes?: string;
+          notes?: string;
+        }
+      | undefined,
+  ) {
+    if (!data) {
+      return undefined;
+    }
+    return {
+      chiefComplaint: data.chiefComplaint,
+      symptoms: data.symptoms,
+      clinicalFindings: data.clinicalFindings,
+      diagnosis: data.diagnosis,
+      advice: data.advice,
+      procedures: data.procedures,
+      labOrders: data.labOrders,
+      followUp: data.followUp,
+      providerNotes: data.providerNotes ?? data.notes,
+    };
+  }
+
+  private parseStructuredConsultationState(notes?: string | null): StructuredConsultationState {
+    const fallback: StructuredConsultationState = {
+      form: {
+        chiefComplaint: '',
+        symptoms: '',
+        clinicalFindings: '',
+        advice: '',
+        procedures: '',
+        labOrders: '',
+        followUp: '',
+        providerNotes: '',
+      },
+      billingDraft: this.defaultBillingDraft(),
+    };
+
+    const raw = notes?.trim() ?? '';
+    if (!raw) {
+      return fallback;
+    }
+
+    try {
+      const parsed = JSON.parse(raw) as Record<string, unknown>;
+      return {
+        form: this.mergeConsultationForm(fallback.form, {
+          chiefComplaint: parsed['chiefComplaint']?.toString(),
+          symptoms: parsed['symptoms']?.toString(),
+          clinicalFindings: parsed['clinicalFindings']?.toString(),
+          advice: parsed['advice']?.toString(),
+          procedures: parsed['procedures']?.toString(),
+          labOrders: parsed['labOrders']?.toString(),
+          followUp: parsed['followUp']?.toString(),
+          providerNotes: (parsed['providerNotes'] ?? parsed['notes'])?.toString(),
+        }),
+        billingDraft: this.mergeBillingDraft(
+          fallback.billingDraft,
+          parsed['billingDraft'] as Record<string, unknown> | undefined,
+        ),
+      };
+    } catch {
+      return {
+        ...fallback,
+        form: {
+          ...fallback.form,
+          providerNotes: raw,
+        },
+      };
+    }
+  }
+
+  private serializeStructuredConsultationState(data: StructuredConsultationState) {
+    return JSON.stringify({
+      chiefComplaint: this.normalizeText(data.form.chiefComplaint),
+      symptoms: this.normalizeText(data.form.symptoms),
+      clinicalFindings: this.normalizeText(data.form.clinicalFindings),
+      advice: this.normalizeText(data.form.advice),
+      procedures: this.normalizeText(data.form.procedures),
+      labOrders: this.normalizeText(data.form.labOrders),
+      followUp: this.normalizeText(data.form.followUp),
+      providerNotes: this.normalizeText(data.form.providerNotes),
+      billingDraft: {
+        consultationFee: data.billingDraft.consultationFee,
+        proceduresAmount: data.billingDraft.proceduresAmount,
+        medicinesAmount: data.billingDraft.medicinesAmount,
+        labTestsAmount: data.billingDraft.labTestsAmount,
+        otherServicesAmount: data.billingDraft.otherServicesAmount,
+        manualDiscountAmount: data.billingDraft.manualDiscountAmount,
+        taxPercent: data.billingDraft.taxPercent,
+        walletUseAmount: data.billingDraft.walletUseAmount,
+        cashAmount: data.billingDraft.cashAmount,
+        upiAmount: data.billingDraft.upiAmount,
+        cardAmount: data.billingDraft.cardAmount,
+        pendingAmount: data.billingDraft.pendingAmount,
+        refundAmount: data.billingDraft.refundAmount,
+        otherServicesLabel: data.billingDraft.otherServicesLabel,
+      },
+    });
+  }
+
+  private mergeConsultationForm(
+    existing: ConsultationFormState,
+    data?: Partial<ConsultationFormState> & { diagnosis?: string },
+  ): ConsultationFormState {
+    return {
+      chiefComplaint: this.normalizeText(data?.chiefComplaint, existing.chiefComplaint),
+      symptoms: this.normalizeText(data?.symptoms, existing.symptoms),
+      clinicalFindings: this.normalizeText(
+        data?.clinicalFindings,
+        existing.clinicalFindings,
+      ),
+      advice: this.normalizeText(data?.advice, existing.advice),
+      procedures: this.normalizeText(data?.procedures, existing.procedures),
+      labOrders: this.normalizeText(data?.labOrders, existing.labOrders),
+      followUp: this.normalizeText(data?.followUp, existing.followUp),
+      providerNotes: this.normalizeText(data?.providerNotes, existing.providerNotes),
+    };
+  }
+
+  private mergeBillingDraft(
+    existing: VisitBillingDraftState,
+    draft?: Record<string, unknown> | Partial<VisitBillingDraftState>,
+  ): VisitBillingDraftState {
+    const source = (draft ?? {}) as Record<string, unknown>;
+    return {
+      consultationFee: this.normalizeNumber(
+        source['consultationFee'],
+        existing.consultationFee,
+      ),
+      proceduresAmount: this.normalizeNumber(
+        source['proceduresAmount'],
+        existing.proceduresAmount,
+      ),
+      medicinesAmount: this.normalizeNumber(
+        source['medicinesAmount'],
+        existing.medicinesAmount,
+      ),
+      labTestsAmount: this.normalizeNumber(
+        source['labTestsAmount'],
+        existing.labTestsAmount,
+      ),
+      otherServicesAmount: this.normalizeNumber(
+        source['otherServicesAmount'],
+        existing.otherServicesAmount,
+      ),
+      manualDiscountAmount: this.normalizeNumber(
+        source['manualDiscountAmount'],
+        existing.manualDiscountAmount,
+      ),
+      taxPercent: this.normalizeNumber(source['taxPercent'], existing.taxPercent),
+      walletUseAmount: this.normalizeNumber(
+        source['walletUseAmount'],
+        existing.walletUseAmount,
+      ),
+      cashAmount: this.normalizeNumber(source['cashAmount'], existing.cashAmount),
+      upiAmount: this.normalizeNumber(source['upiAmount'], existing.upiAmount),
+      cardAmount: this.normalizeNumber(source['cardAmount'], existing.cardAmount),
+      pendingAmount: this.normalizeNumber(source['pendingAmount'], existing.pendingAmount),
+      refundAmount: this.normalizeNumber(source['refundAmount'], existing.refundAmount),
+      otherServicesLabel: this.normalizeText(
+        source['otherServicesLabel'],
+        existing.otherServicesLabel,
+      ),
+    };
+  }
+
+  private defaultBillingDraft(): VisitBillingDraftState {
+    return {
+      consultationFee: 0,
+      proceduresAmount: 0,
+      medicinesAmount: 0,
+      labTestsAmount: 0,
+      otherServicesAmount: 0,
+      manualDiscountAmount: 0,
+      taxPercent: 0,
+      walletUseAmount: 0,
+      cashAmount: 0,
+      upiAmount: 0,
+      cardAmount: 0,
+      pendingAmount: 0,
+      refundAmount: 0,
+      otherServicesLabel: 'Other Services',
+    };
+  }
+
+  private computeVisitChargeItems(state: StructuredConsultationState) {
+    const items: Array<{
+      type: string;
+      title: string;
+      description: string;
+      amount: number;
+    }> = [];
+
+    if (state.billingDraft.consultationFee > 0) {
+      items.push({
+        type: 'CONSULTATION_FEE',
+        title: 'Consultation Fee',
+        description: state.form.chiefComplaint || 'Consultation charge for this visit.',
+        amount: Number(state.billingDraft.consultationFee.toFixed(2)),
+      });
+    }
+
+    if (state.billingDraft.proceduresAmount > 0) {
+      items.push({
+        type: 'PROCEDURE',
+        title: 'Procedures',
+        description: state.form.procedures || 'Procedure charges added to this visit.',
+        amount: Number(state.billingDraft.proceduresAmount.toFixed(2)),
+      });
+    }
+
+    if (state.billingDraft.medicinesAmount > 0) {
+      items.push({
+        type: 'MEDICINE',
+        title: 'Medicines',
+        description:
+          state.form.providerNotes || 'Medicine charges recorded during this visit.',
+        amount: Number(state.billingDraft.medicinesAmount.toFixed(2)),
+      });
+    }
+
+    if (state.billingDraft.labTestsAmount > 0) {
+      items.push({
+        type: 'LAB_TEST',
+        title: 'Lab Tests',
+        description: state.form.labOrders || 'Lab work charges added to this visit.',
+        amount: Number(state.billingDraft.labTestsAmount.toFixed(2)),
+      });
+    }
+
+    if (state.billingDraft.otherServicesAmount > 0) {
+      items.push({
+        type: 'OTHER_SERVICE',
+        title: state.billingDraft.otherServicesLabel || 'Other Services',
+        description: 'Additional service charges recorded during this visit.',
+        amount: Number(state.billingDraft.otherServicesAmount.toFixed(2)),
+      });
+    }
+
+    return items;
+  }
+
+  private computePaymentSummary(
+    grandTotal: number,
+    draft: VisitBillingDraftState,
+    previous: PaymentSummaryState | undefined,
+  ): PaymentSummaryState {
+    const walletUsed = Number(Math.max(0, draft.walletUseAmount || 0).toFixed(2));
+    const cash = Number(Math.max(0, draft.cashAmount || 0).toFixed(2));
+    const upi = Number(Math.max(0, draft.upiAmount || 0).toFixed(2));
+    const card = Number(Math.max(0, draft.cardAmount || 0).toFixed(2));
+    const refund = Number(Math.max(0, draft.refundAmount || 0).toFixed(2));
+    const paidAmount = Number((walletUsed + cash + upi + card).toFixed(2));
+    const balanceDue = Number(
+      Math.max(0, grandTotal - paidAmount + refund).toFixed(2),
+    );
+    const pending = Number(
+      Math.max(balanceDue, draft.pendingAmount || 0).toFixed(2),
+    );
+
+    return {
+      walletUsed,
+      cash,
+      upi,
+      card,
+      pending,
+      refund,
+      paidAmount,
+      balanceDue,
+      recordedAt:
+        paidAmount > 0 || previous?.recordedAt != null ? new Date().toISOString() : null,
+    };
+  }
+
+  private parsePaymentSummary(value: unknown): PaymentSummaryState {
+    const summary = (value as Record<string, unknown> | null) ?? {};
+    return {
+      walletUsed: this.normalizeNumber(summary['walletUsed']),
+      cash: this.normalizeNumber(summary['cash']),
+      upi: this.normalizeNumber(summary['upi']),
+      card: this.normalizeNumber(summary['card']),
+      pending: this.normalizeNumber(summary['pending']),
+      refund: this.normalizeNumber(summary['refund']),
+      paidAmount: this.normalizeNumber(summary['paidAmount']),
+      balanceDue: this.normalizeNumber(summary['balanceDue']),
+      recordedAt: summary['recordedAt']?.toString() ?? null,
+    };
+  }
+
+  private resolvePaymentStatus(payment: PaymentSummaryState) {
+    if (payment.refund > 0 && payment.paidAmount <= 0) {
+      return 'REFUND';
+    }
+    if (payment.balanceDue <= 0) {
+      return 'PAID';
+    }
+    if (payment.paidAmount > 0) {
+      return 'PARTIAL';
+    }
+    return 'PENDING';
+  }
+
+  private resolveServiceType(appointment: {
+    appointmentType: string | null;
+    provider?: { providerType?: string | null } | null;
+  }): ShieldServiceType {
+    const candidates = [
+      appointment.provider?.providerType,
+      appointment.appointmentType,
+    ].map((value) => (value ?? '').toString().trim().toUpperCase());
+
+    for (const candidate of candidates) {
+      if (candidate.includes('PHARMACY')) {
+        return 'PHARMACY';
+      }
+      if (candidate.includes('LAB')) {
+        return 'LAB';
+      }
+      if (candidate.includes('DENTAL')) {
+        return 'DENTAL';
+      }
+      if (candidate.includes('COSMETIC')) {
+        return 'COSMETIC';
+      }
+      if (candidate.includes('DIET')) {
+        return 'DIETITIAN';
+      }
+      if (candidate.includes('HOME')) {
+        return 'HOMECARE';
+      }
+      if (candidate.includes('DOCTOR') || candidate.includes('CONSULT')) {
+        return 'DOCTOR';
+      }
+    }
+
+    return SERVICE_TYPES.includes('DOCTOR') ? 'DOCTOR' : SERVICE_TYPES[0];
+  }
+
+  private buildVisitInvoiceNumber(appointmentId: bigint) {
+    return `VIS-${appointmentId.toString().padStart(6, '0')}`;
+  }
+
+  private isVisitPurchase(purchaseKind?: string | null) {
+    return (purchaseKind ?? '').trim().toUpperCase() === 'VISIT';
   }
 
   private isConsultationStarted(
@@ -488,52 +1555,14 @@ export class AppointmentService {
     return (status ?? '').trim().toUpperCase() === 'COMPLETED';
   }
 
-  private parseStructuredConsultationNotes(notes?: string | null) {
-    const fallback = {
-      symptoms: '',
-      advice: '',
-      followUp: '',
-      notes: '',
-    };
-
-    const raw = notes?.trim() ?? '';
-    if (!raw) {
-      return fallback;
-    }
-
-    try {
-      const parsed = JSON.parse(raw) as Record<string, unknown>;
-      return {
-        symptoms: this.normalizeText(parsed.symptoms),
-        advice: this.normalizeText(parsed.advice),
-        followUp: this.normalizeText(parsed.followUp),
-        notes: this.normalizeText(parsed.notes),
-      };
-    } catch {
-      return {
-        ...fallback,
-        notes: raw,
-      };
-    }
-  }
-
-  private serializeStructuredConsultationNotes(data: {
-    symptoms?: string;
-    advice?: string;
-    followUp?: string;
-    notes?: string;
-  }) {
-    return JSON.stringify({
-      symptoms: this.normalizeText(data.symptoms),
-      advice: this.normalizeText(data.advice),
-      followUp: this.normalizeText(data.followUp),
-      notes: this.normalizeText(data.notes),
-    });
-  }
-
   private normalizeText(value?: unknown, fallback = '') {
     const text = value?.toString().trim();
     return text && text.length > 0 ? text : fallback;
+  }
+
+  private normalizeNumber(value?: unknown, fallback = 0) {
+    const number = Number(value);
+    return Number.isFinite(number) ? Number(number.toFixed(2)) : fallback;
   }
 
   private getAppointmentTypeLabel(type?: string | null) {
@@ -565,14 +1594,46 @@ export class AppointmentService {
       case 'CHECKED_IN':
         return 'Checked In';
       case 'IN_PROGRESS':
-        return 'Consultation in Progress';
+        return 'Consultation In Progress';
       case 'COMPLETED':
         return 'Completed';
       case 'CANCELLED':
         return 'Cancelled';
       default:
-        return status?.replaceAll('_', ' ') ?? 'Appointment';
+        return this.humanizeCode(status || 'Appointment');
     }
+  }
+
+  private getPaymentStatusLabel(status?: string | null) {
+    switch ((status ?? '').trim().toUpperCase()) {
+      case 'PAID':
+        return 'Payment Completed';
+      case 'PARTIAL':
+      case 'PARTIALLY_PAID':
+        return 'Payment Pending';
+      case 'REFUND':
+      case 'REFUNDED':
+        return 'Refund Recorded';
+      case 'PENDING':
+      default:
+        return 'Payment Pending';
+    }
+  }
+
+  private humanizeCode(value: string | null | undefined) {
+    const normalized = (value || '').toString().trim();
+    if (!normalized) {
+      return '';
+    }
+
+    return normalized
+      .replace(/_/g, ' ')
+      .toLowerCase()
+      .replace(/\b\w/g, (character) => character.toUpperCase());
+  }
+
+  private formatMoney(value: number) {
+    return `Rs ${value.toFixed(2)}`;
   }
 
   private formatDateTime(value?: Date | null) {

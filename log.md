@@ -6234,3 +6234,113 @@ est build, ackend/vercel.json, ackend/src/auth/auth.service.ts, and uth_devic
 
 ---
 2026-06-30 23:45:00 IST
+## 177. Provider Visit-Native Billing And Clinical Workflow Integration
+**High-level description**: Extended the existing Provider Portal consultation workflow into a visit-native operating flow so providers can now keep consultation notes, structured clinical fields, live visit billing, invoice generation, payment capture, and visit completion inside the active patient visit instead of leaving the workspace for separate billing behavior.
+- Backend architecture decisions:
+  - kept the active visit anchored to the existing ppointments + consultations model instead of inventing a new parallel visit module
+  - reused the existing purchases and purchase_items tables as the finalized visit-invoice storage surface rather than creating duplicate billing tables
+  - kept in-progress billing and structured clinical draft state inside the existing consultations.notes JSON payload so draft workflow remains attached to the same consultation record
+  - preserved backend ownership of workflow semantics by returning visit summary statuses, billing labels, actions, and timeline entries as part of the consultation workspace contract
+- Backend workflow additions:
+  - expanded appointment consultation save/complete flow to support structured visit fields:
+    - chief complaint
+    - symptoms
+    - clinical findings
+    - diagnosis
+    - procedures
+    - lab orders
+    - advice
+    - follow-up advice
+    - provider notes
+  - added visit-native billing endpoints on the existing appointment slice:
+    - POST /appointments/:id/visit-billing
+    - POST /appointments/:id/generate-invoice
+    - POST /appointments/:id/record-payment
+  - invoice generation now computes visit charges through the existing pricing engine and stores finalized visit invoices on purchases with purchase_kind = VISIT
+  - payment capture now updates visit invoice payment summary and, when wallet cash is used, writes the delta through the existing wallet ledger service instead of calculating anything in Flutter
+  - consultation workspace payload now includes:
+    - visit summary
+    - consultation/billing/payment/prescription/lab/follow-up statuses
+    - backend-driven visit actions
+    - billing draft + line items + totals + payment summary
+    - billing-aware visit timeline entries
+- Provider workspace/frontend changes:
+  - extended the existing Today's Visit tab instead of creating a standalone billing screen
+  - added a visit summary status section so providers can immediately see consultation, visit, billing, payment, prescription, lab, and follow-up status from backend data
+  - added in-visit billing controls for consultation fee, procedures, medicines, lab tests, other services, manual discount, and tax through the existing patient workspace flow
+  - wired backend-driven visit actions for:
+    - Start Consultation
+    - Save Progress
+    - Save Billing
+    - Generate Invoice / Refresh Invoice
+    - Record Payment
+    - Complete Visit
+  - added payment capture inputs for wallet usage, cash, UPI, card, and refund within the visit flow
+  - expanded patient workspace quick actions metadata from the backend so the provider workspace now advertises visit-completion, clinical-note, billing, payment, follow-up, notification, and print-oriented actions from one backend contract
+- Schema / migration notes:
+  - extended ackend/prisma/schema.prisma for visit-native finalized billing storage on existing purchase tables
+  - added SQL migration file:
+    - sql/20260630_visit_native_billing.sql
+  - migration is required before runtime against a real database because the new visit billing code depends on:
+    - purchases.appointment_id
+    - purchases.purchase_kind
+    - purchases.payment_status
+    - purchases.payment_summary
+    - purchases.billing_snapshot
+    - purchase_items.item_type
+    - purchase_items.item_name
+    - purchase_items.metadata
+- Why this approach was chosen:
+  - the next architectural weakness in SHIELD was not another missing screen but the gap between consultation and billing inside the provider workflow
+  - using the existing appointment, consultation, pricing, wallet, and purchase surfaces keeps SHIELD aligned with the rule to extend implementations instead of duplicating modules or repositories
+  - storing draft state on consultation while storing finalized invoices on purchase records gives providers a real end-to-end visit workflow without forcing a bigger schema redesign before CRM work begins
+
+### Files Modified/Created
+**Frontend Files (Modified)**:
+- frontend/lib/shared/services/api_service.dart
+- frontend/lib/features/provider/shared/data/provider_portal_repository.dart
+- frontend/lib/features/provider/shared/presentation/controllers/provider_portal_controller.dart
+- frontend/lib/features/provider/customers/presentation/screens/provider_customers_screen.dart
+
+**Backend Files (Modified)**:
+- backend/prisma/schema.prisma
+- backend/src/appointment/appointment.service.ts
+- backend/src/appointment/appointment.controller.ts
+- backend/src/appointment/appointment.module.ts
+- backend/src/service-provider/service-provider.service.ts
+
+**SQL Files (Created)**:
+- sql/20260630_visit_native_billing.sql
+
+### Verification
+- cd backend && npm run build
+- lutter analyze --no-pub frontend/lib/shared/services/api_service.dart frontend/lib/features/provider/shared/data/provider_portal_repository.dart frontend/lib/features/provider/shared/presentation/controllers/provider_portal_controller.dart frontend/lib/features/provider/customers/presentation/screens/provider_customers_screen.dart
+- Verified the backend builds cleanly after extending the existing appointment workflow into visit-native billing and confirmed the touched Flutter provider files analyze cleanly after wiring the in-visit billing and payment flow.
+
+### Remaining Blockers / Risks
+- This slice makes billing operational inside the visit, but it still stores timeline events as backend-built workspace output rather than as a fully persisted universal event stream.
+- Payment breakdown is now tracked on visit invoices, but external receipt-printing templates and provider-type-specific billing variations still need deeper follow-up slices.
+- SQL migration is required before deploying this slice against a shared or production database.
+
+---
+2026-06-30 23:59:00 IST## 178. Log Correction For Entry 177 Formatting Artifacts
+**High-level description**: Appended a correction note because the shell introduced escape artifacts in two tokens inside entry 177. This preserves the append-only rule while keeping the authoritative references readable.
+- Correct references for entry 177:
+  - ppointments model / consultations model
+  - rontend/lib/shared/services/api_service.dart
+- Scope note:
+  - this correction does not change the implementation recorded in entry 177
+  - the actual visit-native billing slice and verification remain exactly the same
+
+### Files Modified/Created
+**Log Files (Modified)**:
+- log.md
+
+### Verification
+- reviewed the appended tail of log.md
+
+### Remaining Blockers / Risks
+- none beyond the already-recorded entry 177 implementation risks
+
+---
+2026-06-30 23:59:30 IST

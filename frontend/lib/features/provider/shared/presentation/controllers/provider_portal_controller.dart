@@ -404,8 +404,14 @@ class ProviderPortalController extends ChangeNotifier {
   Map<String, dynamic> get consultationForm =>
       Map<String, dynamic>.from(consultationWorkspace['form'] ?? const {});
 
+  Map<String, dynamic> get activeVisitStatusSummary =>
+      Map<String, dynamic>.from(consultationWorkspace['statusSummary'] ?? const {});
+
   Map<String, dynamic> get activeVisitSummary =>
       Map<String, dynamic>.from(consultationWorkspace['visit'] ?? const {});
+
+  Map<String, dynamic> get activeVisitBilling =>
+      Map<String, dynamic>.from(consultationWorkspace['billing'] ?? const {});
 
   List<Map<String, dynamic>> get activeVisitTimeline =>
       List<Map<String, dynamic>>.from(
@@ -678,6 +684,75 @@ class ProviderPortalController extends ChangeNotifier {
     }
   }
 
+  Future<void> saveActiveVisitBilling(Map<String, dynamic> payload) async {
+    final appointmentId = _activeVisitAppointmentId;
+    if (appointmentId == null || appointmentId.isEmpty) {
+      return;
+    }
+    _consultationSaving = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      _consultationWorkspace = await _repository.saveVisitBilling(
+        appointmentId,
+        payload,
+      );
+      await _reloadSelectedCustomerData(preferredAppointmentId: appointmentId);
+    } catch (error) {
+      _error = error.toString();
+    } finally {
+      _consultationSaving = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> generateActiveVisitInvoice(Map<String, dynamic> payload) async {
+    final appointmentId = _activeVisitAppointmentId;
+    if (appointmentId == null || appointmentId.isEmpty) {
+      return;
+    }
+    _consultationSaving = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      _consultationWorkspace = await _repository.generateVisitInvoice(
+        appointmentId,
+        payload,
+      );
+      await _reloadSelectedCustomerData(preferredAppointmentId: appointmentId);
+    } catch (error) {
+      _error = error.toString();
+    } finally {
+      _consultationSaving = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> recordActiveVisitPayment(Map<String, dynamic> payload) async {
+    final appointmentId = _activeVisitAppointmentId;
+    if (appointmentId == null || appointmentId.isEmpty) {
+      return;
+    }
+    _consultationSaving = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      _consultationWorkspace = await _repository.recordVisitPayment(
+        appointmentId,
+        payload,
+      );
+      await _reloadSelectedCustomerData(preferredAppointmentId: appointmentId);
+    } catch (error) {
+      _error = error.toString();
+    } finally {
+      _consultationSaving = false;
+      notifyListeners();
+    }
+  }
+
   String queueStageTitle(String stageCode) {
     for (final stage in queueStagesMetadata) {
       if (stage['code']?.toString() == stageCode) {
@@ -910,11 +985,15 @@ class ProviderPortalController extends ChangeNotifier {
   }
 
   Map<String, dynamic> _consultationPayload(Map<String, String> formData) => {
+    'chief_complaint': formData['chiefComplaint']?.trim() ?? '',
     'symptoms': formData['symptoms']?.trim() ?? '',
+    'clinical_findings': formData['clinicalFindings']?.trim() ?? '',
     'diagnosis': formData['diagnosis']?.trim() ?? '',
     'advice': formData['advice']?.trim() ?? '',
+    'procedures': formData['procedures']?.trim() ?? '',
+    'lab_orders': formData['labOrders']?.trim() ?? '',
     'follow_up': formData['followUp']?.trim() ?? '',
-    'notes': formData['notes']?.trim() ?? '',
+    'provider_notes': formData['providerNotes']?.trim() ?? '',
   };
 
   Future<void> _reloadSelectedCustomerData({

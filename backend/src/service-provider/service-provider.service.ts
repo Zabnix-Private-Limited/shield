@@ -365,6 +365,18 @@ export class ServiceProviderService {
         targetTab: 'today-visit',
       },
       {
+        code: 'COMPLETE_VISIT',
+        title: 'Complete Visit',
+        icon: 'task_alt',
+        targetTab: 'today-visit',
+      },
+      {
+        code: 'ADD_CLINICAL_NOTE',
+        title: 'Add Clinical Note',
+        icon: 'note_alt',
+        targetTab: 'today-visit',
+      },
+      {
         code: 'BOOK_APPOINTMENT',
         title: 'Book Appointment',
         icon: 'event',
@@ -377,10 +389,22 @@ export class ServiceProviderService {
         targetTab: 'documents',
       },
       {
+        code: 'UPLOAD_LAB_REPORT',
+        title: 'Upload Lab Report',
+        icon: 'lab_profile',
+        targetTab: 'records',
+      },
+      {
         code: 'GENERATE_PRESCRIPTION',
         title: 'Generate Prescription',
         icon: 'medication',
         targetTab: 'prescriptions',
+      },
+      {
+        code: 'BOOK_FOLLOW_UP',
+        title: 'Book Follow-up',
+        icon: 'event_repeat',
+        targetTab: 'appointments',
       },
       {
         code: 'GENERATE_INVOICE',
@@ -389,10 +413,34 @@ export class ServiceProviderService {
         targetTab: 'payments',
       },
       {
+        code: 'RECORD_PAYMENT',
+        title: 'Record Payment',
+        icon: 'payments',
+        targetTab: 'today-visit',
+      },
+      {
         code: 'SEND_NOTIFICATION',
         title: 'Send Notification',
         icon: 'notifications',
         targetTab: 'overview',
+      },
+      {
+        code: 'PRINT_PRESCRIPTION',
+        title: 'Print Prescription',
+        icon: 'print',
+        targetTab: 'prescriptions',
+      },
+      {
+        code: 'PRINT_INVOICE',
+        title: 'Print Invoice',
+        icon: 'print',
+        targetTab: 'payments',
+      },
+      {
+        code: 'PRINT_VISIT_SUMMARY',
+        title: 'Print Visit Summary',
+        icon: 'print',
+        targetTab: 'today-visit',
       },
     ];
   }
@@ -490,16 +538,22 @@ export class ServiceProviderService {
     }
 
     for (const purchase of input.purchases) {
+      const purchaseKind = (purchase.purchaseKind || '').toString().toUpperCase();
+      const amount = Number(purchase.payableAmount || 0);
       items.push({
         kind: 'BILLING',
         category: 'BILLING',
-        title: purchase.invoiceNumber || 'Invoice generated',
-        subtitle: `Collected ${Number(purchase.payableAmount || 0).toFixed(2)}`,
+        title:
+          purchase.invoiceNumber ||
+          (purchaseKind === 'VISIT' ? 'Visit invoice generated' : 'Invoice generated'),
+        subtitle: purchase.paymentStatus
+          ? `${this.humanizeCode(purchase.paymentStatus)} • ${amount.toFixed(2)}`
+          : `Collected ${amount.toFixed(2)}`,
         timestamp: purchase.purchaseDate,
         icon: 'receipt_long',
         color: 'amber',
         actor: purchase.provider?.providerName ?? 'Billing desk',
-        amount: Number(purchase.payableAmount || 0),
+        amount,
         linkedRecordId: purchase.id?.toString() ?? null,
         quickNavigationTarget: {
           tab: 'payments',

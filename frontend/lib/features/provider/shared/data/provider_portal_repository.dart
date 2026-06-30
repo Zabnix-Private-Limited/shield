@@ -77,6 +77,27 @@ class ProviderPortalRepository {
     return ApiService.completeAppointmentConsultation(appointmentId, payload);
   }
 
+  Future<Map<String, dynamic>> saveVisitBilling(
+    String appointmentId,
+    Map<String, dynamic> payload,
+  ) {
+    return ApiService.saveAppointmentVisitBilling(appointmentId, payload);
+  }
+
+  Future<Map<String, dynamic>> generateVisitInvoice(
+    String appointmentId,
+    Map<String, dynamic> payload,
+  ) {
+    return ApiService.generateAppointmentVisitInvoice(appointmentId, payload);
+  }
+
+  Future<Map<String, dynamic>> recordVisitPayment(
+    String appointmentId,
+    Map<String, dynamic> payload,
+  ) {
+    return ApiService.recordAppointmentVisitPayment(appointmentId, payload);
+  }
+
   Future<List<Map<String, dynamic>>> getSessions() {
     return ApiService.getAuthenticatedSessions();
   }

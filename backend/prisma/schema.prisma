@@ -604,33 +604,42 @@ model Product {
 // Purchase Tables
 // ------------------------------
 model Purchase {
-  id            BigInt     @id @default(autoincrement())
-  uuid          String?    @unique @db.Uuid
-  customerId    BigInt?    @map("customer_id")
-  providerId    BigInt?    @map("provider_id")
-  invoiceNumber String?    @db.VarChar(255) @map("invoice_number")
-  totalAmount   Decimal?   @db.Decimal(15, 2) @map("total_amount")
-  discountAmount Decimal?  @db.Decimal(15, 2) @map("discount_amount")
-  payableAmount Decimal?   @db.Decimal(15, 2) @map("payable_amount")
-  purchaseDate  DateTime?  @db.Timestamptz(6) @map("purchase_date")
+  id             BigInt           @id @default(autoincrement())
+  uuid           String?          @unique @db.Uuid
+  customerId     BigInt?          @map("customer_id")
+  providerId     BigInt?          @map("provider_id")
+  appointmentId  BigInt?          @map("appointment_id")
+  invoiceNumber  String?          @db.VarChar(255) @map("invoice_number")
+  totalAmount    Decimal?         @db.Decimal(15, 2) @map("total_amount")
+  discountAmount Decimal?         @db.Decimal(15, 2) @map("discount_amount")
+  payableAmount  Decimal?         @db.Decimal(15, 2) @map("payable_amount")
+  purchaseDate   DateTime?        @db.Timestamptz(6) @map("purchase_date")
+  purchaseKind   String?          @default("GENERAL") @db.VarChar(50) @map("purchase_kind")
+  paymentStatus  String?          @default("PENDING") @db.VarChar(50) @map("payment_status")
+  paymentSummary Json?            @map("payment_summary")
+  billingSnapshot Json?           @map("billing_snapshot")
 
-  customer      Customer?  @relation(fields: [customerId], references: [id])
-  provider      ServiceProvider? @relation(fields: [providerId], references: [id])
-  purchaseItems PurchaseItem[]
+  customer       Customer?        @relation(fields: [customerId], references: [id])
+  provider       ServiceProvider? @relation(fields: [providerId], references: [id])
+  appointment    Appointment?     @relation(fields: [appointmentId], references: [id])
+  purchaseItems  PurchaseItem[]
 
   @@map("purchases")
 }
 
 model PurchaseItem {
-  id            BigInt     @id @default(autoincrement())
-  purchaseId    BigInt?    @map("purchase_id")
-  productId     BigInt?    @map("product_id")
-  quantity      Decimal?   @db.Decimal(12, 2)
-  unitPrice     Decimal?   @db.Decimal(15, 2) @map("unit_price")
-  totalPrice    Decimal?   @db.Decimal(15, 2) @map("total_price")
+  id          BigInt    @id @default(autoincrement())
+  purchaseId  BigInt?   @map("purchase_id")
+  productId   BigInt?   @map("product_id")
+  quantity    Decimal?  @db.Decimal(12, 2)
+  unitPrice   Decimal?  @db.Decimal(15, 2) @map("unit_price")
+  totalPrice  Decimal?  @db.Decimal(15, 2) @map("total_price")
+  itemType    String?   @default("MEDICINE") @db.VarChar(50) @map("item_type")
+  itemName    String?   @db.VarChar(255) @map("item_name")
+  metadata    Json?
 
-  purchase      Purchase?  @relation(fields: [purchaseId], references: [id])
-  product       Product?   @relation(fields: [productId], references: [id])
+  purchase    Purchase? @relation(fields: [purchaseId], references: [id])
+  product     Product?  @relation(fields: [productId], references: [id])
 
   @@map("purchase_items")
 }
@@ -653,6 +662,7 @@ model Appointment {
   consultations Consultation[]
   labReports    LabReport[]
   dentalRecords DentalRecord[]
+  purchases     Purchase[]
 
   @@index([customerId], map: "idx_appointment_customer")
   @@index([providerId], map: "idx_appointment_provider")

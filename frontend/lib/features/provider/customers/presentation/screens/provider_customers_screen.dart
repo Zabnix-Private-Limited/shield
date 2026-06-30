@@ -14,9 +14,14 @@ class ProviderCustomersScreen extends StatefulWidget {
 
 class _ProviderCustomersScreenState extends State<ProviderCustomersScreen> {
   final TextEditingController _searchController = TextEditingController();
+  final TextEditingController _chiefComplaintController = TextEditingController();
   final TextEditingController _symptomsController = TextEditingController();
+  final TextEditingController _clinicalFindingsController =
+      TextEditingController();
   final TextEditingController _diagnosisController = TextEditingController();
   final TextEditingController _adviceController = TextEditingController();
+  final TextEditingController _proceduresController = TextEditingController();
+  final TextEditingController _labOrdersController = TextEditingController();
   final TextEditingController _followUpController = TextEditingController();
   final TextEditingController _notesController = TextEditingController();
   String _searchQuery = '';
@@ -25,9 +30,13 @@ class _ProviderCustomersScreenState extends State<ProviderCustomersScreen> {
   @override
   void dispose() {
     _searchController.dispose();
+    _chiefComplaintController.dispose();
     _symptomsController.dispose();
+    _clinicalFindingsController.dispose();
     _diagnosisController.dispose();
     _adviceController.dispose();
+    _proceduresController.dispose();
+    _labOrdersController.dispose();
     _followUpController.dispose();
     _notesController.dispose();
     super.dispose();
@@ -536,6 +545,9 @@ class _ProviderCustomersScreenState extends State<ProviderCustomersScreen> {
     }
 
     final visit = controller.activeVisitSummary as Map<String, dynamic>;
+    final statusSummary =
+        controller.activeVisitStatusSummary as Map<String, dynamic>;
+    final billing = controller.activeVisitBilling as Map<String, dynamic>;
     final actions = controller.consultationActions as List<Map<String, dynamic>>;
     final sections =
         controller.consultationFormSections as List<Map<String, dynamic>>;
@@ -553,6 +565,8 @@ class _ProviderCustomersScreenState extends State<ProviderCustomersScreen> {
           reason: visit['reason']?.toString() ?? 'Visit reason not recorded yet.',
           prescriptionCount: visit['prescriptionCount']?.toString() ?? '0',
         ),
+        const SizedBox(height: 16),
+        _VisitStatusSummaryCard(statusSummary: statusSummary),
         const SizedBox(height: 16),
         if (actions.isNotEmpty)
           Wrap(
@@ -589,7 +603,23 @@ class _ProviderCustomersScreenState extends State<ProviderCustomersScreen> {
             ),
           ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 18),
+        _VisitBillingCard(
+          billing: billing,
+          busy: controller.isConsultationSaving as bool,
+          onEditBilling: () => _showBillingDraftDialog(
+            context,
+            controller,
+            generateInvoiceAfterSave: false,
+          ),
+          onGenerateInvoice: () => _showBillingDraftDialog(
+            context,
+            controller,
+            generateInvoiceAfterSave: true,
+          ),
+          onRecordPayment: () => _showPaymentDialog(context, controller),
+        ),
+        const SizedBox(height: 18),
         Text('Visit timeline', style: AppTypography.h5),
         const SizedBox(height: 10),
         if (timeline.isEmpty)
@@ -622,9 +652,27 @@ class _ProviderCustomersScreenState extends State<ProviderCustomersScreen> {
   ) async {
     final messenger = ScaffoldMessenger.of(context);
     final payload = _consultationFormPayload();
+    var performed = true;
     switch (actionCode) {
       case 'START_CONSULTATION':
         await controller.startConsultationForActiveVisit();
+        break;
+      case 'SAVE_BILLING':
+        performed = await _showBillingDraftDialog(
+          context,
+          controller,
+          generateInvoiceAfterSave: false,
+        );
+        break;
+      case 'GENERATE_INVOICE':
+        performed = await _showBillingDraftDialog(
+          context,
+          controller,
+          generateInvoiceAfterSave: true,
+        );
+        break;
+      case 'RECORD_PAYMENT':
+        performed = await _showPaymentDialog(context, controller);
         break;
       case 'COMPLETE_VISIT':
         await controller.completeActiveConsultation(payload);
@@ -636,6 +684,10 @@ class _ProviderCustomersScreenState extends State<ProviderCustomersScreen> {
     }
 
     if (!mounted) {
+      return;
+    }
+
+    if (!performed) {
       return;
     }
 
@@ -652,24 +704,36 @@ class _ProviderCustomersScreenState extends State<ProviderCustomersScreen> {
   }
 
   Map<String, String> _consultationFormPayload() => {
+    'chiefComplaint': _chiefComplaintController.text,
     'symptoms': _symptomsController.text,
+    'clinicalFindings': _clinicalFindingsController.text,
     'diagnosis': _diagnosisController.text,
     'advice': _adviceController.text,
+    'procedures': _proceduresController.text,
+    'labOrders': _labOrdersController.text,
     'followUp': _followUpController.text,
-    'notes': _notesController.text,
+    'providerNotes': _notesController.text,
   };
 
   TextEditingController _controllerForConsultationField(String code) {
     switch (code) {
+      case 'chiefComplaint':
+        return _chiefComplaintController;
       case 'symptoms':
         return _symptomsController;
+      case 'clinicalFindings':
+        return _clinicalFindingsController;
       case 'diagnosis':
         return _diagnosisController;
       case 'advice':
         return _adviceController;
+      case 'procedures':
+        return _proceduresController;
+      case 'labOrders':
+        return _labOrdersController;
       case 'followUp':
         return _followUpController;
-      case 'notes':
+      case 'providerNotes':
       default:
         return _notesController;
     }
@@ -686,11 +750,17 @@ class _ProviderCustomersScreenState extends State<ProviderCustomersScreen> {
       return;
     }
 
+    _chiefComplaintController.text =
+        controller.consultationFieldValue('chiefComplaint');
     _symptomsController.text = controller.consultationFieldValue('symptoms');
+    _clinicalFindingsController.text =
+        controller.consultationFieldValue('clinicalFindings');
     _diagnosisController.text = controller.consultationFieldValue('diagnosis');
     _adviceController.text = controller.consultationFieldValue('advice');
+    _proceduresController.text = controller.consultationFieldValue('procedures');
+    _labOrdersController.text = controller.consultationFieldValue('labOrders');
     _followUpController.text = controller.consultationFieldValue('followUp');
-    _notesController.text = controller.consultationFieldValue('notes');
+    _notesController.text = controller.consultationFieldValue('providerNotes');
     _syncedConsultationKey = syncKey;
   }
 
@@ -700,11 +770,235 @@ class _ProviderCustomersScreenState extends State<ProviderCustomersScreen> {
         return 'Consultation started.';
       case 'COMPLETE_VISIT':
         return 'Visit completed and saved.';
+      case 'SAVE_BILLING':
+        return 'Visit billing saved.';
+      case 'GENERATE_INVOICE':
+        return 'Invoice generated for this visit.';
+      case 'RECORD_PAYMENT':
+        return 'Payment recorded for this visit.';
       case 'SAVE_PROGRESS':
       default:
         return 'Visit notes saved.';
     }
   }
+
+  Future<bool> _showBillingDraftDialog(
+    BuildContext context,
+    dynamic controller, {
+    required bool generateInvoiceAfterSave,
+  }) async {
+    final draft = Map<String, dynamic>.from(
+      controller.activeVisitBilling['draft'] as Map? ?? const {},
+    );
+    final consultationFeeController = TextEditingController(
+      text: '${draft['consultationFee'] ?? 0}',
+    );
+    final proceduresAmountController = TextEditingController(
+      text: '${draft['proceduresAmount'] ?? 0}',
+    );
+    final medicinesAmountController = TextEditingController(
+      text: '${draft['medicinesAmount'] ?? 0}',
+    );
+    final labTestsAmountController = TextEditingController(
+      text: '${draft['labTestsAmount'] ?? 0}',
+    );
+    final otherServicesAmountController = TextEditingController(
+      text: '${draft['otherServicesAmount'] ?? 0}',
+    );
+    final otherServicesLabelController = TextEditingController(
+      text: draft['otherServicesLabel']?.toString() ?? 'Other Services',
+    );
+    final manualDiscountController = TextEditingController(
+      text: '${draft['manualDiscountAmount'] ?? 0}',
+    );
+    final taxPercentController = TextEditingController(
+      text: '${draft['taxPercent'] ?? 0}',
+    );
+
+    final shouldSubmit = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: Text(
+            generateInvoiceAfterSave ? 'Generate Invoice' : 'Save Visit Billing',
+          ),
+          content: SizedBox(
+            width: 440,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _DialogAmountField(
+                    controller: consultationFeeController,
+                    label: 'Consultation Fee',
+                  ),
+                  _DialogAmountField(
+                    controller: proceduresAmountController,
+                    label: 'Procedures',
+                  ),
+                  _DialogAmountField(
+                    controller: medicinesAmountController,
+                    label: 'Medicines',
+                  ),
+                  _DialogAmountField(
+                    controller: labTestsAmountController,
+                    label: 'Lab Tests',
+                  ),
+                  TextField(
+                    controller: otherServicesLabelController,
+                    decoration: const InputDecoration(
+                      labelText: 'Other Service Label',
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  _DialogAmountField(
+                    controller: otherServicesAmountController,
+                    label: 'Other Services',
+                  ),
+                  _DialogAmountField(
+                    controller: manualDiscountController,
+                    label: 'Manual Discount',
+                  ),
+                  _DialogAmountField(
+                    controller: taxPercentController,
+                    label: 'Tax Percentage',
+                  ),
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: Text(generateInvoiceAfterSave ? 'Generate' : 'Save'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (shouldSubmit != true) {
+      return false;
+    }
+
+    final billingDraft = {
+      'consultationFee': _parseAmount(consultationFeeController.text),
+      'proceduresAmount': _parseAmount(proceduresAmountController.text),
+      'medicinesAmount': _parseAmount(medicinesAmountController.text),
+      'labTestsAmount': _parseAmount(labTestsAmountController.text),
+      'otherServicesAmount': _parseAmount(otherServicesAmountController.text),
+      'otherServicesLabel': otherServicesLabelController.text.trim(),
+      'manualDiscountAmount': _parseAmount(manualDiscountController.text),
+      'taxPercent': _parseAmount(taxPercentController.text),
+    };
+
+    final payload = {
+      ..._consultationFormPayload(),
+      'billing_draft': billingDraft,
+    };
+
+    if (generateInvoiceAfterSave) {
+      await controller.generateActiveVisitInvoice(payload);
+    } else {
+      await controller.saveActiveVisitBilling(payload);
+    }
+
+    return true;
+  }
+
+  Future<bool> _showPaymentDialog(BuildContext context, dynamic controller) async {
+    final draft = Map<String, dynamic>.from(
+      controller.activeVisitBilling['draft'] as Map? ?? const {},
+    );
+    final walletController = TextEditingController(
+      text: '${draft['walletUseAmount'] ?? 0}',
+    );
+    final cashController = TextEditingController(
+      text: '${draft['cashAmount'] ?? 0}',
+    );
+    final upiController = TextEditingController(
+      text: '${draft['upiAmount'] ?? 0}',
+    );
+    final cardController = TextEditingController(
+      text: '${draft['cardAmount'] ?? 0}',
+    );
+    final refundController = TextEditingController(
+      text: '${draft['refundAmount'] ?? 0}',
+    );
+
+    final shouldSubmit = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Record Payment'),
+          content: SizedBox(
+            width: 420,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _DialogAmountField(
+                    controller: walletController,
+                    label: 'Wallet Used',
+                  ),
+                  _DialogAmountField(
+                    controller: cashController,
+                    label: 'Cash',
+                  ),
+                  _DialogAmountField(
+                    controller: upiController,
+                    label: 'UPI',
+                  ),
+                  _DialogAmountField(
+                    controller: cardController,
+                    label: 'Card',
+                  ),
+                  _DialogAmountField(
+                    controller: refundController,
+                    label: 'Refund',
+                  ),
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: const Text('Save Payment'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (shouldSubmit != true) {
+      return false;
+    }
+
+    final billingDraft = {
+      'walletUseAmount': _parseAmount(walletController.text),
+      'cashAmount': _parseAmount(cashController.text),
+      'upiAmount': _parseAmount(upiController.text),
+      'cardAmount': _parseAmount(cardController.text),
+      'refundAmount': _parseAmount(refundController.text),
+    };
+
+    await controller.recordActiveVisitPayment({
+      ..._consultationFormPayload(),
+      'billing_draft': billingDraft,
+    });
+    return true;
+  }
+
+  double _parseAmount(String value) => double.tryParse(value.trim()) ?? 0;
 
   String _patientLabel(Map<String, dynamic> customer) {
     final customerCode = customer['customerCode']?.toString().trim() ?? '';
@@ -1081,6 +1375,265 @@ class _VisitSummaryCard extends StatelessWidget {
   }
 }
 
+class _VisitStatusSummaryCard extends StatelessWidget {
+  const _VisitStatusSummaryCard({required this.statusSummary});
+
+  final Map<String, dynamic> statusSummary;
+
+  @override
+  Widget build(BuildContext context) {
+    final rows = [
+      _VisitStatusTileData(
+        title: 'Consultation',
+        label:
+            (statusSummary['consultationStatus'] as Map?)?['label']?.toString() ??
+            'Waiting',
+      ),
+      _VisitStatusTileData(
+        title: 'Visit',
+        label: (statusSummary['visitStatus'] as Map?)?['label']?.toString() ?? '',
+      ),
+      _VisitStatusTileData(
+        title: 'Billing',
+        label:
+            (statusSummary['billingStatus'] as Map?)?['label']?.toString() ?? '',
+      ),
+      _VisitStatusTileData(
+        title: 'Payment',
+        label:
+            (statusSummary['paymentStatus'] as Map?)?['label']?.toString() ?? '',
+      ),
+      _VisitStatusTileData(
+        title: 'Prescription',
+        label:
+            (statusSummary['prescriptionStatus'] as Map?)?['label']?.toString() ??
+            '',
+      ),
+      _VisitStatusTileData(
+        title: 'Lab',
+        label: (statusSummary['labStatus'] as Map?)?['label']?.toString() ?? '',
+      ),
+      _VisitStatusTileData(
+        title: 'Follow-up',
+        label:
+            (statusSummary['followUpStatus'] as Map?)?['label']?.toString() ?? '',
+      ),
+    ];
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.divider),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Visit Summary', style: AppTypography.h5),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 12,
+            runSpacing: 12,
+            children: rows
+                .map((row) => _VisitStatusTile(data: row))
+                .toList(),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _VisitStatusTileData {
+  const _VisitStatusTileData({required this.title, required this.label});
+
+  final String title;
+  final String label;
+}
+
+class _VisitStatusTile extends StatelessWidget {
+  const _VisitStatusTile({required this.data});
+
+  final _VisitStatusTileData data;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 176,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.lightGray,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            data.title,
+            style: AppTypography.tiny.copyWith(color: AppColors.gray),
+          ),
+          const SizedBox(height: 6),
+          Text(data.label, style: AppTypography.body),
+        ],
+      ),
+    );
+  }
+}
+
+class _VisitBillingCard extends StatelessWidget {
+  const _VisitBillingCard({
+    required this.billing,
+    required this.busy,
+    required this.onEditBilling,
+    required this.onGenerateInvoice,
+    required this.onRecordPayment,
+  });
+
+  final Map<String, dynamic> billing;
+  final bool busy;
+  final VoidCallback onEditBilling;
+  final VoidCallback onGenerateInvoice;
+  final VoidCallback onRecordPayment;
+
+  @override
+  Widget build(BuildContext context) {
+    final lineItems =
+        (billing['lineItems'] as List? ?? const <dynamic>[])
+            .whereType<Map>()
+            .map((item) => Map<String, dynamic>.from(item))
+            .toList();
+    final totals = Map<String, dynamic>.from(billing['totals'] as Map? ?? const {});
+    final payment =
+        Map<String, dynamic>.from(billing['payment'] as Map? ?? const {});
+    final invoice =
+        billing['invoice'] is Map ? Map<String, dynamic>.from(billing['invoice']) : null;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.divider),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Visit Billing', style: AppTypography.h5),
+                    const SizedBox(height: 6),
+                    Text(
+                      billing['statusLabel']?.toString() ?? 'Billing In Progress',
+                      style: AppTypography.small.copyWith(color: AppColors.gray),
+                    ),
+                  ],
+                ),
+              ),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  OutlinedButton(
+                    onPressed: busy ? null : onEditBilling,
+                    child: const Text('Edit Charges'),
+                  ),
+                  FilledButton(
+                    onPressed: busy ? null : onGenerateInvoice,
+                    child: Text(invoice == null ? 'Generate Invoice' : 'Refresh Invoice'),
+                  ),
+                  OutlinedButton(
+                    onPressed: busy ? null : onRecordPayment,
+                    child: const Text('Record Payment'),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          if (invoice != null) ...[
+            _InfoChip(
+              label:
+                  '${invoice['invoiceNumber']?.toString() ?? 'Visit invoice'} • ${invoice['generatedAtLabel']?.toString() ?? ''}',
+            ),
+            const SizedBox(height: 12),
+          ],
+          if (lineItems.isEmpty)
+            const _PanelText('No visit charges have been added yet.')
+          else
+            Column(
+              children: lineItems
+                  .map(
+                    (item) => _BillingLineItemTile(
+                      title: item['title']?.toString() ?? 'Charge',
+                      subtitle: item['description']?.toString() ?? '',
+                      amountLabel: item['amountLabel']?.toString() ?? 'Rs 0.00',
+                    ),
+                  )
+                  .toList(),
+            ),
+          const SizedBox(height: 14),
+          Wrap(
+            spacing: 12,
+            runSpacing: 12,
+            children: [
+              _BillingMetricTile(
+                title: 'Subtotal',
+                value: totals['subtotalLabel']?.toString() ?? 'Rs 0.00',
+              ),
+              _BillingMetricTile(
+                title: 'Discounts',
+                value:
+                    '${totals['manualDiscountLabel'] ?? 'Rs 0.00'} + ${totals['membershipDiscountLabel'] ?? 'Rs 0.00'}',
+              ),
+              _BillingMetricTile(
+                title: 'Benefits Applied',
+                value: totals['benefitAppliedLabel']?.toString() ?? 'Rs 0.00',
+              ),
+              _BillingMetricTile(
+                title: 'Tax',
+                value:
+                    '${totals['taxAmountLabel'] ?? 'Rs 0.00'} (${totals['taxPercentLabel'] ?? '0%'})',
+              ),
+              _BillingMetricTile(
+                title: 'Grand Total',
+                value: totals['grandTotalLabel']?.toString() ?? 'Rs 0.00',
+              ),
+              _BillingMetricTile(
+                title: 'Balance Due',
+                value: payment['balanceDueLabel']?.toString() ?? 'Rs 0.00',
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Text('Payment Summary', style: AppTypography.body),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: [
+              _InfoChip(label: 'Wallet: ${payment['walletUsedLabel'] ?? 'Rs 0.00'}'),
+              _InfoChip(label: 'Cash: ${payment['cashLabel'] ?? 'Rs 0.00'}'),
+              _InfoChip(label: 'UPI: ${payment['upiLabel'] ?? 'Rs 0.00'}'),
+              _InfoChip(label: 'Card: ${payment['cardLabel'] ?? 'Rs 0.00'}'),
+              _InfoChip(
+                label:
+                    'Status: ${payment['statusLabel']?.toString() ?? 'Payment Pending'}',
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _ConsultationActionButton extends StatelessWidget {
   const _ConsultationActionButton({
     required this.label,
@@ -1203,6 +1756,108 @@ class _InfoChip extends StatelessWidget {
       child: Text(
         label,
         style: AppTypography.tiny.copyWith(color: AppColors.darkGray),
+      ),
+    );
+  }
+}
+
+class _BillingLineItemTile extends StatelessWidget {
+  const _BillingLineItemTile({
+    required this.title,
+    required this.subtitle,
+    required this.amountLabel,
+  });
+
+  final String title;
+  final String subtitle;
+  final String amountLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.lightGray,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: AppTypography.body),
+                if (subtitle.trim().isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    subtitle,
+                    style: AppTypography.small.copyWith(color: AppColors.gray),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          Text(
+            amountLabel,
+            style: AppTypography.body.copyWith(fontWeight: FontWeight.w700),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _BillingMetricTile extends StatelessWidget {
+  const _BillingMetricTile({required this.title, required this.value});
+
+  final String title;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 170,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.lightGray,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: AppTypography.tiny.copyWith(color: AppColors.gray),
+          ),
+          const SizedBox(height: 6),
+          Text(value, style: AppTypography.body),
+        ],
+      ),
+    );
+  }
+}
+
+class _DialogAmountField extends StatelessWidget {
+  const _DialogAmountField({
+    required this.controller,
+    required this.label,
+  });
+
+  final TextEditingController controller;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: TextField(
+        controller: controller,
+        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+        decoration: InputDecoration(labelText: label),
       ),
     );
   }

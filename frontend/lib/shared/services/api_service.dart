@@ -270,6 +270,39 @@ class ApiService {
     return _readEnvelope(response);
   }
 
+  static Future<Map<String, dynamic>> saveAppointmentVisitBilling(
+    String appointmentId,
+    Map<String, dynamic> payload,
+  ) async {
+    final response = await _dio.post(
+      '/appointments/$appointmentId/visit-billing',
+      data: payload,
+    );
+    return _readEnvelope(response);
+  }
+
+  static Future<Map<String, dynamic>> generateAppointmentVisitInvoice(
+    String appointmentId,
+    Map<String, dynamic> payload,
+  ) async {
+    final response = await _dio.post(
+      '/appointments/$appointmentId/generate-invoice',
+      data: payload,
+    );
+    return _readEnvelope(response);
+  }
+
+  static Future<Map<String, dynamic>> recordAppointmentVisitPayment(
+    String appointmentId,
+    Map<String, dynamic> payload,
+  ) async {
+    final response = await _dio.post(
+      '/appointments/$appointmentId/record-payment',
+      data: payload,
+    );
+    return _readEnvelope(response);
+  }
+
   static Future<List<Document>> getDocuments(SHIELDRole role) async {
     if (role != SHIELDRole.customer) {
       throw UnsupportedError(

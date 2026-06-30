@@ -110,11 +110,15 @@ export class AppointmentController {
   @Post(':id/consultation')
   async saveConsultation(@Param('id') id: string, @Body() body: any) {
     const workspace = await this.appointmentService.saveConsultation(BigInt(id), {
+      chiefComplaint: body.chief_complaint ?? body.chiefComplaint,
       symptoms: body.symptoms,
+      clinicalFindings: body.clinical_findings ?? body.clinicalFindings,
       diagnosis: body.diagnosis,
       advice: body.advice,
+      procedures: body.procedures,
+      labOrders: body.lab_orders ?? body.labOrders,
       followUp: body.follow_up ?? body.followUp,
-      notes: body.notes,
+      providerNotes: body.provider_notes ?? body.providerNotes ?? body.notes,
     });
     return {
       success: true,
@@ -127,15 +131,72 @@ export class AppointmentController {
   @Post(':id/complete-consultation')
   async completeConsultation(@Param('id') id: string, @Body() body: any) {
     const workspace = await this.appointmentService.completeConsultation(BigInt(id), {
+      chiefComplaint: body.chief_complaint ?? body.chiefComplaint,
       symptoms: body.symptoms,
+      clinicalFindings: body.clinical_findings ?? body.clinicalFindings,
       diagnosis: body.diagnosis,
       advice: body.advice,
+      procedures: body.procedures,
+      labOrders: body.lab_orders ?? body.labOrders,
       followUp: body.follow_up ?? body.followUp,
-      notes: body.notes,
+      providerNotes: body.provider_notes ?? body.providerNotes ?? body.notes,
+      billingDraft: body.billing_draft ?? body.billingDraft,
     });
     return {
       success: true,
       message: 'Consultation completed successfully',
+      data: workspace,
+    };
+  }
+
+  @RequirePermissions('appointments.update')
+  @Post(':id/visit-billing')
+  async saveVisitBilling(@Param('id') id: string, @Body() body: any) {
+    const workspace = await this.appointmentService.saveVisitBillingDraft(
+      BigInt(id),
+      body,
+    );
+    return {
+      success: true,
+      message: 'Visit billing saved successfully',
+      data: workspace,
+    };
+  }
+
+  @RequirePermissions('appointments.update')
+  @Post(':id/generate-invoice')
+  async generateVisitInvoice(@Param('id') id: string, @Body() body: any) {
+    const workspace = await this.appointmentService.generateVisitInvoice(BigInt(id), {
+      formData: {
+        chiefComplaint: body.chief_complaint ?? body.chiefComplaint,
+        symptoms: body.symptoms,
+        clinicalFindings: body.clinical_findings ?? body.clinicalFindings,
+        diagnosis: body.diagnosis,
+        advice: body.advice,
+        procedures: body.procedures,
+        labOrders: body.lab_orders ?? body.labOrders,
+        followUp: body.follow_up ?? body.followUp,
+        providerNotes: body.provider_notes ?? body.providerNotes ?? body.notes,
+      },
+      billingDraft: body.billing_draft ?? body.billingDraft,
+    });
+    return {
+      success: true,
+      message: 'Visit invoice generated successfully',
+      data: workspace,
+    };
+  }
+
+  @RequirePermissions('appointments.update')
+  @Post(':id/record-payment')
+  async recordVisitPayment(@Param('id') id: string, @Body() body: any) {
+    const workspace = await this.appointmentService.recordVisitPayment(
+      BigInt(id),
+      body,
+    );
+    return {
+      success: true,
+      message: 'Visit payment recorded successfully',
       data: workspace,
     };
   }
