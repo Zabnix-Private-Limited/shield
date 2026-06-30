@@ -43,6 +43,10 @@
 6. SOLID Principles
 7. Domain-Driven Design
 8. API-First Design
+9. Backend-Owned Workspace Semantics
+   - Navigation, module registries, workflow stages, action definitions, display labels, button captions, empty states, permissions, and operational metadata must come from backend contracts rather than being hardcoded in Flutter.
+   - Flutter should act as a renderer for backend-owned workspace metadata and should limit local decisions to layout, responsive behavior, accessibility, animations, and presentation-only formatting such as date, currency, and percentage display.
+   - Do not expose raw database or backend enum codes in the UI when a human-readable backend display contract can be returned instead.
 
 ## Database Rules
 - `current_schema.md` at the repository root is the source of truth for the current database situation and schema state.
@@ -111,6 +115,7 @@
 3. Deploy SHIELD to Vercel through the Git push workflow for this repository.
 4. Do not run `vercel --prod` or other production Vercel CLI deploy commands from this machine/account for SHIELD unless the user explicitly overrides that rule.
 5. Do not make Prisma schema application part of the default Vercel build path.
+6. When building or expanding any portal (Customer, Provider, CRM, Manager, Executive, or Super Admin), prefer backend-driven workspace contracts over frontend-owned business semantics, and treat the Provider Portal architecture as the template to generalize from.
 
 ## Project File Structure
 ```

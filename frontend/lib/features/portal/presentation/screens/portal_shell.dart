@@ -51,6 +51,7 @@ class PortalShell extends StatefulWidget {
 
 class _PortalShellState extends State<PortalShell> {
   bool _isLoading = true;
+  PortalRoleData? _portalData;
   PortalSectionData? _sectionData;
   String? _error;
   bool _isInternalSidebarExpanded = true;
@@ -79,18 +80,34 @@ class _PortalShellState extends State<PortalShell> {
 
     try {
       final sectionKey = widget.sectionKey ?? 'dashboard';
-      final data = widget.role == SHIELDRole.customer ||
-              widget.role == SHIELDRole.provider
-          ? portalDataForRole(widget.role).sectionFor(sectionKey)
-          : await ApiService.getRoleSectionData(widget.role, sectionKey);
+      late final PortalRoleData portal;
+      late final PortalSectionData data;
+
+      if (widget.role == SHIELDRole.customer) {
+        portal = portalDataForRole(widget.role);
+        data = portal.sectionFor(sectionKey);
+      } else if (widget.role == SHIELDRole.provider) {
+        final workspace = await ApiService.getProviderWorkspace(limit: 20) ??
+            <String, dynamic>{};
+        final workspaceMeta =
+            workspace['workspaceMeta'] as Map<String, dynamic>? ??
+            const <String, dynamic>{};
+        portal = portalDataForProviderWorkspaceMeta(workspaceMeta);
+        data = portal.sectionFor(sectionKey);
+      } else {
+        portal = portalDataForRole(widget.role);
+        data = await ApiService.getRoleSectionData(widget.role, sectionKey);
+      }
       if (!mounted) return;
       setState(() {
+        _portalData = portal;
         _sectionData = data;
         _isLoading = false;
       });
     } catch (e) {
       if (!mounted) return;
       setState(() {
+        _portalData = null;
         _error = e.toString();
         _isLoading = false;
       });
@@ -105,7 +122,7 @@ class _PortalShellState extends State<PortalShell> {
 
   @override
   Widget build(BuildContext context) {
-    final portal = portalDataForRole(widget.role);
+    final portal = _portalData ?? portalDataForRole(widget.role);
     final activeKey = widget.sectionKey ?? 'dashboard';
     final isCustomer = widget.role == SHIELDRole.customer;
 
@@ -294,6 +311,20 @@ IconData _portalSectionIcon(String key) {
   switch (key) {
     case 'dashboard':
       return Icons.space_dashboard_outlined;
+    case 'calendar':
+      return Icons.event_note_outlined;
+    case 'folder':
+      return Icons.description_outlined;
+    case 'patient':
+      return Icons.groups_outlined;
+    case 'profile':
+      return Icons.person_outline_rounded;
+    case 'prescription':
+      return Icons.receipt_long_outlined;
+    case 'settings':
+      return Icons.settings_outlined;
+    case 'queue':
+      return Icons.inbox_outlined;
     case 'wallet':
     case 'wallet-ops':
       return Icons.account_balance_wallet_outlined;
@@ -305,7 +336,6 @@ IconData _portalSectionIcon(String key) {
     case 'documents':
     case 'reports':
       return Icons.description_outlined;
-    case 'profile':
     case 'users':
       return Icons.person_outline_rounded;
     case 'membership':
@@ -316,14 +346,11 @@ IconData _portalSectionIcon(String key) {
     case 'notifications':
     case 'notification-center':
       return Icons.notifications_none_rounded;
-    case 'settings':
     case 'system':
       return Icons.settings_outlined;
     case 'customers':
     case 'patients':
       return Icons.groups_outlined;
-    case 'queue':
-      return Icons.inbox_outlined;
     case 'verification':
       return Icons.verified_user_outlined;
     case 'bills':
@@ -663,12 +690,15 @@ class _RoleRailNav extends StatelessWidget {
               ),
               children: portal.sections.map((section) {
                 final isActive = section.key == activeSectionKey;
-                final icon = _portalSectionIcon(section.key);
+                final icon = _portalSectionIcon(
+                  section.iconKey ?? section.key,
+                );
+                final targetRoute =
+                    section.route ??
+                    '/portal/${portal.role.routeKey}/${section.key}';
                 final tile = InkWell(
                   borderRadius: BorderRadius.circular(16),
-                  onTap: () => context.go(
-                    '/portal/${portal.role.routeKey}/${section.key}',
-                  ),
+                  onTap: () => context.go(targetRoute),
                   child: Container(
                     margin: const EdgeInsets.only(bottom: 8),
                     padding: EdgeInsets.symmetric(
@@ -714,6 +744,26 @@ class _RoleRailNav extends StatelessWidget {
                                   ),
                                 ),
                               ),
+                              if (section.badgeCount > 0)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 4,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: portal.accentColor.withValues(
+                                      alpha: 0.12,
+                                    ),
+                                    borderRadius: BorderRadius.circular(999),
+                                  ),
+                                  child: Text(
+                                    section.badgeCount.toString(),
+                                    style: AppTypography.tiny.copyWith(
+                                      color: portal.accentColor,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ),
                             ],
                           ),
                   ),

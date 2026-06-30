@@ -1,6 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import {
+  ProviderWorkflowProfileCode,
+  ProviderWorkspaceMetadataService,
+} from './provider-workspace-metadata.service';
 
 type ProviderWorkspaceQuery = {
   providerId?: bigint;
@@ -41,19 +45,12 @@ type QueueItem = {
   secondaryTargetTab: string;
 };
 
-type ProviderWorkflowProfileCode =
-  | 'GENERAL'
-  | 'CLINIC'
-  | 'PHARMACY'
-  | 'DENTAL'
-  | 'LABORATORY'
-  | 'HOME_VISIT'
-  | 'COSMETIC'
-  | 'DIETITIAN';
-
 @Injectable()
 export class OperationsQueueService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly providerWorkspaceMetadataService: ProviderWorkspaceMetadataService,
+  ) {}
 
   async getProviderWorkspace(query: ProviderWorkspaceQuery) {
     const limit = this.normalizeLimit(query.limit, 8);
@@ -62,7 +59,6 @@ export class OperationsQueueService {
       query.providerType,
       providerScope.providers,
     );
-    const workspaceMeta = this.buildProviderWorkspaceMeta(workflowProfile);
     const providerIds = providerScope.providers.map((provider) => provider.id);
     const providerWhere =
       providerIds.length > 0
@@ -220,6 +216,26 @@ export class OperationsQueueService {
             take: 30,
           });
 
+    const queueMetrics = {
+      waitingCount: openAppointments.filter((appointment) => {
+        const stage = this.resolveQueueStageFromStatus(appointment.status);
+        return stage === 'WAITING' || stage === 'ACCEPTED';
+      }).length,
+      activeCareCount: openAppointments.filter((appointment) => {
+        const stage = this.resolveQueueStageFromStatus(appointment.status);
+        return stage === 'CONSULTATION' || stage === 'READY_TO_COMPLETE';
+      }).length,
+      billingCount: recentPurchases.filter(
+        (purchase) => Number(purchase.payableAmount ?? 0) > 0,
+      ).length,
+      appointmentsToday,
+      pendingAppointments,
+    };
+    const workspaceMeta = this.providerWorkspaceMetadataService.buildWorkspaceMeta(
+      workflowProfile,
+      queueMetrics,
+    );
+
     return {
       generatedAt: now.toISOString(),
       workspace: 'provider',
@@ -272,9 +288,11 @@ export class OperationsQueueService {
       })),
       queues: {
         appointments: openAppointments.map((appointment) =>
-          this.toAppointmentQueueItem(appointment),
+          this.toAppointmentQueueItem(appointment, workflowProfile),
         ),
-        billing: recentPurchases.map((purchase) => this.toPurchaseQueueItem(purchase)),
+        billing: recentPurchases.map((purchase) =>
+          this.toPurchaseQueueItem(purchase, workflowProfile),
+        ),
       },
     };
   }
@@ -512,7 +530,7 @@ export class OperationsQueueService {
           status: provider.status || 'INACTIVE',
         })),
         appointments: recentAppointments.map((appointment) =>
-          this.toAppointmentQueueItem(appointment),
+          this.toAppointmentQueueItem(appointment, 'GENERAL'),
         ),
       },
     };
@@ -587,23 +605,29 @@ export class OperationsQueueService {
     }
   }
 
-  private buildProviderWorkspaceMeta(profile: ProviderWorkflowProfileCode) {
+  private buildProviderWorkspaceMeta(
+    profile: ProviderWorkflowProfileCode,
+    metrics: {
+      waitingCount: number;
+      activeCareCount: number;
+      billingCount: number;
+      appointmentsToday: number;
+      pendingAppointments: number;
+    },
+  ) {
     const profileLabel = this.getWorkflowProfileLabel(profile);
     return {
+      providerContext: {
+        providerType: profile,
+        workspaceTitle: this.getWorkspaceTitle(profile),
+        headline: this.getWorkspaceHeadline(profile),
+      },
       workflowProfile: {
         code: profile,
         title: profileLabel,
       },
-      navigationSections: [
-        { code: 'dashboard', title: 'Dashboard', icon: 'dashboard' },
-        { code: 'queue', title: 'Live Queue', icon: 'queue' },
-        { code: 'customers', title: 'Patients', icon: 'patient' },
-        { code: 'appointments', title: 'Appointments', icon: 'calendar' },
-        { code: 'documents', title: 'Medical Records', icon: 'folder' },
-        { code: 'prescriptions', title: 'Prescriptions', icon: 'prescription' },
-        { code: 'profile', title: 'Profile', icon: 'profile' },
-        { code: 'settings', title: 'Settings', icon: 'settings' },
-      ],
+      moduleRegistry: this.buildModuleRegistry(profile),
+      navigationSections: this.buildNavigationSections(profile, metrics),
       queueStages: this.buildQueueStages(profile),
       dashboardHighlights: this.buildDashboardHighlights(profile),
       patientWorkspace: {
@@ -660,6 +684,129 @@ export class OperationsQueueService {
         ],
       },
     };
+  }
+
+  private buildNavigationSections(
+    profile: ProviderWorkflowProfileCode,
+    metrics: {
+      waitingCount: number;
+      activeCareCount: number;
+      billingCount: number;
+      appointmentsToday: number;
+      pendingAppointments: number;
+    },
+  ) {
+    return [
+      {
+        id: 'dashboard',
+        title: 'Dashboard',
+        icon: 'dashboard',
+        route: '/portal/provider/dashboard',
+        permission: 'providers.view',
+        badge: metrics.activeCareCount,
+        order: 1,
+      },
+      {
+        id: 'queue',
+        title: 'Live Queue',
+        icon: 'queue',
+        route: '/portal/provider/queue',
+        permission: 'providers.view',
+        badge: metrics.waitingCount + metrics.billingCount,
+        order: 2,
+      },
+      {
+        id: 'customers',
+        title: 'Patients',
+        icon: 'patient',
+        route: '/portal/provider/customers',
+        permission: 'providers.view',
+        badge: 0,
+        order: 3,
+      },
+      {
+        id: 'appointments',
+        title: 'Appointments',
+        icon: 'calendar',
+        route: '/portal/provider/appointments',
+        permission: 'providers.view',
+        badge: metrics.pendingAppointments,
+        order: 4,
+      },
+      {
+        id: 'documents',
+        title: this.getRecordsNavigationTitle(profile),
+        icon: 'folder',
+        route: '/portal/provider/documents',
+        permission: 'providers.view',
+        badge: 0,
+        order: 5,
+      },
+      {
+        id: 'prescriptions',
+        title: this.getPrescriptionsNavigationTitle(profile),
+        icon: 'prescription',
+        route: '/portal/provider/prescriptions',
+        permission: 'providers.view',
+        badge: 0,
+        order: 6,
+      },
+      {
+        id: 'profile',
+        title: 'Profile',
+        icon: 'profile',
+        route: '/portal/provider/profile',
+        permission: 'providers.view',
+        badge: 0,
+        order: 7,
+      },
+      {
+        id: 'settings',
+        title: 'Settings',
+        icon: 'settings',
+        route: '/portal/provider/settings',
+        permission: 'providers.view',
+        badge: 0,
+        order: 8,
+      },
+    ];
+  }
+
+  private buildModuleRegistry(profile: ProviderWorkflowProfileCode) {
+    const baseModules = [
+      { id: 'dashboard', title: 'Dashboard', permission: 'providers.view' },
+      { id: 'queue', title: 'Live Queue', permission: 'providers.view' },
+      { id: 'patients', title: 'Patient Workspace', permission: 'providers.view' },
+      { id: 'appointments', title: 'Appointments', permission: 'providers.view' },
+      { id: 'documents', title: 'Medical Records', permission: 'providers.view' },
+      { id: 'settings', title: 'Settings', permission: 'providers.view' },
+    ];
+
+    switch (profile) {
+      case 'PHARMACY':
+        return [
+          ...baseModules,
+          { id: 'prescriptions', title: 'Prescription Verification', permission: 'providers.view' },
+          { id: 'billing', title: 'Billing', permission: 'providers.view' },
+        ];
+      case 'LABORATORY':
+        return [
+          ...baseModules,
+          { id: 'samples', title: 'Sample Collection', permission: 'providers.view' },
+          { id: 'reports', title: 'Lab Reports', permission: 'providers.view' },
+        ];
+      case 'DENTAL':
+        return [
+          ...baseModules,
+          { id: 'treatments', title: 'Treatments', permission: 'providers.view' },
+          { id: 'prescriptions', title: 'Prescriptions', permission: 'providers.view' },
+        ];
+      default:
+        return [
+          ...baseModules,
+          { id: 'prescriptions', title: 'Prescriptions', permission: 'providers.view' },
+        ];
+    }
   }
 
   private buildQueueStages(profile: ProviderWorkflowProfileCode) {
@@ -819,6 +966,63 @@ export class OperationsQueueService {
     }
   }
 
+  private getWorkspaceTitle(profile: ProviderWorkflowProfileCode) {
+    switch (profile) {
+      case 'PHARMACY':
+        return 'Pharmacy Workspace';
+      case 'DENTAL':
+        return 'Dental Workspace';
+      case 'LABORATORY':
+        return 'Laboratory Workspace';
+      case 'HOME_VISIT':
+        return 'Home Care Workspace';
+      case 'COSMETIC':
+        return 'Cosmetic Care Workspace';
+      case 'DIETITIAN':
+        return 'Dietitian Workspace';
+      case 'CLINIC':
+        return 'Clinic Workspace';
+      case 'GENERAL':
+      default:
+        return 'Provider Care Hub';
+    }
+  }
+
+  private getWorkspaceHeadline(profile: ProviderWorkflowProfileCode) {
+    switch (profile) {
+      case 'PHARMACY':
+        return 'Verification, dispensing, billing, and patient records in one place';
+      case 'DENTAL':
+        return 'Treatments, appointments, records, and follow-ups in one place';
+      case 'LABORATORY':
+        return 'Samples, reports, appointments, and patient history in one place';
+      case 'HOME_VISIT':
+        return 'Visits, notes, records, and follow-ups in one place';
+      default:
+        return 'Patients, appointments, records, and payments in one place';
+    }
+  }
+
+  private getRecordsNavigationTitle(profile: ProviderWorkflowProfileCode) {
+    switch (profile) {
+      case 'LABORATORY':
+        return 'Lab Reports';
+      default:
+        return 'Medical Records';
+    }
+  }
+
+  private getPrescriptionsNavigationTitle(profile: ProviderWorkflowProfileCode) {
+    switch (profile) {
+      case 'PHARMACY':
+        return 'Prescription Review';
+      case 'LABORATORY':
+        return 'Reports';
+      default:
+        return 'Prescriptions';
+    }
+  }
+
   private getDashboardWaitingTitle(profile: ProviderWorkflowProfileCode) {
     switch (profile) {
       case 'PHARMACY':
@@ -933,7 +1137,7 @@ export class OperationsQueueService {
           business?: { name: string | null; code?: string | null } | null;
         }
       | null;
-  }): QueueItem {
+  }, workflowProfile: ProviderWorkflowProfileCode): QueueItem {
     const customerName =
       appointment.customer
         ? `${appointment.customer.firstName ?? ''} ${appointment.customer.lastName ?? ''}`.trim()
@@ -958,12 +1162,23 @@ export class OperationsQueueService {
       status: appointment.status || 'PENDING',
       statusLabel: this.getAppointmentStatusLabel(appointment.status),
       stageCode,
-      stageLabel: this.getStageLabel(stageCode, appointment.status),
-      primaryActionLabel: this.getPrimaryActionLabel(stageCode, 'APPOINTMENT'),
+      stageLabel: this.providerWorkspaceMetadataService.buildQueueStageLabel(
+        workflowProfile,
+        stageCode,
+        appointment.status,
+      ),
+      primaryActionLabel: this.providerWorkspaceMetadataService.buildPrimaryActionLabel(
+        workflowProfile,
+        stageCode,
+        'APPOINTMENT',
+      ),
       secondaryActionLabel: 'Open patient',
       primaryTargetSection: 'customers',
       secondaryTargetSection: 'customers',
-      primaryTargetTab: this.getPrimaryTargetTab(stageCode, 'APPOINTMENT'),
+      primaryTargetTab: this.providerWorkspaceMetadataService.buildPrimaryTargetTab(
+        stageCode,
+        'APPOINTMENT',
+      ),
       secondaryTargetTab: 'overview',
     };
   }
@@ -981,7 +1196,7 @@ export class OperationsQueueService {
           business?: { name: string | null } | null;
         }
       | null;
-  }): QueueItem {
+  }, workflowProfile: ProviderWorkflowProfileCode): QueueItem {
     const customerName =
       purchase.customer
         ? `${purchase.customer.firstName ?? ''} ${purchase.customer.lastName ?? ''}`.trim()
@@ -1001,12 +1216,22 @@ export class OperationsQueueService {
       status: stageCode,
       statusLabel: this.formatCurrency(Number(purchase.payableAmount ?? 0)),
       stageCode,
-      stageLabel: this.getStageLabel(stageCode, null),
-      primaryActionLabel: this.getPrimaryActionLabel(stageCode, 'PAYMENT'),
+      stageLabel: this.providerWorkspaceMetadataService.buildQueueStageLabel(
+        workflowProfile,
+        stageCode,
+      ),
+      primaryActionLabel: this.providerWorkspaceMetadataService.buildPrimaryActionLabel(
+        workflowProfile,
+        stageCode,
+        'PAYMENT',
+      ),
       secondaryActionLabel: 'Open patient',
       primaryTargetSection: 'customers',
       secondaryTargetSection: 'customers',
-      primaryTargetTab: this.getPrimaryTargetTab(stageCode, 'PAYMENT'),
+      primaryTargetTab: this.providerWorkspaceMetadataService.buildPrimaryTargetTab(
+        stageCode,
+        'PAYMENT',
+      ),
       secondaryTargetTab: 'overview',
     };
   }

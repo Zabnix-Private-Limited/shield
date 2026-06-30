@@ -50,6 +50,11 @@ class PortalSectionData {
   final String key;
   final String title;
   final String summary;
+  final String? iconKey;
+  final String? route;
+  final String? permission;
+  final int badgeCount;
+  final int order;
   final List<String> actions;
   final List<PortalMetric> metrics;
   final List<PortalListItem> queueItems;
@@ -60,6 +65,11 @@ class PortalSectionData {
     required this.key,
     required this.title,
     required this.summary,
+    this.iconKey,
+    this.route,
+    this.permission,
+    this.badgeCount = 0,
+    this.order = 0,
     required this.actions,
     required this.metrics,
     required this.queueItems,
@@ -72,6 +82,11 @@ class PortalSectionData {
       key: (json['key'] ?? '').toString(),
       title: (json['title'] ?? '').toString(),
       summary: (json['summary'] ?? '').toString(),
+      iconKey: json['iconKey']?.toString() ?? json['icon']?.toString(),
+      route: json['route']?.toString(),
+      permission: json['permission']?.toString(),
+      badgeCount: json['badgeCount'] as int? ?? json['badge'] as int? ?? 0,
+      order: json['order'] as int? ?? 0,
       actions: List<String>.from(json['actions'] ?? const <String>[]),
       metrics: (json['metrics'] as List? ?? const <dynamic>[])
           .map((item) => PortalMetric.fromJson(item as Map<String, dynamic>))
@@ -129,6 +144,8 @@ PortalSectionData _section(
     key: key,
     title: resolvedTitle,
     summary: summary ?? 'Live $resolvedTitle records for this workspace.',
+    iconKey: key,
+    route: '/portal/provider/$key',
     actions: actions,
     metrics: const <PortalMetric>[],
     queueItems: const <PortalListItem>[],
@@ -155,6 +172,67 @@ String _humanizeKey(String value) {
       .where((part) => part.isNotEmpty)
       .map((part) => '${part[0].toUpperCase()}${part.substring(1)}')
       .join(' ');
+}
+
+PortalRoleData portalDataForProviderWorkspaceMeta(
+  Map<String, dynamic> workspaceMeta,
+) {
+  final workflowProfile =
+      workspaceMeta['workflowProfile'] as Map<String, dynamic>? ??
+      const <String, dynamic>{};
+  final providerContext =
+      workspaceMeta['providerContext'] as Map<String, dynamic>? ??
+      const <String, dynamic>{};
+  final rawSections = (workspaceMeta['navigationSections'] as List? ??
+          const <dynamic>[])
+      .map((item) => Map<String, dynamic>.from(item as Map))
+      .toList()
+    ..sort(
+      (left, right) => (left['order'] as num? ?? 0).compareTo(
+        right['order'] as num? ?? 0,
+      ),
+    );
+
+  final sections = rawSections
+      .map(
+        (item) => PortalSectionData(
+          key: item['id']?.toString() ?? item['code']?.toString() ?? '',
+          title: item['title']?.toString() ?? 'Section',
+          summary:
+              item['summary']?.toString() ??
+              'Live ${item['title']?.toString() ?? 'workspace'} records.',
+          iconKey: item['icon']?.toString(),
+          route: item['route']?.toString(),
+          permission: item['permission']?.toString(),
+          badgeCount:
+              item['badge'] is num ? (item['badge'] as num).toInt() : 0,
+          order: item['order'] is num ? (item['order'] as num).toInt() : 0,
+          actions: List<String>.from(item['actions'] ?? const <String>[]),
+          metrics: const <PortalMetric>[],
+          queueItems: const <PortalListItem>[],
+          recentItems: const <PortalListItem>[],
+          insightItems: const <PortalListItem>[],
+        ),
+      )
+      .where((section) => section.key.trim().isNotEmpty)
+      .toList();
+
+  return PortalRoleData(
+    role: SHIELDRole.provider,
+    operatorName:
+        providerContext['workspaceTitle']?.toString() ?? 'Provider Care Hub',
+    headline:
+        providerContext['headline']?.toString() ??
+        'Patients, appointments, records, and payments in one place',
+    regionLabel:
+        workflowProfile['title']?.toString() ??
+        'Unified provider care portal',
+    icon: Icons.local_hospital_outlined,
+    accentColor: AppColors.shieldGreen,
+    sections: sections.isEmpty
+        ? portalDataForRole(SHIELDRole.provider).sections
+        : sections,
+  );
 }
 
 PortalRoleData portalDataForRole(SHIELDRole role) {

@@ -5838,3 +5838,89 @@ est build, ackend/vercel.json, ackend/src/auth/auth.service.ts, and uth_devic
 
 ---
 2026-06-30 18:00:42 IST
+## 169. Provider Navigation Contract: Backend-Owned Sidebar, Module Registry, And Repository-Wide Workspace Rule
+**High-level description**: Completed the next architecture step by moving Provider Portal navigation ownership into backend workspace metadata, wiring the internal portal shell to render that contract directly, and formalizing the same backend-owned workspace-semantics rule in `AGENTS.md` so future Customer, CRM, Manager, Executive, and Admin work follows one repository-wide standard.
+- Extended the provider workspace metadata in `OperationsQueueService` to return a richer provider context contract, including:
+  - `providerContext` with backend-owned provider-type/workspace identity and workspace headline
+  - `navigationSections` with stable section ids, titles, icon identifiers, routes, permissions, badge counts, and ordering
+  - `moduleRegistry` describing the backend-owned provider module set by workflow profile
+- Added workflow-aware navigation shaping so backend navigation labels can now vary by provider profile. For example, laboratory navigation can expose `Lab Reports`, while pharmacy wording can expose `Prescription Review`, without any Flutter-side role branching.
+- Updated the portal metadata model in Flutter so a portal section can carry backend-owned icon keys, routes, permissions, badge counts, and ordering instead of being just a local title/summary tuple.
+- Reworked `PortalShell` so the Provider Portal no longer uses the static local provider section list for its sidebar. It now fetches provider workspace metadata, builds provider navigation from backend `navigationSections`, and renders section labels, routes, icons, and badge counts from that contract.
+- Kept the shell fallback safe: if backend navigation metadata is missing, the existing provider portal section list remains the fallback rather than breaking portal access.
+- Added a repository-wide architecture rule to `AGENTS.md` stating that backend contracts must own navigation, modules, workflow stages, actions, display labels, empty states, and operational metadata, while Flutter should remain a renderer for those contracts.
+- Why this approach was chosen:
+  - moving only queue labels would still leave the most visible operational navigation semantics trapped in Flutter.
+  - the sidebar is the natural first consumer of a cross-portal workspace contract because every future portal will need backend-owned navigation, ordering, badges, and permission-aware modules.
+  - formalizing the rule in `AGENTS.md` now reduces the chance of future portal work backsliding into frontend-owned business semantics.
+
+### Files Modified/Created
+**Frontend Files (Modified)**:
+- frontend/lib/features/portal/presentation/portal_role_data.dart
+- frontend/lib/features/portal/presentation/screens/portal_shell.dart
+
+**Backend Files (Modified)**:
+- backend/src/operations-queue/operations-queue.service.ts
+
+**Documentation / Rules Files (Modified)**:
+- AGENTS.md
+
+### Verification
+- flutter analyze lib/features/portal/presentation/screens/portal_shell.dart lib/features/portal/presentation/portal_role_data.dart
+- npm run build
+- Verified the provider portal shell compiles cleanly against backend-owned navigation metadata and the backend compiles after the richer provider workspace contract was introduced.
+
+### Remaining Blockers / Risks
+- Only the Provider Portal sidebar is consuming backend navigation metadata right now. Customer, CRM, Manager, Executive, and Super Admin still rely on local navigation definitions and should be migrated later onto the same contract pattern.
+- The provider content body still contains local widget routing by section key. That is acceptable for now, but deeper provider-module growth should continue shifting operational module definitions and action registries into backend workspace metadata.
+- Badge values are currently derived from live queue/appointment counts in the backend workspace service, but notification-style live updates still require the future real-time transport layer.
+
+---
+2026-06-30 18:59:15 IST
+## 170. Provider Workspace Metadata Service: Unified Patient Workspace Contract And Search-Timeline Foundation
+**High-level description**: Split provider workspace semantics into a dedicated backend metadata service and extended the patient workspace so the provider side keeps moving toward one patient-centered operating surface instead of separate Flutter-owned modules.
+- Added `ProviderWorkspaceMetadataService` as the backend owner for provider workspace semantics. The provider workspace contract now has one place responsible for shaping:
+  - provider context and workflow profile
+  - navigation sections and module registry
+  - queue stage semantics and dashboard highlights
+  - patient search configuration
+  - patient workspace header fields, quick actions, and tab metadata
+  - timeline metadata and feature flags
+- Updated `OperationsQueueService` to consume the metadata service instead of continuing to inline provider workspace semantics, which makes the provider workspace contract easier to expand into a true workspace engine without scattering labels and workflow rules across multiple backend methods.
+- Extended the patient workspace metadata to support a more operational provider flow with backend-owned:
+  - search title, subtitle, placeholder, supported query hints, and empty-state copy
+  - patient header field definitions such as membership, SHIELD card, wallet, blood group, location, and today's visit
+  - quick actions such as `Start Consultation`, `Open Timeline`, and `Check Payments`
+  - richer tabs including `Today's Visit` and `History`
+- Updated the provider patient workspace screen to render the backend-owned search contract, workspace title/description, header fields, quick actions, and active-tab framing so Flutter is acting more like a renderer of provider workspace metadata rather than owning those operational semantics locally.
+- Added controller helpers for metadata-driven patient header values, quick-action tab targets, workspace search copy, and timeline copy so widget code stays presentation-focused while still consuming backend-owned contracts.
+- Fixed the admin queue's appointment mapping to pass a workflow profile after the queue-item signature changed, preventing a half-migrated backend contract from breaking builds outside the provider portal path.
+- Why this approach was chosen:
+  - the next major SHIELD milestone is the unified patient workspace, and that requires a dedicated backend contract owner rather than continuing to grow one large queue service with embedded portal semantics.
+  - provider staff should think in terms of opening one patient and seeing the right actions, records, visits, and payments together; backend-owned workspace metadata is the foundation that lets different provider types evolve those flows without Flutter branching.
+  - centralizing workspace semantics now reduces future churn when the consultation engine, richer timeline events, smart alerts, and real-time queue updates are added.
+
+### Files Modified/Created
+**Frontend Files (Modified)**:
+- frontend/lib/features/provider/customers/presentation/screens/provider_customers_screen.dart
+- frontend/lib/features/provider/shared/presentation/controllers/provider_portal_controller.dart
+
+**Backend Files (New)**:
+- backend/src/operations-queue/provider-workspace-metadata.service.ts
+
+**Backend Files (Modified)**:
+- backend/src/operations-queue/operations-queue.module.ts
+- backend/src/operations-queue/operations-queue.service.ts
+
+### Verification
+- flutter analyze --no-pub frontend/lib/features/provider/customers/presentation/screens/provider_customers_screen.dart frontend/lib/features/provider/shared/presentation/controllers/provider_portal_controller.dart
+- npm run build
+- Verified the patient workspace compiles cleanly against the richer backend workspace contract and the backend builds after extracting provider metadata ownership into a dedicated service.
+
+### Remaining Blockers / Risks
+- The patient workspace is now metadata-shaped, but the consultation engine itself is not implemented yet; `Start Consultation` currently routes into the workspace rather than opening a real provider-type-specific care workflow.
+- Timeline entries are still composed from currently loaded appointments and documents. A true enterprise timeline will need dedicated backend event generation so vitals, billing, dispensing, notes, alerts, and handoffs all write into one patient story.
+- Real-time queue and workspace refresh are still future work; this slice improves the contract shape first, not the transport layer.
+
+---
+2026-06-30 20:30:00 IST

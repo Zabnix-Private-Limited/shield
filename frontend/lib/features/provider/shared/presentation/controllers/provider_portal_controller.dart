@@ -112,6 +112,65 @@ class ProviderPortalController extends ChangeNotifier {
       patientWorkspaceMetadata['emptyStateMessage']?.toString() ??
       'Select a patient to open the full care view.';
 
+  String get patientWorkspaceTitle =>
+      patientWorkspaceMetadata['title']?.toString() ?? 'Patient workspace';
+
+  String get patientWorkspaceDescription =>
+      patientWorkspaceMetadata['description']?.toString() ??
+      'Open one patient and keep visits, records, and payments together in one place.';
+
+  List<Map<String, dynamic>> get patientWorkspaceHeaderFields {
+    final fields = List<Map<String, dynamic>>.from(
+      (patientWorkspaceMetadata['headerFields'] as List? ?? const <dynamic>[])
+          .map((item) => Map<String, dynamic>.from(item as Map)),
+    );
+    fields.sort(
+      (left, right) => (left['order'] as num? ?? 0).compareTo(
+        right['order'] as num? ?? 0,
+      ),
+    );
+    return fields;
+  }
+
+  List<Map<String, dynamic>> get patientWorkspaceQuickActions {
+    final actions = List<Map<String, dynamic>>.from(
+      (patientWorkspaceMetadata['quickActions'] as List? ?? const <dynamic>[])
+          .map((item) => Map<String, dynamic>.from(item as Map)),
+    );
+    return actions;
+  }
+
+  Map<String, dynamic> get searchConfig =>
+      Map<String, dynamic>.from(workspaceMeta['searchConfig'] ?? const {});
+
+  String get patientSearchTitle =>
+      searchConfig['title']?.toString() ?? 'Search patient';
+
+  String get patientSearchSubtitle =>
+      searchConfig['subtitle']?.toString() ??
+      'Open one patient and keep visits, records, membership, and payments together in a single workspace.';
+
+  String get patientSearchPlaceholder =>
+      searchConfig['placeholder']?.toString() ??
+      'Search by name, patient ID, phone, membership, or SHIELD card';
+
+  List<String> get patientSearchSupportedQueries =>
+      List<String>.from(searchConfig['supportedQueries'] ?? const <String>[]);
+
+  String get patientSearchEmptyStateMessage =>
+      searchConfig['emptyStateMessage']?.toString() ??
+      'No patients match this search yet.';
+
+  Map<String, dynamic> get timelineConfig =>
+      Map<String, dynamic>.from(workspaceMeta['timelineConfig'] ?? const {});
+
+  String get timelineTitle =>
+      timelineConfig['title']?.toString() ?? 'Timeline';
+
+  String get timelineSubtitle =>
+      timelineConfig['subtitle']?.toString() ??
+      'Use the patient timeline to follow the care story in one place.';
+
   String get providerDisplayName {
     final display = authProfile['display'] as Map<String, dynamic>? ??
         const <String, dynamic>{};
@@ -377,6 +436,46 @@ class ProviderPortalController extends ChangeNotifier {
       }
     }
     return 'No information is available yet.';
+  }
+
+  String patientHeaderFieldValue(String fieldCode) {
+    switch (fieldCode) {
+      case 'membership':
+        return (((selectedMembership?['membership'] as Map<String, dynamic>?) ??
+                    const <String, dynamic>{})['membershipNumber'])
+                ?.toString() ??
+            'Not issued';
+      case 'shield-card':
+        return selectedCustomer?.shieldCardNumber ?? 'Pending issuance';
+      case 'wallet':
+        final cashWallet =
+            selectedWallet?['cashWallet'] as Map<String, dynamic>? ??
+            const <String, dynamic>{};
+        return formatCurrency(cashWallet['available']);
+      case 'blood-group':
+        return selectedCustomer?.bloodGroup ?? 'Not recorded';
+      case 'location':
+        final location = [
+          selectedCustomer?.city,
+          selectedCustomer?.district,
+        ].whereType<String>().where((value) => value.trim().isNotEmpty).join(', ');
+        return location.isEmpty ? 'Location not recorded' : location;
+      case 'upcoming-appointment':
+        final next = selectedUpcomingAppointments.isNotEmpty
+            ? selectedUpcomingAppointments.first
+            : null;
+        return next == null ? 'No visit scheduled' : next.typeLabel;
+      default:
+        return '';
+    }
+  }
+
+  String patientQuickActionTargetTab(Map<String, dynamic> action) =>
+      action['targetTab']?.toString() ?? 'overview';
+
+  String formatCurrency(Object? value) {
+    final amount = double.tryParse('${value ?? 0}') ?? 0;
+    return 'Rs ${amount.toStringAsFixed(0)}';
   }
 
   String resolvePatientTab(String? tabCode) {
