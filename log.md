@@ -5125,3 +5125,110 @@ pm run build (backend)
 
 ---
 2026-06-30 10:35:00 IST
+## 146. Customer Documents/Prescriptions Extraction, Session Cache Cleanup, and Live Provider Booking
+**High-level description**: Continued the customer-portal production cleanup by moving the active documents and prescriptions routes away from placeholder portal-shell cards, clearing per-customer cached slices when the authenticated customer changes or signs out, and removing the hardcoded consultation provider-id booking path from customer services.
+- Replaced the in-shell document and prescription placeholder cards in rontend/lib/features/portal/presentation/screens/portal_shell.dart with dedicated customer production-slice screens so the active customer routes now render backend-driven archive data instead of migration notices.
+- Added rontend/lib/features/customer/documents/presentation/screens/customer_documents_screen.dart to show the real customer document archive with live counts, status chips, OCR preview visibility, and detail-sheet access driven from ApiService.getCustomerDocumentsStrict(...).
+- Added rontend/lib/features/customer/prescriptions/presentation/screens/customer_prescriptions_screen.dart to show the real prescription history filtered from the authenticated customer document feed instead of leaving /portal/customer/prescriptions as a reserved stub route.
+- Added rontend/lib/shared/services/customer_cache_service.dart and wired it into rontend/lib/shared/services/customer_auth_session.dart so customer-specific dashboard, membership, and wallet Hive entries are cleared when the session is cleared and when the authenticated customer id changes across login or refresh flows.
+- This closes the remaining session-lifecycle gap from the earlier cache-scope pass: account switch, logout, and session-expiry paths no longer leave stale customer cache entries behind.
+- Removed the hardcoded consultation provider map (1/2/3/4) from the customer services booking flow in rontend/lib/features/portal/presentation/screens/portal_shell.dart.
+- Customer consultation booking now loads the live backend provider directory through ApiService.getProviders(), filters the active providers by consultation type, allows the customer to choose a real provider, and submits the selected backend provider id when creating the appointment.
+- The booking form now surfaces a clear UI warning when no active backend provider exists for the chosen consultation type instead of silently falling back to a fake provider id.
+- Why this approach was chosen:
+  - the handoff explicitly prioritized removing old demo architecture from authenticated customer flows, especially placeholder customer sections, hardcoded ids, and cache leakage risks.
+  - documents and prescriptions already had enough backend/API support to be promoted into the active customer slice immediately without inventing new contracts.
+  - cache cleanup was added at the auth-session layer because that is the one place guaranteed to see logout, refresh, and customer-identity changes before the cached customer features rehydrate.
+  - live provider selection was the smallest honest step that materially improves the booking flow without fabricating a full customer service-catalog module first.
+
+### Files Modified/Created
+**Frontend Files (Created)**:
+- frontend/lib/features/customer/documents/presentation/screens/customer_documents_screen.dart
+- frontend/lib/features/customer/prescriptions/presentation/screens/customer_prescriptions_screen.dart
+- frontend/lib/shared/services/customer_cache_service.dart
+
+**Frontend Files (Modified)**:
+- frontend/lib/features/portal/presentation/screens/portal_shell.dart
+- frontend/lib/shared/services/customer_auth_session.dart
+
+**Backend Files**:
+- None
+
+### Verification
+- flutter analyze lib/features/portal/presentation/screens/portal_shell.dart lib/features/customer/documents/presentation/screens/customer_documents_screen.dart lib/features/customer/prescriptions/presentation/screens/customer_prescriptions_screen.dart lib/shared/services/customer_cache_service.dart lib/shared/services/customer_auth_session.dart (frontend)
+- npm run build (backend)
+
+---
+2026-06-30 10:55:33 IST## 147. Log Correction For Entry 146: Plain Path Restatement
+**High-level description**: Restated the file-path references from entry 146 in plain text because the previous append introduced formatting artifacts in a few path strings during shell interpolation.
+- The implementation scope described in entry 146 is unchanged.
+- Plain-text path references for that batch are:
+  - frontend/lib/features/portal/presentation/screens/portal_shell.dart
+  - frontend/lib/shared/services/customer_auth_session.dart
+  - frontend/lib/shared/services/customer_cache_service.dart
+  - frontend/lib/features/customer/documents/presentation/screens/customer_documents_screen.dart
+  - frontend/lib/features/customer/prescriptions/presentation/screens/customer_prescriptions_screen.dart
+- This correction is append-only and only fixes the textual rendering of the paths inside the log.
+
+### Files Modified/Created
+**Log Files (Modified)**:
+- log.md
+
+### Verification
+- log append only; no additional runtime/build verification was required for this correction
+
+---
+2026-06-30 10:55:56 IST## 148. Legacy Customer Dashboard/Profile Hardcoded Id Cleanup
+**High-level description**: Removed the remaining hardcoded customer 1 reads from the older customer dashboard/profile screens so even the legacy customer-facing code paths now resolve the authenticated customer id instead of assuming one static account.
+- Updated frontend/lib/features/dashboard/presentation/screens/customer_dashboard.dart so both the profile read and wallet read now use ApiService.requireAuthenticatedCustomerId() before loading the customer dashboard snapshot.
+- Updated frontend/lib/features/profile/presentation/screens/profile_screen.dart so the profile future now resolves through the authenticated customer id instead of calling getCustomerProfile('1').
+- This keeps the older redirected customer screens aligned with the same multi-customer session rules already enforced in the extracted customer portal slice.
+
+### Files Modified/Created
+**Frontend Files (Modified)**:
+- frontend/lib/features/dashboard/presentation/screens/customer_dashboard.dart
+- frontend/lib/features/profile/presentation/screens/profile_screen.dart
+
+**Backend Files**:
+- None
+
+### Verification
+- flutter analyze lib/features/dashboard/presentation/screens/customer_dashboard.dart lib/features/profile/presentation/screens/profile_screen.dart lib/features/portal/presentation/screens/portal_shell.dart lib/features/customer/documents/presentation/screens/customer_documents_screen.dart lib/features/customer/prescriptions/presentation/screens/customer_prescriptions_screen.dart lib/shared/services/customer_cache_service.dart lib/shared/services/customer_auth_session.dart (frontend)
+- npm run build (backend)
+
+---
+2026-06-30 10:58:17 IST
+## 149. Fixed Customer Auth Session Schema Drift For Future Vercel Deploys
+**High-level description**: Closed the repo-side deployment gap behind the live customer OTP 500 by making Vercel apply the Prisma auth schema during backend builds, and by turning auth-store schema drift into a targeted backend outage message instead of an opaque internal server error.
+- Runtime inspection on June 30, 2026 confirmed production POST /auth/customer/login was failing inside AuthService.ensureAuthDevice with Prisma P2021 because public.auth_devices does not exist in the database currently wired into the live Vercel backend.
+- Added a dedicated backend ercel-build script that runs prisma generate, prisma db push, and 
+est build so future Vercel deployments apply the AuthSession/AuthDevice/LoginHistory schema before the serverless bundle is built.
+- Wired ackend/vercel.json to use that ercel-build command explicitly so deploy behavior is repo-owned instead of depending on external dashboard defaults.
+- Hardened ackend/src/auth/auth.service.ts so refresh lookups, access-token session checks, session persistence, and login-history writes surface a ServiceUnavailableException when auth-store tables are missing, while still logging the operational cause for backend debugging.
+- Verified the local backend .env database is a different Neon target than the live failing environment because the local target already contains uth_devices, uth_sessions, and login_history; production still needs a deployment against its own configured database.
+
+### Files Modified/Created
+**Backend Files (Modified)**:
+- backend/package.json
+- backend/vercel.json
+- backend/src/auth/auth.service.ts
+
+**Frontend Files**:
+- None
+
+### Verification
+- npm run build (backend)
+- Queried Vercel production runtime logs for /auth/customer/login and confirmed Prisma P2021 on missing public.auth_devices
+- Queried the local backend database catalog and confirmed uth_devices, uth_sessions, and login_history already exist there, proving the live outage is tied to a different deployed database target
+## 150. Corrected Entry 149 Path/Text Rendering
+**High-level description**: Restated the customer-auth deployment-fix notes from entry 149 without the PowerShell control-character artifacts so the repo log stays readable and audit-safe.
+- Entry 149 should read ercel-build, 
+est build, ackend/vercel.json, ackend/src/auth/auth.service.ts, and uth_devices / uth_sessions as plain text.
+- The underlying implementation and verification from entry 149 are unchanged; this append only corrects the textual rendering introduced during the shell-based log append.
+
+### Files Modified/Created
+**Log Files (Modified)**:
+- log.md
+
+### Verification
+- append-only correction; no additional runtime/build verification was required for this textual fix

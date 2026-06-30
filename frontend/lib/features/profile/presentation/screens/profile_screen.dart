@@ -27,7 +27,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   void _loadProfile() {
     setState(() {
-      _customerFuture = ApiService.getCustomerProfile('1');
+      _customerFuture = ApiService.getCustomerProfile(
+        ApiService.requireAuthenticatedCustomerId(),
+      );
     });
   }
 

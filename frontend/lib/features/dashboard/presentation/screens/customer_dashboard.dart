@@ -32,8 +32,9 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
 
   void _loadDashboardData() {
     setState(() {
-      _customerFuture = ApiService.getCustomerProfile('1');
-      _walletProfileFuture = ApiService.getWalletProfile('1');
+      final customerId = ApiService.requireAuthenticatedCustomerId();
+      _customerFuture = ApiService.getCustomerProfile(customerId);
+      _walletProfileFuture = ApiService.getWalletProfile(customerId);
       _transactionsFuture = _walletProfileFuture.then((profile) {
         final walletId = profile['walletId'].toString();
         return ApiService.getWalletTransactions(walletId);

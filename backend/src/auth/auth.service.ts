@@ -1,5 +1,11 @@
-import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  ServiceUnavailableException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import { Prisma } from '@prisma/client';
 import { createHash, randomBytes, randomUUID } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { getAppEnv } from '../config/app-env';
@@ -117,10 +123,12 @@ export class AuthService {
       ...requestContext,
       loginMethod: requestContext?.loginMethod ?? 'PHONE_OTP',
     });
-    await this.recordLoginHistory(principal, {
-      ...requestContext,
-      loginMethod: requestContext?.loginMethod ?? 'PHONE_OTP',
-    });
+    await this.runAuthStoreOperation('record_login_history', () =>
+      this.recordLoginHistory(principal, {
+        ...requestContext,
+        loginMethod: requestContext?.loginMethod ?? 'PHONE_OTP',
+      }),
+    );
     return tokens;
   }
 
@@ -273,10 +281,12 @@ export class AuthService {
       ...requestContext,
       loginMethod: requestContext?.loginMethod ?? 'GOOGLE_SIGN_IN',
     });
-    await this.recordLoginHistory(principal, {
-      ...requestContext,
-      loginMethod: requestContext?.loginMethod ?? 'GOOGLE_SIGN_IN',
-    });
+    await this.runAuthStoreOperation('record_login_history', () =>
+      this.recordLoginHistory(principal, {
+        ...requestContext,
+        loginMethod: requestContext?.loginMethod ?? 'GOOGLE_SIGN_IN',
+      }),
+    );
     return tokens;
   }
 
@@ -287,30 +297,32 @@ export class AuthService {
     }
 
     const hash = this.hashToken(normalized);
-    const session = await this.prisma.authSession.findFirst({
-      where: {
-        refreshTokenHash: hash,
-        revokedAt: null,
-        refreshTokenExpiresAt: { gt: new Date() },
-      },
-      select: {
-        id: true,
-        sessionId: true,
-        subjectId: true,
-        principalType: true,
-        roleCode: true,
-        userType: true,
-        accessScope: true,
-        permissions: true,
-        firebaseUid: true,
-        authProvider: true,
-        customerId: true,
-        userId: true,
-        email: true,
-        mobile: true,
-        branchBusinessId: true,
-      },
-    });
+    const session = await this.runAuthStoreOperation('refresh_lookup', () =>
+      this.prisma.authSession.findFirst({
+        where: {
+          refreshTokenHash: hash,
+          revokedAt: null,
+          refreshTokenExpiresAt: { gt: new Date() },
+        },
+        select: {
+          id: true,
+          sessionId: true,
+          subjectId: true,
+          principalType: true,
+          roleCode: true,
+          userType: true,
+          accessScope: true,
+          permissions: true,
+          firebaseUid: true,
+          authProvider: true,
+          customerId: true,
+          userId: true,
+          email: true,
+          mobile: true,
+          branchBusinessId: true,
+        },
+      }),
+    );
 
     if (!session) {
       throw new UnauthorizedException('Refresh token is invalid or expired.');
@@ -349,10 +361,14 @@ export class AuthService {
         secret: this.env.jwtAccessSecret,
       });
 
-      const session = await this.prisma.authSession.findUnique({
-        where: { sessionId: payload.sid },
-        select: { revokedAt: true },
-      });
+      const session = await this.runAuthStoreOperation(
+        'access_token_session_lookup',
+        () =>
+          this.prisma.authSession.findUnique({
+            where: { sessionId: payload.sid },
+            select: { revokedAt: true },
+          }),
+      );
 
       if (!session || session.revokedAt) {
         throw new UnauthorizedException('Session has been revoked.');
@@ -558,11 +574,13 @@ export class AuthService {
     });
 
     const refreshToken = randomBytes(48).toString('hex');
-    await this.persistSession(
-      effectivePrincipal,
-      refreshToken,
-      requestContext,
-      existingSessionId,
+    await this.runAuthStoreOperation('persist_session', () =>
+      this.persistSession(
+        effectivePrincipal,
+        refreshToken,
+        requestContext,
+        existingSessionId,
+      ),
     );
 
     return {
@@ -732,6 +750,50 @@ export class AuthService {
         userAgent: requestContext?.userAgent,
       },
     });
+  }
+
+  private async runAuthStoreOperation<T>(
+    action: string,
+    operation: () => Promise<T>,
+  ): Promise<T> {
+    try {
+      return await operation();
+    } catch (error) {
+      if (this.isAuthStoreSchemaError(error)) {
+        this.logger.error(
+          `Auth store schema is unavailable during ${action}.`,
+          error instanceof Error ? error.stack : undefined,
+        );
+        throw new ServiceUnavailableException(
+          'Authentication session store is temporarily unavailable. Please try again shortly.',
+        );
+      }
+
+      throw error;
+    }
+  }
+
+  private isAuthStoreSchemaError(error: unknown) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      return ['P2021', 'P2022'].includes(error.code);
+    }
+
+    if (!(error instanceof Error)) {
+      return false;
+    }
+
+    const message = error.message.toLowerCase();
+    const touchesAuthStore =
+      message.includes('auth_sessions') ||
+      message.includes('auth_devices') ||
+      message.includes('login_history');
+    const indicatesSchemaDrift =
+      message.includes('does not exist') ||
+      message.includes('relation') ||
+      message.includes('column') ||
+      message.includes('table');
+
+    return touchesAuthStore && indicatesSchemaDrift;
   }
 
   private async revokeSessionById(sessionId: string, reason: string) {

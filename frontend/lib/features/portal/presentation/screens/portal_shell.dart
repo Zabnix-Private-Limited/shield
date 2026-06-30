@@ -5668,6 +5668,7 @@ class _CustomerServicesView extends StatefulWidget {
 
 class _CustomerServicesViewState extends State<_CustomerServicesView> {
   late Future<Customer> _customerFuture;
+  late Future<List<Map<String, dynamic>>> _providersFuture;
   String _activeTab =
       'PHARMACY'; // 'PHARMACY', 'LAB', 'HOMECARE', 'CONSULTATION'
   String _uploadStatus = 'No files selected';
@@ -5685,6 +5686,7 @@ class _CustomerServicesViewState extends State<_CustomerServicesView> {
   String _consultationMode = 'IN_PERSON'; // 'IN_PERSON', 'TELE', 'VIDEO'
   DateTime _selectedDate = DateTime.now().add(const Duration(days: 1));
   String? _selectedDietPlan;
+  String? _selectedProviderId;
 
   @override
   void initState() {
@@ -5692,6 +5694,7 @@ class _CustomerServicesViewState extends State<_CustomerServicesView> {
     _customerFuture = ApiService.getCustomerProfile(
       ApiService.requireAuthenticatedCustomerId(),
     );
+    _providersFuture = ApiService.getProviders();
   }
 
   @override
@@ -6191,13 +6194,6 @@ class _CustomerServicesViewState extends State<_CustomerServicesView> {
       _lastBookingStatus = null;
     });
 
-    const providerMap = {
-      'DOCTOR': '1',
-      'DENTAL': '2',
-      'COSMETIC': '3',
-      'DIETITIAN': '4',
-    };
-
     const appointmentTypeMap = {
       'DOCTOR': 'CLINIC',
       'DENTAL': 'DENTAL',
@@ -6206,11 +6202,30 @@ class _CustomerServicesViewState extends State<_CustomerServicesView> {
     };
 
     try {
+      final providers = await _providersFuture;
+      final matchingProviders = _filterConsultationProviders(providers);
+      final selectedProvider = matchingProviders.cast<Map<String, dynamic>?>().firstWhere(
+        (provider) => provider?['id']?.toString() == _selectedProviderId,
+        orElse: () => matchingProviders.isEmpty ? null : matchingProviders.first,
+      );
+
+      if (selectedProvider == null) {
+        throw StateError(
+          'No active provider is configured yet for this consultation type.',
+        );
+      }
+
+      final providerId = selectedProvider['id']?.toString();
+      if (providerId == null || providerId.trim().isEmpty) {
+        throw StateError('Selected provider is missing a valid identifier.');
+      }
+
       final appointment = await ApiService.createCustomerAppointment(
-        providerId: providerMap[_specialistType] ?? '1',
+        providerId: providerId,
         appointmentType: appointmentTypeMap[_specialistType] ?? 'CLINIC',
         appointmentDate: _selectedDate,
-        remarks: '$_specialistType consultation via $_consultationMode',
+        remarks:
+            '${selectedProvider['providerName'] ?? selectedProvider['name'] ?? _specialistType} via $_consultationMode',
       );
       if (!mounted) return;
       setState(() {
@@ -6222,7 +6237,7 @@ class _CustomerServicesViewState extends State<_CustomerServicesView> {
         context,
         'Consultation booked successfully inside your customer appointments.',
       );
-    } catch (_) {
+    } catch (error) {
       if (!mounted) return;
       setState(() {
         _isBooking = false;
@@ -6230,8 +6245,49 @@ class _CustomerServicesViewState extends State<_CustomerServicesView> {
       });
       showPortalSnackBar(
         context,
-        'Appointment booking is unavailable right now. Please retry shortly.',
+        error is StateError
+            ? error.message
+            : 'Appointment booking is unavailable right now. Please retry shortly.',
       );
+    }
+  }
+
+  List<Map<String, dynamic>> _filterConsultationProviders(
+    List<Map<String, dynamic>> providers,
+  ) {
+    final expectedType = _providerTypeForSpecialist(_specialistType);
+    return providers.where((provider) {
+      final providerType = provider['providerType']?.toString().trim();
+      final status =
+          provider['status']?.toString().trim().toUpperCase() ?? 'ACTIVE';
+      return providerType == expectedType && status == 'ACTIVE';
+    }).toList();
+  }
+
+  String _providerTypeForSpecialist(String specialistType) {
+    switch (specialistType) {
+      case 'DENTAL':
+        return 'DENTAL';
+      case 'DOCTOR':
+      case 'COSMETIC':
+      case 'DIETITIAN':
+        return 'CLINIC';
+      default:
+        return 'CLINIC';
+    }
+  }
+
+  String _providerLabelForSpecialist(String specialistType) {
+    switch (specialistType) {
+      case 'DENTAL':
+        return 'Dental provider';
+      case 'COSMETIC':
+        return 'Cosmetic consultation provider';
+      case 'DIETITIAN':
+        return 'Dietitian consultation provider';
+      case 'DOCTOR':
+      default:
+        return 'Consultation provider';
     }
   }
 
@@ -7120,6 +7176,7 @@ class _CustomerServicesViewState extends State<_CustomerServicesView> {
                 return InkWell(
                   onTap: () => setState(() {
                     _specialistType = type['key'] as String;
+                    _selectedProviderId = null;
                   }),
                   child: Container(
                     padding: EdgeInsets.all(narrow ? 12 : 14),
@@ -7192,6 +7249,106 @@ class _CustomerServicesViewState extends State<_CustomerServicesView> {
                   setState(() {
                     _selectedDate = value;
                   });
+                },
+              ),
+              const SizedBox(height: 16),
+              FutureBuilder<List<Map<String, dynamic>>>(
+                future: _providersFuture,
+                builder: (context, snapshot) {
+                  final providers = snapshot.data ?? const <Map<String, dynamic>>[];
+                  final matchingProviders = _filterConsultationProviders(providers);
+                  final dropdownValue = matchingProviders.any(
+                    (provider) => provider['id']?.toString() == _selectedProviderId,
+                  )
+                      ? _selectedProviderId
+                      : null;
+
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        _providerLabelForSpecialist(_specialistType),
+                        style: AppTypography.small.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      if (snapshot.connectionState == ConnectionState.waiting)
+                        const LinearProgressIndicator(minHeight: 2)
+                      else if (matchingProviders.isEmpty)
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            color: AppColors.warning.withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(
+                              color: AppColors.warning.withValues(alpha: 0.24),
+                            ),
+                          ),
+                          child: Text(
+                            'No active backend provider is available yet for this consultation type.',
+                            style: AppTypography.small.copyWith(
+                              color: AppColors.darkGray,
+                            ),
+                          ),
+                        )
+                      else
+                        DropdownButtonFormField<String>(
+                          initialValue: dropdownValue,
+                          decoration: InputDecoration(
+                            hintText: 'Select provider',
+                            filled: true,
+                            fillColor: AppColors.white,
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 14,
+                              vertical: 14,
+                            ),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(16),
+                              borderSide: const BorderSide(
+                                color: AppColors.divider,
+                              ),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(16),
+                              borderSide: const BorderSide(
+                                color: AppColors.divider,
+                              ),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(16),
+                              borderSide: const BorderSide(
+                                color: AppColors.shieldBlue,
+                              ),
+                            ),
+                          ),
+                          items: matchingProviders.map((provider) {
+                            final providerId = provider['id']?.toString() ?? '';
+                            final providerName =
+                                provider['providerName']?.toString() ??
+                                provider['name']?.toString() ??
+                                'Provider';
+                            final businessName =
+                                (provider['business'] as Map<String, dynamic>?)?['name']
+                                    ?.toString();
+                            return DropdownMenuItem<String>(
+                              value: providerId,
+                              child: Text(
+                                businessName == null || businessName.isEmpty
+                                    ? providerName
+                                    : '$providerName • $businessName',
+                              ),
+                            );
+                          }).toList(),
+                          onChanged: (value) {
+                            setState(() {
+                              _selectedProviderId = value;
+                            });
+                          },
+                        ),
+                    ],
+                  );
                 },
               ),
               const SizedBox(height: 16),
