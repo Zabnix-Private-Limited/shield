@@ -118,13 +118,13 @@ async function main() {
 
   // 5. Seed Staff Users
   const staffData = [
-    { email: 'admin@shield.com', mobile: '9000000001', roleCode: 'ADMIN', deptCode: 'ADMIN', first: 'Super', last: 'Admin' },
-    { email: 'manager@shield.com', mobile: '9000000002', roleCode: 'ADMIN', deptCode: 'ADMIN', first: 'Branch', last: 'Manager' },
-    { email: 'executive@shield.com', mobile: '9000000003', roleCode: 'SHIELD_AGENT', deptCode: 'ADMIN', first: 'Shield', last: 'Agent' },
-    { email: 'crm@shield.com', mobile: '9000000004', roleCode: 'CRM_EXECUTIVE', deptCode: 'CRM', first: 'CRM', last: 'Executive' },
-    { email: 'pharmacy@shield.com', mobile: '9000000005', roleCode: 'PHARMACY_PROVIDER', deptCode: 'PHARMACY', first: 'Pharmacy', last: 'Provider' },
-    { email: 'clinic@shield.com', mobile: '9000000006', roleCode: 'DOCTOR', deptCode: 'CLINIC', first: 'Clinic', last: 'Doctor' },
-    { email: 'dental@shield.com', mobile: '9000000007', roleCode: 'DENTAL_PROVIDER', deptCode: 'DENTAL', first: 'Dental', last: 'Provider' },
+    { email: 'admin@shield.com', mobile: '9000000001', roleCode: 'ADMIN', deptCode: 'ADMIN', first: 'Super', last: 'Admin', branchBizCode: 'SHG' },
+    { email: 'manager@shield.com', mobile: '9000000002', roleCode: 'ADMIN', deptCode: 'ADMIN', first: 'Branch', last: 'Manager', branchBizCode: 'SHG' },
+    { email: 'executive@shield.com', mobile: '9000000003', roleCode: 'SHIELD_AGENT', deptCode: 'ADMIN', first: 'Shield', last: 'Agent', branchBizCode: 'SHG' },
+    { email: 'crm@shield.com', mobile: '9000000004', roleCode: 'CRM_EXECUTIVE', deptCode: 'CRM', first: 'CRM', last: 'Executive', branchBizCode: 'SHG' },
+    { email: 'juniordeveloper03zabnix@gmail.com', mobile: '9000000005', roleCode: 'PHARMACY_PROVIDER', deptCode: 'PHARMACY', first: 'Junior', last: 'Developer', branchBizCode: 'HYP-PERINTHALMANNA' },
+    { email: 'clinic@shield.com', mobile: '9000000006', roleCode: 'DOCTOR', deptCode: 'CLINIC', first: 'Clinic', last: 'Doctor', branchBizCode: 'SHG' },
+    { email: 'dental@shield.com', mobile: '9000000007', roleCode: 'DENTAL_PROVIDER', deptCode: 'DENTAL', first: 'Dental', last: 'Provider', branchBizCode: 'SHG' },
   ];
 
   const staffUsers: Record<string, any> = {};
@@ -145,6 +145,7 @@ async function main() {
           passwordHash: 'Zabnix@2025',
           roleId: roles[staffInfo.roleCode].id,
           departmentId: departments[staffInfo.deptCode].id,
+          branchBusinessId: businesses[staffInfo.branchBizCode].id,
           status: 'ACTIVE',
         },
       });
@@ -156,6 +157,7 @@ async function main() {
           passwordHash: 'Zabnix@2025',
           roleId: roles[staffInfo.roleCode].id,
           departmentId: departments[staffInfo.deptCode].id,
+          branchBusinessId: businesses[staffInfo.branchBizCode].id,
         },
       });
     }

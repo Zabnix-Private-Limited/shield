@@ -5568,3 +5568,27 @@ est build, ackend/vercel.json, ackend/src/auth/auth.service.ts, and uth_devic
 
 ---
 2026-06-30 15:32:31 IST
+
+## 161. Provider Test Account Alignment: Seeded Internal Provider Login Updated To Active Google Mail And Branch Scope
+**High-level description**: Aligned the seeded internal provider bootstrap account with the real Google email currently being used to test the unified Provider Portal, and attached that provider user to a concrete branch business so provider workspace scoping behaves correctly during near-production validation.
+- Replaced the previous generic seeded pharmacy-provider email with `juniordeveloper03zabnix@gmail.com` so the internal Google sign-in flow can match a real testing account instead of a placeholder mailbox.
+- Kept the seeded role as `PHARMACY_PROVIDER`, which is appropriate for the current unified provider portal test path and maps into the shared provider workspace without introducing a separate portal fork.
+- Updated the seeded display name for that provider test user to `Junior Developer` to match the provided testing account rather than preserving a generic provider label.
+- Added `branchBizCode` mapping for seeded internal staff users and started persisting `branchBusinessId` during both create and update paths, so bootstrap internal accounts carry explicit branch/business scope instead of remaining branchless by default.
+- Assigned the provider testing account to `HYP-PERINTHALMANNA`, which gives the seeded provider a real pharmacy branch context for queue/workspace behavior during testing.
+- Also assigned baseline branch scope to the seeded admin, manager, executive, CRM, doctor, and dental users using the live business records seeded earlier in the same bootstrap flow.
+- Why this approach was chosen:
+  - the internal auth service only accepts provisioned users already present in the `users` table, matched primarily by email on first Google login.
+  - using the actual testing Google account removes avoidable friction while keeping provisioning explicit and database-backed.
+  - branch scope matters to the provider portal, so adding it in seed data is safer than leaving test users under-scoped as SHIELD approaches production-like testing.
+
+### Files Modified/Created
+**Backend Files (Modified)**:
+- backend/prisma/seed.ts
+
+### Verification
+- npm run build
+- Verified the seeded provider test account now uses `juniordeveloper03zabnix@gmail.com` with `PHARMACY_PROVIDER` role and `HYP-PERINTHALMANNA` branch scope in the bootstrap data.
+
+---
+2026-06-30 15:39:07 IST
