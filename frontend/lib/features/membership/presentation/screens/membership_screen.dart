@@ -25,7 +25,9 @@ class _MembershipScreenState extends State<MembershipScreen> {
   }
 
   void _loadMembership() {
-    _membershipFuture = ApiService.getCustomerMembership('1');
+    _membershipFuture = ApiService.getCustomerMembership(
+      ApiService.requireAuthenticatedCustomerId(),
+    );
   }
 
   @override

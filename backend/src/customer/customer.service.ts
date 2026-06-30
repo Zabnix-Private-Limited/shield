@@ -95,6 +95,11 @@ export class CustomerService {
             membershipType: true,
           },
         },
+        shieldCard: {
+          include: {
+            issuedBusiness: true,
+          },
+        },
         wallet: true,
       },
     });
@@ -140,6 +145,25 @@ export class CustomerService {
         totalRedeemedCredits: walletSummary?.cashWallet.debited ?? 0,
         availableCredits: walletSummary?.cashWallet.available ?? 0,
       },
+      shieldCard: customer.shieldCard
+        ? {
+            id: customer.shieldCard.id.toString(),
+            uuid: customer.shieldCard.uuid,
+            cardNumber: customer.shieldCard.cardNumber,
+            qrCode: customer.shieldCard.qrCode,
+            status: customer.shieldCard.status,
+            issuedAt: customer.shieldCard.issuedAt,
+            issuedBusiness: customer.shieldCard.issuedBusiness
+              ? {
+                  id: customer.shieldCard.issuedBusiness.id.toString(),
+                  uuid: customer.shieldCard.issuedBusiness.uuid,
+                  code: customer.shieldCard.issuedBusiness.code,
+                  name: customer.shieldCard.issuedBusiness.name,
+                  status: customer.shieldCard.issuedBusiness.status,
+                }
+              : null,
+          }
+        : null,
     };
   }
 
@@ -210,7 +234,8 @@ export class CustomerService {
       let issuedBusinessId = staffUser?.department?.businessId || null;
       if (!issuedBusinessId) {
         const defaultBiz = await tx.business.findFirst({
-          where: { code: 'HYP-PERINTHALMANNA' },
+          where: { status: 'ACTIVE' },
+          orderBy: { id: 'asc' },
         });
         if (defaultBiz) {
           issuedBusinessId = defaultBiz.id;

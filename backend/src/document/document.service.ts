@@ -495,20 +495,21 @@ export class DocumentService {
 
   async classify(documentId: bigint, classificationHint?: string) {
     const doc = await this.findOne(documentId);
-    const mockClassifications = [
+    const supportedClassifications = [
       'PRESCRIPTION',
       'LAB_REPORT',
       'PHARMACY_BILL',
       'INVOICE',
       'DENTAL_REPORT',
+      'UNCLASSIFIED',
     ];
     const normalizedHint = this.normalizeDocumentType(classificationHint);
     const normalizedDocType = this.normalizeDocumentType(doc.documentType);
-    const classification = mockClassifications.includes(normalizedHint)
+    const classification = supportedClassifications.includes(normalizedHint)
       ? normalizedHint
-      : mockClassifications.includes(normalizedDocType)
+      : supportedClassifications.includes(normalizedDocType)
         ? normalizedDocType
-        : mockClassifications[Number(doc.id % BigInt(mockClassifications.length))];
+        : 'UNCLASSIFIED';
 
     await this.prisma.documentClassification.create({
       data: {
@@ -589,11 +590,11 @@ Date: ${formattedDate}
 Medicines:
 - Prescription uploaded | As directed | As directed | Not specified`
           : `Date: ${formattedDate}
-Patient ID: CUST-123456
-Diagnosis Summary: LifeStyle Management & Follow-up`;
+Customer: ${patientName}
+Summary: Structured extraction is unavailable for this document.`;
       confidenceScore = 32;
       extractionRemarks = uploadedFile?.buffer?.length
-        ? 'Prescription extraction used the fallback parser because OCR output was unavailable.'
+        ? 'Document extraction used the minimal parser because OCR output was unavailable.'
         : 'Document record created without an uploaded file buffer.';
     }
 

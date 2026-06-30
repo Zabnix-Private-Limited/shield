@@ -5298,3 +5298,98 @@ est build, ackend/vercel.json, ackend/src/auth/auth.service.ts, and uth_devic
 
 ### Verification
 - Verified the repo diffs add current_schema.md as the database truth source in all SHIELD agent rule files--help
+## 155. Customer Real-Data Cleanup: Removed Shared Dummy Models, Hardcoded Wallet Identities, and Static Customer Card Details
+**High-level description**: Continued the customer-portal production cleanup by removing shared dummy model payloads from active frontend code paths, replacing remaining customer hardcoded ids in wallet flows, and making customer reward/card UI derive from authenticated backend data instead of static preview text.
+- Removed the shared dummy customer-facing collections from the frontend model layer so appointments, documents, notifications, membership, and wallet no longer expose global demo fixtures as a fallback data source.
+- Extended the shared customer model to carry referralCode and shieldCardNumber from real backend payloads, including nested shield card data returned by the customer profile endpoint.
+- Reworked the More screen referral tile so it now loads the authenticated customer profile and shows the real referral code, customer code, and agent-code context instead of the old SHLD-NIHAL-2026 placeholder.
+- Reworked the customer digital privilege card dialog in portal_shell.dart so the displayed member name, card number, and membership status come from the authenticated customer profile rather than hardcoded Nihal/card-preview values.
+- Replaced the wallet profile lookup hardcoded customer id 1 in both wallet_screen.dart and transactions_screen.dart with ApiService.requireAuthenticatedCustomerId().
+- Removed the synthetic wallet-model fallback that forced an empty customer id to become 1, which closes another stale-customer identity leak in wallet parsing.
+- Removed the dummy-backed postBalance/currentBalance helpers from the shared wallet model and moved running-balance calculation into the wallet UI using the actual fetched transaction list grouped by ledger, so balance storytelling now reflects live transaction history rather than a global demo ledger.
+- Tightened ApiService role fallbacks so non-customer appointment/document/notification requests now fail explicitly instead of silently returning dummy collections.
+- Updated the customer portal role header copy to stop presenting Nihal-specific cluster text while real customer data is loading.
+- Why this approach was chosen:
+  - the active customer portal already has enough backend-backed endpoints to render real identity, referral, membership-card, wallet, and archive information without inventing placeholder state.
+  - removing shared dummy collections from the model layer reduces the chance of future authenticated flows accidentally reusing demo data through convenience imports.
+  - wallet running balances were moved to the screen level because post-balance is only valid in the context of the exact fetched transaction stream and ledger ordering, not as a global model getter.
+
+### Files Modified/Created
+**Frontend Files (Modified)**:
+- frontend/lib/shared/models/customer.dart
+- frontend/lib/shared/services/api_service.dart
+- frontend/lib/shared/models/appointment.dart
+- frontend/lib/shared/models/document.dart
+- frontend/lib/shared/models/notification.dart
+- frontend/lib/shared/models/membership.dart
+- frontend/lib/shared/models/wallet.dart
+- frontend/lib/features/customer/wallet/data/models/wallet_model.dart
+- frontend/lib/features/more/presentation/screens/more_screen.dart
+- frontend/lib/features/portal/presentation/portal_role_data.dart
+- frontend/lib/features/portal/presentation/screens/portal_shell.dart
+- frontend/lib/features/wallet/presentation/screens/wallet_screen.dart
+- frontend/lib/features/transactions/presentation/screens/transactions_screen.dart
+
+**Backend Files**:
+- None
+
+### Verification
+- flutter analyze lib/shared/models/customer.dart lib/shared/services/api_service.dart lib/shared/models/appointment.dart lib/shared/models/document.dart lib/shared/models/notification.dart lib/shared/models/membership.dart lib/shared/models/wallet.dart lib/features/customer/wallet/data/models/wallet_model.dart lib/features/more/presentation/screens/more_screen.dart lib/features/portal/presentation/portal_role_data.dart lib/features/portal/presentation/screens/portal_shell.dart lib/features/wallet/presentation/screens/wallet_screen.dart lib/features/transactions/presentation/screens/transactions_screen.dart
+
+---
+2026-06-30 11:40:33 IST
+
+## 156. Log Clarification For Entry 154 Tail Artifact
+**High-level description**: Clarified the stray terminal text appended after entry 154 so the append-only log remains readable without rewriting history.
+- The trailing text fragment at the end of entry 154 was caused by an attempted append-log.js help invocation during tool inspection, not by a source-code change.
+- This clarification is append-only and does not alter the implementation or verification recorded in earlier entries.
+
+### Files Modified/Created
+**Log Files (Modified)**:
+- log.md
+
+### Verification
+- append-only clarification; no additional runtime/build verification was required for this textual note
+
+---
+2026-06-30 11:40:33 IST
+---
+2026-06-30 12:03:32 IST
+
+## 157. Portal Data Source Standardization: Replaced Frontend Demo Dashboards With Live Role-Section API Data
+**High-level description**: Removed the largest remaining production-path demo dataset by converting the portal role-definition layer into metadata only, routing portal sections through the backend role-section dashboard endpoint, removing customer dashboard `BigInt(1)` fallbacks from customer-facing backend entry points, and tightening customer membership/document payloads so live card and document intelligence data flow through the app instead of sample state.
+- Replaced `frontend/lib/features/portal/presentation/portal_role_data.dart` from a giant hardcoded dataset into role/section metadata only, so the frontend no longer ships fake metrics, fake queue items, or named sample members as its default portal content source.
+- Updated `ApiService.getRoleSectionData` to call `GET /dashboard/role/:role/:section`, making portal section content backend-driven instead of reading static Dart lists.
+- Refactored `backend/src/dashboard/dashboard.controller.ts` to reject missing customer context instead of silently defaulting to customer id `1`.
+- Refactored `backend/src/dashboard/dashboard.service.ts` so role-section responses are composed from live Prisma data across customers, providers, appointments, documents, notifications, cards, CRM tasks, complaints, businesses, membership plans, users, roles, audit logs, and commercial settings; removed the hardcoded customer services cards, sample provider queue rows, static Founding Member note, and canned infrastructure insight rows.
+- Removed the same `BigInt(1)` customer fallback from `customer-membership.controller.ts`, `customer-dashboard.controller.ts`, and `customer-wallet.controller.ts` so customer portal bundles can no longer drift into another user's records when session/customer context is missing.
+- Extended `CustomerService.getCustomerPortalMembership` to include real shield-card and issuing-business data, and changed approval-time issuing-business selection from a hardcoded business code fallback to the first active business in the live database when the approving staff user has no branch business.
+- Replaced legacy customer hardcoded membership access in `frontend/lib/features/membership/presentation/screens/membership_screen.dart` with the authenticated customer id, and replaced the old `Founding Member • Perinthalmanna cluster` dashboard subtitle in `frontend/lib/features/dashboard/presentation/screens/customer_dashboard.dart` with live customer status text.
+- Reworked the legacy customer dashboard service recommendations to derive from live provider records instead of a hardcoded service shortlist.
+- Replaced `DocumentService.classify()` demo classification fallback behavior with a deterministic supported-classification path that resolves unknown records to `UNCLASSIFIED`, and removed the fake `CUST-123456` extraction fallback text in favor of real customer identity plus explicit extraction-unavailable messaging.
+- Redirected the portal-shell sample-only internal report/audit/QR workspace routes back to the generic live enterprise workspace so production navigation stops rendering those static demo screens by default.
+- Why this approach was chosen:
+  - replacing the frontend's baked-in portal dataset removes the highest-volume demo contamination source in one architectural step instead of continuing one-card-at-a-time cleanup.
+  - moving section content behind the backend role-section endpoint makes every portal converge on one live data contract and reduces future fallback drift.
+  - removing hardcoded customer defaults from customer-facing controllers closes one of the most dangerous remaining cross-customer isolation paths.
+
+### Files Modified/Created
+**Frontend Files (Modified)**:
+- frontend/lib/features/portal/presentation/portal_role_data.dart
+- frontend/lib/shared/services/api_service.dart
+- frontend/lib/features/portal/presentation/screens/portal_shell.dart
+- frontend/lib/features/dashboard/presentation/screens/customer_dashboard.dart
+- frontend/lib/features/membership/presentation/screens/membership_screen.dart
+
+**Backend Files (Modified)**:
+- backend/src/dashboard/dashboard.controller.ts
+- backend/src/dashboard/dashboard.service.ts
+- backend/src/dashboard/customer-dashboard.controller.ts
+- backend/src/customer/customer-membership.controller.ts
+- backend/src/wallet/customer-wallet.controller.ts
+- backend/src/customer/customer.service.ts
+- backend/src/document/document.service.ts
+
+### Verification
+- flutter analyze
+- npm run build

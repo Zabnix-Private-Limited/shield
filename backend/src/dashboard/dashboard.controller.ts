@@ -1,4 +1,10 @@
-import { Controller, Get, Param, Query } from '@nestjs/common';
+import {
+  BadRequestException,
+  Controller,
+  Get,
+  Param,
+  Query,
+} from '@nestjs/common';
 import { CurrentPrincipal } from '../auth/current-principal.decorator';
 import { RequirePermissions } from '../auth/permissions.decorator';
 import type { ShieldPrincipal } from '../auth/auth.types';
@@ -8,18 +14,26 @@ import { DashboardService } from './dashboard.service';
 export class DashboardController {
   constructor(private dashboardService: DashboardService) {}
 
+  private resolveCustomerId(
+    customerId?: string,
+    principal?: ShieldPrincipal,
+  ): bigint {
+    if (principal?.principalType === 'CUSTOMER' && principal.customerId) {
+      return BigInt(principal.customerId);
+    }
+    if (customerId?.trim()) {
+      return BigInt(customerId);
+    }
+    throw new BadRequestException('Authenticated customer context is required.');
+  }
+
   @RequirePermissions('analytics.view')
   @Get('customer')
   async getCustomerDashboard(
     @Query('customer_id') customerId?: string,
     @CurrentPrincipal() principal?: ShieldPrincipal,
   ) {
-    const id =
-      principal?.principalType === 'CUSTOMER'
-        ? BigInt(principal.customerId!)
-        : customerId
-          ? BigInt(customerId)
-          : BigInt(1);
+    const id = this.resolveCustomerId(customerId, principal);
     const data = await this.dashboardService.getCustomerDashboard(id);
     return {
       success: true,
@@ -69,16 +83,14 @@ export class DashboardController {
     @Query('customer_id') customerId?: string,
     @CurrentPrincipal() principal?: ShieldPrincipal,
   ) {
-    const id =
-      principal?.principalType === 'CUSTOMER'
-        ? BigInt(principal.customerId!)
-        : customerId
-          ? BigInt(customerId)
-          : BigInt(1);
     const data = await this.dashboardService.getRoleSectionDashboard(
       role,
       section,
-      id,
+      principal?.principalType === 'CUSTOMER' && principal.customerId
+        ? BigInt(principal.customerId)
+        : customerId?.trim()
+          ? BigInt(customerId)
+          : undefined,
     );
     return {
       success: true,

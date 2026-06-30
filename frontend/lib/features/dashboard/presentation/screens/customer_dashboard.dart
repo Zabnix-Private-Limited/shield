@@ -23,6 +23,7 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
   late Future<Customer> _customerFuture;
   late Future<Map<String, dynamic>> _walletProfileFuture;
   late Future<List<WalletTransaction>> _transactionsFuture;
+  late Future<List<Map<String, dynamic>>> _providersFuture;
 
   @override
   void initState() {
@@ -35,6 +36,7 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
       final customerId = ApiService.requireAuthenticatedCustomerId();
       _customerFuture = ApiService.getCustomerProfile(customerId);
       _walletProfileFuture = ApiService.getWalletProfile(customerId);
+      _providersFuture = ApiService.getProviders();
       _transactionsFuture = _walletProfileFuture.then((profile) {
         final walletId = profile['walletId'].toString();
         return ApiService.getWalletTransactions(walletId);
@@ -61,6 +63,7 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
           _customerFuture,
           _walletProfileFuture,
           _transactionsFuture,
+          _providersFuture,
         ]),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
@@ -103,6 +106,7 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
           final customer = snapshot.data![0] as Customer;
           final walletProfile = snapshot.data![1] as Map<String, dynamic>;
           final txns = snapshot.data![2] as List<WalletTransaction>;
+          final providers = snapshot.data![3] as List<Map<String, dynamic>>;
 
           final balance =
               double.tryParse(walletProfile['balance']?.toString() ?? '0') ??
@@ -115,20 +119,20 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
           final upcomingCount = txns.isEmpty
               ? 0
               : txns.where((txn) => txn.transactionType == 'DEBIT').length;
-          final recommendedServices = [
-            {
-              'name': 'Pharmacy Reorder',
-              'subtitle': 'Frequently purchased medicines ready',
-            },
-            {
-              'name': 'Lab Follow-up',
-              'subtitle': 'HbA1c and CBC packages available',
-            },
-            {
-              'name': 'Dietitian Plan',
-              'subtitle': 'Nutrition programs with loyalty rewards',
-            },
-          ];
+          final recommendedServices = providers.take(3).map((provider) {
+            return {
+              'name':
+                  (provider['providerName'] ??
+                          provider['name'] ??
+                          'Provider service')
+                      .toString(),
+              'subtitle':
+                  (provider['providerType'] ??
+                          provider['status'] ??
+                          'Active service')
+                      .toString(),
+            };
+          }).toList();
 
           return RefreshIndicator(
             onRefresh: () async => _loadDashboardData(),
@@ -175,7 +179,7 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
                                   ),
                                   const SizedBox(height: 2),
                                   Text(
-                                    'Founding Member • Perinthalmanna cluster',
+                                    customer.status,
                                     style: AppTypography.tiny.copyWith(
                                       color: AppColors.gray,
                                     ),

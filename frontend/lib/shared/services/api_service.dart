@@ -186,7 +186,14 @@ class ApiService {
     SHIELDRole role,
     String section,
   ) async {
-    return portalDataForRole(role).sectionFor(section);
+    final customerId = _resolveOptionalCustomerId();
+    final response = await _dio.get(
+      '/dashboard/role/${role.routeKey}/$section',
+      queryParameters: customerId == null
+          ? null
+          : <String, dynamic>{'customer_id': customerId},
+    );
+    return PortalSectionData.fromJson(_readEnvelope(response));
   }
 
   static Future<List<Appointment>> getAppointments(SHIELDRole role) async {

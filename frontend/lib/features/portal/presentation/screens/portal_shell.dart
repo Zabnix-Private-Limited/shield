@@ -445,17 +445,17 @@ class _RoleContent extends StatelessWidget {
     } else if (isCustomerSettings) {
       content = const _CustomerSettingsView();
     } else if (isCardUtilization) {
-      content = const _CardUtilizationView();
+      content = _EnterpriseWorkspaceView(portal: portal, section: section);
     } else if (isAdminBusinesses) {
       content = const _AdminProviderNetworkView();
     } else if (isAdminMasterData) {
       content = const _AdminMasterDataView();
     } else if (isAdminAudit) {
-      content = const _ServiceUtilizationView();
+      content = _EnterpriseWorkspaceView(portal: portal, section: section);
     } else if (isCrmSection) {
       content = _CrmWorkspaceView(section: section);
     } else if (isReportsSection) {
-      content = const _AdminReportsView();
+      content = _EnterpriseWorkspaceView(portal: portal, section: section);
     } else {
       content = _EnterpriseWorkspaceView(portal: portal, section: section);
     }
@@ -11194,6 +11194,7 @@ class _ServiceUtilizationViewState extends State<_ServiceUtilizationView> {
   }
 }
 
+// ignore: unused_element
 class _AdminReportsView extends StatelessWidget {
   const _AdminReportsView();
 
