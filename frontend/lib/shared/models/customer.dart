@@ -24,6 +24,8 @@ class Customer extends Equatable {
   final DateTime updatedAt;
   final String? bloodGroup;
   final String? agentCode;
+  final String? referralCode;
+  final String? shieldCardNumber;
 
   const Customer({
     required this.id,
@@ -49,6 +51,8 @@ class Customer extends Equatable {
     required this.updatedAt,
     this.bloodGroup,
     this.agentCode,
+    this.referralCode,
+    this.shieldCardNumber,
   });
 
   String get fullName => '$firstName $lastName';
@@ -122,6 +126,20 @@ class Customer extends Equatable {
       agentCode: readString(json['agentCode'] ?? json['agent_code']).isEmpty
           ? null
           : readString(json['agentCode'] ?? json['agent_code']),
+      referralCode:
+          readString(json['referralCode'] ?? json['referral_code']).isEmpty
+          ? null
+          : readString(json['referralCode'] ?? json['referral_code']),
+      shieldCardNumber:
+          readString(
+            (json['shieldCard'] as Map<String, dynamic>?)?['cardNumber'] ??
+                (json['shieldCard'] as Map<String, dynamic>?)?['card_number'],
+          ).isEmpty
+          ? null
+          : readString(
+              (json['shieldCard'] as Map<String, dynamic>?)?['cardNumber'] ??
+                  (json['shieldCard'] as Map<String, dynamic>?)?['card_number'],
+            ),
     );
   }
 
@@ -149,6 +167,8 @@ class Customer extends Equatable {
     DateTime? updatedAt,
     String? bloodGroup,
     String? agentCode,
+    String? referralCode,
+    String? shieldCardNumber,
   }) {
     return Customer(
       id: id ?? this.id,
@@ -174,6 +194,8 @@ class Customer extends Equatable {
       updatedAt: updatedAt ?? this.updatedAt,
       bloodGroup: bloodGroup ?? this.bloodGroup,
       agentCode: agentCode ?? this.agentCode,
+      referralCode: referralCode ?? this.referralCode,
+      shieldCardNumber: shieldCardNumber ?? this.shieldCardNumber,
     );
   }
 
@@ -202,71 +224,7 @@ class Customer extends Equatable {
     updatedAt,
     bloodGroup,
     agentCode,
+    referralCode,
+    shieldCardNumber,
   ];
 }
-
-final List<Customer> dummyCustomers = [
-  Customer(
-    id: '1',
-    uuid: '550e8400-e29b-41d4-a716-446655440000',
-    customerCode: 'SHLD-001',
-    aadhaarNumber: '123456789012',
-    firstName: 'Nihal',
-    lastName: 'Rahman',
-    dob: DateTime(1988, 6, 15),
-    gender: 'Male',
-    mobile: '9876543210',
-    email: 'Zabnixprivatelimited@gmail.com',
-    addressLine1: 'Kizhakkethil House',
-    addressLine2: 'Near Hyper Pharmacy',
-    city: 'Perinthalmanna',
-    district: 'Malappuram',
-    state: 'Kerala',
-    pincode: '679322',
-    status: 'ACTIVE',
-    createdAt: DateTime(2026, 1, 10),
-    updatedAt: DateTime(2026, 6, 20),
-  ),
-  Customer(
-    id: '2',
-    uuid: '550e8400-e29b-41d4-a716-446655440000', // unified mock
-    customerCode: 'SHLD-002',
-    aadhaarNumber: '987654321098',
-    firstName: 'Fathima',
-    lastName: 'Sherin',
-    dob: DateTime(1992, 3, 22),
-    gender: 'Female',
-    mobile: '9123456780',
-    email: 'Zabnixprivatelimited@gmail.com',
-    addressLine1: 'Kallingal House',
-    addressLine2: 'Melattur Road',
-    city: 'Melattur',
-    district: 'Malappuram',
-    state: 'Kerala',
-    pincode: '679326',
-    status: 'ACTIVE',
-    createdAt: DateTime(2026, 1, 15),
-    updatedAt: DateTime(2026, 6, 18),
-  ),
-  Customer(
-    id: '3',
-    uuid: '550e8400-e29b-41d4-a716-446655440002',
-    customerCode: 'SHLD-003',
-    aadhaarNumber: '112233445566',
-    firstName: 'Shanib',
-    lastName: 'K',
-    dob: DateTime(1984, 11, 5),
-    gender: 'Male',
-    mobile: '8901234567',
-    email: 'Zabnixprivatelimited@gmail.com',
-    addressLine1: 'Pallikkal House',
-    addressLine2: null,
-    city: 'Manjeri',
-    district: 'Malappuram',
-    state: 'Kerala',
-    pincode: '676121',
-    status: 'PENDING',
-    createdAt: DateTime(2026, 2, 1),
-    updatedAt: DateTime(2026, 6, 19),
-  ),
-];

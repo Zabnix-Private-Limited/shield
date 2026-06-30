@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_typography.dart';
+import '../../../../shared/services/api_service.dart';
 import '../../../../shared/widgets/app_card.dart';
 import '../../../../shared/widgets/app_page_frame.dart';
 import '../../../../shared/widgets/portal_support.dart';
@@ -12,6 +13,10 @@ class MoreScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final customerFuture = ApiService.getCustomerProfile(
+      ApiService.requireAuthenticatedCustomerId(),
+    );
+
     return Scaffold(
       appBar: AppBar(title: const Text('More')),
       body: SingleChildScrollView(
@@ -37,17 +42,44 @@ class MoreScreen extends StatelessWidget {
                 icon: Icons.stars_rounded,
                 title: 'Referral & Rewards',
                 subtitle: 'View your referral code and understand how points are earned.',
-                onTap: () => showPortalDetailsSheet(
-                  context,
-                  title: 'Referral & Rewards',
-                  subtitle: 'Share referral code SHLD-NIHAL-2026 with new members. Points credit after approval only.',
-                  meta: 'Frontend flow',
-                  status: 'Ready',
-                  highlights: const [
-                    'Referral points are separate from cash wallet credits.',
-                    'New member approval is the trigger for reward posting.',
-                  ],
-                ),
+                onTap: () async {
+                  final messenger = ScaffoldMessenger.of(context);
+                  try {
+                    final customer = await customerFuture;
+                    if (!context.mounted) {
+                      return;
+                    }
+                    final referralCode = customer.referralCode?.trim();
+                    showPortalDetailsSheet(
+                      context,
+                      title: 'Referral & Rewards',
+                      subtitle:
+                          referralCode != null && referralCode.isNotEmpty
+                          ? 'Share your real referral code $referralCode with new members. Points credit after approval only.'
+                          : 'Your customer profile does not have a referral code assigned yet.',
+                      meta: customer.customerCode,
+                      status:
+                          referralCode != null && referralCode.isNotEmpty
+                          ? 'Live'
+                          : 'Pending',
+                      highlights: [
+                        'Referral points are separate from cash wallet credits.',
+                        'New member approval is the trigger for reward posting.',
+                        if (customer.agentCode != null &&
+                            customer.agentCode!.isNotEmpty)
+                          'Your customer record is linked to agent code ${customer.agentCode}.',
+                      ],
+                    );
+                  } catch (_) {
+                    messenger.showSnackBar(
+                      const SnackBar(
+                        content: Text(
+                          'Unable to load live referral details right now.',
+                        ),
+                      ),
+                    );
+                  }
+                },
               ),
               _MoreTile(
                 icon: Icons.notifications_outlined,

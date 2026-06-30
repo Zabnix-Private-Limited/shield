@@ -190,34 +190,38 @@ class ApiService {
   }
 
   static Future<List<Appointment>> getAppointments(SHIELDRole role) async {
-    if (role == SHIELDRole.customer) {
-      final customerId = _requireCustomerId();
-      final response = await _dio.get(
-        '/appointments',
-        queryParameters: {'customer_id': customerId},
+    if (role != SHIELDRole.customer) {
+      throw UnsupportedError(
+        'Live appointments are only wired for authenticated customer flows here.',
       );
-      return _readEnvelopeList(response)
-          .map((item) => Appointment.fromJson(item as Map<String, dynamic>))
-          .toList()
-        ..sort((a, b) => a.appointmentDate.compareTo(b.appointmentDate));
     }
-    return dummyAppointments;
+    final customerId = _requireCustomerId();
+    final response = await _dio.get(
+      '/appointments',
+      queryParameters: {'customer_id': customerId},
+    );
+    return _readEnvelopeList(response)
+        .map((item) => Appointment.fromJson(item as Map<String, dynamic>))
+        .toList()
+      ..sort((a, b) => a.appointmentDate.compareTo(b.appointmentDate));
   }
 
   static Future<List<Document>> getDocuments(SHIELDRole role) async {
-    if (role == SHIELDRole.customer) {
-      final customerId = _requireCustomerId();
-      final response = await _dio.get(
-        '/documents',
-        queryParameters: {'customer_id': customerId},
-        options: Options(receiveTimeout: const Duration(minutes: 1)),
+    if (role != SHIELDRole.customer) {
+      throw UnsupportedError(
+        'Live documents are only wired for authenticated customer flows here.',
       );
-      return _readEnvelopeList(response)
-          .map((item) => Document.fromJson(item as Map<String, dynamic>))
-          .toList()
-        ..sort((a, b) => b.uploadedAt.compareTo(a.uploadedAt));
     }
-    return dummyDocuments;
+    final customerId = _requireCustomerId();
+    final response = await _dio.get(
+      '/documents',
+      queryParameters: {'customer_id': customerId},
+      options: Options(receiveTimeout: const Duration(minutes: 1)),
+    );
+    return _readEnvelopeList(response)
+        .map((item) => Document.fromJson(item as Map<String, dynamic>))
+        .toList()
+      ..sort((a, b) => b.uploadedAt.compareTo(a.uploadedAt));
   }
 
   static Future<List<Document>> getCustomerDocumentsStrict(
@@ -238,21 +242,22 @@ class ApiService {
   static Future<List<NotificationModel>> getNotifications(
     SHIELDRole role,
   ) async {
-    if (role == SHIELDRole.customer) {
-      final customerId = _requireCustomerId();
-      final response = await _dio.get(
-        '/notifications',
-        queryParameters: {'customer_id': customerId},
+    if (role != SHIELDRole.customer) {
+      throw UnsupportedError(
+        'Live notifications are only wired for authenticated customer flows here.',
       );
-      return _readEnvelopeList(response)
-          .map(
-            (item) =>
-                NotificationModel.fromJson(item as Map<String, dynamic>),
-          )
-          .toList()
-        ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
     }
-    return dummyNotifications;
+    final customerId = _requireCustomerId();
+    final response = await _dio.get(
+      '/notifications',
+      queryParameters: {'customer_id': customerId},
+    );
+    return _readEnvelopeList(response)
+        .map(
+          (item) => NotificationModel.fromJson(item as Map<String, dynamic>),
+        )
+        .toList()
+      ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
   }
 
   static Future<Customer> getCustomerProfile(String customerId) async {

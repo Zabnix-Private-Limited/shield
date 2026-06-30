@@ -32,7 +32,9 @@ class _WalletScreenState extends State<WalletScreen> {
 
   void _loadWalletData() {
     setState(() {
-      _walletProfileFuture = ApiService.getWalletProfile('1');
+      _walletProfileFuture = ApiService.getWalletProfile(
+        ApiService.requireAuthenticatedCustomerId(),
+      );
       _transactionsFuture = _walletProfileFuture.then((profile) {
         final walletId = profile['walletId'].toString();
         return ApiService.getWalletTransactions(walletId);
@@ -331,113 +333,139 @@ class _WalletScreenState extends State<WalletScreen> {
                       ],
                     ),
                     const SizedBox(height: 16),
-                    ...filteredTxns.map((txn) {
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 12),
-                        child: AppCard(
-                          padding: const EdgeInsets.all(16),
-                          onTap: () {
-                            showPortalDetailsSheet(
-                              context,
-                              title: txn.remarks ?? 'Wallet transaction',
-                              subtitle:
-                                  'A ${txn.transactionType.toLowerCase()} entry of ₹${txn.amount.toStringAsFixed(2)} was recorded in the ${txn.subLedgerType} ledger.',
-                              meta:
-                                  '${txn.createdAt.day}/${txn.createdAt.month}/${txn.createdAt.year}',
-                              status: txn.transactionType,
-                              highlights: [
-                                'Running balance in ${txn.subLedgerType} sub-ledger after this transaction is ₹${txn.postBalance.toStringAsFixed(2)}.',
-                                'This entry stays visible to support the ledger-based wallet model from the docs.',
-                              ],
-                            );
-                          },
-                          child: Row(
-                            children: [
-                              Container(
-                                width: 48,
-                                height: 48,
-                                decoration: BoxDecoration(
-                                  color: txn.transactionType == 'CREDIT'
-                                      ? AppColors.shieldGreen.withValues(
-                                          alpha: 0.1,
-                                        )
-                                      : AppColors.error.withValues(alpha: 0.1),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Icon(
-                                  txn.transactionType == 'CREDIT'
-                                      ? Icons.add
-                                      : Icons.remove,
-                                  color: txn.transactionType == 'CREDIT'
-                                      ? AppColors.shieldGreen
-                                      : AppColors.error,
-                                  size: 24,
-                                ),
-                              ),
-                              const SizedBox(width: 16),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      txn.remarks ?? 'Transaction',
-                                      style: AppTypography.body.copyWith(
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Row(
-                                      children: [
-                                        Text(
-                                          '${txn.createdAt.day}/${txn.createdAt.month}/${txn.createdAt.year} • ${txn.createdAt.hour}:${txn.createdAt.minute.toString().padLeft(2, '0')}',
-                                          style: AppTypography.tiny.copyWith(
-                                            color: AppColors.gray,
+                    ...(() {
+                      final chronologicalTxns = filteredTxns.reversed.toList();
+                      final Map<String, double> postBalances = {};
+                      final Map<String, double> ledgerBalances = {};
+
+                      for (final txn in chronologicalTxns) {
+                        final currentBalance =
+                            ledgerBalances[txn.subLedgerType] ?? 0.0;
+                        final nextBalance =
+                            currentBalance +
+                            (txn.transactionType == 'CREDIT'
+                                ? txn.amount
+                                : -txn.amount);
+                        ledgerBalances[txn.subLedgerType] = nextBalance;
+                        postBalances[txn.id] = nextBalance;
+                      }
+
+                      return filteredTxns.map((txn) {
+                        final postBalance = postBalances[txn.id] ?? 0.0;
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: AppCard(
+                            padding: const EdgeInsets.all(16),
+                            onTap: () {
+                              showPortalDetailsSheet(
+                                context,
+                                title: txn.remarks ?? 'Wallet transaction',
+                                subtitle:
+                                    'A ${txn.transactionType.toLowerCase()} entry of ₹${txn.amount.toStringAsFixed(2)} was recorded in the ${txn.subLedgerType} ledger.',
+                                meta:
+                                    '${txn.createdAt.day}/${txn.createdAt.month}/${txn.createdAt.year}',
+                                status: txn.transactionType,
+                                highlights: [
+                                  'Running balance in ${txn.subLedgerType} sub-ledger after this transaction is ₹${postBalance.toStringAsFixed(2)}.',
+                                  'This entry stays visible to support the ledger-based wallet model from the docs.',
+                                ],
+                              );
+                            },
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: 48,
+                                  height: 48,
+                                  decoration: BoxDecoration(
+                                    color: txn.transactionType == 'CREDIT'
+                                        ? AppColors.shieldGreen.withValues(
+                                            alpha: 0.1,
+                                          )
+                                        : AppColors.error.withValues(
+                                            alpha: 0.1,
                                           ),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Icon(
+                                    txn.transactionType == 'CREDIT'
+                                        ? Icons.add
+                                        : Icons.remove,
+                                    color: txn.transactionType == 'CREDIT'
+                                        ? AppColors.shieldGreen
+                                        : AppColors.error,
+                                    size: 24,
+                                  ),
+                                ),
+                                const SizedBox(width: 16),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        txn.remarks ?? 'Transaction',
+                                        style: AppTypography.body.copyWith(
+                                          fontWeight: FontWeight.w500,
                                         ),
-                                        const SizedBox(width: 8),
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 6,
-                                            vertical: 2,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: txn.subLedgerType == 'CASH'
-                                                ? AppColors.shieldNavy
-                                                      .withValues(alpha: 0.08)
-                                                : AppColors.shieldBlue
-                                                      .withValues(alpha: 0.08),
-                                            borderRadius: BorderRadius.circular(
-                                              4,
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Row(
+                                        children: [
+                                          Text(
+                                            '${txn.createdAt.day}/${txn.createdAt.month}/${txn.createdAt.year} • ${txn.createdAt.hour}:${txn.createdAt.minute.toString().padLeft(2, '0')}',
+                                            style: AppTypography.tiny.copyWith(
+                                              color: AppColors.gray,
                                             ),
                                           ),
-                                          child: Text(
-                                            txn.subLedgerType,
-                                            style: AppTypography.tiny.copyWith(
+                                          const SizedBox(width: 8),
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 6,
+                                              vertical: 2,
+                                            ),
+                                            decoration: BoxDecoration(
                                               color: txn.subLedgerType == 'CASH'
                                                   ? AppColors.shieldNavy
-                                                  : AppColors.shieldBlue,
-                                              fontWeight: FontWeight.bold,
+                                                        .withValues(alpha: 0.08)
+                                                  : AppColors.shieldBlue
+                                                        .withValues(
+                                                          alpha: 0.08,
+                                                        ),
+                                              borderRadius:
+                                                  BorderRadius.circular(4),
+                                            ),
+                                            child: Text(
+                                              txn.subLedgerType,
+                                              style: AppTypography.tiny
+                                                  .copyWith(
+                                                    color:
+                                                        txn.subLedgerType ==
+                                                            'CASH'
+                                                        ? AppColors.shieldNavy
+                                                        : AppColors.shieldBlue,
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
                                             ),
                                           ),
-                                        ),
-                                      ],
-                                    ),
-                                  ],
+                                        ],
+                                      ),
+                                    ],
+                                  ),
                                 ),
-                              ),
-                              Text(
-                                '${txn.transactionType == 'CREDIT' ? '+' : '-'}₹${txn.amount.toStringAsFixed(2)}',
-                                style: AppTypography.h4.copyWith(
-                                  color: txn.transactionType == 'CREDIT'
-                                      ? AppColors.shieldGreen
-                                      : AppColors.error,
+                                Text(
+                                  '${txn.transactionType == 'CREDIT' ? '+' : '-'}₹${txn.amount.toStringAsFixed(2)}',
+                                  style: AppTypography.h4.copyWith(
+                                    color: txn.transactionType == 'CREDIT'
+                                        ? AppColors.shieldGreen
+                                        : AppColors.error,
+                                  ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
-                        ),
-                      );
-                    }),
+                        );
+                      });
+                    })(),
                   ],
                 ),
               ),

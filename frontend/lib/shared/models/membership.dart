@@ -124,18 +124,3 @@ class Membership extends Equatable {
     updatedAt,
   ];
 }
-
-final Membership dummyMembership = Membership(
-  id: '1',
-  uuid: 'membership-001',
-  customerId: '1',
-  tier: MembershipTier.foundingMember,
-  customerCode: 'SHLD-2026-123456',
-  startDate: DateTime(2026, 1, 1),
-  endDate: DateTime(2027, 1, 1),
-  isActive: true,
-  totalEarnedCredits: 2500,
-  totalRedeemedCredits: 1000,
-  createdAt: DateTime(2026, 1, 1),
-  updatedAt: DateTime(2026, 6, 20, 9, 0),
-);

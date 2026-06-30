@@ -122,9 +122,9 @@ PortalRoleData portalDataForRole(SHIELDRole role) {
     case SHIELDRole.customer:
       return PortalRoleData(
         role: role,
-        operatorName: 'Nihal Rahman',
+        operatorName: 'Customer',
         headline: 'Personal healthcare wallet and records at a glance',
-        regionLabel: 'Perinthalmanna member cluster',
+        regionLabel: 'Authenticated SHIELD account',
         icon: Icons.person,
         accentColor: AppColors.shieldBlue,
         sections: [

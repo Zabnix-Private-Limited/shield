@@ -28,7 +28,9 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
 
   void _loadTransactions() {
     setState(() {
-      _walletProfileFuture = ApiService.getWalletProfile('1');
+      _walletProfileFuture = ApiService.getWalletProfile(
+        ApiService.requireAuthenticatedCustomerId(),
+      );
       _transactionsFuture = _walletProfileFuture.then((profile) {
         final walletId = profile['walletId'].toString();
         return ApiService.getWalletTransactions(walletId);

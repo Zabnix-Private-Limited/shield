@@ -801,11 +801,17 @@ class _CustomerPortalNav extends StatelessWidget {
   Widget build(BuildContext context) {
     final content = FutureBuilder<List<dynamic>>(
       future: Future.wait<dynamic>([
-        ApiService.getCustomerProfile(ApiService.requireAuthenticatedCustomerId()),
-        ApiService.getWalletProfile(ApiService.requireAuthenticatedCustomerId()),
+        ApiService.getCustomerProfile(
+          ApiService.requireAuthenticatedCustomerId(),
+        ),
+        ApiService.getWalletProfile(
+          ApiService.requireAuthenticatedCustomerId(),
+        ),
       ]),
       builder: (context, snapshot) {
-        final customer = snapshot.hasData ? snapshot.data![0] as Customer : null;
+        final customer = snapshot.hasData
+            ? snapshot.data![0] as Customer
+            : null;
         final wallet = snapshot.hasData
             ? snapshot.data![1] as Map<String, dynamic>
             : const <String, dynamic>{};
@@ -842,10 +848,17 @@ class _CustomerPortalNav extends StatelessWidget {
                     ),
                     const SizedBox(height: 16),
                     Text(
-                      customer?.fullName ?? portal.operatorName,
+                      (customer?.fullName.trim().isNotEmpty ?? false)
+                          ? customer!.fullName
+                          : 'Customer',
                       style: AppTypography.body.copyWith(
                         fontWeight: FontWeight.w700,
                       ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      _customerRegionLabel(customer),
+                      style: AppTypography.tiny.copyWith(color: AppColors.gray),
                     ),
                     const SizedBox(height: 4),
                     Text(
@@ -1474,83 +1487,139 @@ void _showMembershipCardDialog(BuildContext context) {
   showDialog<void>(
     context: context,
     builder: (context) {
-      return Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Digital privilege card', style: AppTypography.h4),
-              const SizedBox(height: 14),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(18),
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [AppColors.shieldBlue, AppColors.shieldNavy],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(24),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'SHIELD FOUNDING MEMBER',
-                      style: AppTypography.tiny.copyWith(
-                        color: AppColors.white.withValues(alpha: 0.85),
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 1.1,
-                      ),
+      final customerFuture = ApiService.getCustomerProfile(
+        ApiService.requireAuthenticatedCustomerId(),
+      );
+      return FutureBuilder<Customer>(
+        future: customerFuture,
+        builder: (context, snapshot) {
+          final customer = snapshot.data;
+          final fullName = (customer?.fullName.trim().isNotEmpty ?? false)
+              ? customer!.fullName
+              : 'Customer';
+          final cardNumber =
+              customer?.shieldCardNumber?.trim().isNotEmpty == true
+              ? customer!.shieldCardNumber!.trim()
+              : customer?.customerCode.trim().isNotEmpty == true
+              ? customer!.customerCode.trim()
+              : 'Card pending';
+          final tierLabel = customer?.status.toUpperCase() == 'ACTIVE'
+              ? 'SHIELD ACTIVE MEMBER'
+              : 'SHIELD MEMBERSHIP PENDING';
+
+          return Dialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(28),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Digital privilege card', style: AppTypography.h4),
+                  const SizedBox(height: 14),
+                  if (snapshot.connectionState == ConnectionState.waiting) ...[
+                    const LoadingCard(
+                      title: 'Loading card',
+                      subtitle:
+                          'Fetching the latest membership and card details.',
                     ),
-                    const SizedBox(height: 14),
-                    Text(
-                      'SHLD-2026-123456',
-                      style: AppTypography.h4.copyWith(color: AppColors.white),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      'Nihal Rahman',
-                      style: AppTypography.body.copyWith(
-                        color: AppColors.white,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const SizedBox(height: 18),
+                  ] else ...[
                     Container(
-                      width: 84,
-                      height: 84,
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(18),
                       decoration: BoxDecoration(
-                        color: AppColors.white,
-                        borderRadius: BorderRadius.circular(16),
+                        gradient: const LinearGradient(
+                          colors: [AppColors.shieldBlue, AppColors.shieldNavy],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(24),
                       ),
-                      child: const Icon(
-                        Icons.qr_code_2_rounded,
-                        size: 52,
-                        color: AppColors.shieldNavy,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            tierLabel,
+                            style: AppTypography.tiny.copyWith(
+                              color: AppColors.white.withValues(alpha: 0.85),
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 1.1,
+                            ),
+                          ),
+                          const SizedBox(height: 14),
+                          Text(
+                            cardNumber,
+                            style: AppTypography.h4.copyWith(
+                              color: AppColors.white,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            fullName,
+                            style: AppTypography.body.copyWith(
+                              color: AppColors.white,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          const SizedBox(height: 18),
+                          Container(
+                            width: 84,
+                            height: 84,
+                            decoration: BoxDecoration(
+                              color: AppColors.white,
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: const Icon(
+                              Icons.qr_code_2_rounded,
+                              size: 52,
+                              color: AppColors.shieldNavy,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],
-                ),
+                  const SizedBox(height: 16),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: AppButton(
+                      text: 'Close',
+                      onPressed: () => Navigator.of(context).pop(),
+                      height: 40,
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 16),
-              Align(
-                alignment: Alignment.centerRight,
-                child: AppButton(
-                  text: 'Close',
-                  onPressed: () => Navigator.of(context).pop(),
-                  height: 40,
-                ),
-              ),
-            ],
-          ),
-        ),
+            ),
+          );
+        },
       );
     },
   );
+}
+
+String _customerRegionLabel(Customer? customer) {
+  if (customer == null) {
+    return 'Loading customer context';
+  }
+
+  final parts = <String>[
+    if ((customer.city ?? '').trim().isNotEmpty) customer.city!.trim(),
+    if ((customer.district ?? '').trim().isNotEmpty) customer.district!.trim(),
+    if ((customer.state ?? '').trim().isNotEmpty) customer.state!.trim(),
+  ];
+
+  if (parts.isNotEmpty) {
+    return parts.join(', ');
+  }
+
+  if (customer.customerCode.trim().isNotEmpty) {
+    return customer.customerCode.trim();
+  }
+
+  return 'Authenticated SHIELD account';
 }
 
 void _showPrescriptionUploadPicker(BuildContext context) {
@@ -3629,8 +3698,12 @@ class _CustomerMembershipPortalViewState
   void initState() {
     super.initState();
     _dataFuture = Future.wait([
-      ApiService.getCustomerProfile(ApiService.requireAuthenticatedCustomerId()),
-      ApiService.getCustomerMembership(ApiService.requireAuthenticatedCustomerId()),
+      ApiService.getCustomerProfile(
+        ApiService.requireAuthenticatedCustomerId(),
+      ),
+      ApiService.getCustomerMembership(
+        ApiService.requireAuthenticatedCustomerId(),
+      ),
     ]);
   }
 
@@ -4404,10 +4477,7 @@ class _CustomerSettingsViewState extends State<_CustomerSettingsView> {
 }
 
 class _StaticActionChip extends StatelessWidget {
-  const _StaticActionChip({
-    required this.label,
-    required this.onTap,
-  });
+  const _StaticActionChip({required this.label, required this.onTap});
 
   final String label;
   final VoidCallback onTap;
@@ -4474,9 +4544,7 @@ class _PendingCustomerAccessCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 12),
-              Expanded(
-                child: Text(title, style: AppTypography.h4),
-              ),
+              Expanded(child: Text(title, style: AppTypography.h4)),
             ],
           ),
           const SizedBox(height: 12),
@@ -6204,10 +6272,13 @@ class _CustomerServicesViewState extends State<_CustomerServicesView> {
     try {
       final providers = await _providersFuture;
       final matchingProviders = _filterConsultationProviders(providers);
-      final selectedProvider = matchingProviders.cast<Map<String, dynamic>?>().firstWhere(
-        (provider) => provider?['id']?.toString() == _selectedProviderId,
-        orElse: () => matchingProviders.isEmpty ? null : matchingProviders.first,
-      );
+      final selectedProvider = matchingProviders
+          .cast<Map<String, dynamic>?>()
+          .firstWhere(
+            (provider) => provider?['id']?.toString() == _selectedProviderId,
+            orElse: () =>
+                matchingProviders.isEmpty ? null : matchingProviders.first,
+          );
 
       if (selectedProvider == null) {
         throw StateError(
@@ -7255,11 +7326,16 @@ class _CustomerServicesViewState extends State<_CustomerServicesView> {
               FutureBuilder<List<Map<String, dynamic>>>(
                 future: _providersFuture,
                 builder: (context, snapshot) {
-                  final providers = snapshot.data ?? const <Map<String, dynamic>>[];
-                  final matchingProviders = _filterConsultationProviders(providers);
-                  final dropdownValue = matchingProviders.any(
-                    (provider) => provider['id']?.toString() == _selectedProviderId,
-                  )
+                  final providers =
+                      snapshot.data ?? const <Map<String, dynamic>>[];
+                  final matchingProviders = _filterConsultationProviders(
+                    providers,
+                  );
+                  final dropdownValue =
+                      matchingProviders.any(
+                        (provider) =>
+                            provider['id']?.toString() == _selectedProviderId,
+                      )
                       ? _selectedProviderId
                       : null;
 
@@ -7330,7 +7406,8 @@ class _CustomerServicesViewState extends State<_CustomerServicesView> {
                                 provider['name']?.toString() ??
                                 'Provider';
                             final businessName =
-                                (provider['business'] as Map<String, dynamic>?)?['name']
+                                (provider['business']
+                                        as Map<String, dynamic>?)?['name']
                                     ?.toString();
                             return DropdownMenuItem<String>(
                               value: providerId,

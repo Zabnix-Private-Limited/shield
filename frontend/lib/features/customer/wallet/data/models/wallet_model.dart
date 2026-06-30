@@ -144,7 +144,7 @@ class WalletModel extends CustomerWalletEntity {
 Customer _syntheticCustomer(String customerId) {
   final now = DateTime.now();
   return Customer(
-    id: customerId.isEmpty ? '1' : customerId,
+    id: customerId,
     uuid: '',
     customerCode: '',
     aadhaarNumber: '',
