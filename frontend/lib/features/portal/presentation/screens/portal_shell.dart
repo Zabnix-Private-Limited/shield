@@ -3,7 +3,9 @@ import 'package:dio/dio.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../../customer/dashboard/presentation/screens/dashboard_screen.dart';
+import '../../../customer/documents/presentation/screens/customer_documents_screen.dart';
 import '../../../customer/membership/presentation/screens/membership_screen.dart';
+import '../../../customer/prescriptions/presentation/screens/customer_prescriptions_screen.dart';
 import '../../../customer/shared/domain/customer_access_state.dart';
 import '../../../customer/wallet/presentation/screens/wallet_screen.dart';
 import '../../../customer/shared/widgets/customer_scaffold.dart';
@@ -429,9 +431,15 @@ class _RoleContent extends StatelessWidget {
     } else if (isCustomerNotifications) {
       content = _CustomerNotificationsView(section: section);
     } else if (isCustomerDocuments) {
-      content = const _CustomerDocumentsView();
+      content = _CustomerProtectedSection(
+        sectionKey: section.key,
+        child: const CustomerDocumentsScreen(),
+      );
     } else if (isCustomerPrescriptions) {
-      content = const _CustomerPrescriptionsView();
+      content = _CustomerProtectedSection(
+        sectionKey: section.key,
+        child: const CustomerPrescriptionsScreen(),
+      );
     } else if (isCustomerWallet) {
       content = const CustomerWalletScreen();
     } else if (isCustomerSettings) {
@@ -4547,106 +4555,6 @@ class _CustomerProtectedSection extends StatelessWidget {
           default:
             return child;
         }
-      },
-    );
-  }
-}
-
-class _CustomerDocumentsView extends StatelessWidget {
-  const _CustomerDocumentsView();
-
-  @override
-  Widget build(BuildContext context) {
-    return FutureBuilder<Customer>(
-      future: ApiService.getCustomerProfile(
-        ApiService.requireAuthenticatedCustomerId(),
-      ),
-      builder: (context, snapshot) {
-        if (!snapshot.hasData) {
-          return const AppPortalSectionSkeleton(
-            showHero: true,
-            statCards: 2,
-            listItems: 3,
-          );
-        }
-
-        final customer = snapshot.data!;
-        final accessState = CustomerAccessState(
-          customer: customer,
-          customerStatus: customer.status,
-        );
-
-        if (!accessState.serviceAccessEnabled) {
-          return const _PendingCustomerAccessCard(
-            title: 'Documents unlock after card issue',
-            message:
-                'Document uploads, linked care files, and member-record access stay locked until SHIELD issues the customer membership card.',
-            primaryLabel: 'Membership status',
-            primaryRoute: '/portal/customer/membership',
-            secondaryLabel: 'Complete profile',
-            secondaryRoute: '/portal/customer/profile',
-          );
-        }
-
-        return const _PendingCustomerAccessCard(
-          title: 'Documents migration in progress',
-          message:
-              'This customer route has been reserved for the backend-driven document experience and is being extracted away from older static portal content.',
-          primaryLabel: 'Open notifications',
-          primaryRoute: '/portal/customer/notifications',
-          secondaryLabel: 'Open profile',
-          secondaryRoute: '/portal/customer/profile',
-        );
-      },
-    );
-  }
-}
-
-class _CustomerPrescriptionsView extends StatelessWidget {
-  const _CustomerPrescriptionsView();
-
-  @override
-  Widget build(BuildContext context) {
-    return FutureBuilder<Customer>(
-      future: ApiService.getCustomerProfile(
-        ApiService.requireAuthenticatedCustomerId(),
-      ),
-      builder: (context, snapshot) {
-        if (!snapshot.hasData) {
-          return const AppPortalSectionSkeleton(
-            showHero: true,
-            statCards: 2,
-            listItems: 3,
-          );
-        }
-
-        final customer = snapshot.data!;
-        final accessState = CustomerAccessState(
-          customer: customer,
-          customerStatus: customer.status,
-        );
-
-        if (!accessState.serviceAccessEnabled) {
-          return const _PendingCustomerAccessCard(
-            title: 'Prescriptions stay pending',
-            message:
-                'Prescription uploads and pharmacy-linked care actions are blocked until the SHIELD membership card is issued. You can still browse loaded products.',
-            primaryLabel: 'Browse products',
-            primaryRoute: '/portal/customer/services',
-            secondaryLabel: 'Membership status',
-            secondaryRoute: '/portal/customer/membership',
-          );
-        }
-
-        return const _PendingCustomerAccessCard(
-          title: 'Prescriptions route reserved',
-          message:
-              'The dedicated prescription workflow is being moved out of older static portal content and into the customer production slice.',
-          primaryLabel: 'Open services',
-          primaryRoute: '/portal/customer/services',
-          secondaryLabel: 'Open notifications',
-          secondaryRoute: '/portal/customer/notifications',
-        );
       },
     );
   }

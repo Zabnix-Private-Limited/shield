@@ -5080,3 +5080,48 @@ pm run build (backend)
 
 ---
 2026-06-30 09:31:26 IST
+## 145. Aligned Pending Customer Portal State With Admin-Issued Membership Card Rules
+**High-level description**: Reworked the customer portal so self-registered customers now stay in a real pending state until SHIELD admin or agent operations issue their membership/card, while also removing the last customer-1 cache path that was leaking stale demo identity into live customer sessions.
+- Added a shared customer access-state helper so dashboard, membership, wallet, and portal customer sections all interpret the same rule: registration can complete before service access, but card-backed services only unlock after issued membership activation.
+- Removed the remaining hardcoded customer `1` assumptions from the extracted customer dashboard, membership, and wallet controllers, and changed their local Hive caches to be keyed per authenticated customer instead of using one global customer cache entry.
+- Updated the customer dashboard hero to show `Membership pending approval` with browse-only messaging and pending quick actions when the customer is registered but not yet card-enabled, rather than showing an issued member tier immediately.
+- Reworked the extracted membership screen so inactive memberships no longer present a live digital card or validity framing; pending customers now see approval-stage messaging that makes it explicit the SHIELD card is issued by admin/agent workflows, not at sign-up time.
+- Added a locked-wallet state for pending customers so wallet benefits and service redemptions no longer look active before membership/card issuance.
+- Fixed the customer drawer/header identity path in the portal shell to read the authenticated profile instead of the old static `Founding Member / Nihal Rahman` preview, which removes the most visible stale customer leakage during live customer sessions.
+- Routed customer `documents` and `prescriptions` away from static portal-role dummy cards and into pending-aware customer views so newly registered customers stop seeing invented member-history counts.
+- Changed the customer `services` route into a browse-only pending experience for non-issued customers, keeping loaded product browsing visible while blocking member-service actions until issuance.
+- Wrapped customer `appointments` behind the same pending-state gate so consultation and care booking actions no longer appear usable before SHIELD issues the membership card.
+
+### Files Modified/Created
+**Frontend Files (Created)**:
+- frontend/lib/features/customer/shared/domain/customer_access_state.dart
+
+**Frontend Files (Modified)**:
+- frontend/lib/shared/services/api_service.dart
+- frontend/lib/features/customer/dashboard/domain/services/dashboard_cache_policy.dart
+- frontend/lib/features/customer/dashboard/data/datasources/dashboard_local.dart
+- frontend/lib/features/customer/dashboard/data/repositories/dashboard_repository.dart
+- frontend/lib/features/customer/dashboard/presentation/controllers/dashboard_controller.dart
+- frontend/lib/features/customer/dashboard/presentation/screens/dashboard_screen.dart
+- frontend/lib/features/customer/dashboard/presentation/widgets/greeting_header.dart
+- frontend/lib/features/customer/membership/domain/services/membership_cache_policy.dart
+- frontend/lib/features/customer/membership/data/datasources/membership_local.dart
+- frontend/lib/features/customer/membership/data/repositories/membership_repository.dart
+- frontend/lib/features/customer/membership/presentation/controllers/membership_controller.dart
+- frontend/lib/features/customer/membership/presentation/screens/membership_screen.dart
+- frontend/lib/features/customer/wallet/domain/services/wallet_cache_policy.dart
+- frontend/lib/features/customer/wallet/data/datasources/wallet_local.dart
+- frontend/lib/features/customer/wallet/data/repositories/wallet_repository.dart
+- frontend/lib/features/customer/wallet/presentation/controllers/wallet_controller.dart
+- frontend/lib/features/customer/wallet/presentation/screens/wallet_screen.dart
+- frontend/lib/features/portal/presentation/screens/portal_shell.dart
+
+**Backend Files**:
+- None
+
+### Verification
+- flutter analyze frontend/lib/features/customer/shared/domain/customer_access_state.dart frontend/lib/features/customer/dashboard/presentation/screens/dashboard_screen.dart frontend/lib/features/customer/dashboard/presentation/widgets/greeting_header.dart frontend/lib/features/customer/membership/presentation/screens/membership_screen.dart frontend/lib/features/customer/wallet/presentation/screens/wallet_screen.dart frontend/lib/features/customer/dashboard/presentation/controllers/dashboard_controller.dart frontend/lib/features/customer/dashboard/data/repositories/dashboard_repository.dart frontend/lib/features/customer/dashboard/data/datasources/dashboard_local.dart frontend/lib/features/customer/dashboard/domain/services/dashboard_cache_policy.dart frontend/lib/features/customer/membership/presentation/controllers/membership_controller.dart frontend/lib/features/customer/membership/data/repositories/membership_repository.dart frontend/lib/features/customer/membership/data/datasources/membership_local.dart frontend/lib/features/customer/membership/domain/services/membership_cache_policy.dart frontend/lib/features/customer/wallet/presentation/controllers/wallet_controller.dart frontend/lib/features/customer/wallet/data/repositories/wallet_repository.dart frontend/lib/features/customer/wallet/data/datasources/wallet_local.dart frontend/lib/features/customer/wallet/domain/services/wallet_cache_policy.dart frontend/lib/features/portal/presentation/screens/portal_shell.dart frontend/lib/shared/services/api_service.dart
+- npm run build (backend)
+
+---
+2026-06-30 10:35:00 IST

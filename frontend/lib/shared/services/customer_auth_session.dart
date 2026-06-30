@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import 'api_service.dart';
+import 'customer_cache_service.dart';
 import 'device_identity_service.dart';
 
 class CustomerAuthSession extends ChangeNotifier {
@@ -62,6 +63,7 @@ class CustomerAuthSession extends ChangeNotifier {
     required Map<String, dynamic> tokenPayload,
     String? fallbackMobile,
   }) async {
+    final previousCustomerId = _customerId;
     _accessToken = tokenPayload['accessToken']?.toString().trim();
     _refreshToken = tokenPayload['refreshToken']?.toString().trim();
     final principal = tokenPayload['principal'] is Map<String, dynamic>
@@ -73,6 +75,12 @@ class CustomerAuthSession extends ChangeNotifier {
         : fallbackMobile?.trim();
     _customerId = principal['customerId']?.toString().trim();
     _isAuthenticated = _accessToken != null && _accessToken!.isNotEmpty;
+
+    if (previousCustomerId != null &&
+        previousCustomerId.isNotEmpty &&
+        previousCustomerId != _customerId) {
+      await CustomerCacheService.clearForCustomer(previousCustomerId);
+    }
 
     if (_accessToken != null) {
       ApiService.setAccessToken(_accessToken!);
@@ -138,6 +146,7 @@ class CustomerAuthSession extends ChangeNotifier {
   }
 
   Future<String?> _refreshAccessToken() async {
+    final previousCustomerId = _customerId;
     final refreshToken = _refreshToken?.trim();
     if (refreshToken == null || refreshToken.isEmpty) {
       return null;
@@ -167,6 +176,12 @@ class CustomerAuthSession extends ChangeNotifier {
       ApiService.setActiveCustomerId(_customerId);
       _isAuthenticated = true;
 
+      if (previousCustomerId != null &&
+          previousCustomerId.isNotEmpty &&
+          previousCustomerId != _customerId) {
+        await CustomerCacheService.clearForCustomer(previousCustomerId);
+      }
+
       await _storage.write(key: _accessTokenKey, value: _accessToken);
       await _storage.write(key: _refreshTokenKey, value: _refreshToken);
       if (_customerId != null && _customerId!.isNotEmpty) {
@@ -191,6 +206,7 @@ class CustomerAuthSession extends ChangeNotifier {
   }
 
   Future<void> _clearSessionStorage({bool notify = true}) async {
+    final previousCustomerId = _customerId;
     _isAuthenticated = false;
     _accessToken = null;
     _refreshToken = null;
@@ -199,6 +215,8 @@ class CustomerAuthSession extends ChangeNotifier {
 
     ApiService.clearAccessToken();
     ApiService.setActiveCustomerId(null);
+
+    await CustomerCacheService.clearForCustomer(previousCustomerId);
 
     await _storage.delete(key: _accessTokenKey);
     await _storage.delete(key: _refreshTokenKey);
