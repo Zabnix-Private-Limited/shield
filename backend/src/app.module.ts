@@ -24,6 +24,7 @@ import { MasterDataModule } from './master-data/master-data.module';
 import { OperationsQueueModule } from './operations-queue/operations-queue.module';
 import { PlatformMetadataModule } from './platform-metadata/platform-metadata.module';
 import { ServiceProviderModule } from './service-provider/service-provider.module';
+import { TimelineModule } from './timeline/timeline.module';
 
 @Module({
   imports: [
@@ -33,6 +34,7 @@ import { ServiceProviderModule } from './service-provider/service-provider.modul
     PlatformMetadataModule,
     OperationsQueueModule,
     ServiceProviderModule,
+    TimelineModule,
     PrismaModule,
     PricingModule,
     ReferralModule,

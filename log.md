@@ -6343,4 +6343,92 @@ est build, ackend/vercel.json, ackend/src/auth/auth.service.ts, and uth_devic
 - none beyond the already-recorded entry 177 implementation risks
 
 ---
-2026-06-30 23:59:30 IST
+2026-06-30 23:59:30 IST---
+2026-07-01 01:40:00 IST
+## 179. Provider Timeline Engine And Audit Integration
+**High-level description**: Replaced the remaining Provider Portal timeline composition seams with one backend-owned timeline engine so patient workspace history and active-visit history now come from the same centralized backend service, while the key provider workflow actions also write into the existing audit log table.
+- Backend architecture decisions:
+  - introduced one shared timeline slice instead of keeping separate timeline builders inside the appointment and service-provider services
+  - kept the implementation database-driven and schema-safe by composing events from existing appointments, consultations, prescriptions, lab reports, documents, purchases, wallet transactions, memberships, SHIELD cards, and notifications rather than adding a new event table at freeze time
+  - reused the existing audit_logs table for provider action audit coverage instead of creating a parallel audit store
+  - preserved frontend simplicity by keeping Flutter as a renderer; the backend now owns event ordering, labels, actor details, icons, colors, linked records, and quick-navigation targets
+- New backend timeline capabilities:
+  - added a centralized TimelineService that returns a unified provider-facing event contract with:
+    - event type
+    - plain-English title and description
+    - timestamp
+    - actor and actor role
+    - patient / visit / appointment / invoice / prescription / document / wallet linkage
+    - status
+    - icon identifier
+    - color identifier
+    - click action metadata
+    - backend-owned metadata payload
+  - added timeline endpoints:
+    - GET /timeline/patient/:customerId
+    - GET /timeline/visit/:visitId
+    - GET /timeline/provider
+    - GET /timeline/business?business_id=...
+  - timeline events now cover existing operational records such as:
+    - visit scheduled
+    - visit confirmed
+    - consultation started / updated / completed
+    - procedure added
+    - lab work requested
+    - prescription generated
+    - lab report uploaded
+    - invoice generated
+    - payment received
+    - wallet used / wallet recharged
+    - membership issued
+    - SHIELD card issued
+    - notification sent
+    - visit closed
+- Provider workflow integration:
+  - service-provider patient workspace now loads its patient timeline from TimelineService instead of building mixed records locally inside ServiceProviderService
+  - appointment consultation workspace now loads its visit timeline from TimelineService instead of using the appointment-local timeline builder
+  - provider patient opening now writes a VIEWED_PATIENT audit log entry
+  - consultation start/save, visit billing save, invoice generation, payment recording, and visit completion now write audit entries through the shared timeline/audit surface
+- Why this approach was chosen:
+  - the remaining Provider Portal weakness was not another missing page but inconsistent event ownership across patient workspace and visit workflow
+  - centralizing timeline and audit logic inside one backend service makes the Provider Portal a better reference implementation for CRM, Manager, Executive, and Admin without forcing a risky database redesign this late in the freeze cycle
+  - this keeps SHIELD aligned with the rule that backend owns workflow semantics while Flutter only renders the resulting contract
+
+### Files Modified/Created
+**Backend Files (Modified)**:
+- backend/src/app.module.ts
+- backend/src/appointment/appointment.controller.ts
+- backend/src/appointment/appointment.module.ts
+- backend/src/appointment/appointment.service.ts
+- backend/src/service-provider/service-provider.controller.ts
+- backend/src/service-provider/service-provider.module.ts
+- backend/src/service-provider/service-provider.service.ts
+
+**Backend Files (Created)**:
+- backend/src/timeline/timeline.controller.ts
+- backend/src/timeline/timeline.module.ts
+- backend/src/timeline/timeline.service.ts
+
+### Backend Endpoints Added
+- GET /timeline/patient/:customerId
+- GET /timeline/visit/:visitId
+- GET /timeline/provider
+- GET /timeline/business?business_id=...
+
+### Verification
+- cd backend && npm run build
+- cd frontend && flutter analyze --no-pub
+- cd frontend && flutter test
+- Verified the backend builds cleanly after introducing the centralized timeline service and audit integration.
+- Verified the Flutter workspace analyzes cleanly with no issues.
+- Verified the existing Flutter test suite passes:
+  - test/app_responsive_test.dart
+  - test/widget_test.dart
+
+### SQL Migration Requirement
+- No SQL migration is required for this slice.
+- The timeline engine composes live events from the existing schema and stores audit rows in the existing audit_logs table.
+
+### Remaining Blockers / Risks
+- Timeline ownership is now centralized, but printing templates, provider reports/exports, and true provider-live notifications still need their own completion slices before the Provider Portal can be frozen with zero functional gaps.
+- Audit logging now covers the main provider visit workflow actions, but document download/print actions still need follow-up instrumentation if those operations become active inside the provider workspace.

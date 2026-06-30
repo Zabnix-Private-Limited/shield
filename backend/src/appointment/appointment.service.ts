@@ -7,6 +7,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { randomUUID } from 'crypto';
 import { PricingService } from '../pricing/pricing.service';
 import { SERVICE_TYPES, type ShieldServiceType } from '../pricing/pricing.types';
+import { TimelineService } from '../timeline/timeline.service';
 import { WalletService } from '../wallet/wallet.service';
 
 type ConsultationFormState = {
@@ -59,6 +60,7 @@ export class AppointmentService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly pricingService: PricingService,
+    private readonly timelineService: TimelineService,
     private readonly walletService: WalletService,
   ) {}
 
@@ -127,7 +129,10 @@ export class AppointmentService {
     return this.buildConsultationWorkspacePayload(appointment);
   }
 
-  async startConsultation(id: bigint) {
+  async startConsultation(
+    id: bigint,
+    auditActor?: { userId?: bigint | null; roleCode?: string | null },
+  ) {
     const appointment = await this.getWorkspaceAppointment(id);
 
     await this.ensureConsultationRecord(appointment, undefined, undefined);
@@ -138,6 +143,17 @@ export class AppointmentService {
         data: { status: 'IN_PROGRESS' },
       });
     }
+
+    await this.recordAuditAction({
+      action: 'STARTED_VISIT',
+      entityType: 'VISIT',
+      entityId: appointment.id,
+      userId: auditActor?.userId,
+      details: {
+        appointmentId: appointment.id.toString(),
+        actorRole: this.humanizeCode(auditActor?.roleCode),
+      },
+    });
 
     return this.getConsultationWorkspace(id);
   }
@@ -156,6 +172,7 @@ export class AppointmentService {
       providerNotes?: string;
       notes?: string;
     },
+    auditActor?: { userId?: bigint | null; roleCode?: string | null },
   ) {
     const appointment = await this.getWorkspaceAppointment(id);
 
@@ -172,12 +189,25 @@ export class AppointmentService {
       });
     }
 
+    await this.recordAuditAction({
+      action: 'UPDATED_CONSULTATION',
+      entityType: 'CONSULTATION',
+      entityId: appointment.id,
+      userId: auditActor?.userId,
+      details: {
+        appointmentId: appointment.id.toString(),
+        diagnosis: data.diagnosis ?? '',
+        actorRole: this.humanizeCode(auditActor?.roleCode),
+      },
+    });
+
     return this.getConsultationWorkspace(id);
   }
 
   async saveVisitBillingDraft(
     id: bigint,
     data: Partial<VisitBillingDraftState>,
+    auditActor?: { userId?: bigint | null; roleCode?: string | null },
   ) {
     const appointment = await this.getWorkspaceAppointment(id);
     await this.ensureConsultationRecord(appointment, undefined, data);
@@ -188,6 +218,17 @@ export class AppointmentService {
         data: { status: 'IN_PROGRESS' },
       });
     }
+
+    await this.recordAuditAction({
+      action: 'UPDATED_VISIT_BILLING',
+      entityType: 'BILLING',
+      entityId: appointment.id,
+      userId: auditActor?.userId,
+      details: {
+        appointmentId: appointment.id.toString(),
+        actorRole: this.humanizeCode(auditActor?.roleCode),
+      },
+    });
 
     return this.getConsultationWorkspace(id);
   }
@@ -209,6 +250,7 @@ export class AppointmentService {
       };
       billingDraft?: Partial<VisitBillingDraftState>;
     },
+    auditActor?: { userId?: bigint | null; roleCode?: string | null },
   ) {
     const appointment = await this.getWorkspaceAppointment(id);
     await this.ensureConsultationRecord(
@@ -217,17 +259,38 @@ export class AppointmentService {
       input?.billingDraft,
     );
     await this.upsertVisitInvoice(appointment.id);
+    await this.recordAuditAction({
+      action: 'GENERATED_INVOICE',
+      entityType: 'INVOICE',
+      entityId: appointment.id,
+      userId: auditActor?.userId,
+      details: {
+        appointmentId: appointment.id.toString(),
+        actorRole: this.humanizeCode(auditActor?.roleCode),
+      },
+    });
     return this.getConsultationWorkspace(id);
   }
 
   async recordVisitPayment(
     id: bigint,
     data: Partial<VisitBillingDraftState>,
+    auditActor?: { userId?: bigint | null; roleCode?: string | null },
   ) {
     const appointment = await this.getWorkspaceAppointment(id);
     await this.ensureConsultationRecord(appointment, undefined, data);
     await this.upsertVisitInvoice(appointment.id);
     await this.applyVisitPayment(appointment.id);
+    await this.recordAuditAction({
+      action: 'RECEIVED_PAYMENT',
+      entityType: 'PAYMENT',
+      entityId: appointment.id,
+      userId: auditActor?.userId,
+      details: {
+        appointmentId: appointment.id.toString(),
+        actorRole: this.humanizeCode(auditActor?.roleCode),
+      },
+    });
     return this.getConsultationWorkspace(id);
   }
 
@@ -246,6 +309,7 @@ export class AppointmentService {
       notes?: string;
       billingDraft?: Partial<VisitBillingDraftState>;
     },
+    auditActor?: { userId?: bigint | null; roleCode?: string | null },
   ) {
     const appointment = await this.getWorkspaceAppointment(id);
 
@@ -265,6 +329,18 @@ export class AppointmentService {
     await this.prisma.appointment.update({
       where: { id: refreshedAppointment.id },
       data: { status: 'COMPLETED' },
+    });
+
+    await this.recordAuditAction({
+      action: 'COMPLETED_VISIT',
+      entityType: 'VISIT',
+      entityId: refreshedAppointment.id,
+      userId: auditActor?.userId,
+      details: {
+        appointmentId: refreshedAppointment.id.toString(),
+        diagnosis: data.diagnosis ?? '',
+        actorRole: this.humanizeCode(auditActor?.roleCode),
+      },
     });
 
     return this.getConsultationWorkspace(id);
@@ -607,7 +683,7 @@ export class AppointmentService {
     });
   }
 
-  private buildConsultationWorkspacePayload(appointment: {
+  private async buildConsultationWorkspacePayload(appointment: {
     id: bigint;
     customerId: bigint | null;
     appointmentType: string | null;
@@ -658,13 +734,7 @@ export class AppointmentService {
         this.isVisitPurchase(purchase.purchaseKind),
       ) ?? null;
     const billingWorkspace = this.buildBillingWorkspace(appointment, state, visitInvoice);
-    const timeline = this.buildConsultationTimeline(
-      appointment,
-      consultation,
-      state,
-      visitInvoice,
-      billingWorkspace,
-    );
+    const timeline = await this.timelineService.getVisitTimeline(appointment.id);
     const statusSummary = this.buildVisitStatusSummary(
       statusCode,
       consultation,
@@ -1179,6 +1249,22 @@ export class AppointmentService {
     }
 
     return items;
+  }
+
+  private async recordAuditAction(input: {
+    action: string;
+    entityType: string;
+    entityId: bigint;
+    userId?: bigint | null;
+    details?: Record<string, unknown>;
+  }) {
+    await this.timelineService.recordAuditLog({
+      action: input.action,
+      entityType: input.entityType,
+      entityId: input.entityId,
+      userId: input.userId,
+      newData: input.details ?? {},
+    });
   }
 
   private normalizeConsultationInput(

@@ -8,6 +8,8 @@ import {
   Body,
   Query,
 } from '@nestjs/common';
+import { CurrentPrincipal } from '../auth/current-principal.decorator';
+import type { ShieldPrincipal } from '../auth/auth.types';
 import { OperationsQueueService } from '../operations-queue/operations-queue.service';
 import { RequirePermissions } from '../auth/permissions.decorator';
 import { ServiceProviderService } from './service-provider.service';
@@ -75,9 +77,13 @@ export class ServiceProviderController {
 
   @RequirePermissions('providers.view')
   @Get('workspace/patients/:customerId')
-  async getPatientWorkspace(@Param('customerId') customerId: string) {
+  async getPatientWorkspace(
+    @Param('customerId') customerId: string,
+    @CurrentPrincipal() principal?: ShieldPrincipal,
+  ) {
     const workspace = await this.serviceProviderService.getPatientWorkspace(
       BigInt(customerId),
+      principal,
     );
     return {
       success: true,

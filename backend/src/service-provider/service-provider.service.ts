@@ -4,9 +4,11 @@ import { randomUUID } from 'crypto';
 import { CustomerService } from '../customer/customer.service';
 import { WalletService } from '../wallet/wallet.service';
 import { AppointmentService } from '../appointment/appointment.service';
+import type { ShieldPrincipal } from '../auth/auth.types';
 import { DocumentService } from '../document/document.service';
 import { NotificationService } from '../notification/notification.service';
 import { PharmacyService } from '../pharmacy/pharmacy.service';
+import { TimelineService } from '../timeline/timeline.service';
 
 @Injectable()
 export class ServiceProviderService {
@@ -18,6 +20,7 @@ export class ServiceProviderService {
     private readonly documentService: DocumentService,
     private readonly notificationService: NotificationService,
     private readonly pharmacyService: PharmacyService,
+    private readonly timelineService: TimelineService,
   ) {}
 
   async create(data: any) {
@@ -194,7 +197,7 @@ export class ServiceProviderService {
     };
   }
 
-  async getPatientWorkspace(customerId: bigint) {
+  async getPatientWorkspace(customerId: bigint, principal?: ShieldPrincipal) {
     const [
       patient,
       membership,
@@ -217,14 +220,20 @@ export class ServiceProviderService {
     const activeVisitWorkspace = activeAppointment
       ? await this.appointmentService.getConsultationWorkspace(activeAppointment.id)
       : null;
-    const timeline = this.buildPatientTimeline({
-      wallet,
-      documents,
-      appointments,
-      notifications,
-      purchases,
-      activeVisitWorkspace,
-    });
+    const timeline = await this.timelineService.getPatientTimeline(customerId);
+
+    if (principal?.userId) {
+      await this.timelineService.recordAuditLog({
+        action: 'VIEWED_PATIENT',
+        entityType: 'PATIENT',
+        entityId: customerId,
+        userId: BigInt(principal.userId),
+        newData: {
+          customerId: customerId.toString(),
+          roleCode: principal.roleCode,
+        },
+      });
+    }
 
     const totalBilled = purchases.reduce(
       (sum, purchase) => sum + Number(purchase.totalAmount || 0),
@@ -443,146 +452,6 @@ export class ServiceProviderService {
         targetTab: 'today-visit',
       },
     ];
-  }
-
-  private buildPatientTimeline(input: {
-    wallet: any;
-    documents: Array<any>;
-    appointments: Array<any>;
-    notifications: Array<any>;
-    purchases: Array<any>;
-    activeVisitWorkspace: any;
-  }) {
-    const items: Array<Record<string, unknown>> = [];
-    const visitTimeline = Array.isArray(input.activeVisitWorkspace?.timeline)
-      ? input.activeVisitWorkspace.timeline
-      : [];
-
-    for (const entry of visitTimeline) {
-      items.push({
-        kind: entry.code ?? 'VISIT',
-        category: 'VISIT',
-        title: entry.title ?? 'Visit update',
-        subtitle: entry.subtitle ?? '',
-        timestamp: entry.timestamp ?? new Date().toISOString(),
-        icon: entry.icon ?? 'medical_services',
-        color: entry.color ?? 'blue',
-        actor: entry.actor ?? entry.providerName ?? 'Provider',
-        linkedRecordId: entry.referenceId?.toString() ?? null,
-        quickNavigationTarget: {
-          tab: 'today-visit',
-        },
-      });
-    }
-
-    for (const appointment of input.appointments) {
-      items.push({
-        kind: 'APPOINTMENT',
-        category: 'APPOINTMENT',
-        title: this.humanizeCode(appointment.appointmentType || 'APPOINTMENT'),
-        subtitle: this.humanizeCode(appointment.status || 'SCHEDULED'),
-        timestamp: appointment.appointmentDate,
-        icon: 'event',
-        color: 'blue',
-        actor: appointment.provider?.providerName ?? 'Provider',
-        linkedRecordId: appointment.id?.toString() ?? null,
-        quickNavigationTarget: {
-          tab: 'appointments',
-        },
-      });
-    }
-
-    for (const document of input.documents) {
-      items.push({
-        kind: 'DOCUMENT',
-        category: 'DOCUMENT',
-        title: document.fileName ?? 'Document uploaded',
-        subtitle: this.humanizeCode(document.documentType || document.status || 'DOCUMENT'),
-        timestamp: document.createdAt,
-        icon: 'description',
-        color: 'teal',
-        actor: document.uploadedByUser?.firstName
-          ? `${document.uploadedByUser.firstName} ${document.uploadedByUser.lastName ?? ''}`.trim()
-          : 'Provider',
-        linkedRecordId: document.id?.toString() ?? null,
-        quickNavigationTarget: {
-          tab: 'documents',
-        },
-      });
-    }
-
-    const transactions = Array.isArray(input.wallet?.recentTransactions)
-      ? input.wallet.recentTransactions
-      : [];
-    for (const transaction of transactions) {
-      const amount = Number(transaction.amount || 0);
-      items.push({
-        kind: (transaction.sub_ledger_type || '').toString().toUpperCase() === 'REWARD_POINTS'
-          ? 'REWARD'
-          : 'WALLET',
-        category: 'WALLET',
-        title:
-          transaction.remarks ||
-          (amount >= 0 ? 'Wallet credited' : 'Wallet debited'),
-        subtitle: this.humanizeCode(transaction.sub_ledger_type || 'CASH'),
-        timestamp: transaction.created_at,
-        icon: 'account_balance_wallet',
-        color: 'green',
-        actor: 'SHIELD Wallet',
-        amount,
-        linkedRecordId: transaction.id?.toString() ?? null,
-        quickNavigationTarget: {
-          tab: 'wallet',
-        },
-      });
-    }
-
-    for (const purchase of input.purchases) {
-      const purchaseKind = (purchase.purchaseKind || '').toString().toUpperCase();
-      const amount = Number(purchase.payableAmount || 0);
-      items.push({
-        kind: 'BILLING',
-        category: 'BILLING',
-        title:
-          purchase.invoiceNumber ||
-          (purchaseKind === 'VISIT' ? 'Visit invoice generated' : 'Invoice generated'),
-        subtitle: purchase.paymentStatus
-          ? `${this.humanizeCode(purchase.paymentStatus)} • ${amount.toFixed(2)}`
-          : `Collected ${amount.toFixed(2)}`,
-        timestamp: purchase.purchaseDate,
-        icon: 'receipt_long',
-        color: 'amber',
-        actor: purchase.provider?.providerName ?? 'Billing desk',
-        amount,
-        linkedRecordId: purchase.id?.toString() ?? null,
-        quickNavigationTarget: {
-          tab: 'payments',
-        },
-      });
-    }
-
-    for (const notification of input.notifications) {
-      items.push({
-        kind: 'NOTIFICATION',
-        category: 'NOTIFICATION',
-        title: notification.title || 'Notification sent',
-        subtitle: notification.message || '',
-        timestamp: notification.sentAt ?? new Date().toISOString(),
-        icon: 'notifications',
-        color: 'indigo',
-        actor: 'SHIELD',
-        linkedRecordId: notification.id?.toString() ?? null,
-        quickNavigationTarget: {
-          tab: 'overview',
-        },
-      });
-    }
-
-    return items.sort(
-      (left, right) =>
-        new Date(String(right.timestamp)).getTime() -
-        new Date(String(left.timestamp)).getTime(),
-    );
   }
 
   private isCompletedAppointmentStatus(status: string | null | undefined) {

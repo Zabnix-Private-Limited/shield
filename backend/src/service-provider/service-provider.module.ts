@@ -6,6 +6,7 @@ import { NotificationModule } from '../notification/notification.module';
 import { OperationsQueueModule } from '../operations-queue/operations-queue.module';
 import { PharmacyModule } from '../pharmacy/pharmacy.module';
 import { PrismaModule } from '../prisma/prisma.module';
+import { TimelineModule } from '../timeline/timeline.module';
 import { WalletModule } from '../wallet/wallet.module';
 import { ServiceProviderService } from './service-provider.service';
 import { ServiceProviderController } from './service-provider.controller';
@@ -20,6 +21,7 @@ import { ServiceProviderController } from './service-provider.controller';
     DocumentModule,
     NotificationModule,
     PharmacyModule,
+    TimelineModule,
   ],
   controllers: [ServiceProviderController],
   providers: [ServiceProviderService],

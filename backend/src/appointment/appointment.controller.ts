@@ -84,7 +84,10 @@ export class AppointmentController {
 
   @RequirePermissions('appointments.view')
   @Get(':id/consultation-workspace')
-  async getConsultationWorkspace(@Param('id') id: string) {
+  async getConsultationWorkspace(
+    @Param('id') id: string,
+    @CurrentPrincipal() principal?: ShieldPrincipal,
+  ) {
     const workspace = await this.appointmentService.getConsultationWorkspace(
       BigInt(id),
     );
@@ -97,8 +100,14 @@ export class AppointmentController {
 
   @RequirePermissions('appointments.update')
   @Post(':id/start-consultation')
-  async startConsultation(@Param('id') id: string) {
-    const workspace = await this.appointmentService.startConsultation(BigInt(id));
+  async startConsultation(
+    @Param('id') id: string,
+    @CurrentPrincipal() principal?: ShieldPrincipal,
+  ) {
+    const workspace = await this.appointmentService.startConsultation(BigInt(id), {
+      userId: principal?.userId ? BigInt(principal.userId) : undefined,
+      roleCode: principal?.roleCode,
+    });
     return {
       success: true,
       message: 'Consultation started successfully',
@@ -108,7 +117,11 @@ export class AppointmentController {
 
   @RequirePermissions('appointments.update')
   @Post(':id/consultation')
-  async saveConsultation(@Param('id') id: string, @Body() body: any) {
+  async saveConsultation(
+    @Param('id') id: string,
+    @Body() body: any,
+    @CurrentPrincipal() principal?: ShieldPrincipal,
+  ) {
     const workspace = await this.appointmentService.saveConsultation(BigInt(id), {
       chiefComplaint: body.chief_complaint ?? body.chiefComplaint,
       symptoms: body.symptoms,
@@ -119,6 +132,9 @@ export class AppointmentController {
       labOrders: body.lab_orders ?? body.labOrders,
       followUp: body.follow_up ?? body.followUp,
       providerNotes: body.provider_notes ?? body.providerNotes ?? body.notes,
+    }, {
+      userId: principal?.userId ? BigInt(principal.userId) : undefined,
+      roleCode: principal?.roleCode,
     });
     return {
       success: true,
@@ -129,7 +145,11 @@ export class AppointmentController {
 
   @RequirePermissions('appointments.update')
   @Post(':id/complete-consultation')
-  async completeConsultation(@Param('id') id: string, @Body() body: any) {
+  async completeConsultation(
+    @Param('id') id: string,
+    @Body() body: any,
+    @CurrentPrincipal() principal?: ShieldPrincipal,
+  ) {
     const workspace = await this.appointmentService.completeConsultation(BigInt(id), {
       chiefComplaint: body.chief_complaint ?? body.chiefComplaint,
       symptoms: body.symptoms,
@@ -141,6 +161,9 @@ export class AppointmentController {
       followUp: body.follow_up ?? body.followUp,
       providerNotes: body.provider_notes ?? body.providerNotes ?? body.notes,
       billingDraft: body.billing_draft ?? body.billingDraft,
+    }, {
+      userId: principal?.userId ? BigInt(principal.userId) : undefined,
+      roleCode: principal?.roleCode,
     });
     return {
       success: true,
@@ -151,10 +174,18 @@ export class AppointmentController {
 
   @RequirePermissions('appointments.update')
   @Post(':id/visit-billing')
-  async saveVisitBilling(@Param('id') id: string, @Body() body: any) {
+  async saveVisitBilling(
+    @Param('id') id: string,
+    @Body() body: any,
+    @CurrentPrincipal() principal?: ShieldPrincipal,
+  ) {
     const workspace = await this.appointmentService.saveVisitBillingDraft(
       BigInt(id),
       body,
+      {
+        userId: principal?.userId ? BigInt(principal.userId) : undefined,
+        roleCode: principal?.roleCode,
+      },
     );
     return {
       success: true,
@@ -165,7 +196,11 @@ export class AppointmentController {
 
   @RequirePermissions('appointments.update')
   @Post(':id/generate-invoice')
-  async generateVisitInvoice(@Param('id') id: string, @Body() body: any) {
+  async generateVisitInvoice(
+    @Param('id') id: string,
+    @Body() body: any,
+    @CurrentPrincipal() principal?: ShieldPrincipal,
+  ) {
     const workspace = await this.appointmentService.generateVisitInvoice(BigInt(id), {
       formData: {
         chiefComplaint: body.chief_complaint ?? body.chiefComplaint,
@@ -179,6 +214,9 @@ export class AppointmentController {
         providerNotes: body.provider_notes ?? body.providerNotes ?? body.notes,
       },
       billingDraft: body.billing_draft ?? body.billingDraft,
+    }, {
+      userId: principal?.userId ? BigInt(principal.userId) : undefined,
+      roleCode: principal?.roleCode,
     });
     return {
       success: true,
@@ -189,10 +227,18 @@ export class AppointmentController {
 
   @RequirePermissions('appointments.update')
   @Post(':id/record-payment')
-  async recordVisitPayment(@Param('id') id: string, @Body() body: any) {
+  async recordVisitPayment(
+    @Param('id') id: string,
+    @Body() body: any,
+    @CurrentPrincipal() principal?: ShieldPrincipal,
+  ) {
     const workspace = await this.appointmentService.recordVisitPayment(
       BigInt(id),
       body,
+      {
+        userId: principal?.userId ? BigInt(principal.userId) : undefined,
+        roleCode: principal?.roleCode,
+      },
     );
     return {
       success: true,
