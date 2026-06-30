@@ -86,6 +86,10 @@ class ApiService {
     _activeCustomerId = customerId?.trim();
   }
 
+  static String requireAuthenticatedCustomerId([String? customerId]) {
+    return _requireCustomerId(customerId);
+  }
+
   static String _requireCustomerId([String? customerId]) {
     final activeCustomerId = _activeCustomerId?.trim();
     if (activeCustomerId != null && activeCustomerId.isNotEmpty) {
@@ -349,10 +353,21 @@ class ApiService {
 
   static Future<Map<String, dynamic>> customerLogin({
     required String firebaseIdToken,
+    String? deviceId,
+    String? deviceLabel,
+    String? platform,
   }) async {
     final response = await _dio.post(
       '/auth/customer/login',
-      data: {'firebase_id_token': firebaseIdToken},
+      data: {
+        'firebase_id_token': firebaseIdToken,
+        if (deviceId != null && deviceId.trim().isNotEmpty)
+          'device_id': deviceId.trim(),
+        if (deviceLabel != null && deviceLabel.trim().isNotEmpty)
+          'device_label': deviceLabel.trim(),
+        if (platform != null && platform.trim().isNotEmpty)
+          'platform': platform.trim(),
+      },
     );
     return _readEnvelope(response);
   }
@@ -362,6 +377,9 @@ class ApiService {
     required String name,
     required DateTime dob,
     required String gender,
+    String? deviceId,
+    String? deviceLabel,
+    String? platform,
   }) async {
     final response = await _dio.post(
       '/auth/customer/register',
@@ -370,6 +388,12 @@ class ApiService {
         'name': name.trim(),
         'dob': dob.toIso8601String(),
         'gender': gender,
+        if (deviceId != null && deviceId.trim().isNotEmpty)
+          'device_id': deviceId.trim(),
+        if (deviceLabel != null && deviceLabel.trim().isNotEmpty)
+          'device_label': deviceLabel.trim(),
+        if (platform != null && platform.trim().isNotEmpty)
+          'platform': platform.trim(),
       },
     );
     return _readEnvelope(response);
@@ -377,16 +401,43 @@ class ApiService {
 
   static Future<Map<String, dynamic>> refreshSession(
     String refreshToken,
+    String? deviceId,
+    String? deviceLabel,
+    String? platform,
   ) async {
     final response = await _dio.post(
       '/auth/refresh',
-      data: {'refresh_token': refreshToken},
+      data: {
+        'refresh_token': refreshToken,
+        if (deviceId != null && deviceId.trim().isNotEmpty)
+          'device_id': deviceId.trim(),
+        if (deviceLabel != null && deviceLabel.trim().isNotEmpty)
+          'device_label': deviceLabel.trim(),
+        if (platform != null && platform.trim().isNotEmpty)
+          'platform': platform.trim(),
+      },
     );
     return _readEnvelope(response);
   }
 
-  static Future<void> logout(String refreshToken) async {
-    await _dio.post('/auth/logout', data: {'refresh_token': refreshToken});
+  static Future<void> logout(
+    String refreshToken, {
+    String? deviceId,
+    String? deviceLabel,
+    String? platform,
+  }) async {
+    await _dio.post(
+      '/auth/logout',
+      data: {
+        'refresh_token': refreshToken,
+        if (deviceId != null && deviceId.trim().isNotEmpty)
+          'device_id': deviceId.trim(),
+        if (deviceLabel != null && deviceLabel.trim().isNotEmpty)
+          'device_label': deviceLabel.trim(),
+        if (platform != null && platform.trim().isNotEmpty)
+          'platform': platform.trim(),
+      },
+    );
   }
 
   static Future<Map<String, dynamic>> getCustomerDashboardBundle(
@@ -507,6 +558,7 @@ class ApiService {
     required String token,
     required String platform,
     String? deviceLabel,
+    String? deviceId,
     String? customerId,
   }) async {
     final resolvedCustomerId = _requireCustomerId(customerId);
@@ -516,6 +568,8 @@ class ApiService {
         'customer_id': resolvedCustomerId,
         'token': token,
         'platform': platform,
+        if (deviceId != null && deviceId.trim().isNotEmpty)
+          'device_id': deviceId.trim(),
         if (deviceLabel != null && deviceLabel.trim().isNotEmpty)
           'device_label': deviceLabel.trim(),
       },

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../../app/theme/app_colors.dart';
 import '../../../../../app/theme/app_typography.dart';
+import '../../../shared/domain/customer_access_state.dart';
 import '../../../../customer/shared/widgets/error_card.dart';
 import '../controllers/dashboard_controller.dart';
 import '../widgets/appointment_card.dart';
@@ -62,6 +63,11 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> {
         final pointsBalance = dashboard.wallet.pointsBalance;
         final upcomingVisits = dashboard.appointments.length;
         final documentCount = dashboard.documents.length;
+        final accessState = CustomerAccessState(
+          customer: dashboard.customer,
+          customerStatus: dashboard.customer.status,
+          membership: dashboard.membership,
+        );
 
         return RefreshIndicator(
           onRefresh: _controller.refresh,
@@ -75,6 +81,7 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> {
               GreetingHeader(
                 customer: dashboard.customer,
                 membership: dashboard.membership,
+                accessState: accessState,
                 wallet: dashboard.wallet,
                 upcomingVisits: upcomingVisits,
                 documentCount: documentCount,

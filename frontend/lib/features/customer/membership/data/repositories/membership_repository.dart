@@ -12,17 +12,17 @@ class MembershipRepository {
   final MembershipRemoteDataSource _remote;
   final MembershipLocalDataSource _local;
 
-  Future<MembershipModel?> loadCachedMembership() {
-    return _local.load();
+  Future<MembershipModel?> loadCachedMembership(String customerId) {
+    return _local.load(customerId);
   }
 
   Future<MembershipModel> loadMembership(String customerId) async {
     try {
       final membership = await _remote.fetch(customerId);
-      await _local.save(membership);
+      await _local.save(customerId, membership);
       return membership;
     } catch (_) {
-      final cached = await _local.load();
+      final cached = await _local.load(customerId);
       if (cached != null) {
         return cached;
       }
@@ -32,11 +32,11 @@ class MembershipRepository {
 
   Future<MembershipModel> refreshMembership(String customerId) async {
     final membership = await _remote.fetch(customerId);
-    await _local.save(membership);
+    await _local.save(customerId, membership);
     return membership;
   }
 
-  Future<void> invalidateCache() {
-    return _local.clear();
+  Future<void> invalidateCache(String customerId) {
+    return _local.clear(customerId);
   }
 }

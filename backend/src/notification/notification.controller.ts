@@ -72,6 +72,7 @@ export class NotificationController {
       token,
       platform,
       deviceLabel: body.device_label?.toString().trim() || undefined,
+      sessionId: principal?.sessionId,
     });
 
     return {

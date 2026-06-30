@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import 'api_service.dart';
+import 'device_identity_service.dart';
 
 class CustomerAuthSession extends ChangeNotifier {
   CustomerAuthSession._();
@@ -100,7 +101,12 @@ class CustomerAuthSession extends ChangeNotifier {
     final refreshToken = _refreshToken;
     if (refreshToken != null && refreshToken.isNotEmpty) {
       try {
-        await ApiService.logout(refreshToken);
+        await ApiService.logout(
+          refreshToken,
+          deviceId: await DeviceIdentityService.getInstallationId(),
+          deviceLabel: DeviceIdentityService.defaultDeviceLabel(),
+          platform: DeviceIdentityService.resolvePlatform(),
+        );
       } catch (_) {}
     }
 
@@ -138,7 +144,12 @@ class CustomerAuthSession extends ChangeNotifier {
     }
 
     try {
-      final payload = await ApiService.refreshSession(refreshToken);
+      final payload = await ApiService.refreshSession(
+        refreshToken,
+        await DeviceIdentityService.getInstallationId(),
+        DeviceIdentityService.defaultDeviceLabel(),
+        DeviceIdentityService.resolvePlatform(),
+      );
       _accessToken = payload['accessToken']?.toString().trim();
       _refreshToken =
           payload['refreshToken']?.toString().trim() ?? refreshToken;

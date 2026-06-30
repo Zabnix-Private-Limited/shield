@@ -15,10 +15,10 @@ class DashboardRepository {
   Future<DashboardModel> loadDashboard(String customerId) async {
     try {
       final dashboard = await _remote.fetch(customerId);
-      await _local.save(dashboard);
+      await _local.save(customerId, dashboard);
       return dashboard;
     } catch (_) {
-      final cached = await _local.load();
+      final cached = await _local.load(customerId);
       if (cached != null) {
         return cached;
       }
@@ -28,11 +28,11 @@ class DashboardRepository {
 
   Future<DashboardModel> refreshDashboard(String customerId) async {
     final dashboard = await _remote.fetch(customerId);
-    await _local.save(dashboard);
+    await _local.save(customerId, dashboard);
     return dashboard;
   }
 
-  Future<void> invalidateCache() {
-    return _local.clear();
+  Future<void> invalidateCache(String customerId) {
+    return _local.clear(customerId);
   }
 }

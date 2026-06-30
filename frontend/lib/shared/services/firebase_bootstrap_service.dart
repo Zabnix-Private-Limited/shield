@@ -9,6 +9,7 @@ import '../../firebase_options.dart';
 import '../config/app_config.dart';
 import 'api_service.dart';
 import 'customer_auth_session.dart';
+import 'device_identity_service.dart';
 
 @pragma('vm:entry-point')
 Future<void> shieldFirebaseMessagingBackgroundHandler(
@@ -75,6 +76,8 @@ class FirebaseBootstrapService {
       await ApiService.registerPushToken(
         token: token,
         platform: ApiService.resolvePushPlatform(),
+        deviceId: await DeviceIdentityService.getInstallationId(),
+        deviceLabel: DeviceIdentityService.defaultDeviceLabel(),
         customerId: customerId,
       );
     } on DioException catch (error) {

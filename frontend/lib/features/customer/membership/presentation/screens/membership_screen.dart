@@ -7,6 +7,7 @@ import '../../../../../app/theme/app_typography.dart';
 import '../../../../../shared/models/membership.dart';
 import '../../../../../shared/widgets/app_card.dart';
 import '../../../../../shared/widgets/portal_support.dart';
+import '../../../shared/domain/customer_access_state.dart';
 import '../../../../customer/shared/widgets/error_card.dart';
 import '../controllers/membership_controller.dart';
 
@@ -60,6 +61,11 @@ class _CustomerMembershipScreenState extends State<CustomerMembershipScreen> {
           );
         }
 
+        final accessState = CustomerAccessState(
+          customerStatus: membership.isActive ? 'ACTIVE' : 'PENDING',
+          membership: membership,
+        );
+
         return RefreshIndicator(
           onRefresh: _controller.refresh,
           color: AppColors.shieldBlue,
@@ -68,7 +74,10 @@ class _CustomerMembershipScreenState extends State<CustomerMembershipScreen> {
               parent: AlwaysScrollableScrollPhysics(),
             ),
             children: [
-              _MembershipHero(membership: membership),
+              _MembershipHero(
+                membership: membership,
+                accessState: accessState,
+              ),
               const SizedBox(height: 20),
               LayoutBuilder(
                 builder: (context, constraints) {
@@ -91,26 +100,41 @@ class _CustomerMembershipScreenState extends State<CustomerMembershipScreen> {
                     childAspectRatio: ratio,
                     children: [
                       _MembershipStatCard(
-                        label: 'Total credited',
+                        label: accessState.serviceAccessEnabled
+                            ? 'Total credited'
+                            : 'Credits unlock later',
                         value:
                             '₹${membership.totalEarnedCredits.toStringAsFixed(0)}',
-                        note: 'Ledger-backed wallet credits',
+                        note: accessState.serviceAccessEnabled
+                            ? 'Ledger-backed wallet credits'
+                            : 'No customer credit is exposed before card issue',
                         color: AppColors.shieldGreen,
                         icon: Icons.arrow_downward_rounded,
                       ),
                       _MembershipStatCard(
-                        label: 'Total used',
+                        label: accessState.serviceAccessEnabled
+                            ? 'Total used'
+                            : 'Service access',
                         value:
-                            '₹${membership.totalRedeemedCredits.toStringAsFixed(0)}',
-                        note: 'Redeemed across care services',
+                            accessState.serviceAccessEnabled
+                            ? '₹${membership.totalRedeemedCredits.toStringAsFixed(0)}'
+                            : 'Pending',
+                        note: accessState.serviceAccessEnabled
+                            ? 'Redeemed across care services'
+                            : 'Admin or agent approval is still required',
                         color: AppColors.shieldBlue,
                         icon: Icons.local_hospital_outlined,
                       ),
                       _MembershipStatCard(
-                        label: 'Available now',
-                        value:
-                            '₹${(membership.totalEarnedCredits - membership.totalRedeemedCredits).toStringAsFixed(0)}',
-                        note: 'Computed from live customer ledger',
+                        label: accessState.serviceAccessEnabled
+                            ? 'Available now'
+                            : 'Card issuance',
+                        value: accessState.serviceAccessEnabled
+                            ? '₹${(membership.totalEarnedCredits - membership.totalRedeemedCredits).toStringAsFixed(0)}'
+                            : 'Awaiting',
+                        note: accessState.serviceAccessEnabled
+                            ? 'Computed from live customer ledger'
+                            : 'SHIELD card is issued by admin or agent team',
                         color: AppColors.shieldNavy,
                         icon: Icons.account_balance_wallet_outlined,
                       ),
@@ -121,7 +145,7 @@ class _CustomerMembershipScreenState extends State<CustomerMembershipScreen> {
               const SizedBox(height: 24),
               Text('Benefits', style: AppTypography.h4),
               const SizedBox(height: 12),
-              ..._tierBenefits(membership.tier).map(
+              ..._tierBenefits(membership.tier, accessState).map(
                 (benefit) => Padding(
                   padding: const EdgeInsets.only(bottom: 10),
                   child: AppCard(
@@ -152,22 +176,41 @@ class _CustomerMembershipScreenState extends State<CustomerMembershipScreen> {
                   context,
                   title: 'Membership details',
                   subtitle:
-                      'This customer card now reads from the dedicated backend membership bundle instead of rebuilding from dummy fallback state.',
-                  meta: membership.customerCode,
-                  status: membership.isActive ? 'ACTIVE' : 'INACTIVE',
+                      accessState.serviceAccessEnabled
+                      ? 'This customer membership is active and card-backed.'
+                      : 'The customer registration is complete, but SHIELD membership issuance is still pending.',
+                  meta: accessState.serviceAccessEnabled
+                      ? membership.customerCode
+                      : (membership.customerCode.isNotEmpty
+                            ? membership.customerCode
+                            : 'Awaiting SHIELD card'),
+                  status: accessState.heroStatusLabel,
                   highlights: [
-                    'Tier: ${membership.tierLabel}',
-                    'Valid until ${DateFormat('dd MMM yyyy').format(membership.endDate)}',
-                    'Available credits stay derived from live customer ledger totals.',
+                    accessState.serviceAccessEnabled
+                        ? 'Tier: ${membership.tierLabel}'
+                        : 'The digital card is not generated at sign-up.',
+                    accessState.serviceAccessEnabled
+                        ? 'Valid until ${DateFormat('dd MMM yyyy').format(membership.endDate)}'
+                        : 'Admin or SHIELD agent approval is required before services unlock.',
+                    accessState.serviceAccessEnabled
+                        ? 'Available credits stay derived from live customer ledger totals.'
+                        : 'Customers can browse the app and loaded products while they wait.',
                   ],
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Membership card details', style: AppTypography.h5),
+                    Text(
+                      accessState.serviceAccessEnabled
+                          ? 'Membership card details'
+                          : 'Membership approval details',
+                      style: AppTypography.h5,
+                    ),
                     const SizedBox(height: 6),
                     Text(
-                      'View how the customer card, validity period, and wallet-linked credit totals are being interpreted.',
+                      accessState.serviceAccessEnabled
+                          ? 'View how the customer card, validity period, and wallet-linked credit totals are being interpreted.'
+                          : 'Review the pending state before the SHIELD card is issued.',
                       style: AppTypography.small.copyWith(
                         color: AppColors.gray,
                       ),
@@ -176,7 +219,10 @@ class _CustomerMembershipScreenState extends State<CustomerMembershipScreen> {
                 ),
               ),
               const SizedBox(height: 12),
-              _MembershipActions(membership: membership),
+              _MembershipActions(
+                membership: membership,
+                accessState: accessState,
+              ),
             ],
           ),
         );
@@ -184,7 +230,18 @@ class _CustomerMembershipScreenState extends State<CustomerMembershipScreen> {
     );
   }
 
-  List<String> _tierBenefits(MembershipTier tier) {
+  List<String> _tierBenefits(
+    MembershipTier tier,
+    CustomerAccessState accessState,
+  ) {
+    if (!accessState.serviceAccessEnabled) {
+      return const [
+        'Your profile is created, but the SHIELD membership card has not been issued yet.',
+        'Admin or agent approval is required before doctor, lab, homecare, and other member services unlock.',
+        'You can still browse the customer app and purchase loaded products once they are listed.',
+        'Wallet-linked benefits stay hidden until the issued card becomes active.',
+      ];
+    }
     switch (tier) {
       case MembershipTier.foundingMember:
         return const [
@@ -205,9 +262,13 @@ class _CustomerMembershipScreenState extends State<CustomerMembershipScreen> {
 }
 
 class _MembershipHero extends StatelessWidget {
-  const _MembershipHero({required this.membership});
+  const _MembershipHero({
+    required this.membership,
+    required this.accessState,
+  });
 
   final Membership membership;
+  final CustomerAccessState accessState;
 
   @override
   Widget build(BuildContext context) {
@@ -216,16 +277,21 @@ class _MembershipHero extends StatelessWidget {
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: switch (membership.tier) {
-            MembershipTier.foundingMember => const [
-              AppColors.shieldBlue,
-              AppColors.shieldNavy,
-            ],
-            MembershipTier.standardMember => const [
-              AppColors.shieldGreen,
-              AppColors.shieldBlue,
-            ],
-          },
+          colors: accessState.serviceAccessEnabled
+              ? switch (membership.tier) {
+                  MembershipTier.foundingMember => const [
+                    AppColors.shieldBlue,
+                    AppColors.shieldNavy,
+                  ],
+                  MembershipTier.standardMember => const [
+                    AppColors.shieldGreen,
+                    AppColors.shieldBlue,
+                  ],
+                }
+              : const [
+                  AppColors.warning,
+                  AppColors.shieldBlue,
+                ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -255,7 +321,7 @@ class _MembershipHero extends StatelessWidget {
                   borderRadius: BorderRadius.circular(999),
                 ),
                 child: Text(
-                  membership.isActive ? 'ACTIVE' : 'INACTIVE',
+                  accessState.heroStatusLabel,
                   style: AppTypography.tiny.copyWith(
                     color: AppColors.white,
                     fontWeight: FontWeight.w700,
@@ -266,7 +332,9 @@ class _MembershipHero extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            membership.tierLabel,
+            accessState.serviceAccessEnabled
+                ? membership.tierLabel
+                : 'Registration received',
             style: AppTypography.h2.copyWith(
               color: AppColors.white,
               fontWeight: FontWeight.w800,
@@ -274,11 +342,10 @@ class _MembershipHero extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           Text(
-            membership.customerCode,
-            style: AppTypography.body.copyWith(
+            accessState.membershipSupportingText,
+            style: AppTypography.small.copyWith(
               color: AppColors.white,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 1.2,
+              fontWeight: FontWeight.w600,
             ),
           ),
           const SizedBox(height: 16),
@@ -286,14 +353,25 @@ class _MembershipHero extends StatelessWidget {
             spacing: 10,
             runSpacing: 10,
             children: [
-              _HeroChip(
-                label: 'Valid from',
-                value: DateFormat('dd MMM yyyy').format(membership.startDate),
-              ),
-              _HeroChip(
-                label: 'Valid until',
-                value: DateFormat('dd MMM yyyy').format(membership.endDate),
-              ),
+              if (accessState.serviceAccessEnabled) ...[
+                _HeroChip(
+                  label: 'Valid from',
+                  value: DateFormat('dd MMM yyyy').format(membership.startDate),
+                ),
+                _HeroChip(
+                  label: 'Valid until',
+                  value: DateFormat('dd MMM yyyy').format(membership.endDate),
+                ),
+              ] else ...const [
+                _HeroChip(
+                  label: 'Stage',
+                  value: 'Profile created',
+                ),
+                _HeroChip(
+                  label: 'Next step',
+                  value: 'Await card issue',
+                ),
+              ],
             ],
           ),
         ],
@@ -412,9 +490,13 @@ class _MembershipStatCard extends StatelessWidget {
 }
 
 class _MembershipActions extends StatelessWidget {
-  const _MembershipActions({required this.membership});
+  const _MembershipActions({
+    required this.membership,
+    required this.accessState,
+  });
 
   final Membership membership;
+  final CustomerAccessState accessState;
 
   @override
   Widget build(BuildContext context) {
@@ -457,27 +539,55 @@ class _MembershipActions extends StatelessWidget {
           spacing: 12,
           runSpacing: 10,
           children: [
-            action('Open wallet', () => context.go('/portal/customer/wallet')),
             action(
-              'Open profile',
+              accessState.serviceAccessEnabled ? 'Open wallet' : 'Browse products',
+              () => context.go(
+                accessState.serviceAccessEnabled
+                    ? '/portal/customer/wallet'
+                    : '/portal/customer/services',
+              ),
+            ),
+            action(
+              accessState.serviceAccessEnabled ? 'Open profile' : 'Complete profile',
               () => context.go('/portal/customer/profile'),
             ),
             action(
-              'Renewal guidance',
+              accessState.serviceAccessEnabled
+                  ? 'Renewal guidance'
+                  : 'Approval guidance',
               () => showPortalDetailsSheet(
                 context,
-                title: 'Renewal guidance',
+                title: accessState.serviceAccessEnabled
+                    ? 'Renewal guidance'
+                    : 'Approval guidance',
                 subtitle:
-                    'Renewal flow can now build on this dedicated membership slice without adding more customer logic back into the shared portal shell.',
-                meta: membership.customerCode,
-                status: membership.isActive ? 'ACTIVE' : 'INACTIVE',
-                highlights: const [
-                  'Membership routing now stays isolated to the customer slice.',
-                  'Future renewal actions can be added here once backend workflow APIs are ready.',
-                ],
+                    accessState.serviceAccessEnabled
+                    ? 'Renewal flow can now build on this dedicated membership slice without adding more customer logic back into the shared portal shell.'
+                    : 'SHIELD cards are issued by admin or agent operations after registration review.',
+                meta: accessState.serviceAccessEnabled
+                    ? membership.customerCode
+                    : (membership.customerCode.isNotEmpty
+                          ? membership.customerCode
+                          : 'Awaiting SHIELD card'),
+                status: accessState.heroStatusLabel,
+                highlights: accessState.serviceAccessEnabled
+                    ? const [
+                        'Membership routing now stays isolated to the customer slice.',
+                        'Future renewal actions can be added here once backend workflow APIs are ready.',
+                      ]
+                    : const [
+                        'Sign-up does not generate a card immediately.',
+                        'Customers can browse the app but cannot use member services before issuance.',
+                      ],
               ),
               full: true,
             ),
+            if (!accessState.serviceAccessEnabled)
+              action(
+                'Membership status',
+                () => context.go('/portal/customer/settings'),
+                full: true,
+              ),
           ],
         );
       },

@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 
 import '../../../../../shared/services/api_service.dart';
 import '../../../../../shared/services/customer_auth_session.dart';
+import '../../../../../shared/services/device_identity_service.dart';
 import '../../../../../shared/services/firebase_bootstrap_service.dart';
 
 enum CustomerAuthOutcome { authenticated, registrationRequired }
@@ -122,9 +123,16 @@ class CustomerAuthRepository {
       throw StateError('Unable to read the verified Firebase token.');
     }
 
+    final deviceId = await DeviceIdentityService.getInstallationId();
+    final deviceLabel = DeviceIdentityService.defaultDeviceLabel();
+    final platform = DeviceIdentityService.resolvePlatform();
+
     try {
       final payload = await ApiService.customerLogin(
         firebaseIdToken: firebaseIdToken,
+        deviceId: deviceId,
+        deviceLabel: deviceLabel,
+        platform: platform,
       );
       await CustomerAuthSession.instance.completeLogin(
         tokenPayload: payload,
@@ -163,11 +171,17 @@ class CustomerAuthRepository {
     if (firebaseIdToken == null || firebaseIdToken.isEmpty) {
       throw StateError('Unable to read the verified Firebase token.');
     }
+    final deviceId = await DeviceIdentityService.getInstallationId();
+    final deviceLabel = DeviceIdentityService.defaultDeviceLabel();
+    final platform = DeviceIdentityService.resolvePlatform();
     final payload = await ApiService.customerRegister(
       firebaseIdToken: firebaseIdToken,
       name: name,
       dob: dob,
       gender: gender,
+      deviceId: deviceId,
+      deviceLabel: deviceLabel,
+      platform: platform,
     );
 
     await CustomerAuthSession.instance.completeLogin(

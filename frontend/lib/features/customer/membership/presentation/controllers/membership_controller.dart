@@ -2,17 +2,18 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 
+import '../../../../../shared/services/api_service.dart';
 import '../../data/models/membership_model.dart';
 import '../../data/repositories/membership_repository.dart';
 
 class MembershipController extends ChangeNotifier {
   MembershipController({
     MembershipRepository? repository,
-    this.customerId = '1',
+    this.customerId,
   }) : _repository = repository ?? MembershipRepository();
 
   final MembershipRepository _repository;
-  final String customerId;
+  final String? customerId;
 
   bool _isLoading = false;
   bool _isRefreshing = false;
@@ -25,12 +26,15 @@ class MembershipController extends ChangeNotifier {
   MembershipModel? get membership => _membership;
   bool get hasData => _membership != null;
 
+  String get _resolvedCustomerId =>
+      ApiService.requireAuthenticatedCustomerId(customerId);
+
   Future<void> load() async {
     _isLoading = true;
     _error = null;
     notifyListeners();
 
-    final cached = await _repository.loadCachedMembership();
+    final cached = await _repository.loadCachedMembership(_resolvedCustomerId);
     if (cached != null) {
       _membership = cached;
       _isLoading = false;
@@ -40,7 +44,7 @@ class MembershipController extends ChangeNotifier {
     }
 
     try {
-      _membership = await _repository.loadMembership(customerId);
+      _membership = await _repository.loadMembership(_resolvedCustomerId);
     } catch (err) {
       _error = err;
     } finally {
@@ -55,7 +59,7 @@ class MembershipController extends ChangeNotifier {
     notifyListeners();
 
     try {
-      _membership = await _repository.refreshMembership(customerId);
+      _membership = await _repository.refreshMembership(_resolvedCustomerId);
     } catch (err) {
       _error = err;
     } finally {
@@ -66,7 +70,7 @@ class MembershipController extends ChangeNotifier {
   }
 
   Future<void> invalidateCache() {
-    return _repository.invalidateCache();
+    return _repository.invalidateCache(_resolvedCustomerId);
   }
 
   Future<void> _refreshInBackground() async {
@@ -74,7 +78,7 @@ class MembershipController extends ChangeNotifier {
     notifyListeners();
 
     try {
-      _membership = await _repository.refreshMembership(customerId);
+      _membership = await _repository.refreshMembership(_resolvedCustomerId);
     } catch (err) {
       _error ??= err;
     } finally {

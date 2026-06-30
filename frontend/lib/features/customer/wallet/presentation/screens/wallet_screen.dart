@@ -3,7 +3,11 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../../app/theme/app_colors.dart';
 import '../../../../../app/theme/app_typography.dart';
+import '../../../../../shared/models/customer.dart';
 import '../../../../../shared/models/wallet.dart';
+import '../../../../../shared/services/api_service.dart';
+import '../../../../../shared/widgets/app_card.dart';
+import '../../../shared/domain/customer_access_state.dart';
 import '../../../../../shared/widgets/portal_support.dart';
 import '../../../../customer/shared/widgets/error_card.dart';
 import '../controllers/wallet_controller.dart';
@@ -22,12 +26,16 @@ class CustomerWalletScreen extends StatefulWidget {
 
 class _CustomerWalletScreenState extends State<CustomerWalletScreen> {
   late final WalletController _controller;
+  late Future<Customer> _customerFuture;
   String _selectedLedger = 'ALL';
 
   @override
   void initState() {
     super.initState();
     _controller = WalletController()..load();
+    _customerFuture = ApiService.getCustomerProfile(
+      ApiService.requireAuthenticatedCustomerId(),
+    );
   }
 
   @override
@@ -38,9 +46,36 @@ class _CustomerWalletScreenState extends State<CustomerWalletScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return ListenableBuilder(
-      listenable: _controller,
-      builder: (context, _) {
+    return FutureBuilder<Customer>(
+      future: _customerFuture,
+      builder: (context, customerSnapshot) {
+        if (customerSnapshot.connectionState == ConnectionState.waiting) {
+          return const WalletShimmer();
+        }
+
+        if (!customerSnapshot.hasData) {
+          return ErrorCard(
+            title: 'Wallet unavailable',
+            message: 'The customer access state could not be loaded.',
+            onRetry: () {
+              setState(() {
+                _customerFuture = ApiService.getCustomerProfile(
+                  ApiService.requireAuthenticatedCustomerId(),
+                );
+              });
+            },
+          );
+        }
+
+        final customer = customerSnapshot.data!;
+
+        return ListenableBuilder(
+          listenable: _controller,
+          builder: (context, _) {
+            final accessState = CustomerAccessState(
+              customer: customer,
+              customerStatus: customer.status,
+            );
         if (_controller.isLoading && !_controller.hasData) {
           return const WalletShimmer();
         }
@@ -60,6 +95,10 @@ class _CustomerWalletScreenState extends State<CustomerWalletScreen> {
             message: 'No wallet data is available right now.',
             onRetry: _controller.load,
           );
+        }
+
+        if (!accessState.serviceAccessEnabled) {
+          return _LockedWalletView(customer: customer);
         }
 
         final visibleTransactions = wallet.recentTransactions.where((txn) {
@@ -104,6 +143,8 @@ class _CustomerWalletScreenState extends State<CustomerWalletScreen> {
             ],
           ),
         );
+          },
+        );
       },
     );
   }
@@ -124,6 +165,175 @@ class _CustomerWalletScreenState extends State<CustomerWalletScreen> {
       }
     }
     return balance;
+  }
+}
+
+class _LockedWalletView extends StatelessWidget {
+  const _LockedWalletView({required this.customer});
+
+  final Customer customer;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      physics: const BouncingScrollPhysics(
+        parent: AlwaysScrollableScrollPhysics(),
+      ),
+      children: [
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [AppColors.warning, AppColors.shieldBlue],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(22),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'Wallet pending activation',
+                      style: AppTypography.h4.copyWith(
+                        color: AppColors.white,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.white.withValues(alpha: 0.16),
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: Text(
+                      'LOCKED',
+                      style: AppTypography.tiny.copyWith(
+                        color: AppColors.white,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'SHIELD wallet benefits unlock only after admin or agent card issuance for ${customer.fullName}.',
+                style: AppTypography.small.copyWith(
+                  color: AppColors.white.withValues(alpha: 0.9),
+                ),
+              ),
+              const SizedBox(height: 14),
+              Wrap(
+                spacing: 10,
+                runSpacing: 10,
+                children: const [
+                  _LockedWalletChip(label: 'Profile created'),
+                  _LockedWalletChip(label: 'Membership pending'),
+                  _LockedWalletChip(label: 'Products can stay visible'),
+                ],
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 20),
+        AppCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('What happens next', style: AppTypography.h4),
+              const SizedBox(height: 12),
+              Text(
+                '1. SHIELD admin or agent team reviews the registration.\n'
+                '2. Membership and digital card are issued.\n'
+                '3. Wallet-linked services, benefits, and redemptions become available.',
+                style: AppTypography.body.copyWith(color: AppColors.darkGray),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 14),
+        Row(
+          children: [
+            Expanded(
+              child: Material(
+                color: AppColors.shieldBlue.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(14),
+                child: InkWell(
+                  onTap: () => context.go('/portal/customer/services'),
+                  borderRadius: BorderRadius.circular(14),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    child: Text(
+                      'Browse products',
+                      textAlign: TextAlign.center,
+                      style: AppTypography.small.copyWith(
+                        color: AppColors.shieldBlue,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Material(
+                color: AppColors.shieldBlue,
+                borderRadius: BorderRadius.circular(14),
+                child: InkWell(
+                  onTap: () => context.go('/portal/customer/membership'),
+                  borderRadius: BorderRadius.circular(14),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    child: Text(
+                      'View status',
+                      textAlign: TextAlign.center,
+                      style: AppTypography.small.copyWith(
+                        color: AppColors.white,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _LockedWalletChip extends StatelessWidget {
+  const _LockedWalletChip({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: AppColors.white.withValues(alpha: 0.14),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        label,
+        style: AppTypography.tiny.copyWith(
+          color: AppColors.white,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+    );
   }
 }
 

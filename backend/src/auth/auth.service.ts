@@ -1,28 +1,36 @@
-import {
-  Injectable,
-  Logger,
-  ServiceUnavailableException,
-  UnauthorizedException,
-} from '@nestjs/common';
+import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { createHash, randomBytes, randomUUID } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
-import { RedisService } from '../redis/redis.service';
 import { getAppEnv } from '../config/app-env';
 import { CustomerService } from '../customer/customer.service';
-import { FirebaseAdminService } from '../notification/firebase-admin.service';
 import {
   ACCESS_SCOPES,
-  AuthTokens,
-  ShieldJwtPayload,
-  ShieldPrincipal,
-  ShieldPrincipalType,
+  type AuthRequestContext,
+  type AuthTokens,
+  type ShieldJwtPayload,
+  type ShieldPrincipal,
+  type ShieldPrincipalType,
   USER_TYPES,
 } from './auth.types';
+import { FirebaseAdminService } from '../notification/firebase-admin.service';
 
-type StoredRefreshSession = {
+type SessionRecord = {
+  id: bigint;
   sessionId: string;
-  principal: ShieldPrincipal;
+  subjectId: string;
+  principalType: string;
+  roleCode: string | null;
+  userType: string | null;
+  accessScope: string | null;
+  permissions: unknown;
+  firebaseUid: string | null;
+  authProvider: string | null;
+  customerId: bigint | null;
+  userId: bigint | null;
+  email: string | null;
+  mobile: string | null;
+  branchBusinessId: string | null;
 };
 
 @Injectable()
@@ -33,12 +41,14 @@ export class AuthService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
-    private readonly redisService: RedisService,
     private readonly firebaseAdminService: FirebaseAdminService,
     private readonly customerService: CustomerService,
   ) {}
 
-  async loginCustomer(firebaseIdToken: string) {
+  async loginCustomer(
+    firebaseIdToken: string,
+    requestContext?: AuthRequestContext,
+  ) {
     const decoded = await this.verifyFirebaseToken(firebaseIdToken);
     const provider = this.getFirebaseProvider(decoded);
     if (provider !== 'phone') {
@@ -57,10 +67,7 @@ export class AuthService {
     const customer = await this.prisma.customer.findFirst({
       where: {
         deletedAt: null,
-        OR: [
-          { firebaseUid: decoded.uid },
-          { mobile },
-        ],
+        OR: [{ firebaseUid: decoded.uid }, { mobile }],
       },
       select: {
         id: true,
@@ -73,9 +80,7 @@ export class AuthService {
     });
 
     if (!customer) {
-      throw new UnauthorizedException(
-        'Customer is not provisioned in SHIELD.',
-      );
+      throw new UnauthorizedException('Customer is not provisioned in SHIELD.');
     }
 
     if (
@@ -108,10 +113,22 @@ export class AuthService {
       accessScope: 'SELF',
     });
 
-    return this.issueTokens(principal);
+    const tokens = await this.issueTokens(principal, {
+      ...requestContext,
+      loginMethod: requestContext?.loginMethod ?? 'PHONE_OTP',
+    });
+    await this.recordLoginHistory(principal, {
+      ...requestContext,
+      loginMethod: requestContext?.loginMethod ?? 'PHONE_OTP',
+    });
+    return tokens;
   }
 
-  async registerCustomer(firebaseIdToken: string, body: any) {
+  async registerCustomer(
+    firebaseIdToken: string,
+    body: any,
+    requestContext?: AuthRequestContext,
+  ) {
     const decoded = await this.verifyFirebaseToken(firebaseIdToken);
     const provider = this.getFirebaseProvider(decoded);
     if (provider !== 'phone') {
@@ -136,7 +153,7 @@ export class AuthService {
     });
 
     if (existingCustomer) {
-      return this.loginCustomer(firebaseIdToken);
+      return this.loginCustomer(firebaseIdToken, requestContext);
     }
 
     const normalizedName = (body.name ?? '').toString().trim();
@@ -159,10 +176,13 @@ export class AuthService {
       referred_by_code: body.referred_by_code,
     });
 
-    return this.loginCustomer(firebaseIdToken);
+    return this.loginCustomer(firebaseIdToken, requestContext);
   }
 
-  async loginInternalUser(firebaseIdToken: string) {
+  async loginInternalUser(
+    firebaseIdToken: string,
+    requestContext?: AuthRequestContext,
+  ) {
     const decoded = await this.verifyFirebaseToken(firebaseIdToken);
     const provider = this.getFirebaseProvider(decoded);
     if (provider !== 'google.com') {
@@ -249,45 +269,75 @@ export class AuthService {
         .filter((value): value is string => !!value),
     });
 
-    return this.issueTokens(principal);
+    const tokens = await this.issueTokens(principal, {
+      ...requestContext,
+      loginMethod: requestContext?.loginMethod ?? 'GOOGLE_SIGN_IN',
+    });
+    await this.recordLoginHistory(principal, {
+      ...requestContext,
+      loginMethod: requestContext?.loginMethod ?? 'GOOGLE_SIGN_IN',
+    });
+    return tokens;
   }
 
-  async refresh(refreshToken: string) {
+  async refresh(refreshToken: string, requestContext?: AuthRequestContext) {
     const normalized = refreshToken.trim();
     if (!normalized) {
       throw new UnauthorizedException('Refresh token is required.');
     }
 
-    const key = this.getRefreshKey(normalized);
-    const stored = await this.getStoredRefreshSession(key);
-    if (!stored) {
+    const hash = this.hashToken(normalized);
+    const session = await this.prisma.authSession.findFirst({
+      where: {
+        refreshTokenHash: hash,
+        revokedAt: null,
+        refreshTokenExpiresAt: { gt: new Date() },
+      },
+      select: {
+        id: true,
+        sessionId: true,
+        subjectId: true,
+        principalType: true,
+        roleCode: true,
+        userType: true,
+        accessScope: true,
+        permissions: true,
+        firebaseUid: true,
+        authProvider: true,
+        customerId: true,
+        userId: true,
+        email: true,
+        mobile: true,
+        branchBusinessId: true,
+      },
+    });
+
+    if (!session) {
       throw new UnauthorizedException('Refresh token is invalid or expired.');
     }
 
-    const session = JSON.parse(stored) as StoredRefreshSession;
-    await this.redisService.delete(key);
-    return this.issueTokens(session.principal, session.sessionId);
+    const principal = this.mapSessionToPrincipal(session);
+    return this.issueTokens(principal, requestContext, session.sessionId);
   }
 
   async logout(refreshToken: string | undefined, principal?: ShieldPrincipal) {
     if (refreshToken?.trim()) {
-      const key = this.getRefreshKey(refreshToken.trim());
-      const stored = await this.getStoredRefreshSession(key);
-      if (stored) {
-        const session = JSON.parse(stored) as StoredRefreshSession;
-        await this.revokeSession(
-          session.sessionId,
-          this.parseDurationToSeconds(this.env.jwtRefreshTtl),
-        );
-        await this.redisService.delete(key);
-      }
+      const refreshTokenHash = this.hashToken(refreshToken.trim());
+      await this.prisma.authSession.updateMany({
+        where: {
+          refreshTokenHash,
+          revokedAt: null,
+        },
+        data: {
+          revokedAt: new Date(),
+          revokedReason: 'USER_LOGOUT',
+          isCurrent: false,
+        },
+      });
     }
 
     if (principal) {
-      await this.revokeSession(
-        principal.sessionId,
-        this.parseDurationToSeconds(this.env.jwtRefreshTtl),
-      );
+      await this.revokeSessionById(principal.sessionId, 'USER_LOGOUT');
     }
 
     return { success: true };
@@ -299,8 +349,12 @@ export class AuthService {
         secret: this.env.jwtAccessSecret,
       });
 
-      const revoked = await this.redisService.get(this.getRevokedKey(payload.sid));
-      if (revoked) {
+      const session = await this.prisma.authSession.findUnique({
+        where: { sessionId: payload.sid },
+        select: { revokedAt: true },
+      });
+
+      if (!session || session.revokedAt) {
         throw new UnauthorizedException('Session has been revoked.');
       }
 
@@ -345,6 +399,99 @@ export class AuthService {
     };
   }
 
+  async listSessions(principal: ShieldPrincipal) {
+    const owner = this.getOwnerFromPrincipal(principal);
+    const sessions = await this.prisma.authSession.findMany({
+      where: {
+        ownerType: owner.ownerType,
+        ownerId: owner.ownerId,
+      },
+      include: {
+        authDevice: true,
+      },
+      orderBy: [{ revokedAt: 'asc' }, { lastSeenAt: 'desc' }],
+    });
+
+    return sessions.map((session) => ({
+      sessionId: session.sessionId,
+      roleCode: session.roleCode,
+      loginMethod: session.loginMethod,
+      createdAt: session.createdAt,
+      lastSeenAt: session.lastSeenAt,
+      refreshTokenExpiresAt: session.refreshTokenExpiresAt,
+      revokedAt: session.revokedAt,
+      isCurrent: session.sessionId === principal.sessionId,
+      device: session.authDevice
+        ? {
+            id: session.authDevice.id.toString(),
+            uuid: session.authDevice.uuid,
+            deviceName: session.authDevice.deviceName,
+            platform: session.authDevice.platform,
+            browser: session.authDevice.browser,
+            os: session.authDevice.os,
+            isTrusted: session.authDevice.isTrusted,
+            firstSeenAt: session.authDevice.firstSeenAt,
+            lastSeenAt: session.authDevice.lastSeenAt,
+          }
+        : null,
+    }));
+  }
+
+  async listLoginHistory(principal: ShieldPrincipal, limit = 20) {
+    const owner = this.getOwnerFromPrincipal(principal);
+    const rows = await this.prisma.loginHistory.findMany({
+      where: {
+        ownerType: owner.ownerType,
+        ownerId: owner.ownerId,
+      },
+      include: {
+        authDevice: true,
+      },
+      orderBy: { createdAt: 'desc' },
+      take: Math.min(Math.max(limit, 1), 50),
+    });
+
+    return rows.map((row) => ({
+      id: row.id.toString(),
+      status: row.status,
+      reason: row.reason,
+      loginMethod: row.loginMethod,
+      sessionId: row.sessionId,
+      ipAddress: row.ipAddress,
+      createdAt: row.createdAt,
+      device: row.authDevice
+        ? {
+            deviceName: row.authDevice.deviceName,
+            platform: row.authDevice.platform,
+            browser: row.authDevice.browser,
+            os: row.authDevice.os,
+          }
+        : null,
+    }));
+  }
+
+  async revokeOwnedSession(
+    principal: ShieldPrincipal,
+    targetSessionId: string,
+  ) {
+    const owner = this.getOwnerFromPrincipal(principal);
+    const session = await this.prisma.authSession.findFirst({
+      where: {
+        sessionId: targetSessionId,
+        ownerType: owner.ownerType,
+        ownerId: owner.ownerId,
+      },
+      select: { sessionId: true },
+    });
+
+    if (!session) {
+      throw new UnauthorizedException('Session not found for principal.');
+    }
+
+    await this.revokeSessionById(targetSessionId, 'OWNER_REVOKED');
+    return { success: true };
+  }
+
   private async buildPrincipal(input: {
     subjectId: string;
     principalType: ShieldPrincipalType;
@@ -383,6 +530,7 @@ export class AuthService {
 
   private async issueTokens(
     principal: ShieldPrincipal,
+    requestContext?: AuthRequestContext,
     existingSessionId?: string,
   ): Promise<AuthTokens> {
     const sessionId = existingSessionId ?? principal.sessionId;
@@ -410,23 +558,12 @@ export class AuthService {
     });
 
     const refreshToken = randomBytes(48).toString('hex');
-    try {
-      await this.redisService.set(
-        this.getRefreshKey(refreshToken),
-        JSON.stringify({
-          sessionId,
-          principal: effectivePrincipal,
-        } satisfies StoredRefreshSession),
-        this.parseDurationToSeconds(this.env.jwtRefreshTtl),
-      );
-    } catch (error) {
-      this.logger.error(
-        `Failed to persist auth session in Redis: ${error}`,
-      );
-      throw new ServiceUnavailableException(
-        'Authentication session store is unavailable. Please try again shortly.',
-      );
-    }
+    await this.persistSession(
+      effectivePrincipal,
+      refreshToken,
+      requestContext,
+      existingSessionId,
+    );
 
     return {
       accessToken,
@@ -437,21 +574,226 @@ export class AuthService {
     };
   }
 
-  private async getPermissionsForRole(roleCode: string) {
-    const role = await this.prisma.role.findFirst({
-      where: { code: roleCode },
-      include: {
-        rolePermissions: {
-          include: {
-            permission: true,
-          },
+  private async persistSession(
+    principal: ShieldPrincipal,
+    refreshToken: string,
+    requestContext?: AuthRequestContext,
+    existingSessionId?: string,
+  ) {
+    const owner = this.getOwnerFromPrincipal(principal);
+    const device = await this.ensureAuthDevice(principal, requestContext);
+    const refreshTokenExpiresAt = new Date(
+      Date.now() + this.parseDurationToSeconds(this.env.jwtRefreshTtl) * 1000,
+    );
+    const refreshTokenHash = this.hashToken(refreshToken);
+    const now = new Date();
+
+    if (device) {
+      await this.prisma.authSession.updateMany({
+        where: {
+          ownerType: owner.ownerType,
+          ownerId: owner.ownerId,
+          authDeviceId: device.id,
+          sessionId: { not: principal.sessionId },
+          revokedAt: null,
         },
+        data: {
+          isCurrent: false,
+        },
+      });
+    }
+
+    const data = {
+      ownerType: owner.ownerType,
+      ownerId: owner.ownerId,
+      subjectId: principal.subjectId,
+      customerId: owner.customerId,
+      userId: owner.userId,
+      authDeviceId: device?.id,
+      principalType: principal.principalType,
+      roleCode: principal.roleCode,
+      userType: principal.userType,
+      accessScope: principal.accessScope,
+      permissions: principal.permissions as any,
+      firebaseUid: principal.firebaseUid,
+      authProvider: principal.authProvider,
+      email: principal.email,
+      mobile: principal.mobile,
+      branchBusinessId: principal.branchBusinessId,
+      loginMethod: requestContext?.loginMethod ?? principal.authProvider,
+      refreshTokenHash,
+      refreshTokenExpiresAt,
+      lastSeenAt: now,
+      ipAddress: requestContext?.ipAddress,
+      userAgent: requestContext?.userAgent,
+      revokedAt: null,
+      revokedReason: null,
+      isCurrent: true,
+    };
+
+    if (existingSessionId) {
+      await this.prisma.authSession.update({
+        where: { sessionId: existingSessionId },
+        data,
+      });
+      return;
+    }
+
+    await this.prisma.authSession.create({
+      data: {
+        uuid: randomUUID(),
+        sessionId: principal.sessionId,
+        ...data,
+      },
+    });
+  }
+
+  private async ensureAuthDevice(
+    principal: ShieldPrincipal,
+    requestContext?: AuthRequestContext,
+  ) {
+    const owner = this.getOwnerFromPrincipal(principal);
+    const fingerprintHash = this.buildDeviceFingerprint(requestContext);
+    const now = new Date();
+
+    const existing = await this.prisma.authDevice.findFirst({
+      where: {
+        ownerType: owner.ownerType,
+        ownerId: owner.ownerId,
+        fingerprintHash,
       },
     });
 
-    return role?.rolePermissions
-      .map((entry) => entry.permission.code)
-      .filter((value): value is string => !!value) ?? [];
+    if (existing) {
+      return this.prisma.authDevice.update({
+        where: { id: existing.id },
+        data: {
+          deviceId: requestContext?.deviceId ?? existing.deviceId,
+          deviceName: requestContext?.deviceName ?? existing.deviceName,
+          platform: requestContext?.platform ?? existing.platform,
+          browser: requestContext?.browser ?? existing.browser,
+          os: requestContext?.os ?? existing.os,
+          ipAddress: requestContext?.ipAddress ?? existing.ipAddress,
+          userAgent: requestContext?.userAgent ?? existing.userAgent,
+          lastSeenAt: now,
+        },
+      });
+    }
+
+    return this.prisma.authDevice.create({
+      data: {
+        uuid: randomUUID(),
+        ownerType: owner.ownerType,
+        ownerId: owner.ownerId,
+        customerId: owner.customerId,
+        userId: owner.userId,
+        fingerprintHash,
+        deviceId: requestContext?.deviceId,
+        deviceName: requestContext?.deviceName,
+        platform: requestContext?.platform,
+        browser: requestContext?.browser,
+        os: requestContext?.os,
+        ipAddress: requestContext?.ipAddress,
+        userAgent: requestContext?.userAgent,
+        firstSeenAt: now,
+        lastSeenAt: now,
+      },
+    });
+  }
+
+  private async recordLoginHistory(
+    principal: ShieldPrincipal,
+    requestContext?: AuthRequestContext,
+  ) {
+    const owner = this.getOwnerFromPrincipal(principal);
+    const fingerprintHash = this.buildDeviceFingerprint(requestContext);
+    const device = await this.prisma.authDevice.findFirst({
+      where: {
+        ownerType: owner.ownerType,
+        ownerId: owner.ownerId,
+        fingerprintHash,
+      },
+      select: { id: true },
+    });
+
+    await this.prisma.loginHistory.create({
+      data: {
+        uuid: randomUUID(),
+        ownerType: owner.ownerType,
+        ownerId: owner.ownerId,
+        customerId: owner.customerId,
+        userId: owner.userId,
+        authDeviceId: device?.id,
+        sessionId: principal.sessionId,
+        loginMethod: requestContext?.loginMethod ?? principal.authProvider,
+        status: 'SUCCESS',
+        reason: null,
+        ipAddress: requestContext?.ipAddress,
+        userAgent: requestContext?.userAgent,
+      },
+    });
+  }
+
+  private async revokeSessionById(sessionId: string, reason: string) {
+    await this.prisma.authSession.updateMany({
+      where: {
+        sessionId,
+        revokedAt: null,
+      },
+      data: {
+        revokedAt: new Date(),
+        revokedReason: reason,
+        isCurrent: false,
+      },
+    });
+  }
+
+  private getOwnerFromPrincipal(principal: ShieldPrincipal) {
+    if (principal.customerId?.trim()) {
+      return {
+        ownerType: 'CUSTOMER',
+        ownerId: principal.customerId.trim(),
+        customerId: BigInt(principal.customerId.trim()),
+        userId: null as bigint | null,
+      };
+    }
+
+    if (principal.userId?.trim()) {
+      return {
+        ownerType: 'USER',
+        ownerId: principal.userId.trim(),
+        customerId: null as bigint | null,
+        userId: BigInt(principal.userId.trim()),
+      };
+    }
+
+    throw new UnauthorizedException('Principal does not own an auth session.');
+  }
+
+  private mapSessionToPrincipal(session: SessionRecord): ShieldPrincipal {
+    const permissions = Array.isArray(session.permissions)
+      ? session.permissions
+          .map((entry) => String(entry))
+          .filter((entry) => entry.trim().length > 0)
+      : [];
+
+    return {
+      subjectId:
+        session.subjectId,
+      sessionId: session.sessionId,
+      principalType: this.toPrincipalType(session.principalType),
+      roleCode: session.roleCode ?? 'CUSTOMER',
+      userType: this.toUserType(session.userType),
+      accessScope: this.toAccessScope(session.accessScope, 'SELF'),
+      permissions,
+      firebaseUid: session.firebaseUid ?? '',
+      authProvider: session.authProvider ?? '',
+      customerId: session.customerId?.toString(),
+      userId: session.userId?.toString(),
+      email: session.email ?? undefined,
+      mobile: session.mobile ?? undefined,
+      branchBusinessId: session.branchBusinessId ?? undefined,
+    };
   }
 
   private getFirebaseProvider(decoded: Record<string, any>) {
@@ -489,6 +831,25 @@ export class AuthService {
     };
   }
 
+  private async getPermissionsForRole(roleCode: string) {
+    const role = await this.prisma.role.findFirst({
+      where: { code: roleCode },
+      include: {
+        rolePermissions: {
+          include: {
+            permission: true,
+          },
+        },
+      },
+    });
+
+    return (
+      role?.rolePermissions
+        .map((entry) => entry.permission.code)
+        .filter((value): value is string => !!value) ?? []
+    );
+  }
+
   private parseDurationToSeconds(value: string) {
     const trimmed = value.trim().toLowerCase();
     const match = trimmed.match(/^(\d+)([smhd])$/);
@@ -510,39 +871,22 @@ export class AuthService {
     return amount * multiplier;
   }
 
-  private getRefreshKey(refreshToken: string) {
-    return `auth:refresh:${this.hashToken(refreshToken)}`;
-  }
-
-  private async getStoredRefreshSession(key: string) {
-    try {
-      return await this.redisService.get(key);
-    } catch (error) {
-      this.logger.error(`Failed to read auth session from Redis: ${error}`);
-      throw new ServiceUnavailableException(
-        'Authentication session store is unavailable. Please try again shortly.',
-      );
-    }
-  }
-
-  private getRevokedKey(sessionId: string) {
-    return `auth:revoked:${sessionId}`;
-  }
-
-  private async revokeSession(sessionId: string, ttlSeconds: number) {
-    try {
-      await this.redisService.set(
-        this.getRevokedKey(sessionId),
-        '1',
-        ttlSeconds > 0 ? ttlSeconds : 300,
-      );
-    } catch (error) {
-      this.logger.warn(`Failed to revoke session ${sessionId}: ${error}`);
-    }
-  }
-
   private hashToken(value: string) {
     return createHash('sha256').update(value).digest('hex');
+  }
+
+  private buildDeviceFingerprint(requestContext?: AuthRequestContext) {
+    const raw = [
+      requestContext?.deviceId?.trim(),
+      requestContext?.userAgent?.trim(),
+      requestContext?.platform?.trim(),
+      requestContext?.browser?.trim(),
+      requestContext?.os?.trim(),
+    ]
+      .filter((value): value is string => Boolean(value && value.trim()))
+      .join('|');
+
+    return this.hashToken(raw || 'shield-unknown-device');
   }
 
   private toUserType(value: string | null | undefined): ShieldPrincipal['userType'] {
@@ -558,5 +902,9 @@ export class AuthService {
     return ACCESS_SCOPES.includes(value as ShieldPrincipal['accessScope'])
       ? (value as ShieldPrincipal['accessScope'])
       : fallback;
+  }
+
+  private toPrincipalType(value: string | null | undefined): ShieldPrincipalType {
+    return value === 'SYSTEM' || value === 'USER' ? value : 'CUSTOMER';
   }
 }

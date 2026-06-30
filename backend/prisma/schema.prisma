@@ -124,6 +124,9 @@ model User {
   crmActivities CrmActivity[]
   crmTasks CrmTask[]
   auditLogs AuditLog[]
+  authDevices AuthDevice[]
+  authSessions AuthSession[]
+  loginHistory LoginHistory[]
   documents Document[]
 
   @@index([mobile], map: "idx_user_mobile")
@@ -191,6 +194,9 @@ model Customer {
   complaints    Complaint[]
   notifications Notification[]
   devicePushTokens DevicePushToken[]
+  authDevices AuthDevice[]
+  authSessions AuthSession[]
+  loginHistory LoginHistory[]
   referralRewardEventsAsReferrer ReferralRewardEvent[] @relation("ReferralRewardReferrer")
   referralRewardEventsAsReferred ReferralRewardEvent[] @relation("ReferralRewardReferred")
   pricingRuleAudits PricingRuleAudit[]
@@ -840,6 +846,7 @@ model DevicePushToken {
   id            BigInt     @id @default(autoincrement())
   uuid          String     @unique @db.Uuid
   customerId    BigInt     @map("customer_id")
+  authDeviceId  BigInt?    @map("auth_device_id")
   token         String     @unique @db.Text
   platform      String     @db.VarChar(30)
   deviceLabel   String?    @db.VarChar(120) @map("device_label")
@@ -849,10 +856,119 @@ model DevicePushToken {
   updatedAt     DateTime   @default(now()) @updatedAt @db.Timestamptz(6) @map("updated_at")
 
   customer      Customer   @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  authDevice    AuthDevice? @relation(fields: [authDeviceId], references: [id], onDelete: SetNull)
 
   @@index([customerId], map: "idx_device_push_tokens_customer")
+  @@index([authDeviceId], map: "idx_device_push_tokens_auth_device")
   @@index([platform], map: "idx_device_push_tokens_platform")
   @@map("device_push_tokens")
+}
+
+model AuthDevice {
+  id            BigInt     @id @default(autoincrement())
+  uuid          String     @unique @db.Uuid
+  ownerType     String     @db.VarChar(30) @map("owner_type")
+  ownerId       String     @db.VarChar(50) @map("owner_id")
+  customerId    BigInt?    @map("customer_id")
+  userId        BigInt?    @map("user_id")
+  fingerprintHash String   @db.VarChar(128) @map("fingerprint_hash")
+  deviceId      String?    @db.VarChar(120) @map("device_id")
+  deviceName    String?    @db.VarChar(255) @map("device_name")
+  platform      String?    @db.VarChar(50)
+  browser       String?    @db.VarChar(100)
+  os            String?    @db.VarChar(100)
+  ipAddress     String?    @db.VarChar(100) @map("ip_address")
+  userAgent     String?    @db.Text @map("user_agent")
+  isTrusted     Boolean    @default(false) @map("is_trusted")
+  firstSeenAt   DateTime   @default(now()) @db.Timestamptz(6) @map("first_seen_at")
+  lastSeenAt    DateTime   @default(now()) @db.Timestamptz(6) @map("last_seen_at")
+  createdAt     DateTime   @default(now()) @db.Timestamptz(6) @map("created_at")
+  updatedAt     DateTime   @default(now()) @updatedAt @db.Timestamptz(6) @map("updated_at")
+
+  customer      Customer?  @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  user          User?      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  authSessions  AuthSession[]
+  pushTokens    DevicePushToken[]
+  loginHistory  LoginHistory[]
+
+  @@unique([ownerType, ownerId, fingerprintHash], map: "uq_auth_devices_owner_fingerprint")
+  @@index([customerId], map: "idx_auth_devices_customer")
+  @@index([userId], map: "idx_auth_devices_user")
+  @@index([lastSeenAt], map: "idx_auth_devices_last_seen")
+  @@map("auth_devices")
+}
+
+model AuthSession {
+  id            BigInt     @id @default(autoincrement())
+  uuid          String     @unique @db.Uuid
+  sessionId     String     @unique @db.Uuid @map("session_id")
+  subjectId     String     @db.VarChar(120) @map("subject_id")
+  ownerType     String     @db.VarChar(30) @map("owner_type")
+  ownerId       String     @db.VarChar(50) @map("owner_id")
+  customerId    BigInt?    @map("customer_id")
+  userId        BigInt?    @map("user_id")
+  authDeviceId  BigInt?    @map("auth_device_id")
+  principalType String     @db.VarChar(30) @map("principal_type")
+  roleCode      String?    @db.VarChar(50) @map("role_code")
+  userType      String?    @db.VarChar(30) @map("user_type")
+  accessScope   String?    @db.VarChar(30) @map("access_scope")
+  permissions   Json?      @map("permissions")
+  firebaseUid   String?    @db.VarChar(128) @map("firebase_uid")
+  authProvider  String?    @db.VarChar(30) @map("auth_provider")
+  email         String?    @db.VarChar(255)
+  mobile        String?    @db.VarChar(20)
+  branchBusinessId String? @db.VarChar(50) @map("branch_business_id")
+  loginMethod   String?    @db.VarChar(50) @map("login_method")
+  refreshTokenHash String  @unique @db.VarChar(128) @map("refresh_token_hash")
+  refreshTokenExpiresAt DateTime @db.Timestamptz(6) @map("refresh_token_expires_at")
+  lastSeenAt    DateTime   @default(now()) @db.Timestamptz(6) @map("last_seen_at")
+  ipAddress     String?    @db.VarChar(100) @map("ip_address")
+  userAgent     String?    @db.Text @map("user_agent")
+  revokedAt     DateTime?  @db.Timestamptz(6) @map("revoked_at")
+  revokedReason String?    @db.Text @map("revoked_reason")
+  isCurrent     Boolean    @default(true) @map("is_current")
+  createdAt     DateTime   @default(now()) @db.Timestamptz(6) @map("created_at")
+  updatedAt     DateTime   @default(now()) @updatedAt @db.Timestamptz(6) @map("updated_at")
+
+  customer      Customer?  @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  user          User?      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  authDevice    AuthDevice? @relation(fields: [authDeviceId], references: [id], onDelete: SetNull)
+
+  @@index([ownerType, ownerId], map: "idx_auth_sessions_owner")
+  @@index([customerId], map: "idx_auth_sessions_customer")
+  @@index([userId], map: "idx_auth_sessions_user")
+  @@index([authDeviceId], map: "idx_auth_sessions_auth_device")
+  @@index([isCurrent], map: "idx_auth_sessions_current")
+  @@index([refreshTokenExpiresAt], map: "idx_auth_sessions_refresh_expiry")
+  @@map("auth_sessions")
+}
+
+model LoginHistory {
+  id            BigInt     @id @default(autoincrement())
+  uuid          String     @unique @db.Uuid
+  ownerType     String     @db.VarChar(30) @map("owner_type")
+  ownerId       String     @db.VarChar(50) @map("owner_id")
+  customerId    BigInt?    @map("customer_id")
+  userId        BigInt?    @map("user_id")
+  authDeviceId  BigInt?    @map("auth_device_id")
+  sessionId     String?    @db.Uuid @map("session_id")
+  loginMethod   String?    @db.VarChar(50) @map("login_method")
+  status        String     @db.VarChar(30)
+  reason        String?    @db.Text
+  ipAddress     String?    @db.VarChar(100) @map("ip_address")
+  userAgent     String?    @db.Text @map("user_agent")
+  createdAt     DateTime   @default(now()) @db.Timestamptz(6) @map("created_at")
+
+  customer      Customer?  @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  user          User?      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  authDevice    AuthDevice? @relation(fields: [authDeviceId], references: [id], onDelete: SetNull)
+
+  @@index([ownerType, ownerId], map: "idx_login_history_owner")
+  @@index([customerId], map: "idx_login_history_customer")
+  @@index([userId], map: "idx_login_history_user")
+  @@index([authDeviceId], map: "idx_login_history_auth_device")
+  @@index([createdAt], map: "idx_login_history_created_at")
+  @@map("login_history")
 }
 
 model AuditLog {

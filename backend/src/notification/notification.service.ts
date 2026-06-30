@@ -15,6 +15,7 @@ type RegisterTokenInput = {
   token: string;
   platform: string;
   deviceLabel?: string;
+  sessionId?: string;
 };
 
 @Injectable()
@@ -45,10 +46,18 @@ export class NotificationService {
   }
 
   async registerDeviceToken(input: RegisterTokenInput) {
+    const session = input.sessionId
+      ? await this.prisma.authSession.findUnique({
+          where: { sessionId: input.sessionId },
+          select: { authDeviceId: true },
+        })
+      : null;
+
     return this.prisma.devicePushToken.upsert({
       where: { token: input.token },
       update: {
         customerId: input.customerId,
+        authDeviceId: session?.authDeviceId ?? undefined,
         platform: input.platform.toUpperCase(),
         deviceLabel: input.deviceLabel,
         isActive: true,
@@ -57,6 +66,7 @@ export class NotificationService {
       create: {
         uuid: randomUUID(),
         customerId: input.customerId,
+        authDeviceId: session?.authDeviceId ?? undefined,
         token: input.token,
         platform: input.platform.toUpperCase(),
         deviceLabel: input.deviceLabel,

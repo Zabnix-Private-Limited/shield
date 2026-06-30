@@ -4,22 +4,22 @@ import '../../domain/services/membership_cache_policy.dart';
 import '../models/membership_model.dart';
 
 class MembershipLocalDataSource {
-  Future<MembershipModel?> load() async {
+  Future<MembershipModel?> load(String customerId) async {
     final box = await Hive.openBox<String>(MembershipCachePolicy.boxName);
-    final cached = box.get(MembershipCachePolicy.cacheKey);
+    final cached = box.get(MembershipCachePolicy.cacheKeyFor(customerId));
     if (cached == null || cached.trim().isEmpty) {
       return null;
     }
     return MembershipModel.fromCache(cached);
   }
 
-  Future<void> save(MembershipModel model) async {
+  Future<void> save(String customerId, MembershipModel model) async {
     final box = await Hive.openBox<String>(MembershipCachePolicy.boxName);
-    await box.put(MembershipCachePolicy.cacheKey, model.toCache());
+    await box.put(MembershipCachePolicy.cacheKeyFor(customerId), model.toCache());
   }
 
-  Future<void> clear() async {
+  Future<void> clear(String customerId) async {
     final box = await Hive.openBox<String>(MembershipCachePolicy.boxName);
-    await box.delete(MembershipCachePolicy.cacheKey);
+    await box.delete(MembershipCachePolicy.cacheKeyFor(customerId));
   }
 }

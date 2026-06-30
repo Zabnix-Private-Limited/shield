@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../../customer/dashboard/presentation/screens/dashboard_screen.dart';
 import '../../../customer/membership/presentation/screens/membership_screen.dart';
+import '../../../customer/shared/domain/customer_access_state.dart';
 import '../../../customer/wallet/presentation/screens/wallet_screen.dart';
 import '../../../customer/shared/widgets/customer_scaffold.dart';
 import '../../../customer/shared/widgets/error_card.dart';
@@ -385,6 +386,10 @@ class _RoleContent extends StatelessWidget {
         portal.role == SHIELDRole.customer && section.key == 'appointments';
     final isCustomerNotifications =
         portal.role == SHIELDRole.customer && section.key == 'notifications';
+    final isCustomerDocuments =
+        portal.role == SHIELDRole.customer && section.key == 'documents';
+    final isCustomerPrescriptions =
+        portal.role == SHIELDRole.customer && section.key == 'prescriptions';
     final isCustomerWallet =
         portal.role == SHIELDRole.customer && section.key == 'wallet';
     final isCustomerSettings =
@@ -417,9 +422,16 @@ class _RoleContent extends StatelessWidget {
     } else if (isCustomerServices) {
       content = const _CustomerServicesView();
     } else if (isCustomerAppointments) {
-      content = _CustomerAppointmentsView(section: section);
+      content = _CustomerProtectedSection(
+        sectionKey: section.key,
+        child: _CustomerAppointmentsView(section: section),
+      );
     } else if (isCustomerNotifications) {
       content = _CustomerNotificationsView(section: section);
+    } else if (isCustomerDocuments) {
+      content = const _CustomerDocumentsView();
+    } else if (isCustomerPrescriptions) {
+      content = const _CustomerPrescriptionsView();
     } else if (isCustomerWallet) {
       content = const CustomerWalletScreen();
     } else if (isCustomerSettings) {
@@ -779,13 +791,24 @@ class _CustomerPortalNav extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final content = FutureBuilder<Map<String, dynamic>>(
-      future: ApiService.getWalletProfile('1'),
+    final content = FutureBuilder<List<dynamic>>(
+      future: Future.wait<dynamic>([
+        ApiService.getCustomerProfile(ApiService.requireAuthenticatedCustomerId()),
+        ApiService.getWalletProfile(ApiService.requireAuthenticatedCustomerId()),
+      ]),
       builder: (context, snapshot) {
-        final balance = snapshot.hasData
-            ? (double.tryParse(snapshot.data!['balance']?.toString() ?? '0') ??
-                  0.0)
-            : 0.0;
+        final customer = snapshot.hasData ? snapshot.data![0] as Customer : null;
+        final wallet = snapshot.hasData
+            ? snapshot.data![1] as Map<String, dynamic>
+            : const <String, dynamic>{};
+        final balance =
+            double.tryParse(wallet['balance']?.toString() ?? '0') ?? 0.0;
+        final accessState = customer == null
+            ? null
+            : CustomerAccessState(
+                customer: customer,
+                customerStatus: customer.status,
+              );
 
         return Container(
           width: inDrawer ? null : 280,
@@ -811,14 +834,18 @@ class _CustomerPortalNav extends StatelessWidget {
                     ),
                     const SizedBox(height: 16),
                     Text(
-                      portal.operatorName,
+                      customer?.fullName ?? portal.operatorName,
                       style: AppTypography.body.copyWith(
                         fontWeight: FontWeight.w700,
                       ),
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'Founding Member',
+                      accessState == null
+                          ? 'Loading customer'
+                          : accessState.serviceAccessEnabled
+                          ? 'Membership active'
+                          : 'Membership pending',
                       style: AppTypography.small.copyWith(
                         color: AppColors.darkGray,
                       ),
@@ -843,7 +870,9 @@ class _CustomerPortalNav extends StatelessWidget {
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
-                              'Wallet balance',
+                              accessState?.serviceAccessEnabled == true
+                                  ? 'Wallet balance'
+                                  : 'Wallet unlocks after card issue',
                               style: AppTypography.tiny.copyWith(
                                 color: AppColors.gray,
                               ),
@@ -3077,7 +3106,9 @@ class _CustomerProfilePortalViewState
     });
 
     try {
-      final customer = await ApiService.getCustomerProfile('1');
+      final customer = await ApiService.getCustomerProfile(
+        ApiService.requireAuthenticatedCustomerId(),
+      );
       if (!mounted) return;
       _hydrateForm(customer);
       setState(() {
@@ -3341,7 +3372,9 @@ class _CustomerProfilePortalViewState
                       },
                     ),
                     _HeroActionGridItem(
-                      label: 'View member ID',
+                      label: customer.status.toUpperCase() == 'ACTIVE'
+                          ? 'View member ID'
+                          : 'Membership status',
                       onTap: () => context.go('/portal/customer/membership'),
                     ),
                     _HeroActionGridItem(
@@ -3588,8 +3621,8 @@ class _CustomerMembershipPortalViewState
   void initState() {
     super.initState();
     _dataFuture = Future.wait([
-      ApiService.getCustomerProfile('1'),
-      ApiService.getCustomerMembership('1'),
+      ApiService.getCustomerProfile(ApiService.requireAuthenticatedCustomerId()),
+      ApiService.getCustomerMembership(ApiService.requireAuthenticatedCustomerId()),
     ]);
   }
 
@@ -4358,6 +4391,263 @@ class _CustomerSettingsViewState extends State<_CustomerSettingsView> {
           ],
         ),
       ],
+    );
+  }
+}
+
+class _StaticActionChip extends StatelessWidget {
+  const _StaticActionChip({
+    required this.label,
+    required this.onTap,
+  });
+
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: AppColors.shieldBlue.withValues(alpha: 0.08),
+      borderRadius: BorderRadius.circular(999),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(999),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          child: Text(
+            label,
+            style: AppTypography.small.copyWith(
+              color: AppColors.shieldBlue,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _PendingCustomerAccessCard extends StatelessWidget {
+  const _PendingCustomerAccessCard({
+    required this.title,
+    required this.message,
+    this.primaryLabel,
+    this.primaryRoute,
+    this.secondaryLabel,
+    this.secondaryRoute,
+  });
+
+  final String title;
+  final String message;
+  final String? primaryLabel;
+  final String? primaryRoute;
+  final String? secondaryLabel;
+  final String? secondaryRoute;
+
+  @override
+  Widget build(BuildContext context) {
+    return AppCard(
+      padding: const EdgeInsets.all(18),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: AppColors.warning.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: const Icon(
+                  Icons.hourglass_top_rounded,
+                  color: AppColors.warning,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(title, style: AppTypography.h4),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            message,
+            style: AppTypography.body.copyWith(color: AppColors.darkGray),
+          ),
+          const SizedBox(height: 14),
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: [
+              if (primaryLabel != null && primaryRoute != null)
+                _StaticActionChip(
+                  label: primaryLabel!,
+                  onTap: () => context.go(primaryRoute!),
+                ),
+              if (secondaryLabel != null && secondaryRoute != null)
+                _StaticActionChip(
+                  label: secondaryLabel!,
+                  onTap: () => context.go(secondaryRoute!),
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CustomerProtectedSection extends StatelessWidget {
+  const _CustomerProtectedSection({
+    required this.sectionKey,
+    required this.child,
+  });
+
+  final String sectionKey;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<Customer>(
+      future: ApiService.getCustomerProfile(
+        ApiService.requireAuthenticatedCustomerId(),
+      ),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) {
+          return const AppPortalSectionSkeleton(
+            showHero: true,
+            statCards: 2,
+            listItems: 3,
+          );
+        }
+
+        final customer = snapshot.data!;
+        final accessState = CustomerAccessState(
+          customer: customer,
+          customerStatus: customer.status,
+        );
+
+        if (accessState.serviceAccessEnabled) {
+          return child;
+        }
+
+        switch (sectionKey) {
+          case 'appointments':
+            return const _PendingCustomerAccessCard(
+              title: 'Appointments unlock after card issue',
+              message:
+                  'Consultation, clinic, lab, dental, and homecare bookings stay disabled until SHIELD issues the membership card.',
+              primaryLabel: 'Membership status',
+              primaryRoute: '/portal/customer/membership',
+              secondaryLabel: 'Browse products',
+              secondaryRoute: '/portal/customer/services',
+            );
+          default:
+            return child;
+        }
+      },
+    );
+  }
+}
+
+class _CustomerDocumentsView extends StatelessWidget {
+  const _CustomerDocumentsView();
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<Customer>(
+      future: ApiService.getCustomerProfile(
+        ApiService.requireAuthenticatedCustomerId(),
+      ),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) {
+          return const AppPortalSectionSkeleton(
+            showHero: true,
+            statCards: 2,
+            listItems: 3,
+          );
+        }
+
+        final customer = snapshot.data!;
+        final accessState = CustomerAccessState(
+          customer: customer,
+          customerStatus: customer.status,
+        );
+
+        if (!accessState.serviceAccessEnabled) {
+          return const _PendingCustomerAccessCard(
+            title: 'Documents unlock after card issue',
+            message:
+                'Document uploads, linked care files, and member-record access stay locked until SHIELD issues the customer membership card.',
+            primaryLabel: 'Membership status',
+            primaryRoute: '/portal/customer/membership',
+            secondaryLabel: 'Complete profile',
+            secondaryRoute: '/portal/customer/profile',
+          );
+        }
+
+        return const _PendingCustomerAccessCard(
+          title: 'Documents migration in progress',
+          message:
+              'This customer route has been reserved for the backend-driven document experience and is being extracted away from older static portal content.',
+          primaryLabel: 'Open notifications',
+          primaryRoute: '/portal/customer/notifications',
+          secondaryLabel: 'Open profile',
+          secondaryRoute: '/portal/customer/profile',
+        );
+      },
+    );
+  }
+}
+
+class _CustomerPrescriptionsView extends StatelessWidget {
+  const _CustomerPrescriptionsView();
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<Customer>(
+      future: ApiService.getCustomerProfile(
+        ApiService.requireAuthenticatedCustomerId(),
+      ),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) {
+          return const AppPortalSectionSkeleton(
+            showHero: true,
+            statCards: 2,
+            listItems: 3,
+          );
+        }
+
+        final customer = snapshot.data!;
+        final accessState = CustomerAccessState(
+          customer: customer,
+          customerStatus: customer.status,
+        );
+
+        if (!accessState.serviceAccessEnabled) {
+          return const _PendingCustomerAccessCard(
+            title: 'Prescriptions stay pending',
+            message:
+                'Prescription uploads and pharmacy-linked care actions are blocked until the SHIELD membership card is issued. You can still browse loaded products.',
+            primaryLabel: 'Browse products',
+            primaryRoute: '/portal/customer/services',
+            secondaryLabel: 'Membership status',
+            secondaryRoute: '/portal/customer/membership',
+          );
+        }
+
+        return const _PendingCustomerAccessCard(
+          title: 'Prescriptions route reserved',
+          message:
+              'The dedicated prescription workflow is being moved out of older static portal content and into the customer production slice.',
+          primaryLabel: 'Open services',
+          primaryRoute: '/portal/customer/services',
+          secondaryLabel: 'Open notifications',
+          secondaryRoute: '/portal/customer/notifications',
+        );
+      },
     );
   }
 }
@@ -5469,6 +5759,7 @@ class _CustomerServicesView extends StatefulWidget {
 }
 
 class _CustomerServicesViewState extends State<_CustomerServicesView> {
+  late Future<Customer> _customerFuture;
   String _activeTab =
       'PHARMACY'; // 'PHARMACY', 'LAB', 'HOMECARE', 'CONSULTATION'
   String _uploadStatus = 'No files selected';
@@ -5486,6 +5777,14 @@ class _CustomerServicesViewState extends State<_CustomerServicesView> {
   String _consultationMode = 'IN_PERSON'; // 'IN_PERSON', 'TELE', 'VIDEO'
   DateTime _selectedDate = DateTime.now().add(const Duration(days: 1));
   String? _selectedDietPlan;
+
+  @override
+  void initState() {
+    super.initState();
+    _customerFuture = ApiService.getCustomerProfile(
+      ApiService.requireAuthenticatedCustomerId(),
+    );
+  }
 
   @override
   void dispose() {
@@ -6068,39 +6367,149 @@ class _CustomerServicesViewState extends State<_CustomerServicesView> {
 
   @override
   Widget build(BuildContext context) {
+    return FutureBuilder<Customer>(
+      future: _customerFuture,
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) {
+          return const AppPortalSectionSkeleton(
+            showHero: true,
+            statCards: 2,
+            listItems: 4,
+          );
+        }
+
+        final customer = snapshot.data!;
+        final accessState = CustomerAccessState(
+          customer: customer,
+          customerStatus: customer.status,
+        );
+
+        if (!accessState.serviceAccessEnabled) {
+          return _buildPendingProductPreview();
+        }
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              physics: const BouncingScrollPhysics(),
+              child: Row(
+                children: [
+                  _buildTabButton(
+                    'PHARMACY',
+                    'Pharmacy',
+                    Icons.local_pharmacy_outlined,
+                  ),
+                  const SizedBox(width: 8),
+                  _buildTabButton('LAB', 'Laboratory', Icons.biotech_outlined),
+                  const SizedBox(width: 8),
+                  _buildTabButton('HOMECARE', 'Home Care', Icons.home_outlined),
+                  const SizedBox(width: 8),
+                  _buildTabButton(
+                    'CONSULTATION',
+                    'Consultations',
+                    Icons.people_outline,
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+            AnimatedSwitcher(
+              duration: const Duration(milliseconds: 200),
+              child: _buildActiveTabContent(),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildPendingProductPreview() {
+    const products = [
+      {
+        'name': 'Omega-3 Fish Oil',
+        'price': '₹650.00',
+        'desc': 'Heart and joint health',
+      },
+      {
+        'name': 'Vitamin D3 60K',
+        'price': '₹150.00',
+        'desc': 'Bone strength support',
+      },
+      {
+        'name': 'Multi-Vitamin Daily',
+        'price': '₹240.00',
+        'desc': 'Loaded wellness support',
+      },
+    ];
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Tab Selector Row
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          physics: const BouncingScrollPhysics(),
-          child: Row(
-            children: [
-              _buildTabButton(
-                'PHARMACY',
-                'Pharmacy',
-                Icons.local_pharmacy_outlined,
-              ),
-              const SizedBox(width: 8),
-              _buildTabButton('LAB', 'Laboratory', Icons.biotech_outlined),
-              const SizedBox(width: 8),
-              _buildTabButton('HOMECARE', 'Home Care', Icons.home_outlined),
-              const SizedBox(width: 8),
-              _buildTabButton(
-                'CONSULTATION',
-                'Consultations',
-                Icons.people_outline,
-              ),
-            ],
-          ),
+        const _PendingCustomerAccessCard(
+          title: 'Browse-only product access',
+          message:
+              'Your SHIELD profile is created, but member services remain locked until admin or agent card issuance. You can still browse the loaded product experience below.',
+          primaryLabel: 'Membership status',
+          primaryRoute: '/portal/customer/membership',
+          secondaryLabel: 'Complete profile',
+          secondaryRoute: '/portal/customer/profile',
         ),
-        const SizedBox(height: 24),
-
-        // Tab Contents
-        AnimatedSwitcher(
-          duration: const Duration(milliseconds: 200),
-          child: _buildActiveTabContent(),
+        const SizedBox(height: 18),
+        Text('Loaded products', style: AppTypography.h4),
+        const SizedBox(height: 12),
+        ...products.map(
+          (product) => Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: AppCard(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: AppColors.shieldBlue.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: const Icon(
+                      Icons.local_pharmacy_outlined,
+                      color: AppColors.shieldBlue,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          product['name']!,
+                          style: AppTypography.body.copyWith(
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          product['desc']!,
+                          style: AppTypography.small.copyWith(
+                            color: AppColors.gray,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Text(
+                    product['price']!,
+                    style: AppTypography.small.copyWith(
+                      color: AppColors.shieldNavy,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
         ),
       ],
     );

@@ -65,3 +65,14 @@ export type AuthenticatedSession = {
   sessionId: string;
   principal: ShieldPrincipal;
 };
+
+export type AuthRequestContext = {
+  deviceId?: string;
+  deviceName?: string;
+  platform?: string;
+  browser?: string;
+  os?: string;
+  ipAddress?: string;
+  userAgent?: string;
+  loginMethod?: string;
+};

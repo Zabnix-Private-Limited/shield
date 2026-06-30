@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../../../app/theme/app_colors.dart';
 import '../../../../../app/theme/app_typography.dart';
 import '../../../../../shared/models/customer.dart';
 import '../../../../../shared/models/membership.dart';
+import '../../../shared/domain/customer_access_state.dart';
 import '../../domain/entities/dashboard_entity.dart';
 import 'membership_card.dart';
 import 'quick_actions.dart';
@@ -13,6 +15,7 @@ class GreetingHeader extends StatelessWidget {
     super.key,
     required this.customer,
     required this.membership,
+    required this.accessState,
     required this.wallet,
     required this.upcomingVisits,
     required this.documentCount,
@@ -21,6 +24,7 @@ class GreetingHeader extends StatelessWidget {
 
   final Customer customer;
   final Membership membership;
+  final CustomerAccessState accessState;
   final DashboardWalletSummary wallet;
   final int upcomingVisits;
   final int documentCount;
@@ -59,7 +63,9 @@ class GreetingHeader extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      membership.tierLabel,
+                      accessState.serviceAccessEnabled
+                          ? membership.tierLabel
+                          : 'Membership pending approval',
                       style: AppTypography.small.copyWith(
                         color: AppColors.white.withValues(alpha: 0.8),
                       ),
@@ -67,9 +73,18 @@ class GreetingHeader extends StatelessWidget {
                   ],
                 ),
               ),
-              MembershipCard(status: customer.status),
+              MembershipCard(status: accessState.heroStatusLabel),
             ],
           ),
+          if (!accessState.serviceAccessEnabled) ...[
+            const SizedBox(height: 10),
+            Text(
+              'You can complete your profile and browse loaded products now. Care services unlock only after SHIELD issues your membership card.',
+              style: AppTypography.small.copyWith(
+                color: AppColors.white.withValues(alpha: 0.84),
+              ),
+            ),
+          ],
           const SizedBox(height: 12),
           LayoutBuilder(
             builder: (context, constraints) {
@@ -80,25 +95,95 @@ class GreetingHeader extends StatelessWidget {
                 children: [
                   _HeroStatBlock(
                     width: itemWidth,
-                    label: 'Wallet',
-                    value: '₹${wallet.balance.toStringAsFixed(0)}',
-                    secondary:
-                        '${wallet.pointsBalance.toStringAsFixed(0)} reward pts',
+                    label: accessState.serviceAccessEnabled
+                        ? 'Wallet'
+                        : 'Products',
+                    value: accessState.serviceAccessEnabled
+                        ? '₹${wallet.balance.toStringAsFixed(0)}'
+                        : 'Browse only',
+                    secondary: accessState.serviceAccessEnabled
+                        ? '${wallet.pointsBalance.toStringAsFixed(0)} reward pts'
+                        : 'Loaded products stay visible before card issue',
                   ),
                   _HeroStatBlock(
                     width: itemWidth,
-                    label: 'Activity',
-                    value: '$upcomingVisits visits',
-                    secondary: '$documentCount documents',
+                    label: accessState.serviceAccessEnabled
+                        ? 'Activity'
+                        : 'Card status',
+                    value: accessState.serviceAccessEnabled
+                        ? '$upcomingVisits visits'
+                        : 'Pending',
+                    secondary: accessState.serviceAccessEnabled
+                        ? '$documentCount documents'
+                        : 'Issued by admin or agent team',
                   ),
                 ],
               );
             },
           ),
           const SizedBox(height: 10),
-          QuickActions(actions: quickActions),
+          if (accessState.serviceAccessEnabled)
+            QuickActions(actions: quickActions)
+          else
+            const _PendingQuickActions(),
         ],
       ),
+    );
+  }
+}
+
+class _PendingQuickActions extends StatelessWidget {
+  const _PendingQuickActions();
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final singleWidth = constraints.maxWidth;
+        final twoColumnWidth = constraints.maxWidth >= 280
+            ? (constraints.maxWidth - 12) / 2
+            : singleWidth;
+
+        Widget action(String label, String route, {bool full = false}) {
+          return SizedBox(
+            width: full ? singleWidth : twoColumnWidth,
+            child: Material(
+              color: AppColors.white.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(14),
+              child: InkWell(
+                onTap: () => context.go(route),
+                borderRadius: BorderRadius.circular(14),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 12,
+                  ),
+                  child: Text(
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
+                    style: AppTypography.small.copyWith(
+                      color: AppColors.white,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          );
+        }
+
+        return Wrap(
+          spacing: 12,
+          runSpacing: 10,
+          children: [
+            action('Complete profile', '/portal/customer/profile'),
+            action('Browse products', '/portal/customer/services'),
+            action('Check membership', '/portal/customer/membership', full: true),
+          ],
+        );
+      },
     );
   }
 }

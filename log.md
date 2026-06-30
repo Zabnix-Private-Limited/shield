@@ -5044,3 +5044,39 @@ pm run build (backend)
 
 ---
 2026-06-30 09:05:05 IST
+
+## 144. Replaced Redis-Critical Auth Sessions With A PostgreSQL Authentication Subsystem
+**High-level description**: Moved SHIELD authentication state onto PostgreSQL so customer and internal login no longer depend on an always-on Redis tier, and expanded the backend auth model into a real session/device/history subsystem that fits the platform's multi-portal future.
+- Added PostgreSQL auth-domain tables in schema.prisma for AuthSession, AuthDevice, and LoginHistory, and linked device push tokens to authenticated devices so customer notifications and session ownership share the same backend identity trail.
+- Reworked ackend/src/auth/auth.service.ts so refresh-token persistence, refresh lookup, session revocation, and JWT session validation now use Prisma/PostgreSQL instead of Redis. Refresh tokens are stored only as SHA-256 hashes, while each session now captures owner type, device linkage, auth method, expiry, revocation state, and session activity timestamps.
+- Expanded ackend/src/auth/auth.controller.ts to capture request metadata (device id/label, browser, platform, OS, IP, user agent) for login/register/refresh flows and added protected session-management endpoints for authenticated users to inspect active sessions, inspect login history, and revoke owned sessions.
+- Updated notification token registration so FCM device tokens can attach back to the current authenticated auth-device record rather than existing as isolated customer rows.
+- Added a lightweight frontend device-identity service and passed installation/device metadata through customer login, registration, refresh, logout, and push-token registration so the new backend auth-device model starts receiving stable per-installation hints immediately.
+- Redis remains available for health reporting and future cache/rate-limit use, but SHIELD authentication is no longer modeled as Redis-owned application state.
+- The remaining operational step is schema application in the real database (prisma db push / equivalent deploy migration path). This was intentionally not executed automatically here because the configured database may be a shared remote environment.
+
+### Files Modified/Created
+**Frontend Files (Created)**:
+- frontend/lib/shared/services/device_identity_service.dart
+
+**Frontend Files (Modified)**:
+- frontend/lib/shared/services/api_service.dart
+- frontend/lib/shared/services/customer_auth_session.dart
+- frontend/lib/shared/services/firebase_bootstrap_service.dart
+- frontend/lib/features/customer/auth/data/customer_auth_repository.dart
+
+**Backend Files (Modified)**:
+- backend/prisma/schema.prisma
+- backend/src/auth/auth.types.ts
+- backend/src/auth/auth.service.ts
+- backend/src/auth/auth.controller.ts
+- backend/src/auth/auth.module.ts
+- backend/src/notification/notification.controller.ts
+- backend/src/notification/notification.service.ts
+
+### Verification
+- npm run build (backend)
+- flutter analyze lib/shared/services/api_service.dart lib/shared/services/customer_auth_session.dart lib/shared/services/firebase_bootstrap_service.dart lib/shared/services/device_identity_service.dart lib/features/customer/auth/data/customer_auth_repository.dart (frontend)
+
+---
+2026-06-30 09:31:26 IST

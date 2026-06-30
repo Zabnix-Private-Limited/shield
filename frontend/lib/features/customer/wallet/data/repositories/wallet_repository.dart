@@ -12,17 +12,17 @@ class WalletRepository {
   final WalletRemoteDataSource _remote;
   final WalletLocalDataSource _local;
 
-  Future<WalletModel?> loadCachedWallet() {
-    return _local.load();
+  Future<WalletModel?> loadCachedWallet(String customerId) {
+    return _local.load(customerId);
   }
 
   Future<WalletModel> loadWallet(String customerId) async {
     try {
       final wallet = await _remote.fetch(customerId);
-      await _local.save(wallet);
+      await _local.save(customerId, wallet);
       return wallet;
     } catch (_) {
-      final cached = await _local.load();
+      final cached = await _local.load(customerId);
       if (cached != null) {
         return cached;
       }
@@ -32,11 +32,11 @@ class WalletRepository {
 
   Future<WalletModel> refreshWallet(String customerId) async {
     final wallet = await _remote.fetch(customerId);
-    await _local.save(wallet);
+    await _local.save(customerId, wallet);
     return wallet;
   }
 
-  Future<void> invalidateCache() {
-    return _local.clear();
+  Future<void> invalidateCache(String customerId) {
+    return _local.clear(customerId);
   }
 }

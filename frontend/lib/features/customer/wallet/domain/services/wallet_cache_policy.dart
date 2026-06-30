@@ -1,4 +1,4 @@
 class WalletCachePolicy {
   static const String boxName = 'customer_wallet_cache';
-  static const String cacheKey = 'customer_wallet';
+  static String cacheKeyFor(String customerId) => 'customer_wallet_$customerId';
 }

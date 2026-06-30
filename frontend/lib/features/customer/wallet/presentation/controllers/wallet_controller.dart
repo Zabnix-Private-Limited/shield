@@ -2,17 +2,18 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 
+import '../../../../../shared/services/api_service.dart';
 import '../../data/models/wallet_model.dart';
 import '../../data/repositories/wallet_repository.dart';
 
 class WalletController extends ChangeNotifier {
   WalletController({
     WalletRepository? repository,
-    this.customerId = '1',
+    this.customerId,
   }) : _repository = repository ?? WalletRepository();
 
   final WalletRepository _repository;
-  final String customerId;
+  final String? customerId;
 
   bool _isLoading = false;
   bool _isRefreshing = false;
@@ -25,12 +26,15 @@ class WalletController extends ChangeNotifier {
   WalletModel? get wallet => _wallet;
   bool get hasData => _wallet != null;
 
+  String get _resolvedCustomerId =>
+      ApiService.requireAuthenticatedCustomerId(customerId);
+
   Future<void> load() async {
     _isLoading = true;
     _error = null;
     notifyListeners();
 
-    final cached = await _repository.loadCachedWallet();
+    final cached = await _repository.loadCachedWallet(_resolvedCustomerId);
     if (cached != null) {
       _wallet = cached;
       _isLoading = false;
@@ -40,7 +44,7 @@ class WalletController extends ChangeNotifier {
     }
 
     try {
-      _wallet = await _repository.loadWallet(customerId);
+      _wallet = await _repository.loadWallet(_resolvedCustomerId);
     } catch (error) {
       _error = error;
     } finally {
@@ -55,7 +59,7 @@ class WalletController extends ChangeNotifier {
     notifyListeners();
 
     try {
-      _wallet = await _repository.refreshWallet(customerId);
+      _wallet = await _repository.refreshWallet(_resolvedCustomerId);
     } catch (error) {
       _error = error;
     } finally {
@@ -66,7 +70,7 @@ class WalletController extends ChangeNotifier {
   }
 
   Future<void> invalidateCache() {
-    return _repository.invalidateCache();
+    return _repository.invalidateCache(_resolvedCustomerId);
   }
 
   Future<void> _refreshInBackground() async {
@@ -74,7 +78,7 @@ class WalletController extends ChangeNotifier {
     notifyListeners();
 
     try {
-      _wallet = await _repository.refreshWallet(customerId);
+      _wallet = await _repository.refreshWallet(_resolvedCustomerId);
     } catch (error) {
       _error ??= error;
     } finally {
