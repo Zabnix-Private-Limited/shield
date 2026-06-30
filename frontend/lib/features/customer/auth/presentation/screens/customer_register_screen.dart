@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../../app/theme/app_colors.dart';
 import '../../../../../app/theme/app_typography.dart';
 import '../../data/customer_auth_repository.dart';
+import '../widgets/shield_date_picker_sheet.dart';
 
 class CustomerRegisterScreen extends StatefulWidget {
   const CustomerRegisterScreen({super.key});
@@ -40,8 +41,8 @@ class _CustomerRegisterScreenState extends State<CustomerRegisterScreen> {
 
   Future<void> _pickDob() async {
     final now = DateTime.now();
-    final selected = await showDatePicker(
-      context: context,
+    final selected = await showShieldDatePickerSheet(
+      context,
       firstDate: DateTime(1930),
       lastDate: DateTime(now.year - 1, now.month, now.day),
       initialDate: DateTime(now.year - 25, now.month, now.day),
@@ -82,7 +83,7 @@ class _CustomerRegisterScreenState extends State<CustomerRegisterScreen> {
       context.go('/portal/customer/dashboard');
     } catch (error) {
       setState(() {
-        _errorText = error.toString().replaceFirst('Exception: ', '');
+        _errorText = _cleanErrorMessage(error);
       });
     } finally {
       if (mounted) {
@@ -148,7 +149,7 @@ class _CustomerRegisterScreenState extends State<CustomerRegisterScreen> {
                           child: Text(
                             _dob == null
                                 ? 'Select date of birth'
-                                : '${_dob!.day}/${_dob!.month}/${_dob!.year}',
+                                : _formatDob(_dob!),
                             style: AppTypography.body.copyWith(
                               color: _dob == null
                                   ? AppColors.gray
@@ -240,6 +241,12 @@ class _CustomerRegisterScreenState extends State<CustomerRegisterScreen> {
       filled: true,
       fillColor: AppColors.lightGray,
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      suffixIcon: hintText == 'Select DOB'
+          ? const Icon(
+              Icons.calendar_month_rounded,
+              color: AppColors.shieldBlue,
+            )
+          : null,
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(16),
         borderSide: BorderSide.none,
@@ -253,6 +260,31 @@ class _CustomerRegisterScreenState extends State<CustomerRegisterScreen> {
         borderSide: const BorderSide(color: AppColors.shieldBlue, width: 1.2),
       ),
     );
+  }
+
+  String _formatDob(DateTime date) {
+    const monthNames = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
+    return '${date.day} ${monthNames[date.month - 1]} ${date.year}';
+  }
+
+  String _cleanErrorMessage(Object error) {
+    return error
+        .toString()
+        .replaceFirst('Exception: ', '')
+        .replaceFirst('Bad state: ', '');
   }
 }
 

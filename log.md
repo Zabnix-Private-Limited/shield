@@ -4997,3 +4997,50 @@ pm run build (backend)
 
 ---
 2026-06-30 03:40:00 IST
+
+## 142. Replaced Customer DOB Input With A Custom SHIELD Date Picker Sheet
+**High-level description**: Replaced the stock date picker on customer registration with a custom SHIELD-styled bottom sheet so date selection feels consistent with the rest of the customer app instead of pulling in mismatched platform UI.
+- Added a reusable customer-auth date picker sheet with a frosted-glass bottom-sheet surface, 28px rounded corners, brand-blue selection states, and mobile-first sizing that matches the current SHIELD customer visual language.
+- Built the picker around a custom month calendar grid with previous/next month navigation, a tappable month-year header, and an animated compact month/year jump view so DOB selection stays fast without relying on a third-party widget package.
+- Kept the control dark-mode friendly by using layered translucent surfaces and theme-derived text colors rather than hard-coded light-only styling.
+- Updated the customer registration DOB field to launch the custom sheet, show a cleaner formatted date value, and use an inline calendar affordance so the registration form feels more app-native and polished.
+- Designed the sheet as a reusable primitive for future customer flows like appointments, reminders, expiry dates, and service scheduling instead of treating DOB as a one-off form control.
+
+### Files Modified/Created
+**Frontend Files (Created)**:
+- frontend/lib/features/customer/auth/presentation/widgets/shield_date_picker_sheet.dart
+
+**Frontend Files (Modified)**:
+- frontend/lib/features/customer/auth/presentation/screens/customer_register_screen.dart
+
+**Backend Files**:
+- None
+
+### Verification
+- flutter analyze lib/features/customer/auth/presentation/screens/customer_register_screen.dart lib/features/customer/auth/presentation/widgets/shield_date_picker_sheet.dart (frontend)
+
+---
+2026-06-30 09:00:38 IST
+
+## 143. Hardened Customer Auth Session Errors Around Live Redis Outage
+**High-level description**: Traced the deployed customer OTP 500 to the backend auth session store and tightened both backend and customer UI handling so a Redis outage no longer surfaces as an opaque internal-server-error path.
+- Verified the live backend health endpoint at https://shield-backend.vercel.app/health and confirmed the auth dependency state was edis.configured: true, healthy: false, with message Connection is closed., which explains the customer OTP login failure after Firebase verification succeeds.
+- Updated ackend/src/auth/auth.service.ts so refresh-session reads and session-token writes now log Redis failures explicitly and return a ServiceUnavailableException with a targeted auth-session-store message instead of a generic uncaught 500.
+- Kept the production auth contract intact: SHIELD still requires Redis-backed refresh-session persistence rather than silently degrading into a stateless or partial-login mode.
+- Cleaned the customer OTP and registration screens so backend or repository failures no longer render the raw Bad state: prefix in the customer-facing UI; they now show the underlying message directly.
+- This keeps the next deployed failure precise: if Redis is still unhealthy, customers should see an explicit temporary-auth-session message while backend logs retain the operational cause.
+
+### Files Modified/Created
+**Frontend Files (Modified)**:
+- frontend/lib/features/customer/auth/presentation/screens/customer_otp_screen.dart
+- frontend/lib/features/customer/auth/presentation/screens/customer_register_screen.dart
+
+**Backend Files (Modified)**:
+- backend/src/auth/auth.service.ts
+
+### Verification
+- npm run build (backend)
+- flutter analyze lib/features/customer/auth/presentation/screens/customer_otp_screen.dart lib/features/customer/auth/presentation/screens/customer_register_screen.dart (frontend)
+
+---
+2026-06-30 09:05:05 IST

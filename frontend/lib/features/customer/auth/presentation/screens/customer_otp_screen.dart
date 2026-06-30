@@ -96,7 +96,7 @@ class _CustomerOtpScreenState extends State<CustomerOtpScreen> {
       });
     } catch (error) {
       setState(() {
-        _errorText = error.toString().replaceFirst('Exception: ', '');
+        _errorText = _cleanErrorMessage(error);
       });
     } finally {
       if (mounted) {
@@ -116,9 +116,16 @@ class _CustomerOtpScreenState extends State<CustomerOtpScreen> {
       _startTimer();
     } catch (error) {
       setState(() {
-        _errorText = error.toString().replaceFirst('Exception: ', '');
+        _errorText = _cleanErrorMessage(error);
       });
     }
+  }
+
+  String _cleanErrorMessage(Object error) {
+    return error
+        .toString()
+        .replaceFirst('Exception: ', '')
+        .replaceFirst('Bad state: ', '');
   }
 
   @override

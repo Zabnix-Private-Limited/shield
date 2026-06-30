@@ -1,6 +1,7 @@
 import {
   Injectable,
   Logger,
+  ServiceUnavailableException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
@@ -258,7 +259,7 @@ export class AuthService {
     }
 
     const key = this.getRefreshKey(normalized);
-    const stored = await this.redisService.get(key);
+    const stored = await this.getStoredRefreshSession(key);
     if (!stored) {
       throw new UnauthorizedException('Refresh token is invalid or expired.');
     }
@@ -271,7 +272,7 @@ export class AuthService {
   async logout(refreshToken: string | undefined, principal?: ShieldPrincipal) {
     if (refreshToken?.trim()) {
       const key = this.getRefreshKey(refreshToken.trim());
-      const stored = await this.redisService.get(key);
+      const stored = await this.getStoredRefreshSession(key);
       if (stored) {
         const session = JSON.parse(stored) as StoredRefreshSession;
         await this.revokeSession(
@@ -409,14 +410,23 @@ export class AuthService {
     });
 
     const refreshToken = randomBytes(48).toString('hex');
-    await this.redisService.set(
-      this.getRefreshKey(refreshToken),
-      JSON.stringify({
-        sessionId,
-        principal: effectivePrincipal,
-      } satisfies StoredRefreshSession),
-      this.parseDurationToSeconds(this.env.jwtRefreshTtl),
-    );
+    try {
+      await this.redisService.set(
+        this.getRefreshKey(refreshToken),
+        JSON.stringify({
+          sessionId,
+          principal: effectivePrincipal,
+        } satisfies StoredRefreshSession),
+        this.parseDurationToSeconds(this.env.jwtRefreshTtl),
+      );
+    } catch (error) {
+      this.logger.error(
+        `Failed to persist auth session in Redis: ${error}`,
+      );
+      throw new ServiceUnavailableException(
+        'Authentication session store is unavailable. Please try again shortly.',
+      );
+    }
 
     return {
       accessToken,
@@ -502,6 +512,17 @@ export class AuthService {
 
   private getRefreshKey(refreshToken: string) {
     return `auth:refresh:${this.hashToken(refreshToken)}`;
+  }
+
+  private async getStoredRefreshSession(key: string) {
+    try {
+      return await this.redisService.get(key);
+    } catch (error) {
+      this.logger.error(`Failed to read auth session from Redis: ${error}`);
+      throw new ServiceUnavailableException(
+        'Authentication session store is unavailable. Please try again shortly.',
+      );
+    }
   }
 
   private getRevokedKey(sessionId: string) {
