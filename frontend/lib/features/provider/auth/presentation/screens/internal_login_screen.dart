@@ -98,7 +98,7 @@ class _InternalLoginScreenState extends State<InternalLoginScreen> {
                     Text('SHIELD Internal Access', style: AppTypography.h3),
                     const SizedBox(height: 10),
                     Text(
-                      'Use your provisioned Google account to open the provider, CRM, and operational workspaces.',
+                      'Use your provisioned Google account to open the provider, CRM, and operational screens.',
                       style: AppTypography.body.copyWith(
                         color: AppColors.gray,
                         height: 1.45,

@@ -70,7 +70,7 @@ export class ServiceProviderController {
     });
     return {
       success: true,
-      message: 'Provider workspace retrieved successfully.',
+      message: 'Provider information retrieved successfully.',
       data: workspace,
     };
   }
@@ -87,7 +87,7 @@ export class ServiceProviderController {
     );
     return {
       success: true,
-      message: 'Provider patient workspace retrieved successfully.',
+      message: 'Patient record retrieved successfully.',
       data: workspace,
     };
   }

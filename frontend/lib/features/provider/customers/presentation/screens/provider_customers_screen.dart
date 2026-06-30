@@ -1025,7 +1025,7 @@ class _ProviderCustomersScreenState extends State<ProviderCustomersScreen> {
       case 'timeline':
         return controller.timelineSubtitle as String;
       case 'appointments':
-        return 'Review upcoming and past appointments without leaving the patient workspace.';
+        return 'Review upcoming and past appointments without leaving the patient record.';
       case 'records':
         return 'Open the latest uploaded records, reports, and supporting files for this patient.';
       case 'payments':

@@ -159,7 +159,7 @@ class ProviderPortalController extends ChangeNotifier {
       'Select a patient to open the full care view.';
 
   String get patientWorkspaceTitle =>
-      patientWorkspaceMetadata['title']?.toString() ?? 'Patient workspace';
+      patientWorkspaceMetadata['title']?.toString() ?? 'Patient Record';
 
   String get patientWorkspaceDescription =>
       patientWorkspaceMetadata['description']?.toString() ??
@@ -193,7 +193,7 @@ class ProviderPortalController extends ChangeNotifier {
 
   String get patientSearchSubtitle =>
       searchConfig['subtitle']?.toString() ??
-      'Open one patient and keep visits, records, membership, and payments together in a single workspace.';
+      'Open one patient and keep visits, records, membership, and payments together in a single patient record.';
 
   String get patientSearchPlaceholder =>
       searchConfig['placeholder']?.toString() ??
@@ -423,83 +423,8 @@ class ProviderPortalController extends ChangeNotifier {
   String get activeVisitStatusLabel =>
       consultationWorkspace['statusLabel']?.toString() ?? 'Waiting';
 
-  List<Map<String, dynamic>> get selectedTimeline {
-    if (_selectedTimelineEntries.isNotEmpty) {
-      return _selectedTimelineEntries.toList();
-    }
-
-    final items = <Map<String, dynamic>>[];
-    for (final timelineEntry in activeVisitTimeline) {
-      items.add({
-        'kind': timelineEntry['code'] ?? 'VISIT',
-        'title': timelineEntry['title'] ?? 'Visit update',
-        'subtitle': timelineEntry['subtitle'] ?? '',
-        'timestamp':
-            DateTime.tryParse(timelineEntry['timestamp']?.toString() ?? '') ??
-            DateTime.now(),
-      });
-    }
-    for (final appointment in selectedAppointments) {
-      items.add({
-        'kind': 'APPOINTMENT',
-        'title': appointment.typeLabel,
-        'subtitle': appointment.statusLabel,
-        'timestamp': appointment.appointmentDate,
-      });
-    }
-    for (final document in selectedDocuments) {
-      items.add({
-        'kind': 'DOCUMENT',
-        'title': document.fileName,
-        'subtitle': '${document.typeLabel} • ${document.statusLabel}',
-        'timestamp': document.uploadedAt,
-      });
-    }
-    for (final transaction in selectedWalletTransactions) {
-      items.add({
-        'kind': transaction.subLedgerType == 'POINTS' ? 'REWARD' : 'WALLET',
-        'title': transaction.remarks?.trim().isNotEmpty == true
-            ? transaction.remarks
-            : transaction.isCredit
-            ? 'Wallet credit'
-            : 'Wallet debit',
-        'subtitle':
-            '${transaction.subLedgerType} • ${transaction.isCredit ? 'Credit' : 'Debit'}',
-        'timestamp': transaction.createdAt,
-      });
-    }
-    for (final purchase in selectedPurchases) {
-      items.add({
-        'kind': 'BILLING',
-        'title':
-            purchase['invoiceNumber']?.toString() ??
-            purchase['invoice_number']?.toString() ??
-            'Invoice',
-        'subtitle':
-            'Payment ${formatCurrency(purchase['payableAmount'] ?? purchase['payable_amount'])}',
-        'timestamp':
-            DateTime.tryParse(
-              purchase['purchaseDate']?.toString() ??
-                  purchase['purchase_date']?.toString() ??
-                  '',
-            ) ??
-            DateTime.now(),
-      });
-    }
-    for (final notification in selectedNotifications) {
-      items.add({
-        'kind': 'NOTIFICATION',
-        'title': notification.title,
-        'subtitle': notification.body,
-        'timestamp': notification.createdAt,
-      });
-    }
-    items.sort(
-      (a, b) =>
-          (b['timestamp'] as DateTime).compareTo(a['timestamp'] as DateTime),
-    );
-    return items;
-  }
+  List<Map<String, dynamic>> get selectedTimeline =>
+      _selectedTimelineEntries.toList();
 
   Future<void> ensureLoaded() async {
     if (_loading || _workspaceLoaded) {

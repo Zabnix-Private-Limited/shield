@@ -32,7 +32,7 @@ export class OperationsQueueController {
     });
     return {
       success: true,
-      message: 'Provider workspace queue retrieved successfully.',
+      message: 'Provider queue retrieved successfully.',
       data,
     };
   }

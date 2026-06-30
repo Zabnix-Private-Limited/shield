@@ -54,7 +54,7 @@ class _ProviderWorkspaceScaffoldState
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text('Provider workspace unavailable', style: AppTypography.h4),
+              Text('Provider screen unavailable', style: AppTypography.h4),
               const SizedBox(height: 8),
               Text(
                 controller.error!,

@@ -6431,4 +6431,53 @@ est build, ackend/vercel.json, ackend/src/auth/auth.service.ts, and uth_devic
 
 ### Remaining Blockers / Risks
 - Timeline ownership is now centralized, but printing templates, provider reports/exports, and true provider-live notifications still need their own completion slices before the Provider Portal can be frozen with zero functional gaps.
-- Audit logging now covers the main provider visit workflow actions, but document download/print actions still need follow-up instrumentation if those operations become active inside the provider workspace.
+- Audit logging now covers the main provider visit workflow actions, but document download/print actions still need follow-up instrumentation if those operations become active inside the provider workspace.## 180. Provider Portal Freeze Cleanup: Backend-owned timeline-only rendering and provider wording normalization
+**Timestamp:** 2026-07-01 00:25:00 IST
+
+### Why this was changed
+- The Provider Portal still had one remaining frontend-composed patient timeline fallback inside the provider controller, which violated the rule that timeline semantics must come entirely from the backend.
+- A small set of provider-facing strings still exposed the technical word "workspace" in visible UI and backend display contracts, which conflicted with the repository requirement to use plain healthcare language.
+- The appointment service still contained dead legacy consultation timeline composition logic after the centralized timeline engine was introduced.
+
+### What was changed
+- Removed the last Flutter-side fallback timeline composition from the provider controller so patient activity now renders only the backend-provided timeline stream.
+- Removed the unused legacy consultation timeline builder from the appointment service.
+- Normalized provider-facing labels from "Patient Workspace" to "Patient Record" and from role-specific "Workspace" titles to "Operations" where those values were visible to staff.
+- Updated provider-facing API success messages and error copy to avoid the old technical wording.
+- Kept internal identifiers, route names, and class names unchanged where they are implementation details rather than user-visible content.
+
+### Architectural decisions
+- Backend remains the single source of truth for patient timeline entries; Flutter now renders `_selectedTimelineEntries` only and does not infer activity from appointments, billing, documents, wallet transactions, or notifications.
+- Visible healthcare terminology was corrected without renaming internal symbols, which avoids unnecessary churn while still fixing the production user experience.
+- The cleanup was scoped to production-path provider surfaces instead of broad repo renames, so the Provider freeze can proceed safely without destabilizing unrelated portals.
+
+### Backend files modified
+- `backend/src/appointment/appointment.service.ts`
+- `backend/src/operations-queue/operations-queue.controller.ts`
+- `backend/src/operations-queue/operations-queue.service.ts`
+- `backend/src/operations-queue/provider-workspace-metadata.service.ts`
+- `backend/src/service-provider/service-provider.controller.ts`
+
+### Frontend files modified
+- `frontend/lib/features/provider/shared/presentation/controllers/provider_portal_controller.dart`
+- `frontend/lib/features/provider/shared/presentation/widgets/provider_workspace_scaffold.dart`
+- `frontend/lib/features/provider/auth/presentation/screens/internal_login_screen.dart`
+- `frontend/lib/features/provider/customers/presentation/screens/provider_customers_screen.dart`
+- `frontend/lib/features/portal/presentation/portal_role_data.dart`
+
+### New endpoints
+- No new endpoints were added in this cleanup slice.
+
+### Validation performed
+- `npm run build` in `backend/`
+- `flutter analyze --no-pub` in `frontend/`
+- `flutter test` in `frontend/`
+- Manual repository search confirmed the targeted provider-facing "Patient Workspace" and "provider workspace" wording was removed from production-path display copy.
+
+### SQL migration required
+- No SQL migration required.
+
+### Remaining blockers
+- Provider printing/export templates are still not implemented as a shared production print system.
+- Provider reports are still not complete enough to call the portal fully frozen.
+- Live provider notifications are not yet wired to a real-time transport layer, although the portal is structured to support that next.

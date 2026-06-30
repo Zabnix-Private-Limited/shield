@@ -242,7 +242,7 @@ export class ProviderWorkspaceMetadataService {
       {
         id: 'customers',
         moduleId: 'patient-workspace',
-        title: 'Patient Workspace',
+        title: 'Patient Record',
         icon: 'patient',
         route: '/portal/provider/customers',
         permission: 'providers.view',
@@ -334,13 +334,13 @@ export class ProviderWorkspaceMetadataService {
       },
       {
         id: 'patient-workspace',
-        title: 'Patient Workspace',
+        title: 'Patient Record',
         permission: 'providers.view',
         renderer: 'patient-workspace',
         sectionKey: 'customers',
         category: 'workspace',
-        description: 'One patient-centered workspace for visits, records, billing, and follow-up.',
-        emptyStateMessage: 'Select a patient to open the full care workspace.',
+        description: 'One patient-centered record for visits, records, billing, and follow-up.',
+        emptyStateMessage: 'Select a patient to open the full patient record.',
         searchConfig: this.buildSearchConfig(profile),
         actions: ['start-consultation', 'open-timeline', 'check-payments'],
         featureFlags: ['patient-workspace', 'visit-engine'],
@@ -873,8 +873,8 @@ export class ProviderWorkspaceMetadataService {
         consultationCompleted: 'Visit completed successfully.',
       },
       errors: {
-        metadataUnavailable:
-          'Provider workspace details could not be loaded right now.',
+          metadataUnavailable:
+          'Provider details could not be loaded right now.',
         patientUnavailable: 'Patient details could not be loaded right now.',
         consultationUnavailable:
           'Visit details could not be loaded right now.',
@@ -884,9 +884,9 @@ export class ProviderWorkspaceMetadataService {
 
   private buildPatientWorkspace(profile: ProviderWorkflowProfileCode) {
     return {
-      title: 'Patient workspace',
+      title: 'Patient Record',
       description:
-        'Open one patient and keep visits, records, billing, and follow-up work together in a single workspace.',
+        'Open one patient and keep visits, records, billing, and follow-up work together in one place.',
       emptyStateMessage:
         'Select a patient to open the full care view. Visits, records, benefits, and payments stay together here.',
       headerFields: [
@@ -1216,19 +1216,19 @@ export class ProviderWorkspaceMetadataService {
   private getWorkspaceTitle(profile: ProviderWorkflowProfileCode) {
     switch (profile) {
       case 'PHARMACY':
-        return 'Pharmacy Workspace';
+        return 'Pharmacy Operations';
       case 'DENTAL':
-        return 'Dental Workspace';
+        return 'Dental Operations';
       case 'LABORATORY':
-        return 'Laboratory Workspace';
+        return 'Laboratory Operations';
       case 'HOME_VISIT':
-        return 'Home Care Workspace';
+        return 'Home Care Operations';
       case 'COSMETIC':
-        return 'Cosmetic Care Workspace';
+        return 'Cosmetic Care Operations';
       case 'DIETITIAN':
-        return 'Dietitian Workspace';
+        return 'Dietitian Operations';
       case 'CLINIC':
-        return 'Clinic Workspace';
+        return 'Clinic Operations';
       case 'GENERAL':
       default:
         return 'Provider Care Hub';
@@ -1359,11 +1359,11 @@ export class ProviderWorkspaceMetadataService {
   private getSearchSubtitle(profile: ProviderWorkflowProfileCode) {
     switch (profile) {
       case 'PHARMACY':
-        return 'Open one patient and keep verification, records, membership, and payments together in a single workspace.';
+      return 'Open one patient and keep verification, records, membership, and payments together in one place.';
       case 'LABORATORY':
-        return 'Open one patient and keep sample work, reports, billing, and follow-up together in a single workspace.';
+      return 'Open one patient and keep sample work, reports, billing, and follow-up together in one place.';
       default:
-        return 'Open one patient and keep appointments, medical records, membership, and payments together in a single workspace.';
+      return 'Open one patient and keep appointments, medical records, membership, and payments together in one place.';
     }
   }
 

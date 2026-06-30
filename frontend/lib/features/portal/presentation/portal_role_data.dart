@@ -320,9 +320,9 @@ PortalRoleData portalDataForRole(SHIELDRole role) {
     case SHIELDRole.pharmacyStaff:
       return PortalRoleData(
         role: role,
-        operatorName: 'Pharmacy Workspace',
+        operatorName: 'Pharmacy Operations',
         headline: 'Live pharmacy operations across customers and documents',
-        regionLabel: 'Provider-side fulfillment workspace',
+        regionLabel: 'Provider-side fulfillment center',
         icon: Icons.local_pharmacy_outlined,
         accentColor: AppColors.shieldGreen,
         sections: [
@@ -338,9 +338,9 @@ PortalRoleData portalDataForRole(SHIELDRole role) {
     case SHIELDRole.clinicStaff:
       return PortalRoleData(
         role: role,
-        operatorName: 'Clinic Workspace',
+        operatorName: 'Clinic Operations',
         headline: 'Patient flow, appointments, and consultation records',
-        regionLabel: 'Clinic-side care delivery workspace',
+        regionLabel: 'Clinic-side care delivery center',
         icon: Icons.local_hospital_outlined,
         accentColor: AppColors.shieldNavy,
         sections: [
@@ -355,9 +355,9 @@ PortalRoleData portalDataForRole(SHIELDRole role) {
     case SHIELDRole.dentalStaff:
       return PortalRoleData(
         role: role,
-        operatorName: 'Dental Workspace',
+        operatorName: 'Dental Operations',
         headline: 'Dental care scheduling, treatments, and reports',
-        regionLabel: 'Dental provider workspace',
+        regionLabel: 'Dental care center',
         icon: Icons.medical_services_outlined,
         accentColor: AppColors.warning,
         sections: [

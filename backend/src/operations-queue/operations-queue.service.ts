@@ -631,7 +631,7 @@ export class OperationsQueueService {
       queueStages: this.buildQueueStages(profile),
       dashboardHighlights: this.buildDashboardHighlights(profile),
       patientWorkspace: {
-        title: 'Patient workspace',
+        title: 'Patient Record',
         emptyStateMessage:
           'Select a patient to open the full care view. Visits, records, benefits, and payments stay together here.',
         tabs: [
@@ -776,7 +776,7 @@ export class OperationsQueueService {
     const baseModules = [
       { id: 'dashboard', title: 'Dashboard', permission: 'providers.view' },
       { id: 'queue', title: 'Live Queue', permission: 'providers.view' },
-      { id: 'patients', title: 'Patient Workspace', permission: 'providers.view' },
+      { id: 'patients', title: 'Patient Record', permission: 'providers.view' },
       { id: 'appointments', title: 'Appointments', permission: 'providers.view' },
       { id: 'documents', title: 'Medical Records', permission: 'providers.view' },
       { id: 'settings', title: 'Settings', permission: 'providers.view' },
@@ -969,19 +969,19 @@ export class OperationsQueueService {
   private getWorkspaceTitle(profile: ProviderWorkflowProfileCode) {
     switch (profile) {
       case 'PHARMACY':
-        return 'Pharmacy Workspace';
+        return 'Pharmacy Operations';
       case 'DENTAL':
-        return 'Dental Workspace';
+        return 'Dental Operations';
       case 'LABORATORY':
-        return 'Laboratory Workspace';
+        return 'Laboratory Operations';
       case 'HOME_VISIT':
-        return 'Home Care Workspace';
+        return 'Home Care Operations';
       case 'COSMETIC':
-        return 'Cosmetic Care Workspace';
+        return 'Cosmetic Care Operations';
       case 'DIETITIAN':
-        return 'Dietitian Workspace';
+        return 'Dietitian Operations';
       case 'CLINIC':
-        return 'Clinic Workspace';
+        return 'Clinic Operations';
       case 'GENERAL':
       default:
         return 'Provider Care Hub';
