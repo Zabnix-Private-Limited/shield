@@ -5678,3 +5678,41 @@ est build, ackend/vercel.json, ackend/src/auth/auth.service.ts, and uth_devic
 
 ---
 2026-06-30 15:48:40 IST
+
+## 165. Provider Workflow UX Shift: Dashboard, Queue, and Customer Workspace Refocused Around Operational Work
+**High-level description**: Refactored the core provider experience away from sparse page-like CRUD surfaces and toward a denser operational workflow shape, using the existing live provider workspace data to emphasize urgent work, queue stages, and a single customer workspace instead of isolated lists and chips.
+- Extended `ProviderPortalController` with presentation-safe derived workflow helpers so widgets can render stage-grouped queue data, urgent work items, provider identity, selected-customer timeline entries, upcoming appointments, completed visits, and recent documents without embedding operational transforms directly in UI code.
+- Reworked the provider dashboard from a generic summary-card page into an action-oriented workspace that now emphasizes:
+  - provider identity and active work context
+  - urgent, waiting, in-progress, and ready stage counts
+  - today's schedule sourced from live selected-customer appointments
+  - continue-current-work cards sourced from the live provider queue
+- Rebuilt the provider queue screen into a stage-based horizontal workflow board (`NEW`, `ASSIGNED`, `IN_PROGRESS`, `WAITING`, `READY`, `COMPLETED`) so operational work is seen as process state rather than a flat mixed list.
+- Replaced the provider customer chip selector with searchable customer results and a denser single customer workspace shell.
+- Expanded the customer workspace to keep more of the provider's day in one surface by adding:
+  - customer header with code, membership, card, blood group, and location
+  - tabbed in-place views for overview, timeline, appointments, documents, wallet, and membership
+  - timeline composition from real appointment and document events already loaded through authenticated APIs
+- Preserved the existing live backend contracts and current architecture boundaries; this batch intentionally changes workflow presentation and provider ergonomics without inventing fake data or introducing new hardcoded operational payloads.
+- Why this approach was chosen:
+  - the current provider implementation was technically live but still felt like a CRUD portal rather than a healthcare workstation.
+  - the existing provider workspace API already returns enough signal to start shaping the UI around work stages and customer context before a deeper workflow-engine/backend expansion lands.
+  - moving the view-model transformations into the controller keeps the provider screens cleaner and avoids backsliding into business logic inside widgets.
+
+### Files Modified/Created
+**Frontend Files (Modified)**:
+- frontend/lib/features/provider/shared/presentation/controllers/provider_portal_controller.dart
+- frontend/lib/features/provider/dashboard/presentation/screens/provider_dashboard_screen.dart
+- frontend/lib/features/provider/queue/presentation/screens/provider_queue_screen.dart
+- frontend/lib/features/provider/customers/presentation/screens/provider_customers_screen.dart
+
+**Backend Files**:
+- None
+
+### Verification
+- flutter analyze lib/features/provider/shared/presentation/controllers/provider_portal_controller.dart lib/features/provider/dashboard/presentation/screens/provider_dashboard_screen.dart lib/features/provider/queue/presentation/screens/provider_queue_screen.dart lib/features/provider/customers/presentation/screens/provider_customers_screen.dart
+- npm run build
+- Verified the provider workflow presentation refactor compiles cleanly on the frontend and does not break backend build integrity.
+
+---
+2026-06-30 16:23:27 IST

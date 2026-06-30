@@ -55,6 +55,112 @@ class ProviderPortalController extends ChangeNotifier {
       List<Map<String, dynamic>>.from(queues['appointments'] ?? const []);
   List<Map<String, dynamic>> get billingQueue =>
       List<Map<String, dynamic>>.from(queues['billing'] ?? const []);
+  List<Map<String, dynamic>> get workflowQueue => [
+    ...appointmentQueue.map(
+      (item) => <String, dynamic>{...item, 'workflowType': 'APPOINTMENT'},
+    ),
+    ...billingQueue.map(
+      (item) => <String, dynamic>{...item, 'workflowType': 'BILLING'},
+    ),
+  ];
+
+  String get providerDisplayName {
+    final profile = authProfile['profile'] as Map<String, dynamic>? ??
+        const <String, dynamic>{};
+    final firstName = profile['firstName']?.toString().trim() ?? '';
+    final lastName = profile['lastName']?.toString().trim() ?? '';
+    final fullName = '$firstName $lastName'.trim();
+    return fullName.isEmpty ? 'SHIELD Provider' : fullName;
+  }
+
+  String get providerRoleCode {
+    final principal = authProfile['principal'] as Map<String, dynamic>? ??
+        const <String, dynamic>{};
+    return principal['roleCode']?.toString() ?? 'SERVICE_PROVIDER';
+  }
+
+  Map<String, List<Map<String, dynamic>>> get queueByStage {
+    final buckets = <String, List<Map<String, dynamic>>>{
+      'NEW': <Map<String, dynamic>>[],
+      'ASSIGNED': <Map<String, dynamic>>[],
+      'IN_PROGRESS': <Map<String, dynamic>>[],
+      'WAITING': <Map<String, dynamic>>[],
+      'READY': <Map<String, dynamic>>[],
+      'COMPLETED': <Map<String, dynamic>>[],
+    };
+
+    for (final item in workflowQueue) {
+      final stage = _resolveWorkflowStage(item['status']?.toString());
+      buckets.putIfAbsent(stage, () => <Map<String, dynamic>>[]).add(item);
+    }
+
+    return buckets;
+  }
+
+  Map<String, int> get queueStageCounts => {
+    for (final entry in queueByStage.entries) entry.key: entry.value.length,
+  };
+
+  List<Map<String, dynamic>> get urgentQueueItems {
+    final ranked = workflowQueue.toList()
+      ..sort((a, b) {
+        final left = _priorityRank(a);
+        final right = _priorityRank(b);
+        if (left != right) {
+          return left.compareTo(right);
+        }
+        return _resolveWorkflowStage(a['status']?.toString())
+            .compareTo(_resolveWorkflowStage(b['status']?.toString()));
+      });
+    return ranked.take(4).toList();
+  }
+
+  List<Appointment> get selectedUpcomingAppointments {
+    final now = DateTime.now();
+    final upcoming = selectedAppointments
+        .where((appointment) => appointment.appointmentDate.isAfter(now))
+        .toList()
+      ..sort((a, b) => a.appointmentDate.compareTo(b.appointmentDate));
+    return upcoming;
+  }
+
+  List<Appointment> get selectedCompletedAppointments {
+    final completed = selectedAppointments
+        .where((appointment) => appointment.status == AppointmentStatus.completed)
+        .toList()
+      ..sort((a, b) => b.appointmentDate.compareTo(a.appointmentDate));
+    return completed;
+  }
+
+  List<Document> get selectedRecentDocuments {
+    final recent = selectedDocuments.toList()
+      ..sort((a, b) => b.uploadedAt.compareTo(a.uploadedAt));
+    return recent;
+  }
+
+  List<Map<String, dynamic>> get selectedTimeline {
+    final items = <Map<String, dynamic>>[];
+    for (final appointment in selectedAppointments) {
+      items.add({
+        'kind': 'APPOINTMENT',
+        'title': appointment.typeLabel,
+        'subtitle': appointment.statusLabel,
+        'timestamp': appointment.appointmentDate,
+      });
+    }
+    for (final document in selectedDocuments) {
+      items.add({
+        'kind': 'DOCUMENT',
+        'title': document.fileName,
+        'subtitle': '${document.typeLabel} • ${document.statusLabel}',
+        'timestamp': document.uploadedAt,
+      });
+    }
+    items.sort(
+      (a, b) => (b['timestamp'] as DateTime).compareTo(a['timestamp'] as DateTime),
+    );
+    return items;
+  }
 
   Future<void> ensureLoaded() async {
     if (_loading || _workspaceLoaded) {
@@ -148,5 +254,46 @@ class ProviderPortalController extends ChangeNotifier {
   Future<void> revokeOwnedSession(String sessionId) async {
     await _repository.revokeSession(sessionId);
     await loadSettingsData();
+  }
+
+  String _resolveWorkflowStage(String? rawStatus) {
+    final normalized = (rawStatus ?? '').trim().toUpperCase();
+    if (normalized.contains('COMPLETE') || normalized.contains('APPROVED')) {
+      return 'COMPLETED';
+    }
+    if (normalized.contains('READY') || normalized.contains('VALIDATED')) {
+      return 'READY';
+    }
+    if (normalized.contains('WAIT')) {
+      return 'WAITING';
+    }
+    if (normalized.contains('PROGRESS') ||
+        normalized.contains('CHECKED') ||
+        normalized.contains('PROCESS')) {
+      return 'IN_PROGRESS';
+    }
+    if (normalized.contains('ASSIGN') ||
+        normalized.contains('SCHEDULED') ||
+        normalized.contains('CONFIRM')) {
+      return 'ASSIGNED';
+    }
+    return 'NEW';
+  }
+
+  int _priorityRank(Map<String, dynamic> item) {
+    final title = item['title']?.toString().toUpperCase() ?? '';
+    final subtitle = item['subtitle']?.toString().toUpperCase() ?? '';
+    final meta = item['meta']?.toString().toUpperCase() ?? '';
+    final combined = '$title $subtitle $meta';
+    if (combined.contains('URGENT') || combined.contains('EMERGENCY')) {
+      return 0;
+    }
+    if (combined.contains('WAITING')) {
+      return 1;
+    }
+    if (combined.contains('PENDING')) {
+      return 2;
+    }
+    return 3;
   }
 }
