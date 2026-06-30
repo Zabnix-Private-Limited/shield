@@ -38,6 +38,12 @@ class InternalAuthRepository {
         deviceLabel: DeviceIdentityService.defaultDeviceLabel(),
         platform: DeviceIdentityService.resolvePlatform(),
       );
+      final accessToken = payload['accessToken']?.toString().trim() ?? '';
+      if (accessToken.isEmpty) {
+        throw StateError('Internal sign-in did not return an access token.');
+      }
+      ApiService.setAccessToken(accessToken);
+      ApiService.setActiveCustomerId(null);
       final profile = await ApiService.getAuthenticatedProfile();
       payload['profile'] = profile['profile'];
       await InternalAuthSession.instance.completeLogin(tokenPayload: payload);
@@ -49,10 +55,16 @@ class InternalAuthRepository {
       try {
         await _firebaseAuth.signOut();
       } catch (_) {}
+      ApiService.clearAccessToken();
+      ApiService.setActiveCustomerId(null);
       if (message.isNotEmpty) {
         throw StateError(message);
       }
       throw StateError('Internal sign-in failed right now. Please try again.');
+    } catch (_) {
+      ApiService.clearAccessToken();
+      ApiService.setActiveCustomerId(null);
+      rethrow;
     }
   }
 }

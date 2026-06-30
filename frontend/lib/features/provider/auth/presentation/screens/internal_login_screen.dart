@@ -33,7 +33,10 @@ class _InternalLoginScreenState extends State<InternalLoginScreen> {
         return;
       }
       setState(() {
-        _error = error.toString().replaceFirst('StateError: ', '');
+        _error = error
+            .toString()
+            .replaceFirst('StateError: ', '')
+            .replaceFirst('Bad state: ', '');
       });
     } finally {
       if (mounted) {

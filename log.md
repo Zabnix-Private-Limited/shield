@@ -5592,3 +5592,89 @@ est build, ackend/vercel.json, ackend/src/auth/auth.service.ts, and uth_devic
 
 ---
 2026-06-30 15:39:07 IST
+
+## 162. Internal Test Identity Standardization: Replaced Placeholder Staff Emails With Real Zabnix Google Accounts
+**High-level description**: Standardized SHIELD's seeded internal testing identities around the provided real Zabnix Google accounts so internal sign-in testing can happen through actual Google-authenticated mailboxes instead of generic placeholder addresses, while also retiring the old `@shield.com` seed identities.
+- Replaced the old placeholder seeded internal-user emails with the provided Google accounts and mapped them across the most useful active portal roles for testing:
+  - `Zabnixprivatelimited@gmail.com` -> `ADMIN` (superadmin-style primary admin profile)
+  - `softwareengineerzabnix@gmail.com` -> `SHIELD_AGENT`
+  - `platformcatalystzabnix@gmail.com` -> `CRM_EXECUTIVE`
+  - `juniordeveloperzabnix@gmail.com` -> `PHARMACY_PROVIDER`
+  - `juniordeveloper02zabnix@gmail.com` -> `DOCTOR`
+  - `juniordeveloper03zabnix@gmail.com` -> `DENTAL_PROVIDER`
+- Removed the duplicate placeholder admin/manager-style seed entry so the internal bootstrap set now matches the six real test identities provided by the user instead of requiring an extra fake mailbox.
+- Updated the seeded display names to use non-placeholder people names, while keeping `Zabnix` as the name basis for the primary admin profile as requested.
+- Preserved branch/business scoping for the seeded internal users so provider-role testing still opens meaningful branch-scoped workspaces:
+  - pharmacy provider -> `HYP-PERINTHALMANNA`
+  - admin, agent, CRM, doctor, dental -> `SHG`
+- Added a seed-time retirement step for the old placeholder emails (`admin@shield.com`, `manager@shield.com`, `executive@shield.com`, `crm@shield.com`, `pharmacy@shield.com`, `clinic@shield.com`, `dental@shield.com`) by marking them `INACTIVE`, setting `deletedAt`, and clearing Firebase auth linkage fields. This keeps shared/test databases from accumulating stale internal login identities after the Zabnix accounts are introduced.
+- Why this approach was chosen:
+  - internal Google login in SHIELD only succeeds for provisioned `users` rows already present in the database, so real test mailboxes must exist in seed/bootstrap data if seed-based provisioning is the current workflow.
+  - using the provided real accounts is closer to production-like testing than placeholder domains while still keeping explicit role assignment and branch scope under repo control.
+  - retiring the old placeholder seed identities avoids confusion and accidental sign-in against stale fake users once the real testing accounts become the standard.
+
+### Files Modified/Created
+**Backend Files (Modified)**:
+- backend/prisma/seed.ts
+
+### Verification
+- npm run build
+- Verified the seed now provisions the six provided Zabnix Google accounts and retires the old `@shield.com` internal placeholders during bootstrap.
+
+---
+2026-06-30 15:43:54 IST
+
+## 163. Internal User Provisioning Applied: Seed Logic Hardened And Current Database Updated With Zabnix Test Accounts
+**High-level description**: Completed the actual internal-user provisioning pass against the current configured database by hardening the seed rerun logic, executing the seed, and verifying the resulting active internal accounts directly from the database.
+- Fixed the seeded internal-user update path so rerunning `prisma db seed` now fully updates existing staff rows instead of only changing role/department/branch fields. The update path now also refreshes employee code, names, mobile, email, active status, soft-delete state, and auth linkage reset fields.
+- Changed the staff lookup from mobile-only to `OR(email, mobile)` so seed reruns are resilient during email transitions and do not depend on one exact legacy match path.
+- Executed `npm run seed` against the current configured database and confirmed that the six provided Zabnix Google accounts were updated in place as active SHIELD internal users.
+- Re-verified backend compilation after the seed logic change with `npm run build`.
+- Queried the current database directly after seeding and confirmed the active internal identities now present are:
+  - `Zabnixprivatelimited@gmail.com` -> `ADMIN` -> branch `SHG`
+  - `softwareengineerzabnix@gmail.com` -> `SHIELD_AGENT` -> branch `SHG`
+  - `platformcatalystzabnix@gmail.com` -> `CRM_EXECUTIVE` -> branch `SHG`
+  - `juniordeveloperzabnix@gmail.com` -> `PHARMACY_PROVIDER` -> branch `HYP-PERINTHALMANNA`
+  - `juniordeveloper02zabnix@gmail.com` -> `DOCTOR` -> branch `SHG`
+  - `juniordeveloper03zabnix@gmail.com` -> `DENTAL_PROVIDER` -> branch `SHG`
+- Also confirmed that the old placeholder `dental@shield.com` seed user is now `INACTIVE` with `deletedAt` populated, demonstrating that the retirement path is taking effect in the current database.
+- Why this approach was chosen:
+  - simply editing `seed.ts` was not enough; near-production testing requires the current database to actually contain the intended Google-login identities.
+  - the hardened update path prevents stale placeholder user rows from surviving partially migrated seed reruns.
+  - direct post-seed database verification gives higher confidence than trusting seed console output alone.
+
+### Files Modified/Created
+**Backend Files (Modified)**:
+- backend/prisma/seed.ts
+
+### Verification
+- npm run seed
+- npm run build
+- Direct Prisma query against the configured database to confirm the six active Zabnix test accounts and placeholder-account retirement state
+
+---
+2026-06-30 15:47:15 IST
+
+## 164. Provider Internal Login Fix: Attach Fresh SHIELD Access Token Before Authenticated Profile Fetch
+**High-level description**: Fixed the provider/internal sign-in regression where the frontend successfully completed Firebase Google sign-in and backend `/auth/internal/login`, but then immediately called `/auth/me` without sending the freshly issued SHIELD bearer token.
+- Identified the real failure path in `InternalAuthRepository.signInWithGoogle()`: after `POST /auth/internal/login` returned tokens, the frontend called `ApiService.getAuthenticatedProfile()` before applying the returned `accessToken` to the shared API client.
+- This caused the backend to reject `/auth/me` with `401 Unauthorized` and message `Bearer token is required.`, which was correct behavior from the backend because no Authorization header had been attached yet.
+- Updated the internal sign-in flow to validate that `accessToken` exists in the login payload, set it on `ApiService`, clear any active customer identity, and only then call `/auth/me`.
+- Added cleanup on failure so partial internal-login attempts now clear any temporarily staged token/customer context before surfacing the error.
+- Cleaned the internal login-screen error rendering so raw `Bad state:` prefixes are stripped before showing user-facing error text.
+- Why this approach was chosen:
+  - the backend auth contract was already correct; the problem was the frontend failing to honor the token handoff sequence.
+  - fixing the repository-level login handshake is safer than weakening `/auth/me` auth requirements.
+  - the cleanup path reduces the chance of stale token state contaminating the next login attempt after a failed internal sign-in.
+
+### Files Modified/Created
+**Frontend Files (Modified)**:
+- frontend/lib/features/provider/auth/data/internal_auth_repository.dart
+- frontend/lib/features/provider/auth/presentation/screens/internal_login_screen.dart
+
+### Verification
+- flutter analyze lib/features/provider/auth/data/internal_auth_repository.dart lib/features/provider/auth/presentation/screens/internal_login_screen.dart
+- Verified the frontend now stages the returned SHIELD access token before requesting `/auth/me` in the internal login flow.
+
+---
+2026-06-30 15:48:40 IST
