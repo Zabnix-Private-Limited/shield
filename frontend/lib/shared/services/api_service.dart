@@ -13,7 +13,6 @@ import '../models/prescription_analysis.dart';
 import '../models/wallet.dart';
 
 class ApiService {
-  static const Duration _mockDelay = Duration(milliseconds: 180);
   static String? _accessToken;
   static String? _activeCustomerId;
   static Future<String?> Function()? _onRefreshToken;
@@ -87,13 +86,25 @@ class ApiService {
     _activeCustomerId = customerId?.trim();
   }
 
-  static String _resolveCustomerId(String customerId) {
+  static String _requireCustomerId([String? customerId]) {
     final activeCustomerId = _activeCustomerId?.trim();
     if (activeCustomerId != null && activeCustomerId.isNotEmpty) {
       return activeCustomerId;
     }
-    final normalized = customerId.trim();
-    return normalized.isEmpty ? '1' : normalized;
+    final normalized = customerId?.trim() ?? '';
+    if (normalized.isNotEmpty) {
+      return normalized;
+    }
+    throw StateError('Authenticated customer session is required.');
+  }
+
+  static String? _resolveOptionalCustomerId([String? customerId]) {
+    final activeCustomerId = _activeCustomerId?.trim();
+    if (activeCustomerId != null && activeCustomerId.isNotEmpty) {
+      return activeCustomerId;
+    }
+    final normalized = customerId?.trim() ?? '';
+    return normalized.isEmpty ? null : normalized;
   }
 
   static String _resolveBaseUrl() {
@@ -150,17 +161,10 @@ class ApiService {
     throw const FormatException('Unexpected API list response envelope');
   }
 
-  static Customer _mockCustomer(String customerId) {
-    return dummyCustomers.firstWhere(
-      (customer) => customer.id == customerId,
-      orElse: () => dummyCustomers.first,
-    );
-  }
-
   static Future<Map<String, dynamic>> _getCustomerPayload(
     String customerId,
   ) async {
-    final resolvedCustomerId = _resolveCustomerId(customerId);
+    final resolvedCustomerId = _requireCustomerId(customerId);
     final response = await _dio.get('/customers/$resolvedCustomerId');
     return _readEnvelope(response);
   }
@@ -178,52 +182,34 @@ class ApiService {
     SHIELDRole role,
     String section,
   ) async {
-    await Future<void>.delayed(_mockDelay);
     return portalDataForRole(role).sectionFor(section);
   }
 
   static Future<List<Appointment>> getAppointments(SHIELDRole role) async {
-    final customerId = _resolveCustomerId('1');
     if (role == SHIELDRole.customer) {
-      try {
-        final response = await _dio.get(
-          '/appointments',
-          queryParameters: {'customer_id': customerId},
-        );
-        return _readEnvelopeList(response)
-            .map((item) => Appointment.fromJson(item as Map<String, dynamic>))
-            .toList()
-          ..sort((a, b) => a.appointmentDate.compareTo(b.appointmentDate));
-      } catch (_) {}
-    }
-    await Future<void>.delayed(_mockDelay);
-    if (role == SHIELDRole.customer) {
-      return dummyAppointments
-          .where((appointment) => appointment.customerId == customerId)
+      final customerId = _requireCustomerId();
+      final response = await _dio.get(
+        '/appointments',
+        queryParameters: {'customer_id': customerId},
+      );
+      return _readEnvelopeList(response)
+          .map((item) => Appointment.fromJson(item as Map<String, dynamic>))
           .toList()
-        ..sort((a, b) => b.appointmentDate.compareTo(a.appointmentDate));
+        ..sort((a, b) => a.appointmentDate.compareTo(b.appointmentDate));
     }
     return dummyAppointments;
   }
 
   static Future<List<Document>> getDocuments(SHIELDRole role) async {
-    final customerId = _resolveCustomerId('1');
     if (role == SHIELDRole.customer) {
-      try {
-        final response = await _dio.get(
-          '/documents',
-          queryParameters: {'customer_id': customerId},
-        );
-        return _readEnvelopeList(response)
-            .map((item) => Document.fromJson(item as Map<String, dynamic>))
-            .toList()
-          ..sort((a, b) => b.uploadedAt.compareTo(a.uploadedAt));
-      } catch (_) {}
-    }
-    await Future<void>.delayed(_mockDelay);
-    if (role == SHIELDRole.customer) {
-      return dummyDocuments
-          .where((document) => document.customerId == customerId)
+      final customerId = _requireCustomerId();
+      final response = await _dio.get(
+        '/documents',
+        queryParameters: {'customer_id': customerId},
+        options: Options(receiveTimeout: const Duration(minutes: 1)),
+      );
+      return _readEnvelopeList(response)
+          .map((item) => Document.fromJson(item as Map<String, dynamic>))
           .toList()
         ..sort((a, b) => b.uploadedAt.compareTo(a.uploadedAt));
     }
@@ -233,7 +219,7 @@ class ApiService {
   static Future<List<Document>> getCustomerDocumentsStrict(
     String customerId,
   ) async {
-    final resolvedCustomerId = _resolveCustomerId(customerId);
+    final resolvedCustomerId = _requireCustomerId(customerId);
     final response = await _dio.get(
       '/documents',
       queryParameters: {'customer_id': resolvedCustomerId},
@@ -248,26 +234,17 @@ class ApiService {
   static Future<List<NotificationModel>> getNotifications(
     SHIELDRole role,
   ) async {
-    final customerId = _resolveCustomerId('1');
     if (role == SHIELDRole.customer) {
-      try {
-        final response = await _dio.get(
-          '/notifications',
-          queryParameters: {'customer_id': customerId},
-        );
-        return _readEnvelopeList(response)
-            .map(
-              (item) =>
-                  NotificationModel.fromJson(item as Map<String, dynamic>),
-            )
-            .toList()
-          ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
-      } catch (_) {}
-    }
-    await Future<void>.delayed(_mockDelay);
-    if (role == SHIELDRole.customer) {
-      return dummyNotifications
-          .where((notification) => notification.customerId == customerId)
+      final customerId = _requireCustomerId();
+      final response = await _dio.get(
+        '/notifications',
+        queryParameters: {'customer_id': customerId},
+      );
+      return _readEnvelopeList(response)
+          .map(
+            (item) =>
+                NotificationModel.fromJson(item as Map<String, dynamic>),
+          )
           .toList()
         ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
     }
@@ -275,21 +252,16 @@ class ApiService {
   }
 
   static Future<Customer> getCustomerProfile(String customerId) async {
-    final resolvedCustomerId = _resolveCustomerId(customerId);
-    try {
-      final payload = await _getCustomerPayload(resolvedCustomerId);
-      return Customer.fromJson(payload);
-    } catch (_) {
-      await Future<void>.delayed(_mockDelay);
-      return _mockCustomer(resolvedCustomerId);
-    }
+    final resolvedCustomerId = _requireCustomerId(customerId);
+    final payload = await _getCustomerPayload(resolvedCustomerId);
+    return Customer.fromJson(payload);
   }
 
   static Future<Customer> updateCustomerProfile(
     String customerId,
     Customer customer,
   ) async {
-    final resolvedCustomerId = _resolveCustomerId(customerId);
+    final resolvedCustomerId = _requireCustomerId(customerId);
     final response = await _dio.put(
       '/customers/$resolvedCustomerId',
       data: {
@@ -313,199 +285,56 @@ class ApiService {
   static Future<Map<String, dynamic>> getWalletProfile(
     String customerId,
   ) async {
-    final resolvedCustomerId = _resolveCustomerId(customerId);
-    try {
-      final response = await _dio.get('/wallets/$resolvedCustomerId');
-      final wallet = _readEnvelope(response);
-      final walletId = wallet['walletId'].toString();
-      final transactions = await _getWalletTransactionsFromBackend(walletId);
-      final cashWallet = wallet['cashWallet'] is Map<String, dynamic>
-          ? wallet['cashWallet'] as Map<String, dynamic>
-          : const <String, dynamic>{};
-      final rewardPoints = wallet['rewardPoints'] is Map<String, dynamic>
-          ? wallet['rewardPoints'] as Map<String, dynamic>
-          : const <String, dynamic>{};
-      final cashBalance =
-          double.tryParse((cashWallet['available'] ?? 0).toString()) ?? 0;
-      final pointsBalance =
-          double.tryParse((rewardPoints['available'] ?? 0).toString()) ?? 0;
+    final resolvedCustomerId = _requireCustomerId(customerId);
+    final response = await _dio.get('/wallets/$resolvedCustomerId');
+    final wallet = _readEnvelope(response);
+    final walletId = wallet['walletId'].toString();
+    final transactions = await _getWalletTransactionsFromBackend(walletId);
+    final cashWallet = wallet['cashWallet'] is Map<String, dynamic>
+        ? wallet['cashWallet'] as Map<String, dynamic>
+        : const <String, dynamic>{};
+    final rewardPoints = wallet['rewardPoints'] is Map<String, dynamic>
+        ? wallet['rewardPoints'] as Map<String, dynamic>
+        : const <String, dynamic>{};
+    final cashBalance =
+        double.tryParse((cashWallet['available'] ?? 0).toString()) ?? 0;
+    final pointsBalance =
+        double.tryParse((rewardPoints['available'] ?? 0).toString()) ?? 0;
 
-      return {
-        'walletId': walletId,
-        'customerId': wallet['customerId'].toString(),
-        'balance': cashBalance,
-        'cashBalance': cashBalance,
-        'pointsBalance': pointsBalance,
-        'creditAvailable':
-            double.tryParse((wallet['creditAvailable'] ?? 0).toString()) ?? 0,
-        'status': (wallet['status'] ?? 'ACTIVE').toString(),
-        'transactionsLoaded': transactions.isNotEmpty,
-      };
-    } catch (_) {
-      await Future<void>.delayed(_mockDelay);
-      final transactions = dummyTransactions
-          .where((transaction) => transaction.walletId == dummyWallet.id)
-          .toList();
-
-      double cashBalance = 0;
-      double pointsBalance = 0;
-      for (final transaction in transactions) {
-        final delta = transaction.signedAmount;
-        if (transaction.subLedgerType == 'POINTS') {
-          pointsBalance += delta;
-        } else {
-          cashBalance += delta;
-        }
-      }
-
-      return {
-        'walletId': dummyWallet.id,
-        'customerId': resolvedCustomerId,
-        'cashBalance': cashBalance,
-        'pointsBalance': pointsBalance,
-        'balance': cashBalance,
-        'status': dummyWallet.status,
-      };
-    }
+    return {
+      'walletId': walletId,
+      'customerId': wallet['customerId'].toString(),
+      'balance': cashBalance,
+      'cashBalance': cashBalance,
+      'pointsBalance': pointsBalance,
+      'creditAvailable':
+          double.tryParse((wallet['creditAvailable'] ?? 0).toString()) ?? 0,
+      'status': (wallet['status'] ?? 'ACTIVE').toString(),
+      'transactionsLoaded': transactions.isNotEmpty,
+    };
   }
 
   static Future<List<WalletTransaction>> getWalletTransactions(
     String walletId,
   ) async {
-    try {
-      return await _getWalletTransactionsFromBackend(walletId);
-    } catch (_) {
-      await Future<void>.delayed(_mockDelay);
-      return dummyTransactions
-          .where((transaction) => transaction.walletId == walletId)
-          .toList()
-        ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
-    }
+    return _getWalletTransactionsFromBackend(walletId);
   }
 
   static Future<Map<String, dynamic>> getCustomerWalletBundle(
     String customerId,
   ) async {
-    final resolvedCustomerId = _resolveCustomerId(customerId);
-    try {
-      final response = await _dio.get(
-        '/customer/wallet',
-        queryParameters: {'customer_id': resolvedCustomerId},
-      );
-      return _readEnvelope(response);
-    } catch (_) {
-      final results = await Future.wait<dynamic>([
-        getWalletProfile(resolvedCustomerId),
-        getCustomerMembership(resolvedCustomerId),
-      ]);
-
-      final wallet = Map<String, dynamic>.from(
-        results[0] as Map<String, dynamic>,
-      );
-      final membership = results[1] as Membership;
-      final transactions = await getWalletTransactions(
-        wallet['walletId']?.toString() ?? dummyWallet.id,
-      );
-
-      double monthlySpend = 0;
-      double rewardCredits = 0;
-      for (final txn in transactions) {
-        if (txn.subLedgerType == 'POINTS') {
-          if (txn.transactionType == 'CREDIT') {
-            rewardCredits += txn.amount;
-          }
-          continue;
-        }
-        if (txn.transactionType == 'DEBIT') {
-          monthlySpend += txn.amount;
-        }
-      }
-
-      return {
-        'walletId': wallet['walletId']?.toString() ?? dummyWallet.id,
-        'customerId': wallet['customerId']?.toString() ?? resolvedCustomerId,
-        'status': wallet['status'] ?? 'ACTIVE',
-        'cashWallet': {
-          'available': wallet['cashBalance'] ?? wallet['balance'] ?? 0,
-          'credited': transactions
-              .where(
-                (txn) =>
-                    txn.subLedgerType != 'POINTS' &&
-                    txn.transactionType == 'CREDIT',
-              )
-              .fold<double>(0, (sum, txn) => sum + txn.amount),
-          'debited': transactions
-              .where(
-                (txn) =>
-                    txn.subLedgerType != 'POINTS' &&
-                    txn.transactionType == 'DEBIT',
-              )
-              .fold<double>(0, (sum, txn) => sum + txn.amount),
-        },
-        'rewardPoints': {
-          'available': wallet['pointsBalance'] ?? 0,
-          'earned': transactions
-              .where(
-                (txn) =>
-                    txn.subLedgerType == 'POINTS' &&
-                    txn.transactionType == 'CREDIT',
-              )
-              .fold<double>(0, (sum, txn) => sum + txn.amount),
-          'redeemed': transactions
-              .where(
-                (txn) =>
-                    txn.subLedgerType == 'POINTS' &&
-                    txn.transactionType == 'DEBIT',
-              )
-              .fold<double>(0, (sum, txn) => sum + txn.amount),
-        },
-        'benefitSummary': const {
-          'benefitsUsed': 0,
-          'grantedTotal': 0,
-          'appliedTotal': 0,
-          'hiddenRemaining': 0,
-        },
-        'recentTransactions': transactions
-            .map(
-              (item) => {
-                'id': item.id,
-                'uuid': item.uuid,
-                'wallet_id': item.walletId,
-                'transaction_type': item.transactionType,
-                'sub_ledger_type': item.subLedgerType,
-                'amount': item.amount,
-                'reference_type': item.referenceType,
-                'reference_id': item.referenceId,
-                'remarks': item.remarks,
-                'created_by': item.createdBy,
-                'created_at': item.createdAt.toIso8601String(),
-              },
-            )
-            .toList(),
-        'statistics': {
-          'monthlySpend': monthlySpend,
-          'rewardCredits': rewardCredits,
-          'creditAvailable': wallet['creditAvailable'] ?? 0,
-        },
-        'membership': {
-          'id': membership.id,
-          'uuid': membership.uuid,
-          'membershipNumber': membership.customerCode,
-          'status': membership.isActive ? 'ACTIVE' : 'INACTIVE',
-          'activationDate': membership.startDate.toIso8601String(),
-          'expiryDate': membership.endDate.toIso8601String(),
-          'createdAt': membership.createdAt.toIso8601String(),
-          'updatedAt': membership.updatedAt.toIso8601String(),
-          'membershipType': {'name': membership.tierLabel},
-        },
-      };
-    }
+    final resolvedCustomerId = _requireCustomerId(customerId);
+    final response = await _dio.get(
+      '/customer/wallet',
+      queryParameters: {'customer_id': resolvedCustomerId},
+    );
+    return _readEnvelope(response);
   }
 
   static Future<Map<String, dynamic>> getCustomerMembershipBundle(
     String customerId,
   ) async {
-    final resolvedCustomerId = _resolveCustomerId(customerId);
+    final resolvedCustomerId = _requireCustomerId(customerId);
     final response = await _dio.get(
       '/customer/membership',
       queryParameters: {'customer_id': resolvedCustomerId},
@@ -563,210 +392,30 @@ class ApiService {
   static Future<Map<String, dynamic>> getCustomerDashboardBundle(
     String customerId,
   ) async {
-    final resolvedCustomerId = _resolveCustomerId(customerId);
-    try {
-      final response = await _dio.get(
-        '/customer/dashboard',
-        queryParameters: {'customer_id': resolvedCustomerId},
-      );
-      return _readEnvelope(response);
-    } catch (_) {
-      final results = await Future.wait<dynamic>([
-        getCustomerProfile(resolvedCustomerId),
-        getWalletProfile(resolvedCustomerId),
-        getCustomerMembership(resolvedCustomerId),
-        getAppointments(SHIELDRole.customer),
-        getNotifications(SHIELDRole.customer),
-        getDocuments(SHIELDRole.customer),
-      ]);
-
-      final customer = results[0] as Customer;
-      final wallet = Map<String, dynamic>.from(
-        results[1] as Map<String, dynamic>,
-      );
-      final membership = results[2] as Membership;
-      final appointments = results[3] as List<Appointment>;
-      final notifications = results[4] as List<NotificationModel>;
-      final documents = results[5] as List<Document>;
-      final transactions = await getWalletTransactions(
-        wallet['walletId']?.toString() ?? dummyWallet.id,
-      );
-
-      return {
-        'customer': {
-          'id': customer.id,
-          'uuid': customer.uuid,
-          'customer_code': customer.customerCode,
-          'aadhaar_number': customer.aadhaarNumber,
-          'first_name': customer.firstName,
-          'last_name': customer.lastName,
-          'dob': customer.dob?.toIso8601String(),
-          'gender': customer.gender,
-          'mobile': customer.mobile,
-          'email': customer.email,
-          'address_line1': customer.addressLine1,
-          'address_line2': customer.addressLine2,
-          'city': customer.city,
-          'district': customer.district,
-          'state': customer.state,
-          'pincode': customer.pincode,
-          'status': customer.status,
-          'created_by': customer.createdBy,
-          'approved_by': customer.approvedBy,
-          'created_at': customer.createdAt.toIso8601String(),
-          'updated_at': customer.updatedAt.toIso8601String(),
-          'blood_group': customer.bloodGroup,
-          'agent_code': customer.agentCode,
-        },
-        'wallet': {
-          'walletId': wallet['walletId']?.toString() ?? dummyWallet.id,
-          'customerId': wallet['customerId']?.toString() ?? customer.id,
-          'balance': wallet['balance'] ?? 0,
-          'cashBalance': wallet['cashBalance'] ?? wallet['balance'] ?? 0,
-          'pointsBalance': wallet['pointsBalance'] ?? 0,
-          'creditAvailable': wallet['creditAvailable'] ?? 0,
-          'status': wallet['status'] ?? 'ACTIVE',
-        },
-        'membership': {
-          'id': membership.id,
-          'uuid': membership.uuid,
-          'membershipNumber': membership.customerCode,
-          'status': membership.isActive ? 'ACTIVE' : 'INACTIVE',
-          'activationDate': membership.startDate.toIso8601String(),
-          'expiryDate': membership.endDate.toIso8601String(),
-          'createdAt': membership.createdAt.toIso8601String(),
-          'updatedAt': membership.updatedAt.toIso8601String(),
-          'membershipType': {'name': membership.tierLabel},
-        },
-        'appointments': appointments
-            .map(
-              (item) => {
-                'id': item.id,
-                'uuid': item.uuid,
-                'customer_id': item.customerId,
-                'provider_id': item.providerId,
-                'appointment_type': item.type.name.toUpperCase(),
-                'appointment_date': item.appointmentDate.toIso8601String(),
-                'status': item.status.name.toUpperCase(),
-                'remarks': item.notes,
-                'provider': {
-                  'providerName': item.doctorName,
-                  'providerType': item.department,
-                },
-              },
-            )
-            .toList(),
-        'notifications': notifications
-            .map(
-              (item) => {
-                'id': item.id,
-                'uuid': item.uuid,
-                'customer_id': item.customerId,
-                'title': item.title,
-                'message': item.body,
-                'status': item.isRead ? 'READ' : 'UNREAD',
-                'sent_at': item.createdAt.toIso8601String(),
-                'channel': item.type.name.toUpperCase(),
-              },
-            )
-            .toList(),
-        'recentActivity': transactions
-            .take(4)
-            .map(
-              (item) => {
-                'id': item.id,
-                'uuid': item.uuid,
-                'wallet_id': item.walletId,
-                'transaction_type': item.transactionType,
-                'sub_ledger_type': item.subLedgerType,
-                'amount': item.amount,
-                'reference_type': item.referenceType,
-                'reference_id': item.referenceId,
-                'remarks': item.remarks,
-                'created_by': item.createdBy,
-                'created_at': item.createdAt.toIso8601String(),
-              },
-            )
-            .toList(),
-        'documents': documents
-            .map(
-              (item) => {
-                'id': item.id,
-                'uuid': item.uuid,
-                'customer_id': item.customerId,
-                'file_name': item.fileName,
-                'storage_path': item.storagePath,
-                'file_size': item.fileSize,
-                'mime_type': item.mimeType,
-                'document_type': item.type?.name.toUpperCase(),
-                'status': item.status.name.toUpperCase(),
-                'uploaded_by': item.uploadedBy,
-                'created_at': item.uploadedAt.toIso8601String(),
-                'processed_at': item.processedAt?.toIso8601String(),
-              },
-            )
-            .toList(),
-        'quickActions': const [
-          {
-            'key': 'view-card',
-            'label': 'View card',
-            'route': '/portal/customer/membership',
-          },
-          {
-            'key': 'book-visit',
-            'label': 'Book visit',
-            'route': '/portal/customer/appointments',
-          },
-          {
-            'key': 'open-wallet',
-            'label': 'Open wallet',
-            'route': '/portal/customer/wallet',
-          },
-        ],
-        'services': const [
-          {
-            'key': 'pharmacy',
-            'label': 'Pharmacy',
-            'description': 'Medicines, repeats, and partner branch orders.',
-          },
-          {
-            'key': 'clinic',
-            'label': 'Clinic',
-            'description':
-                'Consultations, preventive care, and scheduled visits.',
-          },
-          {
-            'key': 'lab',
-            'label': 'Lab',
-            'description':
-                'Diagnostics, sample collections, and health reports.',
-          },
-        ],
-      };
-    }
+    final resolvedCustomerId = _requireCustomerId(customerId);
+    final response = await _dio.get(
+      '/customer/dashboard',
+      queryParameters: {'customer_id': resolvedCustomerId},
+    );
+    return _readEnvelope(response);
   }
 
   static Future<Membership> getCustomerMembership(String customerId) async {
-    final resolvedCustomerId = _resolveCustomerId(customerId);
-    try {
-      final customerPayload = await _getCustomerPayload(resolvedCustomerId);
-      final customer = Customer.fromJson(customerPayload);
-      final walletData = customerPayload['wallet'] as Map<String, dynamic>?;
-      final transactions = walletData == null
-          ? <WalletTransaction>[]
-          : await _getWalletTransactionsFromBackend(
-              walletData['id'].toString(),
-            );
+    final resolvedCustomerId = _requireCustomerId(customerId);
+    final customerPayload = await _getCustomerPayload(resolvedCustomerId);
+    final customer = Customer.fromJson(customerPayload);
+    final walletData = customerPayload['wallet'] as Map<String, dynamic>?;
+    final transactions = walletData == null
+        ? <WalletTransaction>[]
+        : await _getWalletTransactionsFromBackend(
+            walletData['id'].toString(),
+          );
 
-      return Membership.fromApi(
-        customer: customer,
-        customerPayload: customerPayload,
-        transactions: transactions,
-      );
-    } catch (_) {
-      await Future<void>.delayed(_mockDelay);
-      return dummyMembership;
-    }
+    return Membership.fromApi(
+      customer: customer,
+      customerPayload: customerPayload,
+      transactions: transactions,
+    );
   }
 
   static Future<Appointment> createCustomerAppointment({
@@ -775,7 +424,7 @@ class ApiService {
     required DateTime appointmentDate,
     String? remarks,
   }) async {
-    final customerId = _resolveCustomerId('1');
+    final customerId = _requireCustomerId();
     final response = await _dio.post(
       '/appointments',
       data: {
@@ -803,7 +452,7 @@ class ApiService {
     String mimeType = 'application/pdf',
     int fileSize = 1024,
   }) async {
-    final customerId = _resolveCustomerId('1');
+    final customerId = _requireCustomerId();
     final formData = FormData.fromMap({
       'customer_id': customerId,
       'file_name': fileName,
@@ -858,9 +507,9 @@ class ApiService {
     required String token,
     required String platform,
     String? deviceLabel,
-    String customerId = '1',
+    String? customerId,
   }) async {
-    final resolvedCustomerId = _resolveCustomerId(customerId);
+    final resolvedCustomerId = _requireCustomerId(customerId);
     await _dio.post(
       '/notifications/device-token',
       data: {
@@ -887,13 +536,13 @@ class ApiService {
     String? email,
     String? subject,
     String? turnstileToken,
-    String customerId = '1',
+    String? customerId,
   }) async {
-    final resolvedCustomerId = _resolveCustomerId(customerId);
+    final resolvedCustomerId = _resolveOptionalCustomerId(customerId);
     await _dio.post(
       '/support/contact',
       data: {
-        'customer_id': resolvedCustomerId,
+        if (resolvedCustomerId != null) 'customer_id': resolvedCustomerId,
         'name': name.trim(),
         'phone': phone.trim(),
         'email': email?.trim(),
@@ -914,13 +563,13 @@ class ApiService {
     String? subject,
     int? rating,
     String? turnstileToken,
-    String customerId = '1',
+    String? customerId,
   }) async {
-    final resolvedCustomerId = _resolveCustomerId(customerId);
+    final resolvedCustomerId = _resolveOptionalCustomerId(customerId);
     await _dio.post(
       '/support/feedback',
       data: {
-        'customer_id': resolvedCustomerId,
+        if (resolvedCustomerId != null) 'customer_id': resolvedCustomerId,
         'name': name?.trim(),
         'phone': phone?.trim(),
         'email': email?.trim(),

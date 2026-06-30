@@ -142,7 +142,10 @@ class CustomerAuthRepository {
           message.contains('not provisioned')) {
         return CustomerAuthOutcome.registrationRequired;
       }
-      rethrow;
+      if (message.isNotEmpty) {
+        throw StateError(message);
+      }
+      throw StateError('OTP verification failed right now. Please try again.');
     }
   }
 

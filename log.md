@@ -4930,3 +4930,50 @@ pm run build (backend)
 
 ---
 2026-06-29 20:36:30 IST
+
+## 139. Hardened Customer Portal Auth And Removed Customer Fallback Reads
+**High-level description**: Tightened the customer production path so localhost bypass auth no longer masks integration issues and customer-facing reads now require a real authenticated backend session instead of silently dropping to dummy data.
+- Removed the backend development customer principal injection from ackend/src/auth/shield-jwt-auth.guard.ts, so protected customer routes now always require a real SHIELD bearer token.
+- Removed the frontend localhost customer sign-in bypass from rontend/lib/shared/services/customer_auth_session.dart and rontend/lib/features/customer/auth/presentation/screens/customer_login_screen.dart, which keeps the customer entry flow aligned with the real Firebase OTP session contract.
+- Reworked rontend/lib/shared/services/api_service.dart so customer-facing profile, wallet, membership, dashboard, documents, notifications, appointments, document upload, appointment creation, and push-token registration calls now require a resolved authenticated customer id instead of defaulting to customer 1 or falling back to dummy bundles.
+- Kept the internal portal demo scaffolding intact for non-customer role shell areas, but stopped the customer portal from hiding backend or auth failures behind dummy customer data.
+- Adjusted support-contact and support-feedback submission helpers so they only attach customer_id when a real customer session is present, preserving public submission behavior without reintroducing hardcoded customer defaults.
+
+### Files Modified/Created
+**Frontend Files (Modified)**:
+- frontend/lib/shared/services/customer_auth_session.dart
+- frontend/lib/features/customer/auth/presentation/screens/customer_login_screen.dart
+- frontend/lib/shared/services/api_service.dart
+
+**Backend Files (Modified)**:
+- backend/src/auth/shield-jwt-auth.guard.ts
+
+### Verification
+- 
+pm run build (backend)
+- lutter analyze lib/shared/services/api_service.dart lib/shared/services/customer_auth_session.dart lib/features/customer/auth/presentation/screens/customer_login_screen.dart (frontend)
+
+---
+2026-06-30 00:35:00 IST
+
+## 140. Added Firebase Auth Diagnostics And Cleaner OTP Failure Messaging
+**High-level description**: Added targeted diagnostics around Firebase Admin token verification and replaced the raw customer OTP Dio dump with cleaner user-facing error text so the next deployed auth failure is easier to diagnose from logs and less noisy in the customer UI.
+- Updated ackend/src/notification/firebase-admin.service.ts to log the Firebase project id used during Admin initialization and to log the Firebase Admin error code when ID-token verification fails.
+- Kept the backend API contract unchanged; token-verification failures still return the same unauthorized response, but the server logs will now show which Firebase project performed the verification.
+- Updated rontend/lib/features/customer/auth/data/customer_auth_repository.dart so non-registration OTP failures surface the backend message cleanly instead of dumping a raw DioException string into the OTP screen.
+- This keeps the current customer auth behavior intact while improving production debugging for the remaining deployed Firebase mismatch investigation.
+
+### Files Modified/Created
+**Frontend Files (Modified)**:
+- frontend/lib/features/customer/auth/data/customer_auth_repository.dart
+
+**Backend Files (Modified)**:
+- backend/src/notification/firebase-admin.service.ts
+
+### Verification
+- 
+pm run build (backend)
+- lutter analyze lib/features/customer/auth/data/customer_auth_repository.dart (frontend)
+
+---
+2026-06-30 03:15:00 IST

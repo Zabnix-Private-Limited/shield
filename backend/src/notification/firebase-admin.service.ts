@@ -55,6 +55,10 @@ export class FirebaseAdminService {
         'shield-admin',
       );
 
+    this.logger.log(
+      `Firebase Admin initialized for project ${credentials.projectId}.`,
+    );
+
     return this.app;
   }
 
@@ -164,6 +168,13 @@ export class FirebaseAdminService {
       throw new Error('Firebase Admin credentials are unavailable.');
     }
 
-    return getAuth(app).verifyIdToken(normalized, true);
+    try {
+      return await getAuth(app).verifyIdToken(normalized, true);
+    } catch (error: any) {
+      this.logger.warn(
+        `Firebase ID token verification failed for project ${app.options.projectId}: ${error?.code ?? error}`,
+      );
+      throw error;
+    }
   }
 }

@@ -14,7 +14,6 @@ class CustomerAuthSession extends ChangeNotifier {
   static const _refreshTokenKey = 'customer_refresh_token';
   static const _mobileKey = 'customer_mobile';
   static const _customerIdKey = 'customer_id';
-  static const _localBypassKey = 'customer_local_bypass';
 
   bool _initialized = false;
   bool _isAuthenticated = false;
@@ -27,7 +26,6 @@ class CustomerAuthSession extends ChangeNotifier {
   bool get isAuthenticated => _isAuthenticated;
   String? get mobile => _mobile;
   String? get customerId => _customerId;
-  bool get supportsLocalSignIn => _supportsLocalSignIn();
 
   Future<void> initialize() async {
     ApiService.configureAuthHandlers(
@@ -44,20 +42,6 @@ class CustomerAuthSession extends ChangeNotifier {
     _refreshToken = values[_refreshTokenKey]?.trim();
     _mobile = values[_mobileKey]?.trim();
     _customerId = values[_customerIdKey]?.trim();
-    final localBypassEnabled = values[_localBypassKey] == 'true';
-
-    if (localBypassEnabled && supportsLocalSignIn) {
-      _accessToken = null;
-      _refreshToken = null;
-      _customerId = (_customerId?.isNotEmpty ?? false) ? _customerId : '1';
-      _mobile = (_mobile?.isNotEmpty ?? false) ? _mobile : '9876543210';
-      _isAuthenticated = true;
-      ApiService.clearAccessToken();
-      ApiService.setActiveCustomerId(_customerId);
-      _initialized = true;
-      notifyListeners();
-      return;
-    }
 
     if (_accessToken != null && _accessToken!.isNotEmpty) {
       ApiService.setAccessToken(_accessToken!);
@@ -108,35 +92,6 @@ class CustomerAuthSession extends ChangeNotifier {
     if (_customerId != null && _customerId!.isNotEmpty) {
       await _storage.write(key: _customerIdKey, value: _customerId);
     }
-    await _storage.delete(key: _localBypassKey);
-
-    notifyListeners();
-  }
-
-  Future<void> signInLocally({required String mobile, String? memberId}) async {
-    if (!supportsLocalSignIn) {
-      throw StateError('Local customer sign-in is not available here.');
-    }
-
-    final normalizedMobile = mobile.replaceAll(RegExp(r'\D'), '');
-    if (normalizedMobile.length < 10) {
-      throw StateError('Enter a valid mobile number for local testing.');
-    }
-
-    _accessToken = null;
-    _refreshToken = null;
-    _mobile = normalizedMobile;
-    _customerId = '1';
-    _isAuthenticated = true;
-
-    ApiService.clearAccessToken();
-    ApiService.setActiveCustomerId(_customerId);
-
-    await _storage.delete(key: _accessTokenKey);
-    await _storage.delete(key: _refreshTokenKey);
-    await _storage.write(key: _mobileKey, value: _mobile);
-    await _storage.write(key: _customerIdKey, value: _customerId);
-    await _storage.write(key: _localBypassKey, value: 'true');
 
     notifyListeners();
   }
@@ -238,22 +193,9 @@ class CustomerAuthSession extends ChangeNotifier {
     await _storage.delete(key: _refreshTokenKey);
     await _storage.delete(key: _mobileKey);
     await _storage.delete(key: _customerIdKey);
-    await _storage.delete(key: _localBypassKey);
 
     if (notify) {
       notifyListeners();
     }
-  }
-
-  bool _supportsLocalSignIn() {
-    if (!kDebugMode || !kIsWeb) {
-      return false;
-    }
-
-    final normalizedHost = Uri.base.host.trim().toLowerCase();
-    return normalizedHost == 'localhost' ||
-        normalizedHost == '127.0.0.1' ||
-        normalizedHost == '0.0.0.0' ||
-        normalizedHost == '::1';
   }
 }

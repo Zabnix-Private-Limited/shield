@@ -5,7 +5,6 @@ import 'package:go_router/go_router.dart';
 import '../../../../../app/theme/app_colors.dart';
 import '../../../../../app/theme/app_typography.dart';
 import '../../data/customer_auth_repository.dart';
-import '../../../../../shared/services/customer_auth_session.dart';
 
 class CustomerLoginScreen extends StatefulWidget {
   const CustomerLoginScreen({super.key});
@@ -38,23 +37,13 @@ class _CustomerLoginScreenState extends State<CustomerLoginScreen> {
     });
 
     try {
-      if (CustomerAuthSession.instance.supportsLocalSignIn) {
-        await CustomerAuthSession.instance.signInLocally(
-          mobile: _phoneController.text,
-        );
-      } else {
-        await CustomerAuthRepository.instance.startPhoneVerification(
-          _phoneController.text,
-        );
-      }
+      await CustomerAuthRepository.instance.startPhoneVerification(
+        _phoneController.text,
+      );
       if (!mounted) {
         return;
       }
-      context.go(
-        CustomerAuthSession.instance.supportsLocalSignIn
-            ? '/portal/customer/dashboard'
-            : '/customer/otp',
-      );
+      context.go('/customer/otp');
     } on FirebaseAuthException catch (error) {
       setState(() {
         _errorText = error.message ?? 'Unable to send OTP right now.';
@@ -74,8 +63,6 @@ class _CustomerLoginScreenState extends State<CustomerLoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final supportsLocalSignIn =
-        CustomerAuthSession.instance.supportsLocalSignIn;
     return Scaffold(
       backgroundColor: AppColors.white,
       body: SafeArea(
@@ -162,23 +149,6 @@ class _CustomerLoginScreenState extends State<CustomerLoginScreen> {
                         ),
                       ),
                     ],
-                    if (supportsLocalSignIn) ...[
-                      const SizedBox(height: 12),
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(14),
-                        decoration: BoxDecoration(
-                          color: AppColors.lightGray,
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: Text(
-                          'Local test mode is active on localhost. Continue will open the customer portal with the backend dev customer session instead of real Firebase OTP.',
-                          style: AppTypography.small.copyWith(
-                            color: AppColors.darkGray,
-                          ),
-                        ),
-                      ),
-                    ],
                     const SizedBox(height: 22),
                     SizedBox(
                       width: double.infinity,
@@ -202,9 +172,7 @@ class _CustomerLoginScreenState extends State<CustomerLoginScreen> {
                                 ),
                               )
                             : Text(
-                                supportsLocalSignIn
-                                    ? 'Continue in local test mode'
-                                    : 'Continue',
+                                'Continue',
                                 style: AppTypography.body.copyWith(
                                   color: AppColors.white,
                                   fontWeight: FontWeight.w700,
