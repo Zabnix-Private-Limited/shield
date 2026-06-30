@@ -22,6 +22,7 @@ import { PricingModule } from './pricing/pricing.module';
 import { ReferralModule } from './referral/referral.module';
 import { MasterDataModule } from './master-data/master-data.module';
 import { OperationsQueueModule } from './operations-queue/operations-queue.module';
+import { PlatformMetadataModule } from './platform-metadata/platform-metadata.module';
 import { ServiceProviderModule } from './service-provider/service-provider.module';
 
 @Module({
@@ -29,6 +30,7 @@ import { ServiceProviderModule } from './service-provider/service-provider.modul
     SentryModule.forRoot(),
     AuthModule,
     MasterDataModule,
+    PlatformMetadataModule,
     OperationsQueueModule,
     ServiceProviderModule,
     PrismaModule,

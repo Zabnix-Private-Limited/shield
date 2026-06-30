@@ -51,6 +51,8 @@ class PortalSectionData {
   final String title;
   final String summary;
   final String? iconKey;
+  final String? moduleId;
+  final String? rendererKey;
   final String? route;
   final String? permission;
   final int badgeCount;
@@ -66,6 +68,8 @@ class PortalSectionData {
     required this.title,
     required this.summary,
     this.iconKey,
+    this.moduleId,
+    this.rendererKey,
     this.route,
     this.permission,
     this.badgeCount = 0,
@@ -83,6 +87,8 @@ class PortalSectionData {
       title: (json['title'] ?? '').toString(),
       summary: (json['summary'] ?? '').toString(),
       iconKey: json['iconKey']?.toString() ?? json['icon']?.toString(),
+      moduleId: json['moduleId']?.toString(),
+      rendererKey: json['rendererKey']?.toString(),
       route: json['route']?.toString(),
       permission: json['permission']?.toString(),
       badgeCount: json['badgeCount'] as int? ?? json['badge'] as int? ?? 0,
@@ -137,6 +143,8 @@ PortalSectionData _section(
   String key, {
   String? title,
   String? summary,
+  String? moduleId,
+  String? rendererKey,
   List<String> actions = const <String>[],
 }) {
   final resolvedTitle = title ?? _humanizeKey(key);
@@ -145,6 +153,8 @@ PortalSectionData _section(
     title: resolvedTitle,
     summary: summary ?? 'Live $resolvedTitle records for this workspace.',
     iconKey: key,
+    moduleId: moduleId ?? key,
+    rendererKey: rendererKey ?? key,
     route: '/portal/provider/$key',
     actions: actions,
     metrics: const <PortalMetric>[],
@@ -183,6 +193,15 @@ PortalRoleData portalDataForProviderWorkspaceMeta(
   final providerContext =
       workspaceMeta['providerContext'] as Map<String, dynamic>? ??
       const <String, dynamic>{};
+  final rawModules = (workspaceMeta['moduleRegistry'] as List? ??
+          const <dynamic>[])
+      .map((item) => Map<String, dynamic>.from(item as Map))
+      .toList();
+  final modulesById = <String, Map<String, dynamic>>{
+    for (final module in rawModules)
+      if ((module['id']?.toString().trim() ?? '').isNotEmpty)
+        module['id']!.toString(): module,
+  };
   final rawSections = (workspaceMeta['navigationSections'] as List? ??
           const <dynamic>[])
       .map((item) => Map<String, dynamic>.from(item as Map))
@@ -195,24 +214,43 @@ PortalRoleData portalDataForProviderWorkspaceMeta(
 
   final sections = rawSections
       .map(
-        (item) => PortalSectionData(
-          key: item['id']?.toString() ?? item['code']?.toString() ?? '',
-          title: item['title']?.toString() ?? 'Section',
-          summary:
-              item['summary']?.toString() ??
-              'Live ${item['title']?.toString() ?? 'workspace'} records.',
-          iconKey: item['icon']?.toString(),
-          route: item['route']?.toString(),
-          permission: item['permission']?.toString(),
-          badgeCount:
-              item['badge'] is num ? (item['badge'] as num).toInt() : 0,
-          order: item['order'] is num ? (item['order'] as num).toInt() : 0,
-          actions: List<String>.from(item['actions'] ?? const <String>[]),
-          metrics: const <PortalMetric>[],
-          queueItems: const <PortalListItem>[],
-          recentItems: const <PortalListItem>[],
-          insightItems: const <PortalListItem>[],
-        ),
+        (item) {
+          final moduleId = item['moduleId']?.toString();
+          final module = moduleId == null ? null : modulesById[moduleId];
+          final resolvedTitle =
+              item['title']?.toString() ??
+              module?['title']?.toString() ??
+              'Section';
+          return PortalSectionData(
+            key:
+                module?['sectionKey']?.toString() ??
+                item['id']?.toString() ??
+                item['code']?.toString() ??
+                '',
+            title: resolvedTitle,
+            summary:
+                item['summary']?.toString() ??
+                module?['summary']?.toString() ??
+                'Live $resolvedTitle records.',
+            iconKey: item['icon']?.toString(),
+            moduleId: moduleId,
+            rendererKey:
+                module?['renderer']?.toString() ??
+                item['renderer']?.toString(),
+            route: item['route']?.toString(),
+            permission:
+                item['permission']?.toString() ??
+                module?['permission']?.toString(),
+            badgeCount:
+                item['badge'] is num ? (item['badge'] as num).toInt() : 0,
+            order: item['order'] is num ? (item['order'] as num).toInt() : 0,
+            actions: List<String>.from(item['actions'] ?? const <String>[]),
+            metrics: const <PortalMetric>[],
+            queueItems: const <PortalListItem>[],
+            recentItems: const <PortalListItem>[],
+            insightItems: const <PortalListItem>[],
+          );
+        },
       )
       .where((section) => section.key.trim().isNotEmpty)
       .toList();
@@ -483,6 +521,8 @@ class _PortalSectionFactory {
     'customers',
     title: 'Patients',
     summary: 'Patient profile, appointments, medical records, membership, and payments.',
+    moduleId: 'patient-workspace',
+    rendererKey: 'patient-workspace',
   );
 
   static final PortalSectionData providerAppointments = _section(

@@ -15,6 +15,8 @@ import '../models/wallet.dart';
 class ApiService {
   static String? _accessToken;
   static String? _activeCustomerId;
+  static final Map<String, Map<String, dynamic>> _providerPlatformWorkspaceCache =
+      <String, Map<String, dynamic>>{};
   static Future<String?> Function()? _onRefreshToken;
   static Future<void> Function()? _onSessionExpired;
   static final Dio _dio =
@@ -76,10 +78,12 @@ class ApiService {
 
   static void setAccessToken(String accessToken) {
     _accessToken = accessToken.trim();
+    _providerPlatformWorkspaceCache.clear();
   }
 
   static void clearAccessToken() {
     _accessToken = null;
+    _providerPlatformWorkspaceCache.clear();
   }
 
   static void setActiveCustomerId(String? customerId) {
@@ -224,6 +228,44 @@ class ApiService {
         .map((item) => Appointment.fromJson(item as Map<String, dynamic>))
         .toList()
       ..sort((a, b) => a.appointmentDate.compareTo(b.appointmentDate));
+  }
+
+  static Future<Map<String, dynamic>> getAppointmentConsultationWorkspace(
+    String appointmentId,
+  ) async {
+    final response = await _dio.get(
+      '/appointments/$appointmentId/consultation-workspace',
+    );
+    return _readEnvelope(response);
+  }
+
+  static Future<Map<String, dynamic>> startAppointmentConsultation(
+    String appointmentId,
+  ) async {
+    final response = await _dio.post('/appointments/$appointmentId/start-consultation');
+    return _readEnvelope(response);
+  }
+
+  static Future<Map<String, dynamic>> saveAppointmentConsultation(
+    String appointmentId,
+    Map<String, dynamic> payload,
+  ) async {
+    final response = await _dio.post(
+      '/appointments/$appointmentId/consultation',
+      data: payload,
+    );
+    return _readEnvelope(response);
+  }
+
+  static Future<Map<String, dynamic>> completeAppointmentConsultation(
+    String appointmentId,
+    Map<String, dynamic> payload,
+  ) async {
+    final response = await _dio.post(
+      '/appointments/$appointmentId/complete-consultation',
+      data: payload,
+    );
+    return _readEnvelope(response);
   }
 
   static Future<List<Document>> getDocuments(SHIELDRole role) async {
@@ -786,6 +828,33 @@ class ApiService {
       },
     );
     return _readEnvelope(response);
+  }
+
+  static Future<Map<String, dynamic>?> getProviderPlatformWorkspace({
+    String? providerId,
+    String? providerType,
+    String? businessId,
+    bool forceRefresh = false,
+  }) async {
+    final cacheKey = [
+      providerId?.trim() ?? '',
+      providerType?.trim() ?? '',
+      businessId?.trim() ?? '',
+    ].join('|');
+    if (!forceRefresh && _providerPlatformWorkspaceCache.containsKey(cacheKey)) {
+      return Map<String, dynamic>.from(_providerPlatformWorkspaceCache[cacheKey]!);
+    }
+    final response = await _dio.get(
+      '/platform/workspace/provider',
+      queryParameters: {
+        if (providerId != null) 'provider_id': providerId,
+        if (providerType != null) 'provider_type': providerType,
+        if (businessId != null) 'business_id': businessId,
+      },
+    );
+    final data = _readEnvelope(response);
+    _providerPlatformWorkspaceCache[cacheKey] = Map<String, dynamic>.from(data);
+    return Map<String, dynamic>.from(data);
   }
 
   static Future<Map<String, dynamic>?> getCrmOperationsQueue({

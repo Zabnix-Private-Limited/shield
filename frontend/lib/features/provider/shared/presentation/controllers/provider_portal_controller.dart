@@ -14,10 +14,15 @@ class ProviderPortalController extends ChangeNotifier {
   bool _workspaceLoaded = false;
   bool _customerLoading = false;
   bool _settingsLoading = false;
+  bool _consultationLoading = false;
+  bool _consultationSaving = false;
   String? _error;
   String? _selectedCustomerId;
+  String? _activeVisitAppointmentId;
   Map<String, dynamic>? _workspace;
+  Map<String, dynamic>? _platformWorkspace;
   Map<String, dynamic>? _authProfile;
+  Map<String, dynamic>? _consultationWorkspace;
   Customer? _selectedCustomer;
   Map<String, dynamic>? _selectedWallet;
   Map<String, dynamic>? _selectedMembership;
@@ -30,10 +35,17 @@ class ProviderPortalController extends ChangeNotifier {
   bool get isWorkspaceLoaded => _workspaceLoaded;
   bool get isCustomerLoading => _customerLoading;
   bool get isSettingsLoading => _settingsLoading;
+  bool get isConsultationLoading => _consultationLoading;
+  bool get isConsultationSaving => _consultationSaving;
   String? get error => _error;
+  String? get activeVisitAppointmentId => _activeVisitAppointmentId;
   Map<String, dynamic> get workspace => _workspace ?? const <String, dynamic>{};
+  Map<String, dynamic> get platformWorkspace =>
+      _platformWorkspace ?? const <String, dynamic>{};
   Map<String, dynamic> get authProfile =>
       _authProfile ?? const <String, dynamic>{};
+  Map<String, dynamic> get consultationWorkspace =>
+      _consultationWorkspace ?? const <String, dynamic>{};
   String? get selectedCustomerId => _selectedCustomerId;
   Customer? get selectedCustomer => _selectedCustomer;
   Map<String, dynamic>? get selectedWallet => _selectedWallet;
@@ -51,6 +63,29 @@ class ProviderPortalController extends ChangeNotifier {
       Map<String, dynamic>.from(workspace['summary'] ?? const {});
   Map<String, dynamic> get workspaceMeta =>
       Map<String, dynamic>.from(workspace['workspaceMeta'] ?? const {});
+  Map<String, dynamic> get providerContextMetadata =>
+      Map<String, dynamic>.from(workspaceMeta['providerContext'] ?? const {});
+  Map<String, dynamic> get workspaceMessages =>
+      Map<String, dynamic>.from(workspaceMeta['messages'] ?? const {});
+  Map<String, dynamic> get workspaceLabels =>
+      Map<String, dynamic>.from(workspaceMeta['labels'] ?? const {});
+  Map<String, dynamic> get workspaceFilters =>
+      Map<String, dynamic>.from(workspaceMeta['filters'] ?? const {});
+  List<Map<String, dynamic>> get dashboardWidgetMetadata =>
+      List<Map<String, dynamic>>.from(
+        (workspaceMeta['dashboardWidgets'] as List? ?? const <dynamic>[])
+            .map((item) => Map<String, dynamic>.from(item as Map)),
+      );
+  List<Map<String, dynamic>> get providerWorklists =>
+      List<Map<String, dynamic>>.from(
+        (workspaceMeta['worklists'] as List? ?? const <dynamic>[])
+            .map((item) => Map<String, dynamic>.from(item as Map)),
+      );
+  List<Map<String, dynamic>> get workspaceQuickActions =>
+      List<Map<String, dynamic>>.from(
+        (workspaceMeta['quickActions'] as List? ?? const <dynamic>[])
+            .map((item) => Map<String, dynamic>.from(item as Map)),
+      );
   Map<String, dynamic> get queues =>
       Map<String, dynamic>.from(workspace['queues'] ?? const {});
   List<Map<String, dynamic>> get appointmentQueue =>
@@ -274,6 +309,53 @@ class ProviderPortalController extends ChangeNotifier {
     return recent;
   }
 
+  Appointment? get activeVisitAppointment {
+    final activeId = _activeVisitAppointmentId;
+    if (activeId == null || activeId.isEmpty) {
+      return null;
+    }
+    for (final appointment in selectedAppointments) {
+      if (appointment.id == activeId) {
+        return appointment;
+      }
+    }
+    return null;
+  }
+
+  List<Map<String, dynamic>> get consultationActions =>
+      List<Map<String, dynamic>>.from(
+        (consultationWorkspace['actions'] as List? ?? const <dynamic>[])
+            .map((item) => Map<String, dynamic>.from(item as Map)),
+      );
+
+  List<Map<String, dynamic>> get consultationFormSections {
+    final sections = List<Map<String, dynamic>>.from(
+      (consultationWorkspace['formSections'] as List? ?? const <dynamic>[])
+          .map((item) => Map<String, dynamic>.from(item as Map)),
+    );
+    sections.sort(
+      (left, right) => (left['order'] as num? ?? 0).compareTo(
+        right['order'] as num? ?? 0,
+      ),
+    );
+    return sections;
+  }
+
+  Map<String, dynamic> get consultationForm =>
+      Map<String, dynamic>.from(consultationWorkspace['form'] ?? const {});
+
+  Map<String, dynamic> get activeVisitSummary =>
+      Map<String, dynamic>.from(consultationWorkspace['visit'] ?? const {});
+
+  List<Map<String, dynamic>> get activeVisitTimeline =>
+      List<Map<String, dynamic>>.from(
+        (consultationWorkspace['timeline'] as List? ?? const <dynamic>[])
+            .map((item) => Map<String, dynamic>.from(item as Map)),
+      );
+
+  String get activeVisitStatusLabel =>
+      consultationWorkspace['statusLabel']?.toString() ?? 'Waiting';
+
   List<Map<String, dynamic>> get selectedTimeline {
     final items = <Map<String, dynamic>>[];
     for (final appointment in selectedAppointments) {
@@ -312,11 +394,20 @@ class ProviderPortalController extends ChangeNotifier {
 
     try {
       final results = await Future.wait([
-        _repository.getWorkspace(),
+        _repository.getOperationalWorkspace(),
+        _repository.getPlatformWorkspace(),
         _repository.getAuthenticatedProfile(),
       ]);
-      _workspace = results[0];
-      _authProfile = results[1];
+      final operationalWorkspace = Map<String, dynamic>.from(results[0]);
+      final platformWorkspace = Map<String, dynamic>.from(results[1]);
+      final mergedWorkspace = Map<String, dynamic>.from(operationalWorkspace);
+      mergedWorkspace['workspaceMeta'] =
+          platformWorkspace['workspaceMeta'] ??
+          operationalWorkspace['workspaceMeta'] ??
+          const <String, dynamic>{};
+      _workspace = mergedWorkspace;
+      _platformWorkspace = platformWorkspace;
+      _authProfile = results[2];
       _workspaceLoaded = true;
       _selectedCustomerId ??= customers.isNotEmpty
           ? customers.first['id']?.toString()
@@ -356,11 +447,17 @@ class ProviderPortalController extends ChangeNotifier {
       _selectedMembership = results[2] as Map<String, dynamic>;
       _selectedDocuments = results[3] as List<Document>;
       _selectedAppointments = results[4] as List<Appointment>;
+      _activeVisitAppointmentId = _resolvePrimaryVisitAppointmentId();
+      _consultationWorkspace = null;
     } catch (error) {
       _error = error.toString();
     } finally {
       _customerLoading = false;
       notifyListeners();
+    }
+
+    if (_activeVisitAppointmentId != null) {
+      await loadConsultationWorkspace(_activeVisitAppointmentId!);
     }
   }
 
@@ -390,6 +487,90 @@ class ProviderPortalController extends ChangeNotifier {
   Future<void> revokeOwnedSession(String sessionId) async {
     await _repository.revokeSession(sessionId);
     await loadSettingsData();
+  }
+
+  Future<void> loadConsultationWorkspace(String appointmentId) async {
+    _activeVisitAppointmentId = appointmentId;
+    _consultationLoading = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      _consultationWorkspace = await _repository.getConsultationWorkspace(
+        appointmentId,
+      );
+    } catch (error) {
+      _error = error.toString();
+    } finally {
+      _consultationLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> startConsultationForActiveVisit() async {
+    final appointmentId = _activeVisitAppointmentId;
+    if (appointmentId == null || appointmentId.isEmpty) {
+      return;
+    }
+    _consultationSaving = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      _consultationWorkspace = await _repository.startConsultation(appointmentId);
+      await _reloadSelectedCustomerData();
+    } catch (error) {
+      _error = error.toString();
+    } finally {
+      _consultationSaving = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> saveActiveConsultation(Map<String, String> formData) async {
+    final appointmentId = _activeVisitAppointmentId;
+    if (appointmentId == null || appointmentId.isEmpty) {
+      return;
+    }
+    _consultationSaving = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      _consultationWorkspace = await _repository.saveConsultation(
+        appointmentId,
+        _consultationPayload(formData),
+      );
+      await _reloadSelectedCustomerData();
+    } catch (error) {
+      _error = error.toString();
+    } finally {
+      _consultationSaving = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> completeActiveConsultation(Map<String, String> formData) async {
+    final appointmentId = _activeVisitAppointmentId;
+    if (appointmentId == null || appointmentId.isEmpty) {
+      return;
+    }
+    _consultationSaving = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      _consultationWorkspace = await _repository.completeConsultation(
+        appointmentId,
+        _consultationPayload(formData),
+      );
+      await _reloadSelectedCustomerData(preferredAppointmentId: appointmentId);
+    } catch (error) {
+      _error = error.toString();
+    } finally {
+      _consultationSaving = false;
+      notifyListeners();
+    }
   }
 
   String queueStageTitle(String stageCode) {
@@ -472,6 +653,9 @@ class ProviderPortalController extends ChangeNotifier {
 
   String patientQuickActionTargetTab(Map<String, dynamic> action) =>
       action['targetTab']?.toString() ?? 'overview';
+
+  String consultationFieldValue(String fieldCode) =>
+      consultationForm[fieldCode]?.toString() ?? '';
 
   String formatCurrency(Object? value) {
     final amount = double.tryParse('${value ?? 0}') ?? 0;
@@ -578,5 +762,60 @@ class ProviderPortalController extends ChangeNotifier {
       return 2;
     }
     return 3;
+  }
+
+  String? _resolvePrimaryVisitAppointmentId() {
+    final incomplete = selectedAppointments
+        .where(
+          (appointment) =>
+              appointment.status != AppointmentStatus.completed &&
+              appointment.status != AppointmentStatus.cancelled,
+        )
+        .toList()
+      ..sort((a, b) => a.appointmentDate.compareTo(b.appointmentDate));
+    if (incomplete.isNotEmpty) {
+      return incomplete.first.id;
+    }
+
+    final completed = selectedAppointments.toList()
+      ..sort((a, b) => b.appointmentDate.compareTo(a.appointmentDate));
+    return completed.isEmpty ? null : completed.first.id;
+  }
+
+  Map<String, dynamic> _consultationPayload(Map<String, String> formData) => {
+    'symptoms': formData['symptoms']?.trim() ?? '',
+    'diagnosis': formData['diagnosis']?.trim() ?? '',
+    'advice': formData['advice']?.trim() ?? '',
+    'follow_up': formData['followUp']?.trim() ?? '',
+    'notes': formData['notes']?.trim() ?? '',
+  };
+
+  Future<void> _reloadSelectedCustomerData({String? preferredAppointmentId}) async {
+    final customerId = _selectedCustomerId;
+    if (customerId == null || customerId.isEmpty) {
+      return;
+    }
+
+    final results = await Future.wait([
+      _repository.getCustomerProfile(customerId),
+      _repository.getCustomerWallet(customerId),
+      _repository.getCustomerMembership(customerId),
+      _repository.getCustomerDocuments(customerId),
+      _repository.getCustomerAppointments(customerId),
+    ]);
+
+    _selectedCustomer = results[0] as Customer;
+    _selectedWallet = results[1] as Map<String, dynamic>;
+    _selectedMembership = results[2] as Map<String, dynamic>;
+    _selectedDocuments = results[3] as List<Document>;
+    _selectedAppointments = results[4] as List<Appointment>;
+    _activeVisitAppointmentId =
+        preferredAppointmentId ?? _resolvePrimaryVisitAppointmentId();
+
+    if (_activeVisitAppointmentId != null) {
+      _consultationWorkspace = await _repository.getConsultationWorkspace(
+        _activeVisitAppointmentId!,
+      );
+    }
   }
 }

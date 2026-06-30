@@ -14,11 +14,22 @@ class ProviderCustomersScreen extends StatefulWidget {
 
 class _ProviderCustomersScreenState extends State<ProviderCustomersScreen> {
   final TextEditingController _searchController = TextEditingController();
+  final TextEditingController _symptomsController = TextEditingController();
+  final TextEditingController _diagnosisController = TextEditingController();
+  final TextEditingController _adviceController = TextEditingController();
+  final TextEditingController _followUpController = TextEditingController();
+  final TextEditingController _notesController = TextEditingController();
   String _searchQuery = '';
+  String? _syncedConsultationKey;
 
   @override
   void dispose() {
     _searchController.dispose();
+    _symptomsController.dispose();
+    _diagnosisController.dispose();
+    _adviceController.dispose();
+    _followUpController.dispose();
+    _notesController.dispose();
     super.dispose();
   }
 
@@ -29,6 +40,7 @@ class _ProviderCustomersScreenState extends State<ProviderCustomersScreen> {
         final activeTab = controller.resolvePatientTab(_routeTab(context));
         final selected = controller.selectedCustomer;
         final workspaceTabs = controller.patientWorkspaceTabs;
+        _syncConsultationEditors(controller);
         final matchingCustomers = controller.customers.where((customer) {
           final query = _searchQuery.trim().toLowerCase();
           if (query.isEmpty) {
@@ -251,23 +263,10 @@ class _ProviderCustomersScreenState extends State<ProviderCustomersScreen> {
               .toList(),
         );
       case 'today-visit':
-        final upcoming = controller.selectedUpcomingAppointments as List<dynamic>;
-        if (upcoming.isEmpty) {
+        if (controller.activeVisitAppointmentId == null) {
           return _PanelText(controller.patientTabEmptyState(activeTab));
         }
-        return Column(
-          children: upcoming
-              .take(3)
-              .map(
-                (appointment) => _SummaryCard(
-                  title: appointment.typeLabel,
-                  subtitle:
-                      '${appointment.statusLabel} • ${appointment.doctorName ?? 'Provider'}',
-                  meta: _formatTimelineDate(appointment.appointmentDate),
-                ),
-              )
-              .toList(),
-        );
+        return _buildTodayVisitContent(context, controller);
       case 'appointments':
         final appointments = controller.selectedAppointments as List<dynamic>;
         if (appointments.isEmpty) {
@@ -396,6 +395,186 @@ class _ProviderCustomersScreenState extends State<ProviderCustomersScreen> {
         );
       default:
         return _PanelText(controller.patientTabEmptyState(activeTab));
+    }
+  }
+
+  Widget _buildTodayVisitContent(BuildContext context, dynamic controller) {
+    if (controller.isConsultationLoading &&
+        controller.consultationWorkspace.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.all(24),
+        child: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    final visit = controller.activeVisitSummary as Map<String, dynamic>;
+    final actions = controller.consultationActions as List<Map<String, dynamic>>;
+    final sections =
+        controller.consultationFormSections as List<Map<String, dynamic>>;
+    final timeline = controller.activeVisitTimeline as List<Map<String, dynamic>>;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _VisitSummaryCard(
+          title: visit['title']?.toString() ?? 'Current Visit',
+          subtitle: visit['subtitle']?.toString() ?? 'Provider visit in progress',
+          appointmentDateLabel:
+              visit['appointmentDateLabel']?.toString() ?? 'Time not scheduled',
+          statusLabel: controller.activeVisitStatusLabel,
+          reason: visit['reason']?.toString() ?? 'Visit reason not recorded yet.',
+          prescriptionCount: visit['prescriptionCount']?.toString() ?? '0',
+        ),
+        const SizedBox(height: 16),
+        if (actions.isNotEmpty)
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: actions
+                .map(
+                  (action) => _ConsultationActionButton(
+                    label: action['title']?.toString() ?? 'Continue',
+                    primary:
+                        (action['emphasis']?.toString() ?? '').toLowerCase() ==
+                        'primary',
+                    loading: controller.isConsultationSaving as bool,
+                    onTap: () => _handleConsultationAction(
+                      context,
+                      controller,
+                      action['code']?.toString() ?? '',
+                    ),
+                  ),
+                )
+                .toList(),
+          ),
+        const SizedBox(height: 18),
+        ...sections.map(
+          (section) => Padding(
+            padding: const EdgeInsets.only(bottom: 14),
+            child: _ConsultationField(
+              title: section['title']?.toString() ?? 'Notes',
+              placeholder:
+                  section['placeholder']?.toString() ?? 'Add visit notes',
+              controller: _controllerForConsultationField(
+                section['code']?.toString() ?? '',
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text('Visit timeline', style: AppTypography.h5),
+        const SizedBox(height: 10),
+        if (timeline.isEmpty)
+          _PanelText('No visit activity has been recorded yet.')
+        else
+          Column(
+            children: timeline
+                .map(
+                  (entry) => _TimelineTile(
+                    kind: _timelineLabel(entry['code']?.toString()),
+                    title: entry['title']?.toString() ?? 'Visit update',
+                    subtitle: entry['subtitle']?.toString() ?? '',
+                    timestamp:
+                        DateTime.tryParse(
+                          entry['timestamp']?.toString() ?? '',
+                        ) ??
+                        DateTime.now(),
+                  ),
+                )
+                .toList(),
+          ),
+      ],
+    );
+  }
+
+  Future<void> _handleConsultationAction(
+    BuildContext context,
+    dynamic controller,
+    String actionCode,
+  ) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final payload = _consultationFormPayload();
+    switch (actionCode) {
+      case 'START_CONSULTATION':
+        await controller.startConsultationForActiveVisit();
+        break;
+      case 'COMPLETE_VISIT':
+        await controller.completeActiveConsultation(payload);
+        break;
+      case 'SAVE_PROGRESS':
+      default:
+        await controller.saveActiveConsultation(payload);
+        break;
+    }
+
+    if (!mounted) {
+      return;
+    }
+
+    final error = controller.error?.toString().trim();
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(
+          error != null && error.isNotEmpty
+              ? error
+              : _consultationActionMessage(actionCode),
+        ),
+      ),
+    );
+  }
+
+  Map<String, String> _consultationFormPayload() => {
+    'symptoms': _symptomsController.text,
+    'diagnosis': _diagnosisController.text,
+    'advice': _adviceController.text,
+    'followUp': _followUpController.text,
+    'notes': _notesController.text,
+  };
+
+  TextEditingController _controllerForConsultationField(String code) {
+    switch (code) {
+      case 'symptoms':
+        return _symptomsController;
+      case 'diagnosis':
+        return _diagnosisController;
+      case 'advice':
+        return _adviceController;
+      case 'followUp':
+        return _followUpController;
+      case 'notes':
+      default:
+        return _notesController;
+    }
+  }
+
+  void _syncConsultationEditors(dynamic controller) {
+    final appointmentId = controller.activeVisitAppointmentId?.toString() ?? '';
+    final consultationId =
+        controller.consultationWorkspace['consultationId']?.toString() ?? '';
+    final statusCode =
+        controller.consultationWorkspace['statusCode']?.toString() ?? '';
+    final syncKey = '$appointmentId|$consultationId|$statusCode';
+    if (_syncedConsultationKey == syncKey || appointmentId.isEmpty) {
+      return;
+    }
+
+    _symptomsController.text = controller.consultationFieldValue('symptoms');
+    _diagnosisController.text = controller.consultationFieldValue('diagnosis');
+    _adviceController.text = controller.consultationFieldValue('advice');
+    _followUpController.text = controller.consultationFieldValue('followUp');
+    _notesController.text = controller.consultationFieldValue('notes');
+    _syncedConsultationKey = syncKey;
+  }
+
+  String _consultationActionMessage(String actionCode) {
+    switch (actionCode) {
+      case 'START_CONSULTATION':
+        return 'Consultation started.';
+      case 'COMPLETE_VISIT':
+        return 'Visit completed and saved.';
+      case 'SAVE_PROGRESS':
+      default:
+        return 'Visit notes saved.';
     }
   }
 
@@ -677,6 +856,202 @@ class _SearchHintChip extends StatelessWidget {
   }
 }
 
+class _VisitSummaryCard extends StatelessWidget {
+  const _VisitSummaryCard({
+    required this.title,
+    required this.subtitle,
+    required this.appointmentDateLabel,
+    required this.statusLabel,
+    required this.reason,
+    required this.prescriptionCount,
+  });
+
+  final String title;
+  final String subtitle;
+  final String appointmentDateLabel;
+  final String statusLabel;
+  final String reason;
+  final String prescriptionCount;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.lightGray,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(title, style: AppTypography.h5),
+                    const SizedBox(height: 6),
+                    Text(
+                      subtitle,
+                      style: AppTypography.small.copyWith(color: AppColors.gray),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              _StatusBadge(label: statusLabel),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: [
+              _InfoChip(label: appointmentDateLabel),
+              _InfoChip(label: 'Prescriptions: $prescriptionCount'),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Text(
+            reason,
+            style: AppTypography.body.copyWith(color: AppColors.darkGray),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ConsultationActionButton extends StatelessWidget {
+  const _ConsultationActionButton({
+    required this.label,
+    required this.primary,
+    required this.loading,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool primary;
+  final bool loading;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    if (primary) {
+      return FilledButton(
+        onPressed: loading ? null : onTap,
+        child: loading
+            ? const SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            : Text(label),
+      );
+    }
+
+    return OutlinedButton(
+      onPressed: loading ? null : onTap,
+      child: loading
+          ? const SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
+          : Text(label),
+    );
+  }
+}
+
+class _ConsultationField extends StatelessWidget {
+  const _ConsultationField({
+    required this.title,
+    required this.placeholder,
+    required this.controller,
+  });
+
+  final String title;
+  final String placeholder;
+  final TextEditingController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(title, style: AppTypography.body),
+        const SizedBox(height: 8),
+        TextField(
+          controller: controller,
+          minLines: 3,
+          maxLines: 5,
+          decoration: InputDecoration(
+            hintText: placeholder,
+            filled: true,
+            fillColor: Colors.white,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(16),
+              borderSide: const BorderSide(color: AppColors.divider),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(16),
+              borderSide: const BorderSide(color: AppColors.divider),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _StatusBadge extends StatelessWidget {
+  const _StatusBadge({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: AppColors.shieldBlue.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        label,
+        style: AppTypography.tiny.copyWith(
+          color: AppColors.shieldBlue,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+    );
+  }
+}
+
+class _InfoChip extends StatelessWidget {
+  const _InfoChip({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        label,
+        style: AppTypography.tiny.copyWith(color: AppColors.darkGray),
+      ),
+    );
+  }
+}
+
 class _SummaryCard extends StatelessWidget {
   const _SummaryCard({
     required this.title,
@@ -827,6 +1202,16 @@ String _timelineLabel(String? rawKind) {
   switch ((rawKind ?? '').toUpperCase()) {
     case 'APPOINTMENT':
       return 'Visit';
+    case 'CONSULTATION':
+      return 'Care';
+    case 'DIAGNOSIS':
+      return 'Diagnosis';
+    case 'ADVICE':
+      return 'Advice';
+    case 'FOLLOW_UP':
+      return 'Follow-up';
+    case 'COMPLETED':
+      return 'Done';
     case 'DOCUMENT':
       return 'Record';
     default:

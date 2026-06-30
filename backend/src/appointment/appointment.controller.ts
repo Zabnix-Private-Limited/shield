@@ -1,6 +1,5 @@
 import {
   Controller,
-  ForbiddenException,
   Get,
   Post,
   Param,
@@ -80,6 +79,64 @@ export class AppointmentController {
       success: true,
       message: 'Appointment confirmed successfully',
       data: appt,
+    };
+  }
+
+  @RequirePermissions('appointments.view')
+  @Get(':id/consultation-workspace')
+  async getConsultationWorkspace(@Param('id') id: string) {
+    const workspace = await this.appointmentService.getConsultationWorkspace(
+      BigInt(id),
+    );
+    return {
+      success: true,
+      message: 'Consultation workspace retrieved',
+      data: workspace,
+    };
+  }
+
+  @RequirePermissions('appointments.update')
+  @Post(':id/start-consultation')
+  async startConsultation(@Param('id') id: string) {
+    const workspace = await this.appointmentService.startConsultation(BigInt(id));
+    return {
+      success: true,
+      message: 'Consultation started successfully',
+      data: workspace,
+    };
+  }
+
+  @RequirePermissions('appointments.update')
+  @Post(':id/consultation')
+  async saveConsultation(@Param('id') id: string, @Body() body: any) {
+    const workspace = await this.appointmentService.saveConsultation(BigInt(id), {
+      symptoms: body.symptoms,
+      diagnosis: body.diagnosis,
+      advice: body.advice,
+      followUp: body.follow_up ?? body.followUp,
+      notes: body.notes,
+    });
+    return {
+      success: true,
+      message: 'Consultation progress saved successfully',
+      data: workspace,
+    };
+  }
+
+  @RequirePermissions('appointments.update')
+  @Post(':id/complete-consultation')
+  async completeConsultation(@Param('id') id: string, @Body() body: any) {
+    const workspace = await this.appointmentService.completeConsultation(BigInt(id), {
+      symptoms: body.symptoms,
+      diagnosis: body.diagnosis,
+      advice: body.advice,
+      followUp: body.follow_up ?? body.followUp,
+      notes: body.notes,
+    });
+    return {
+      success: true,
+      message: 'Consultation completed successfully',
+      data: workspace,
     };
   }
 }

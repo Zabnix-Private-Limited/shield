@@ -2,7 +2,14 @@ import 'package:equatable/equatable.dart';
 
 enum AppointmentType { clinic, dental, homeVisit }
 
-enum AppointmentStatus { scheduled, completed, cancelled, rescheduled }
+enum AppointmentStatus {
+  scheduled,
+  checkedIn,
+  inProgress,
+  completed,
+  cancelled,
+  rescheduled,
+}
 
 class Appointment extends Equatable {
   final String id;
@@ -51,6 +58,10 @@ class Appointment extends Equatable {
         case 'CONFIRMED':
         case 'SCHEDULED':
           return AppointmentStatus.scheduled;
+        case 'CHECKED_IN':
+          return AppointmentStatus.checkedIn;
+        case 'IN_PROGRESS':
+          return AppointmentStatus.inProgress;
         case 'COMPLETED':
           return AppointmentStatus.completed;
         case 'RESCHEDULED':
@@ -102,6 +113,8 @@ class Appointment extends Equatable {
 
   String get statusLabel => switch (status) {
     AppointmentStatus.scheduled => 'Scheduled',
+    AppointmentStatus.checkedIn => 'Checked In',
+    AppointmentStatus.inProgress => 'Consultation in Progress',
     AppointmentStatus.completed => 'Completed',
     AppointmentStatus.cancelled => 'Cancelled',
     AppointmentStatus.rescheduled => 'Rescheduled',

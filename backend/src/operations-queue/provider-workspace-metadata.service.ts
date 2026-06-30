@@ -21,32 +21,99 @@ export class ProviderWorkspaceMetadataService {
       appointmentsToday: number;
       pendingAppointments: number;
     },
+    options?: {
+      providerContext?: Record<string, unknown>;
+      permissions?: string[];
+    },
   ) {
     const profileLabel = this.getWorkflowProfileLabel(profile);
+    const moduleRegistry = this.buildModuleRegistry(profile);
+    const dashboardLayout = this.buildDashboardLayout(profile);
+    const workflowStages = this.buildWorkflowStages(profile);
+    const queueStages = this.buildQueueStages(profile);
+    const dashboardHighlights = this.buildDashboardHighlights(profile);
+    const searchConfig = this.buildSearchConfig(profile);
+    const timelineConfig = this.buildTimelineConfig(profile);
+    const quickActions = this.buildPatientQuickActions(profile);
+    const patientWorkspace = this.buildPatientWorkspace(profile);
+    const workflowEngine = {
+      title: 'Workflow Engine',
+      description:
+        'Backend-owned visit stages and provider workflow progression.',
+      stages: workflowStages,
+      completionActionTitle: this.getReadyStageTitle(profile),
+    };
+    const notificationEngine = this.buildNotificationEngine(profile);
+    const auditEngine = this.buildAuditEngine(profile);
+    const featureFlags = {
+      realtimeQueue: false,
+      patientTimeline: true,
+      consultationEngine: true,
+      smartAlerts: true,
+    };
+    const navigationSections = this.buildNavigationSections(profile, metrics);
+    const permissions = options?.permissions?.length
+      ? [...new Set(options.permissions)]
+      : ['providers.view'];
+    const topLevelWorklists = this.buildWorkspaceWorklists(
+      profile,
+      metrics,
+      queueStages,
+    );
+    const dashboardWidgets = this.buildDashboardWidgets(
+      profile,
+      metrics,
+      dashboardLayout,
+    );
+    const aggregatedFormSchemas = [
+      ...new Set(
+        moduleRegistry.flatMap((module) => {
+          const formSchemas = (module as { formSchemas?: unknown[] }).formSchemas;
+          return Array.isArray(formSchemas)
+            ? formSchemas.map((item: unknown) => item?.toString() ?? '')
+            : [];
+        }),
+      ),
+    ].filter((value) => value.length > 0);
     return {
       providerContext: {
         providerType: profile,
         workspaceTitle: this.getWorkspaceTitle(profile),
         headline: this.getWorkspaceHeadline(profile),
+        ...options?.providerContext,
       },
       workflowProfile: {
         code: profile,
         title: profileLabel,
       },
-      moduleRegistry: this.buildModuleRegistry(profile),
-      navigationSections: this.buildNavigationSections(profile, metrics),
-      queueStages: this.buildQueueStages(profile),
-      dashboardHighlights: this.buildDashboardHighlights(profile),
-      searchConfig: this.buildSearchConfig(profile),
-      timelineConfig: this.buildTimelineConfig(profile),
-      featureFlags: {
-        realtimeQueue: false,
-        patientTimeline: true,
-        consultationEngine: false,
-        smartAlerts: true,
-      },
-      permissions: ['providers.view'],
-      patientWorkspace: this.buildPatientWorkspace(profile),
+      navigation: navigationSections,
+      navigationSections,
+      moduleRegistry,
+      dashboardLayout,
+      dashboardWidgets,
+      quickActions,
+      worklists: topLevelWorklists,
+      formSchemas: aggregatedFormSchemas,
+      visitEngine: this.buildVisitEngine(profile),
+      workflowEngine,
+      workflowDefinitions: workflowStages,
+      visitStages: workflowStages,
+      queueStages,
+      dashboardHighlights,
+      searchConfig,
+      filters: this.buildWorkspaceFilters(profile),
+      timelineConfig,
+      actionEngine: this.buildActionEngine(profile),
+      notificationEngine,
+      notificationTypes: notificationEngine.eventTypes,
+      auditEngine,
+      auditMetadata: auditEngine,
+      featureFlags,
+      permissions,
+      patientWorkspace,
+      statusMappings: this.buildStatusMappings(profile),
+      labels: this.buildWorkspaceLabels(profile),
+      messages: this.buildWorkspaceMessages(profile),
     };
   }
 
@@ -154,6 +221,7 @@ export class ProviderWorkspaceMetadataService {
     return [
       {
         id: 'dashboard',
+        moduleId: 'dashboard',
         title: 'Dashboard',
         icon: 'dashboard',
         route: '/portal/provider/dashboard',
@@ -163,6 +231,7 @@ export class ProviderWorkspaceMetadataService {
       },
       {
         id: 'queue',
+        moduleId: 'queue',
         title: 'Live Queue',
         icon: 'queue',
         route: '/portal/provider/queue',
@@ -172,6 +241,7 @@ export class ProviderWorkspaceMetadataService {
       },
       {
         id: 'customers',
+        moduleId: 'patient-workspace',
         title: 'Patient Workspace',
         icon: 'patient',
         route: '/portal/provider/customers',
@@ -181,6 +251,7 @@ export class ProviderWorkspaceMetadataService {
       },
       {
         id: 'appointments',
+        moduleId: 'appointments',
         title: 'Appointments',
         icon: 'calendar',
         route: '/portal/provider/appointments',
@@ -190,6 +261,7 @@ export class ProviderWorkspaceMetadataService {
       },
       {
         id: 'documents',
+        moduleId: 'documents',
         title: this.getRecordsNavigationTitle(profile),
         icon: 'folder',
         route: '/portal/provider/documents',
@@ -199,6 +271,7 @@ export class ProviderWorkspaceMetadataService {
       },
       {
         id: 'prescriptions',
+        moduleId: 'prescriptions',
         title: this.getPrescriptionsNavigationTitle(profile),
         icon: 'prescription',
         route: '/portal/provider/prescriptions',
@@ -208,6 +281,7 @@ export class ProviderWorkspaceMetadataService {
       },
       {
         id: 'profile',
+        moduleId: 'profile',
         title: 'Profile',
         icon: 'profile',
         route: '/portal/provider/profile',
@@ -217,6 +291,7 @@ export class ProviderWorkspaceMetadataService {
       },
       {
         id: 'settings',
+        moduleId: 'settings',
         title: 'Settings',
         icon: 'settings',
         route: '/portal/provider/settings',
@@ -229,16 +304,91 @@ export class ProviderWorkspaceMetadataService {
 
   private buildModuleRegistry(profile: ProviderWorkflowProfileCode) {
     const baseModules = [
-      { id: 'dashboard', title: 'Dashboard', permission: 'providers.view' },
-      { id: 'queue', title: 'Live Queue', permission: 'providers.view' },
+      {
+        id: 'dashboard',
+        title: 'Dashboard',
+        permission: 'providers.view',
+        renderer: 'dashboard',
+        sectionKey: 'dashboard',
+        category: 'workspace',
+        description: 'Actionable control center for the provider workday.',
+        emptyStateMessage: 'No dashboard widgets are available yet.',
+        dashboardWidgets: ['today-patients', 'waiting-queue', 'tasks-waiting'],
+        worklists: ['waiting', 'today-appointments', 'urgent'],
+        actions: ['open-queue', 'open-patient-search'],
+        featureFlags: ['dashboard-widgets'],
+      },
+      {
+        id: 'queue',
+        title: 'Live Queue',
+        permission: 'providers.view',
+        renderer: 'queue',
+        sectionKey: 'queue',
+        category: 'workflow',
+        description: 'Live operational queue for the current provider workflow.',
+        emptyStateMessage: 'No patients are waiting in the live queue right now.',
+        worklists: ['waiting', 'accepted', 'in-progress', 'ready'],
+        timelineEventTypes: ['CHECK_IN', 'ASSIGNED', 'STARTED', 'COMPLETED'],
+        actions: ['open-patient', 'start-workflow', 'finish-workflow'],
+        featureFlags: ['live-queue-board'],
+      },
       {
         id: 'patient-workspace',
         title: 'Patient Workspace',
         permission: 'providers.view',
+        renderer: 'patient-workspace',
+        sectionKey: 'customers',
+        category: 'workspace',
+        description: 'One patient-centered workspace for visits, records, billing, and follow-up.',
+        emptyStateMessage: 'Select a patient to open the full care workspace.',
+        searchConfig: this.buildSearchConfig(profile),
+        actions: ['start-consultation', 'open-timeline', 'check-payments'],
+        featureFlags: ['patient-workspace', 'visit-engine'],
       },
-      { id: 'appointments', title: 'Appointments', permission: 'providers.view' },
-      { id: 'documents', title: 'Medical Records', permission: 'providers.view' },
-      { id: 'settings', title: 'Settings', permission: 'providers.view' },
+      {
+        id: 'appointments',
+        title: 'Appointments',
+        permission: 'providers.view',
+        renderer: 'appointments',
+        sectionKey: 'appointments',
+        category: 'schedule',
+        description: 'Assigned appointments, follow-up visits, and care schedule.',
+        emptyStateMessage: 'No appointments are available yet.',
+        worklists: ['today-appointments', 'upcoming', 'completed'],
+        actions: ['open-patient', 'start-visit'],
+      },
+      {
+        id: 'documents',
+        title: 'Medical Records',
+        permission: 'providers.view',
+        renderer: 'documents',
+        sectionKey: 'documents',
+        category: 'records',
+        description: 'Medical records, uploaded files, and supporting care documents.',
+        emptyStateMessage: 'No records have been uploaded yet.',
+        timelineEventTypes: ['DOCUMENT_UPLOADED', 'REPORT_READY'],
+        actions: ['open-patient', 'review-records'],
+      },
+      {
+        id: 'profile',
+        title: 'Profile',
+        permission: 'providers.view',
+        renderer: 'profile',
+        sectionKey: 'profile',
+        category: 'account',
+        description: 'Provider identity, role, branch, and availability details.',
+        emptyStateMessage: 'Provider profile is not available yet.',
+      },
+      {
+        id: 'settings',
+        title: 'Settings',
+        permission: 'providers.view',
+        renderer: 'settings',
+        sectionKey: 'settings',
+        category: 'account',
+        description: 'Sessions, devices, notifications, and provider preferences.',
+        emptyStateMessage: 'Settings are not available yet.',
+      },
     ];
 
     switch (profile) {
@@ -249,8 +399,29 @@ export class ProviderWorkspaceMetadataService {
             id: 'prescriptions',
             title: 'Prescription Verification',
             permission: 'providers.view',
+            renderer: 'prescriptions',
+            sectionKey: 'prescriptions',
+            category: 'care-module',
+            workflowTags: ['validation', 'dispensing', 'handover'],
+            description:
+              'Prescription validation and medicine handover for pharmacy workflows.',
+            formSchemas: ['prescription-validation', 'dispense-medicines'],
+            timelineEventTypes: ['PRESCRIPTION_VALIDATED', 'MEDICINES_DISPENSED'],
+            actions: ['start-verification', 'dispense-medicines'],
           },
-          { id: 'billing', title: 'Billing', permission: 'providers.view' },
+          {
+            id: 'billing',
+            title: 'Billing',
+            permission: 'providers.view',
+            renderer: 'billing',
+            sectionKey: 'billing',
+            category: 'billing',
+            workflowTags: ['invoice', 'payment', 'benefits'],
+            description:
+              'Patient billing, wallet usage, benefits, and payment completion.',
+            actions: ['open-billing', 'collect-payment'],
+            timelineEventTypes: ['INVOICE_GENERATED', 'PAYMENT_COMPLETED'],
+          },
         ];
       case 'LABORATORY':
         return [
@@ -259,17 +430,56 @@ export class ProviderWorkspaceMetadataService {
             id: 'samples',
             title: 'Sample Collection',
             permission: 'providers.view',
+            renderer: 'patient-workspace',
+            sectionKey: 'customers',
+            category: 'care-module',
+            workflowTags: ['sample', 'processing', 'verification'],
+            description:
+              'Sample collection and processing work for laboratory patients.',
+            formSchemas: ['sample-collection', 'sample-processing'],
+            actions: ['collect-sample', 'update-processing'],
+            timelineEventTypes: ['SAMPLE_COLLECTED', 'SAMPLE_PROCESSING'],
           },
-          { id: 'reports', title: 'Lab Reports', permission: 'providers.view' },
+          {
+            id: 'reports',
+            title: 'Lab Reports',
+            permission: 'providers.view',
+            renderer: 'documents',
+            sectionKey: 'documents',
+            category: 'records',
+            workflowTags: ['reports', 'verification'],
+            description: 'Laboratory reports and verification records.',
+            actions: ['open-reports', 'verify-report'],
+            timelineEventTypes: ['REPORT_UPLOADED', 'REPORT_VERIFIED'],
+          },
         ];
       case 'DENTAL':
         return [
           ...baseModules,
-          { id: 'treatments', title: 'Treatments', permission: 'providers.view' },
+          {
+            id: 'treatments',
+            title: 'Treatments',
+            permission: 'providers.view',
+            renderer: 'patient-workspace',
+            sectionKey: 'customers',
+            category: 'care-module',
+            workflowTags: ['treatment', 'procedures', 'follow-up'],
+            description: 'Dental treatment workflow and procedure tracking.',
+            formSchemas: ['dental-procedure', 'treatment-plan'],
+            actions: ['start-treatment', 'record-procedure'],
+            timelineEventTypes: ['TREATMENT_STARTED', 'PROCEDURE_RECORDED'],
+          },
           {
             id: 'prescriptions',
             title: 'Prescriptions',
             permission: 'providers.view',
+            renderer: 'prescriptions',
+            sectionKey: 'prescriptions',
+            category: 'care-module',
+            workflowTags: ['prescription', 'aftercare'],
+            description: 'Dental aftercare prescriptions and care advice.',
+            actions: ['create-prescription', 'review-aftercare'],
+            timelineEventTypes: ['PRESCRIPTION_CREATED'],
           },
         ];
       default:
@@ -279,9 +489,78 @@ export class ProviderWorkspaceMetadataService {
             id: 'prescriptions',
             title: 'Prescriptions',
             permission: 'providers.view',
+            renderer: 'prescriptions',
+            sectionKey: 'prescriptions',
+            category: 'care-module',
+            workflowTags: ['consultation', 'prescription', 'follow-up'],
+            description:
+              'Consultation-linked prescriptions and medication history.',
+            formSchemas: ['consultation-prescription'],
+            actions: ['create-prescription', 'review-prescriptions'],
+            timelineEventTypes: ['PRESCRIPTION_CREATED'],
           },
         ];
     }
+  }
+
+  private buildDashboardLayout(profile: ProviderWorkflowProfileCode) {
+    return {
+      title: 'Provider Dashboard',
+      description: 'Backend-owned dashboard layout for the provider workday.',
+      widgets: [
+        {
+          id: 'today-patients',
+          title: 'Today\'s Patients',
+          metricKind: 'appointments-today',
+          moduleId: 'dashboard',
+          order: 1,
+        },
+        {
+          id: 'waiting-queue',
+          title: this.getDashboardWaitingTitle(profile),
+          metricKind: 'queue-waiting',
+          moduleId: 'queue',
+          order: 2,
+        },
+        {
+          id: 'tasks-waiting',
+          title: 'Tasks Waiting',
+          metricKind: 'active-care',
+          moduleId: 'dashboard',
+          order: 3,
+        },
+      ],
+    };
+  }
+
+  private buildVisitEngine(profile: ProviderWorkflowProfileCode) {
+    return {
+      title: 'Visit Engine',
+      description:
+        'Every patient interaction is centered around one visit workflow.',
+      stageCodes: this.buildWorkflowStages(profile).map((stage) => stage.code),
+      linkedDomains: [
+        'queue',
+        'consultation',
+        'documents',
+        'prescriptions',
+        'billing',
+        'wallet',
+        'timeline',
+        'notes',
+      ],
+      primaryModuleId: 'patient-workspace',
+    };
+  }
+
+  private buildWorkflowEngine(profile: ProviderWorkflowProfileCode) {
+    return {
+      title: 'Workflow Engine',
+      description:
+        'Backend-owned visit stages and provider workflow progression.',
+      stages: this.buildWorkflowStages(profile),
+      completionActionTitle: this.getReadyStageTitle(profile),
+    };
   }
 
   private buildQueueStages(profile: ProviderWorkflowProfileCode) {
@@ -368,8 +647,238 @@ export class ProviderWorkspaceMetadataService {
       eventLabels: {
         APPOINTMENT: 'Visit',
         DOCUMENT: 'Record',
+        CHECK_IN: 'Check In',
+        ASSIGNED: 'Assigned',
+        STARTED: 'Care Started',
+        COMPLETED: 'Completed',
       },
       emptyStateMessage: 'No patient history is available yet.',
+    };
+  }
+
+  private buildActionEngine(profile: ProviderWorkflowProfileCode) {
+    return {
+      title: 'Action Engine',
+      description: 'Buttons and quick actions are provided by backend contracts.',
+      primaryActions: this.buildPatientQuickActions(profile),
+    };
+  }
+
+  private buildNotificationEngine(profile: ProviderWorkflowProfileCode) {
+    return {
+      title: 'Notification Engine',
+      description: 'Provider notifications are backend-generated event types.',
+      eventTypes: [
+        'PATIENT_ARRIVED',
+        'REPORT_READY',
+        'PRESCRIPTION_UPLOADED',
+        'PAYMENT_COMPLETED',
+      ],
+      featureFlags: ['in-app-notifications'],
+    };
+  }
+
+  private buildAuditEngine(profile: ProviderWorkflowProfileCode) {
+    return {
+      title: 'Audit Engine',
+      description: 'Critical provider actions must remain auditable.',
+      eventTypes: [
+        'VIEWED_PATIENT',
+        'STARTED_VISIT',
+        'UPDATED_CONSULTATION',
+        'COMPLETED_VISIT',
+      ],
+      scope: profile,
+    };
+  }
+
+  private buildDashboardWidgets(
+    profile: ProviderWorkflowProfileCode,
+    metrics: {
+      waitingCount: number;
+      activeCareCount: number;
+      billingCount: number;
+      appointmentsToday: number;
+      pendingAppointments: number;
+    },
+    dashboardLayout: {
+      widgets: Array<{
+        id: string;
+        title: string;
+        metricKind: string;
+        moduleId: string;
+        order: number;
+      }>;
+    },
+  ) {
+    return dashboardLayout.widgets.map((widget) => ({
+      id: widget.id,
+      title: widget.title,
+      value: this.resolveDashboardWidgetValue(widget.metricKind, metrics),
+      icon: this.resolveDashboardWidgetIcon(widget.metricKind),
+      color: this.resolveDashboardWidgetColor(widget.metricKind),
+      destinationModuleId: widget.moduleId,
+      refreshIntervalSeconds: 60,
+      visibilityRule: 'providers.view',
+      order: widget.order,
+      emptyStateMessage: this.getDashboardWidgetEmptyState(
+        profile,
+        widget.metricKind,
+      ),
+    }));
+  }
+
+  private buildWorkspaceWorklists(
+    profile: ProviderWorkflowProfileCode,
+    metrics: {
+      waitingCount: number;
+      activeCareCount: number;
+      billingCount: number;
+      appointmentsToday: number;
+      pendingAppointments: number;
+    },
+    queueStages: Array<{ code: string }>,
+  ) {
+    return [
+      {
+        id: 'waiting',
+        title: this.getDashboardWaitingTitle(profile),
+        count: metrics.waitingCount,
+        icon: 'queue',
+        color: 'orange',
+        stageCodes: ['WAITING', 'ACCEPTED'],
+        emptyStateMessage: this.getWaitingEmptyState(profile),
+      },
+      {
+        id: 'active-care',
+        title: this.getConsultationStageTitle(profile),
+        count: metrics.activeCareCount,
+        icon: 'care',
+        color: 'blue',
+        stageCodes: ['CONSULTATION', 'READY_TO_COMPLETE'],
+        emptyStateMessage: this.getConsultationEmptyState(profile),
+      },
+      {
+        id: 'pending-payments',
+        title: 'Pending Payments',
+        count: metrics.billingCount,
+        icon: 'payments',
+        color: 'amber',
+        stageCodes: ['WAITING_PAYMENT'],
+        emptyStateMessage: 'No payments are waiting right now.',
+      },
+      {
+        id: 'today-visits',
+        title: "Today's Visits",
+        count: metrics.appointmentsToday,
+        icon: 'calendar',
+        color: 'green',
+        stageCodes: queueStages.map((stage) => stage.code),
+        emptyStateMessage: 'No visits are scheduled for today.',
+      },
+    ];
+  }
+
+  private buildWorkspaceFilters(profile: ProviderWorkflowProfileCode) {
+    return {
+      queue: [
+        {
+          code: 'all-open',
+          title: 'All Open Work',
+          description: 'Show every active queue stage for this provider.',
+          stageCodes: ['WAITING', 'ACCEPTED', 'CONSULTATION', 'WAITING_PAYMENT'],
+        },
+        {
+          code: 'waiting',
+          title: this.getDashboardWaitingTitle(profile),
+          description: 'Only show patients waiting for the next staff action.',
+          stageCodes: ['WAITING', 'ACCEPTED'],
+        },
+        {
+          code: 'active-care',
+          title: this.getConsultationStageTitle(profile),
+          description: 'Only show active care or service work in progress.',
+          stageCodes: ['CONSULTATION', 'READY_TO_COMPLETE'],
+        },
+        {
+          code: 'billing',
+          title: 'Pending Payments',
+          description: 'Only show visits that still need billing completion.',
+          stageCodes: ['WAITING_PAYMENT'],
+        },
+      ],
+      search: [
+        {
+          code: 'patient-identity',
+          title: 'Patient Identity',
+          supportedQueries: ['Patient name', 'Patient ID', 'Phone number'],
+        },
+        {
+          code: 'visit-access',
+          title: 'Visit Access',
+          supportedQueries: ['SHIELD card', 'Membership number', 'Appointment', 'Invoice'],
+        },
+      ],
+    };
+  }
+
+  private buildStatusMappings(profile: ProviderWorkflowProfileCode) {
+    return {
+      queue: {
+        WAITING: this.getDashboardWaitingTitle(profile),
+        ACCEPTED: 'Accepted',
+        CONSULTATION: this.getConsultationStageTitle(profile),
+        WAITING_PAYMENT: 'Waiting for Payment',
+        READY_TO_COMPLETE: this.getReadyStageTitle(profile),
+        COMPLETED: 'Completed',
+        CLOSED: 'Closed',
+      },
+      timeline: {
+        APPOINTMENT: 'Visit',
+        DOCUMENT: 'Record',
+        CHECK_IN: 'Check In',
+        ASSIGNED: 'Assigned',
+        STARTED: 'Care Started',
+        COMPLETED: 'Completed',
+      },
+    };
+  }
+
+  private buildWorkspaceLabels(profile: ProviderWorkflowProfileCode) {
+    return {
+      patient: 'Patient',
+      visit: 'Visit',
+      timeline: 'Timeline',
+      records: this.getRecordsNavigationTitle(profile),
+      prescriptions: this.getPrescriptionsNavigationTitle(profile),
+      queueWaiting: this.getDashboardWaitingTitle(profile),
+      queueActive: this.getConsultationStageTitle(profile),
+      queueReady: this.getReadyStageTitle(profile),
+    };
+  }
+
+  private buildWorkspaceMessages(profile: ProviderWorkflowProfileCode) {
+    return {
+      emptyStates: {
+        queueWaiting: this.getWaitingEmptyState(profile),
+        queueActive: this.getConsultationEmptyState(profile),
+        patientWorkspace:
+          'Select a patient to open the full care view. Visits, records, benefits, and payments stay together here.',
+        search: 'No patients match this search yet.',
+        timeline: 'No patient history is available yet.',
+      },
+      success: {
+        consultationStarted: `${this.getConsultationStageTitle(profile)} started successfully.`,
+        consultationSaved: 'Visit progress saved successfully.',
+        consultationCompleted: 'Visit completed successfully.',
+      },
+      errors: {
+        metadataUnavailable:
+          'Provider workspace details could not be loaded right now.',
+        patientUnavailable: 'Patient details could not be loaded right now.',
+        consultationUnavailable:
+          'Visit details could not be loaded right now.',
+      },
     };
   }
 
@@ -517,6 +1026,113 @@ export class ProviderWorkspaceMetadataService {
             targetTab: 'payments',
           },
         ];
+    }
+  }
+
+  private buildWorkflowStages(profile: ProviderWorkflowProfileCode) {
+    return [
+      {
+        code: 'CHECK_IN',
+        title: 'Check In',
+        order: 1,
+      },
+      {
+        code: 'ASSIGNED',
+        title: 'Assigned',
+        order: 2,
+      },
+      {
+        code: 'IN_PROGRESS',
+        title: this.getConsultationStageTitle(profile),
+        order: 3,
+      },
+      {
+        code: 'WAITING_PAYMENT',
+        title: 'Waiting for Payment',
+        order: 4,
+      },
+      {
+        code: 'COMPLETED',
+        title: 'Completed',
+        order: 5,
+      },
+      {
+        code: 'CLOSED',
+        title: 'Closed',
+        order: 6,
+      },
+    ];
+  }
+
+  private resolveDashboardWidgetValue(
+    metricKind: string,
+    metrics: {
+      waitingCount: number;
+      activeCareCount: number;
+      billingCount: number;
+      appointmentsToday: number;
+      pendingAppointments: number;
+    },
+  ) {
+    switch (metricKind) {
+      case 'appointments-today':
+        return metrics.appointmentsToday;
+      case 'queue-waiting':
+        return metrics.waitingCount;
+      case 'active-care':
+        return metrics.activeCareCount;
+      case 'pending-appointments':
+        return metrics.pendingAppointments;
+      case 'pending-payments':
+        return metrics.billingCount;
+      default:
+        return 0;
+    }
+  }
+
+  private resolveDashboardWidgetIcon(metricKind: string) {
+    switch (metricKind) {
+      case 'appointments-today':
+        return 'calendar';
+      case 'queue-waiting':
+        return 'queue';
+      case 'active-care':
+        return 'care';
+      case 'pending-payments':
+        return 'payments';
+      default:
+        return 'dashboard';
+    }
+  }
+
+  private resolveDashboardWidgetColor(metricKind: string) {
+    switch (metricKind) {
+      case 'queue-waiting':
+        return 'orange';
+      case 'active-care':
+        return 'blue';
+      case 'pending-payments':
+        return 'amber';
+      default:
+        return 'green';
+    }
+  }
+
+  private getDashboardWidgetEmptyState(
+    profile: ProviderWorkflowProfileCode,
+    metricKind: string,
+  ) {
+    switch (metricKind) {
+      case 'appointments-today':
+        return 'No visits are scheduled for today.';
+      case 'queue-waiting':
+        return this.getWaitingEmptyState(profile);
+      case 'active-care':
+        return this.getConsultationEmptyState(profile);
+      case 'pending-payments':
+        return 'No payments are waiting right now.';
+      default:
+        return 'No dashboard activity is available yet.';
     }
   }
 

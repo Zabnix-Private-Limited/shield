@@ -47,6 +47,10 @@
    - Navigation, module registries, workflow stages, action definitions, display labels, button captions, empty states, permissions, and operational metadata must come from backend contracts rather than being hardcoded in Flutter.
    - Flutter should act as a renderer for backend-owned workspace metadata and should limit local decisions to layout, responsive behavior, accessibility, animations, and presentation-only formatting such as date, currency, and percentage display.
    - Do not expose raw database or backend enum codes in the UI when a human-readable backend display contract can be returned instead.
+10. Provider Platform Module Architecture
+   - SHIELD should have one Provider Platform with backend-driven modules, not separate duplicated provider portals for doctor, pharmacy, dental, laboratory, dietitian, or home-care roles.
+   - Provider type should change the loaded module registry, module renderer identifiers, workflow stages, forms, actions, and permissions through backend metadata, while the Flutter shell remains a reusable renderer.
+   - Avoid frontend branching on provider type for business semantics; if a provider workflow needs to differ, add or adjust the backend module contract instead of creating provider-type-specific pages.
 
 ## Database Rules
 - `current_schema.md` at the repository root is the source of truth for the current database situation and schema state.
@@ -116,6 +120,7 @@
 4. Do not run `vercel --prod` or other production Vercel CLI deploy commands from this machine/account for SHIELD unless the user explicitly overrides that rule.
 5. Do not make Prisma schema application part of the default Vercel build path.
 6. When building or expanding any portal (Customer, Provider, CRM, Manager, Executive, or Super Admin), prefer backend-driven workspace contracts over frontend-owned business semantics, and treat the Provider Portal architecture as the template to generalize from.
+7. When expanding the Provider Portal, prefer adding backend-owned modules/plugins inside the shared Provider Platform shell over creating separate provider-type portals or duplicate workflow pages.
 
 ## Project File Structure
 ```

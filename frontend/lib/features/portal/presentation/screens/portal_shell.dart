@@ -87,7 +87,7 @@ class _PortalShellState extends State<PortalShell> {
         portal = portalDataForRole(widget.role);
         data = portal.sectionFor(sectionKey);
       } else if (widget.role == SHIELDRole.provider) {
-        final workspace = await ApiService.getProviderWorkspace(limit: 20) ??
+        final workspace = await ApiService.getProviderPlatformWorkspace() ??
             <String, dynamic>{};
         final workspaceMeta =
             workspace['workspaceMeta'] as Map<String, dynamic>? ??
@@ -485,22 +485,8 @@ class _RoleContent extends StatelessWidget {
       content = const CustomerWalletScreen();
     } else if (isCustomerSettings) {
       content = const _CustomerSettingsView();
-    } else if (isProviderRole && section.key == 'dashboard') {
-      content = const ProviderDashboardScreen();
-    } else if (isProviderRole && section.key == 'queue') {
-      content = const ProviderQueueScreen();
-    } else if (isProviderRole && section.key == 'customers') {
-      content = const ProviderCustomersScreen();
-    } else if (isProviderRole && section.key == 'appointments') {
-      content = const ProviderAppointmentsScreen();
-    } else if (isProviderRole && section.key == 'documents') {
-      content = const ProviderDocumentsScreen();
-    } else if (isProviderRole && section.key == 'prescriptions') {
-      content = const ProviderPrescriptionsScreen();
-    } else if (isProviderRole && section.key == 'profile') {
-      content = const ProviderProfileScreen();
-    } else if (isProviderRole && section.key == 'settings') {
-      content = const ProviderSettingsScreen();
+    } else if (isProviderRole) {
+      content = _buildProviderModuleContent(section);
     } else if (isCardUtilization) {
       content = _EnterpriseWorkspaceView(portal: portal, section: section);
     } else if (isAdminBusinesses) {
@@ -579,6 +565,29 @@ class _RoleContent extends StatelessWidget {
         ),
       ],
     );
+  }
+
+  Widget _buildProviderModuleContent(PortalSectionData section) {
+    switch (section.rendererKey ?? section.moduleId ?? section.key) {
+      case 'dashboard':
+        return const ProviderDashboardScreen();
+      case 'queue':
+        return const ProviderQueueScreen();
+      case 'patient-workspace':
+        return const ProviderCustomersScreen();
+      case 'appointments':
+        return const ProviderAppointmentsScreen();
+      case 'documents':
+        return const ProviderDocumentsScreen();
+      case 'prescriptions':
+        return const ProviderPrescriptionsScreen();
+      case 'profile':
+        return const ProviderProfileScreen();
+      case 'settings':
+        return const ProviderSettingsScreen();
+      default:
+        return _EnterpriseWorkspaceView(portal: portal, section: section);
+    }
   }
 }
 
@@ -5326,6 +5335,10 @@ Color _appointmentAccent(AppointmentStatus status) {
       return AppColors.error;
     case AppointmentStatus.rescheduled:
       return AppColors.warning;
+    case AppointmentStatus.checkedIn:
+      return AppColors.warning;
+    case AppointmentStatus.inProgress:
+      return AppColors.shieldNavy;
     case AppointmentStatus.scheduled:
       return AppColors.shieldBlue;
   }
@@ -5339,6 +5352,10 @@ IconData _appointmentIcon(AppointmentStatus status) {
       return Icons.cancel_outlined;
     case AppointmentStatus.rescheduled:
       return Icons.update_rounded;
+    case AppointmentStatus.checkedIn:
+      return Icons.fact_check_outlined;
+    case AppointmentStatus.inProgress:
+      return Icons.local_hospital_outlined;
     case AppointmentStatus.scheduled:
       return Icons.event_note_rounded;
   }

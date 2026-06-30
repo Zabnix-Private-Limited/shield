@@ -5924,3 +5924,192 @@ est build, ackend/vercel.json, ackend/src/auth/auth.service.ts, and uth_devic
 
 ---
 2026-06-30 20:30:00 IST
+## 171. Provider Consultation Engine: Backend-Owned Visit Workspace, Save Progress, And Complete Visit Flow
+**High-level description**: Built the next major Provider Portal workflow end-to-end by turning `Today's Visit` into a real consultation workspace backed by live appointment and consultation data, instead of leaving it as a passive summary tab.
+- Extended the appointment backend with a provider-facing consultation workflow API that now supports:
+  - loading a display-ready consultation workspace for an appointment
+  - starting a consultation
+  - saving consultation progress
+  - completing a consultation
+- Kept the backend as the semantic owner by making the consultation workspace response shape the visit for Flutter, including:
+  - visit title, subtitle, schedule label, reason, and status label
+  - backend-owned action definitions such as `Start Consultation`, `Save Progress`, and `Complete Visit`
+  - backend-owned form field metadata for Symptoms, Diagnosis, Advice, Follow-up, and Clinical Notes
+  - a visit timeline built from appointment and consultation state
+- Used the existing `consultations` table and appointment relationship instead of inventing new demo tables. Structured visit details are now stored through backend-controlled consultation note serialization while still preserving compatibility with older plain-text notes.
+- Updated provider data access in Flutter so the patient workspace can load and submit the consultation workflow through authenticated API calls rather than local-only UI state.
+- Expanded `ProviderPortalController` to manage the active visit, consultation workspace loading/saving, and post-save refresh so provider widgets stay presentation-focused while the controller coordinates the live workflow.
+- Reworked the `Today's Visit` tab into an actual consultation engine surface with:
+  - visit summary card
+  - action buttons driven by backend action metadata
+  - backend-defined clinical form sections
+  - live save/start/complete actions
+  - visit timeline rendered from backend timeline entries
+- Updated the shared appointment model so provider workflows now correctly recognize `Checked In` and `Consultation in Progress` states rather than collapsing them into generic scheduled visits.
+- Why this approach was chosen:
+  - the provider workspace was already patient-centered structurally, but the most important operational action still dead-ended into a static screen.
+  - SHIELD needs a care workflow engine, not just queue navigation, and the existing appointment-to-consultation schema was strong enough to support a real first version without schema churn.
+  - making the consultation workspace backend-driven keeps this slice aligned with the larger architecture rule that Flutter renders workflow contracts instead of owning healthcare business semantics.
+
+### Files Modified/Created
+**Frontend Files (Modified)**:
+- frontend/lib/features/provider/customers/presentation/screens/provider_customers_screen.dart
+- frontend/lib/features/provider/shared/presentation/controllers/provider_portal_controller.dart
+- frontend/lib/features/provider/shared/data/provider_portal_repository.dart
+- frontend/lib/shared/services/api_service.dart
+- frontend/lib/shared/models/appointment.dart
+
+**Backend Files (Modified)**:
+- backend/src/appointment/appointment.controller.ts
+- backend/src/appointment/appointment.service.ts
+
+### Verification
+- flutter analyze --no-pub frontend/lib/features/provider/customers/presentation/screens/provider_customers_screen.dart frontend/lib/features/provider/shared/presentation/controllers/provider_portal_controller.dart frontend/lib/shared/services/api_service.dart frontend/lib/features/provider/shared/data/provider_portal_repository.dart frontend/lib/shared/models/appointment.dart
+- npm run build
+- Verified the provider consultation workspace compiles cleanly in Flutter and the backend builds after the new appointment consultation workflow endpoints were added.
+
+### Remaining Blockers / Risks
+- This completes the first real consultation workflow, but the underlying consultation schema is still lightweight. Symptoms, advice, follow-up, and notes are currently stored through backend-managed structured consultation notes because the database does not yet have dedicated columns for each care field.
+- The visit timeline is now backend-generated for the consultation workspace, but it is still scoped to appointment and consultation milestones. A fuller provider timeline should later absorb prescriptions, billing, lab milestones, documents, notes, and alerts into one patient story.
+- The queue and patient workspace now lead into a real visit workflow, but real-time updates, provider-type-specific consultation variations, and prescription creation from the consultation flow are still future slices.
+
+---
+2026-06-30 21:05:00 IST
+## 172. Provider Platform Module Contract: Backend-Driven Module Registry And Shell Rendering
+**High-level description**: Reworked the Provider Portal shell around a backend-driven module contract so SHIELD now treats provider workflows as modules inside one Provider Platform rather than as hardcoded provider-specific pages.
+- Extended provider workspace metadata so navigation items now carry backend-owned `moduleId` values, linking sidebar entries to the provider module registry instead of leaving Flutter to infer which provider screen should be shown.
+- Enriched the backend provider module registry to behave more like a platform/plugin contract by returning module-level metadata such as:
+  - stable module ids
+  - renderer identifiers
+  - section keys
+  - module categories
+  - workflow tags for provider-type-specialized modules
+- Kept provider-type specialization in the backend module contract instead of duplicating portals. Examples:
+  - pharmacy modules can expose prescription verification and billing capabilities
+  - laboratory modules can expose samples and reports
+  - dental modules can expose treatments while still using the shared Provider Platform shell
+- Updated Flutter portal metadata parsing so provider navigation sections now inherit module renderer identity from the backend module registry. This gives the shell a stable render contract without hardcoding business semantics per provider type.
+- Reworked `PortalShell` to resolve provider content through a provider-module renderer path instead of a long `if (isProviderRole && section.key == ...)` chain. Flutter still maps stable renderer ids to widgets, but the backend now decides which provider modules are active and how they should be identified.
+- Hardened the fallback provider role data so even when backend metadata is unavailable, the patient workspace still resolves through the same module-driven renderer path rather than falling back to a mismatched local section key.
+- Updated `AGENTS.md` to freeze the new repository rule: SHIELD should have one Provider Platform with backend-driven modules/plugins, not separate duplicated provider-specific portals.
+- Why this approach was chosen:
+  - the previous provider architecture was already moving toward backend-owned semantics, but the shell still effectively treated provider features like a hardcoded page list.
+  - a module contract is the right intermediate layer before adding more provider types, because it lets SHIELD evolve into a healthcare operations platform where workflow capabilities are loaded by metadata instead of by frontend branching.
+  - this keeps future work aligned with the user goal of one reusable Provider Platform shell that can support doctor, pharmacy, dental, lab, dietitian, home-care, and future provider types without duplicating portals.
+
+### Files Modified/Created
+**Frontend Files (Modified)**:
+- frontend/lib/features/portal/presentation/portal_role_data.dart
+- frontend/lib/features/portal/presentation/screens/portal_shell.dart
+
+**Backend Files (Modified)**:
+- backend/src/operations-queue/provider-workspace-metadata.service.ts
+
+**Documentation / Rules Files (Modified)**:
+- AGENTS.md
+
+### Verification
+- flutter analyze --no-pub frontend/lib/features/portal/presentation/screens/portal_shell.dart frontend/lib/features/portal/presentation/portal_role_data.dart
+- npm run build
+- Verified the provider shell compiles cleanly after switching to backend module-driven rendering and the backend builds after the richer provider module registry contract update.
+
+### Remaining Blockers / Risks
+- The shell is now module-driven, but many provider modules still render the same shared screens. The next phase is to deepen module metadata so forms, actions, worklists, and dashboard widgets are loaded per module with less shared placeholder behavior.
+- Renderer identifiers are now stable backend contract values, but Flutter still owns the final renderer map. That is acceptable as a presentation boundary for now, as long as future provider workflows add module ids and renderer ids through the backend contract first.
+- This change freezes the platform direction, but global provider search, real-time queue transport, timeline unification across all modules, and deeper plugin-specific visit variants are still future slices.
+
+---
+2026-06-30 21:25:00 IST
+## 173. Platform Metadata Service: Dedicated Provider Startup Contract And Richer Module Engine Metadata
+**High-level description**: Added a dedicated backend platform metadata endpoint for the Provider Platform and expanded the provider workspace contract so SHIELD now has a real startup metadata service instead of treating feature APIs as the primary source of shell configuration.
+- Added a dedicated backend Platform Metadata module with `GET /platform/workspace/provider`, which now returns Provider Platform metadata as its own contract rather than requiring the frontend shell to read navigation/module semantics from the operations queue workspace response.
+- Implemented `PlatformMetadataService` to assemble provider platform metadata from live provider scope and queue metrics, while reusing the shared `ProviderWorkspaceMetadataService` as the semantic owner for the provider contract.
+- Reworked the Provider Platform shell to bootstrap from the new platform metadata endpoint, which is the first step toward the user-recommended startup model where the frontend fetches one metadata contract and renders the provider platform from it.
+- Expanded provider workspace metadata beyond navigation/module ids so the Provider Platform contract now also includes backend-owned engine definitions for:
+  - dashboard layout/widgets
+  - visit engine
+  - workflow engine
+  - action engine
+  - notification engine
+  - audit engine
+- Deepened the provider module registry so modules now carry richer backend-owned metadata such as:
+  - renderer ids
+  - section keys
+  - categories
+  - descriptions
+  - empty states
+  - actions
+  - worklists
+  - workflow tags
+  - timeline event types
+  - form schema identifiers
+  - feature flags
+- Preserved the existing Provider Platform renderer contract in Flutter, but moved it one step closer to a true module system by having navigation sections inherit module ids and renderer identity from the backend module registry instead of treating them as plain sidebar items.
+- Why this approach was chosen:
+  - the previous provider shell was already backend-driven for navigation, but it still depended on a feature-oriented workspace endpoint for metadata bootstrapping.
+  - SHIELD is now at the stage where shared engines matter more than adding more isolated portal pages, so introducing a dedicated Platform Metadata Service keeps the Provider Platform aligned with the long-term architecture before CRM/Admin/Manager are expanded.
+  - this lets future provider work deepen the module engine, visit engine, workflow engine, and dynamic forms without coupling portal startup to queue-specific API contracts.
+
+### Files Modified/Created
+**Frontend Files (Modified)**:
+- frontend/lib/features/portal/presentation/screens/portal_shell.dart
+- frontend/lib/features/portal/presentation/portal_role_data.dart
+- frontend/lib/shared/services/api_service.dart
+
+**Backend Files (New)**:
+- backend/src/platform-metadata/platform-metadata.controller.ts
+- backend/src/platform-metadata/platform-metadata.module.ts
+- backend/src/platform-metadata/platform-metadata.service.ts
+
+**Backend Files (Modified)**:
+- backend/src/app.module.ts
+- backend/src/operations-queue/provider-workspace-metadata.service.ts
+
+### Verification
+- flutter analyze --no-pub frontend/lib/features/portal/presentation/screens/portal_shell.dart frontend/lib/features/portal/presentation/portal_role_data.dart frontend/lib/shared/services/api_service.dart
+- npm run build
+- Verified the Provider Platform shell compiles cleanly after switching to the dedicated platform metadata endpoint and the backend builds after the new Platform Metadata module and richer provider engine metadata were introduced.
+
+### Remaining Blockers / Risks
+- The startup metadata service now exists, but provider data screens still fetch their live operational data from feature-specific APIs. That is acceptable for now; the next architectural step is to make more of those screens consume deeper module/engine metadata from the platform contract while keeping live records in feature APIs.
+- Module registry items now carry richer metadata, but Flutter only consumes a subset of it today. Future slices should render more of the backend-owned module metadata directly instead of leaving richer fields unused.
+- This establishes the platform contract for Provider first, but CRM/Admin/Manager/Executive should not be migrated yet; the Provider Platform still needs deeper engine work before it becomes the template for the rest of SHIELD.
+
+---
+2026-06-30 22:00:00 IST## 174. Provider Platform Metadata Completion: Richer Startup Contract And Shared Metadata Cache
+**High-level description**: Expanded the Provider Platform startup contract so `/platform/workspace/provider` now carries richer provider context, shared engine metadata, labels, messages, and filters, then aligned the provider workspace controller to consume that same cached metadata contract instead of relying only on the older queue workspace semantics.
+- Added richer backend-owned Provider Platform metadata so the startup contract now includes:
+  - provider context details for provider name, role, department, branch, business, availability, and working-hours placeholders sourced from authenticated backend data where available
+  - top-level navigation aliasing, dashboard widgets, worklists, quick actions, workflow definitions, visit stages, status mappings, labels, filters, messages, and aggregated form schema identifiers
+  - permission passthrough from the authenticated principal so the platform contract reflects the signed-in provider scope instead of returning a static permission list
+- Reworked `PlatformMetadataService` to combine live provider scope, authenticated profile display data, and queue-derived operational metrics before delegating final workspace semantics to `ProviderWorkspaceMetadataService`.
+- Kept the queue workspace API focused on live records while updating the provider Flutter controller to merge operational data with the platform metadata contract, so patient search, queue stages, tabs, worklists, and future module rendering all point at the same backend-owned metadata source.
+- Added a scoped frontend cache for Provider Platform metadata in `ApiService`, clearing it on auth token changes so the shell and provider workspace can share one startup metadata request per authenticated provider session.
+- Why this approach was chosen:
+  - the shell had already moved to the platform metadata endpoint, but the deeper provider workspace controller still depended on the older workspace metadata path, which risked semantic drift between two provider experiences.
+  - caching the metadata contract at the API layer is the smallest safe step toward the requested one-request startup model because both the portal shell and provider workspace can now share backend-owned platform semantics without duplicate fetches.
+  - enriching the startup contract now makes the Provider Platform a stronger blueprint for CRM, Manager, Executive, and Admin later, because more of the reusable platform layer is now explicit and backend-owned.
+
+### Files Modified/Created
+**Frontend Files (Modified)**:
+- frontend/lib/shared/services/api_service.dart
+- frontend/lib/features/provider/shared/data/provider_portal_repository.dart
+- frontend/lib/features/provider/shared/presentation/controllers/provider_portal_controller.dart
+
+**Backend Files (Modified)**:
+- backend/src/platform-metadata/platform-metadata.controller.ts
+- backend/src/platform-metadata/platform-metadata.service.ts
+- backend/src/operations-queue/provider-workspace-metadata.service.ts
+
+### Verification
+- flutter analyze --no-pub frontend/lib/shared/services/api_service.dart frontend/lib/features/provider/shared/data/provider_portal_repository.dart frontend/lib/features/provider/shared/presentation/controllers/provider_portal_controller.dart frontend/lib/features/portal/presentation/screens/portal_shell.dart frontend/lib/features/portal/presentation/portal_role_data.dart
+- npm run build
+- Verified the backend builds after expanding the Provider Platform startup contract and the touched Flutter provider/platform files analyze cleanly after moving the provider controller onto the shared cached metadata path.
+
+### Remaining Blockers / Risks
+- Provider context now exposes branch, business, department, and availability placeholders through the platform contract, but true schedule-driven working hours and live availability still need dedicated backend scheduling data rather than placeholder summaries.
+- The provider controller now consumes the shared platform metadata contract, but most provider screens still render only part of the richer contract. The next slices should use the new dashboard widget, worklist, labels, filters, and messages metadata more directly.
+- This completes more of the reusable platform layer, but visit lifecycle, real-time transport, dynamic form schemas, and audit/search engines still need deeper backend implementation before the Provider Platform becomes a full template for other portals.
+
+---
+2026-06-30 22:45:00 IST
