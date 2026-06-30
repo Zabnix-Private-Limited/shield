@@ -5532,3 +5532,39 @@ est build, ackend/vercel.json, ackend/src/auth/auth.service.ts, and uth_devic
 
 ---
 2026-06-30 14:34:40 IST
+
+## 160. Auth Recovery UX Hardening: Graceful Session-Expired Messaging And Timed Redirect Screens
+**High-level description**: Hardened the frontend auth/router experience so expired SHIELD sessions and unknown-route failures no longer surface raw backend 401 payloads or GoRouter default error pages to users.
+- Confirmed the previously observed `/internal/login` page-not-found failure on the live site was caused by stale frontend deployment state, not by the route definition being absent in the current codebase.
+- Added `AuthRedirectNotice` as a lightweight shared frontend auth-recovery signal so customer and internal session services can surface an intentional user-facing recovery path when access-token validation and refresh both fail.
+- Updated both `CustomerAuthSession` and `InternalAuthSession` to raise a proper recovery notice before clearing invalid session state, with role-appropriate messaging for member and staff users.
+- Added a reusable `RouteRecoveryScreen` that presents a human-readable explanation plus an automatic redirect after 5 seconds, instead of exposing raw framework error output.
+- Added a dedicated `/session-expired` route so expired member and staff sessions now transition through a clear recovery screen and then redirect to the correct login entry point with context.
+- Updated the customer and internal login screens to recognize `reason=session-expired` and show a contextual message after redirect, so users understand why they were asked to sign in again.
+- Added a router-level `errorBuilder` so unknown routes now show a controlled SHIELD recovery screen that automatically redirects to the safest next destination: internal login, customer splash, or the authenticated portal home depending on session state and requested path.
+- Why this approach was chosen:
+  - expired access tokens are expected operational events, but raw backend 401 payloads are not acceptable user experience for a production healthcare platform.
+  - a centralized recovery-screen pattern keeps routing and session-clear behavior consistent across both customer and internal auth flows.
+  - the GoRouter errorBuilder closes the gap between correct code and imperfect deploy/browser states, which is especially useful during active Vercel rollout transitions.
+
+### Files Modified/Created
+**Frontend Files (New)**:
+- frontend/lib/shared/services/auth_redirect_notice.dart
+- frontend/lib/app/routes/route_recovery_screen.dart
+
+**Frontend Files (Modified)**:
+- frontend/lib/app/routes/app_router.dart
+- frontend/lib/features/customer/auth/presentation/screens/customer_login_screen.dart
+- frontend/lib/features/provider/auth/presentation/screens/internal_login_screen.dart
+- frontend/lib/shared/services/customer_auth_session.dart
+- frontend/lib/shared/services/internal_auth_session.dart
+
+**Backend Files**:
+- None
+
+### Verification
+- flutter analyze lib/app/routes/app_router.dart lib/app/routes/route_recovery_screen.dart lib/features/customer/auth/presentation/screens/customer_login_screen.dart lib/features/provider/auth/presentation/screens/internal_login_screen.dart lib/shared/services/customer_auth_session.dart lib/shared/services/internal_auth_session.dart lib/shared/services/auth_redirect_notice.dart
+- Verified the earlier `/internal/login` route failure was deployment-related while the current codebase contains the route definition and recovery handling.
+
+---
+2026-06-30 15:32:31 IST

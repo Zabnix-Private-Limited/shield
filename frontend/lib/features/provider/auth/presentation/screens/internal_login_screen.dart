@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../../../app/theme/app_colors.dart';
 import '../../../../../app/theme/app_typography.dart';
@@ -45,6 +46,13 @@ class _InternalLoginScreenState extends State<InternalLoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final reason = GoRouterState.of(context).uri.queryParameters['reason'];
+    final reasonMessage = switch (reason) {
+      'session-expired' =>
+        'Your previous SHIELD staff session expired. Please sign in again.',
+      _ => null,
+    };
+
     return Scaffold(
       backgroundColor: const Color(0xFFF4F7FB),
       body: Center(
@@ -93,6 +101,25 @@ class _InternalLoginScreenState extends State<InternalLoginScreen> {
                         height: 1.45,
                       ),
                     ),
+                    if (reasonMessage != null) ...[
+                      const SizedBox(height: 16),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: AppColors.lightGray,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: AppColors.divider),
+                        ),
+                        child: Text(
+                          reasonMessage,
+                          style: AppTypography.small.copyWith(
+                            color: AppColors.darkGray,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: 24),
                     SizedBox(
                       width: double.infinity,

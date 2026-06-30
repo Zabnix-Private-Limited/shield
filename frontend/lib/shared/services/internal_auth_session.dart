@@ -5,6 +5,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../models/shield_role.dart';
 import 'active_auth_session.dart';
 import 'api_service.dart';
+import 'auth_redirect_notice.dart';
 import 'device_identity_service.dart';
 
 class InternalAuthSession extends ChangeNotifier {
@@ -239,6 +240,11 @@ class InternalAuthSession extends ChangeNotifier {
   }
 
   Future<void> _handleSessionExpired() async {
+    AuthRedirectNotice.instance.showSessionExpired(
+      sessionKind: ShieldSessionKind.internal,
+      message:
+          'Your SHIELD staff session expired or is no longer valid. Please sign in again with your approved internal account.',
+    );
     await _clearSessionStorage();
     try {
       await FirebaseAuth.instance.signOut();

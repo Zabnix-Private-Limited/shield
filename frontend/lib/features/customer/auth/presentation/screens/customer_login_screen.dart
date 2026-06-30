@@ -63,6 +63,13 @@ class _CustomerLoginScreenState extends State<CustomerLoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final reason = GoRouterState.of(context).uri.queryParameters['reason'];
+    final reasonMessage = switch (reason) {
+      'session-expired' =>
+        'Your SHIELD member session expired. Please sign in again to continue.',
+      _ => null,
+    };
+
     return Scaffold(
       backgroundColor: AppColors.white,
       body: SafeArea(
@@ -101,6 +108,26 @@ class _CustomerLoginScreenState extends State<CustomerLoginScreen> {
                       textAlign: TextAlign.center,
                       style: AppTypography.body.copyWith(color: AppColors.gray),
                     ),
+                    if (reasonMessage != null) ...[
+                      const SizedBox(height: 18),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: AppColors.lightGray,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: AppColors.divider),
+                        ),
+                        child: Text(
+                          reasonMessage,
+                          textAlign: TextAlign.center,
+                          style: AppTypography.small.copyWith(
+                            color: AppColors.darkGray,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: 32),
                     Align(
                       alignment: Alignment.centerLeft,

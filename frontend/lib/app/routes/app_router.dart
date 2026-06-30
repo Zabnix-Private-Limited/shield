@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
+import '../../shared/services/auth_redirect_notice.dart';
+import '../../shared/services/active_auth_session.dart';
 import '../../features/customer/auth/presentation/screens/customer_login_screen.dart';
 import '../../features/customer/auth/presentation/screens/customer_otp_screen.dart';
 import '../../features/customer/auth/presentation/screens/customer_register_screen.dart';
 import '../../features/customer/auth/presentation/screens/customer_splash_screen.dart';
 import '../../features/provider/auth/presentation/screens/internal_login_screen.dart';
 import '../../features/portal/presentation/screens/portal_shell.dart';
+import 'route_recovery_screen.dart';
 import '../../shared/models/shield_role.dart';
 import '../../shared/services/customer_auth_session.dart';
 import '../../shared/services/internal_auth_session.dart';
@@ -20,12 +23,14 @@ final GoRouter router = GoRouter(
   refreshListenable: Listenable.merge([
     CustomerAuthSession.instance,
     InternalAuthSession.instance,
+    AuthRedirectNotice.instance,
   ]),
   redirect: (context, state) {
     final isCustomerAuthenticated = CustomerAuthSession.instance.isAuthenticated;
     final isInternalAuthenticated = InternalAuthSession.instance.isAuthenticated;
     final isAuthenticated =
         isCustomerAuthenticated || isInternalAuthenticated;
+    final authNotice = AuthRedirectNotice.instance;
     final location = state.matchedLocation;
     final isCustomerPortal =
         location.startsWith('/customer/') ||
@@ -38,8 +43,17 @@ final GoRouter router = GoRouter(
       '/customer/otp',
       '/customer/register',
       '/internal/login',
+      '/session-expired',
     };
     final isPublicLocation = publicLocations.contains(location);
+
+    if (authNotice.hasNotice && location != '/session-expired') {
+      final kind =
+          authNotice.sessionKind == ShieldSessionKind.internal
+              ? 'internal'
+              : 'customer';
+      return '/session-expired?kind=$kind';
+    }
 
     if (!isAuthenticated && !isPublicLocation) {
       final next = Uri.encodeComponent(state.uri.toString());
@@ -111,6 +125,26 @@ final GoRouter router = GoRouter(
       path: '/internal/login',
       name: 'internal-login',
       builder: (context, state) => const InternalLoginScreen(),
+    ),
+    GoRoute(
+      path: '/session-expired',
+      name: 'session-expired',
+      builder: (context, state) {
+        final kind = state.uri.queryParameters['kind'];
+        final isInternal = kind == 'internal';
+        return RouteRecoveryScreen(
+          title: isInternal ? 'Staff Session Expired' : 'Session Expired',
+          message: isInternal
+              ? 'Your SHIELD internal access token expired or is no longer valid. You will be redirected to the internal sign-in page so you can continue securely.'
+              : 'Your SHIELD member session expired or is no longer valid. You will be redirected to the login page so you can continue securely.',
+          targetRoute: isInternal
+              ? '/internal/login?reason=session-expired'
+              : '/customer/login?reason=session-expired',
+          targetLabel: isInternal
+              ? 'Go To Internal Login'
+              : 'Go To Member Login',
+        );
+      },
     ),
     GoRoute(
       path: '/portal/:role',
@@ -185,4 +219,34 @@ final GoRouter router = GoRouter(
       redirect: (context, state) => '/portal/customer/dashboard',
     ),
   ],
+  errorBuilder: (context, state) {
+    final requestedPath = state.uri.toString();
+    final isInternalPath = requestedPath.startsWith('/internal/');
+    final hasCustomerSession = CustomerAuthSession.instance.isAuthenticated;
+    final hasInternalSession = InternalAuthSession.instance.isAuthenticated;
+    final targetRoute = hasInternalSession
+        ? '/portal/${InternalAuthSession.instance.homeRole.routeKey}/dashboard'
+        : hasCustomerSession
+        ? '/portal/customer/dashboard'
+        : isInternalPath
+        ? '/internal/login'
+        : '/customer/splash';
+    final targetLabel = hasInternalSession
+        ? 'Open Provider Home'
+        : hasCustomerSession
+        ? 'Open Member Home'
+        : isInternalPath
+        ? 'Open Internal Login'
+        : 'Open SHIELD Home';
+    final message = isInternalPath
+        ? 'The internal SHIELD page you requested is unavailable in the current app state or the link is outdated. You will be redirected to the correct internal access entry point.'
+        : 'The SHIELD page you requested could not be opened. The link may be outdated or incomplete. You will be redirected to a safe starting point.';
+
+    return RouteRecoveryScreen(
+      title: 'Page Unavailable',
+      message: message,
+      targetRoute: targetRoute,
+      targetLabel: targetLabel,
+    );
+  },
 );

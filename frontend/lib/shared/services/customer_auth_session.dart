@@ -4,6 +4,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import 'active_auth_session.dart';
 import 'api_service.dart';
+import 'auth_redirect_notice.dart';
 import 'customer_cache_service.dart';
 import 'device_identity_service.dart';
 
@@ -205,6 +206,11 @@ class CustomerAuthSession extends ChangeNotifier {
   }
 
   Future<void> _handleSessionExpired() async {
+    AuthRedirectNotice.instance.showSessionExpired(
+      sessionKind: ShieldSessionKind.customer,
+      message:
+          'Your SHIELD member session expired or is no longer valid. Please sign in again to continue securely.',
+    );
     await _clearSessionStorage();
     try {
       await FirebaseAuth.instance.signOut();
