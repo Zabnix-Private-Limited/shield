@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { randomUUID } from 'crypto';
 import { ReferralService } from '../referral/referral.service';
@@ -8,6 +8,8 @@ import { WALLET_LEDGER_TYPES } from '../pricing/pricing.types';
 
 @Injectable()
 export class CustomerService {
+  private readonly logger = new Logger(CustomerService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly referralService: ReferralService,
@@ -17,7 +19,7 @@ export class CustomerService {
 
   async create(data: any, staffUserId?: bigint) {
     const result = await this.createCustomerAggregate(data, staffUserId);
-    const preloadConfig = await this.pricingService.getPreloadConfig();
+    const preloadConfig = await this.getSafePreloadConfig();
 
     if (preloadConfig.cashPreloadEnabled && preloadConfig.cashPreloadAmount > 0) {
       await this.walletService.createLedgerEntry({
@@ -50,6 +52,22 @@ export class CustomerService {
     }
 
     return result.customer;
+  }
+
+  private async getSafePreloadConfig() {
+    try {
+      return await this.pricingService.getPreloadConfig();
+    } catch (error) {
+      this.logger.warn(
+        `Customer registration preload lookup failed; continuing without preload entries: ${error}`,
+      );
+      return {
+        cashPreloadEnabled: false,
+        cashPreloadAmount: 0,
+        benefitPreloadEnabled: false,
+        benefitPreloadAmount: 0,
+      };
+    }
   }
 
   async findOne(id: bigint) {
