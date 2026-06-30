@@ -9,6 +9,7 @@ import {
   HttpCode,
   UploadedFile,
   UseInterceptors,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import * as multer from 'multer';
@@ -138,8 +139,20 @@ export class DocumentController {
 
   @RequirePermissions('documents.view')
   @Post('document-intelligence/validate')
-  async validate(@Body() body: any) {
-    const staffId = body.staff_id ? BigInt(body.staff_id) : BigInt(1);
+  async validate(
+    @Body() body: any,
+    @CurrentPrincipal() principal?: ShieldPrincipal,
+  ) {
+    const staffId = body.staff_id
+      ? BigInt(body.staff_id)
+      : principal?.userId
+        ? BigInt(principal.userId)
+        : undefined;
+
+    if (!staffId) {
+      throw new UnauthorizedException('Authentication required');
+    }
+
     const doc = await this.documentService.validate(
       BigInt(body.document_id),
       staffId,
@@ -170,8 +183,18 @@ export class DocumentController {
   async approvePrescriptionReview(
     @Param('documentId') documentId: string,
     @Body() body: any,
+    @CurrentPrincipal() principal?: ShieldPrincipal,
   ) {
-    const staffId = body.staff_id ? BigInt(body.staff_id) : BigInt(1);
+    const staffId = body.staff_id
+      ? BigInt(body.staff_id)
+      : principal?.userId
+        ? BigInt(principal.userId)
+        : undefined;
+
+    if (!staffId) {
+      throw new UnauthorizedException('Authentication required');
+    }
+
     const providerId = body.provider_id ? BigInt(body.provider_id) : undefined;
     const review = await this.documentService.approvePrescriptionReview(
       BigInt(documentId),

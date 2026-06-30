@@ -5393,3 +5393,35 @@ est build, ackend/vercel.json, ackend/src/auth/auth.service.ts, and uth_devic
 ### Verification
 - flutter analyze
 - npm run build
+
+## 158. Global Production Cleanup: Seeding Purge, Controller Security Hardening, and Legacy Deletions
+- Removed customer fixtures and operational records (appointments, documents, wallet transactions, referrals, complaints, crm tasks/activities, and purchases) from the backend database seed process, retaining only master reference/bootstrap data and baseline staff accounts.
+- Eliminated all hardcoded `BigInt(1)` defaults from backend controllers (`crm.controller.ts`, `customer.controller.ts`, `document.controller.ts`, and `wallet.controller.ts`), replacing them with authenticated principal resolution through the `@CurrentPrincipal()` decorator, throwing `UnauthorizedException` if unauthenticated.
+- Cleaned the portal shell view (`portal_shell.dart`) by deleting dead, unused mock views: `_CardUtilizationView`, `_BranchIdsDirectoryView`, `_ServiceUtilizationView`, and `_AdminReportsView`.
+- Deleted obsolete legacy customer-facing feature directories (`appointments/`, `dashboard/`, `documents/`, `membership/`, `notifications/`, `prescriptions/`, `profile/`, `settings/`, `transactions/`, `wallet/`) under the frontend's `lib/features/` path.
+- Fixed route expectations in `test/widget_test.dart` to match the customer auth session splash entry path.
+- Verified build and test stability across both frontend (`flutter analyze` and `flutter test`) and backend (`npm run build` and database seeding).
+
+### Frontend Files
+- [portal_shell.dart](file:///e:/K4NN4N/shield/frontend/lib/features/portal/presentation/screens/portal_shell.dart)
+- [widget_test.dart](file:///e:/K4NN4N/shield/frontend/test/widget_test.dart)
+- `frontend/lib/features/appointments/` (Deleted)
+- `frontend/lib/features/dashboard/` (Deleted)
+- `frontend/lib/features/documents/` (Deleted)
+- `frontend/lib/features/membership/` (Deleted)
+- `frontend/lib/features/notifications/` (Deleted)
+- `frontend/lib/features/prescriptions/` (Deleted)
+- `frontend/lib/features/profile/` (Deleted)
+- `frontend/lib/features/settings/` (Deleted)
+- `frontend/lib/features/transactions/` (Deleted)
+- `frontend/lib/features/wallet/` (Deleted)
+
+### Backend Files
+- [seed.ts](file:///e:/K4NN4N/shield/backend/prisma/seed.ts)
+- [crm.controller.ts](file:///e:/K4NN4N/shield/backend/src/crm/crm.controller.ts)
+- [customer.controller.ts](file:///e:/K4NN4N/shield/backend/src/customer/customer.controller.ts)
+- [document.controller.ts](file:///e:/K4NN4N/shield/backend/src/document/document.controller.ts)
+- [wallet.controller.ts](file:///e:/K4NN4N/shield/backend/src/wallet/wallet.controller.ts)
+
+---
+2026-06-30 12:47:00 IST

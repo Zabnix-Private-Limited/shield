@@ -6,8 +6,11 @@ import {
   Param,
   Body,
   Query,
+  UnauthorizedException,
 } from '@nestjs/common';
+import { CurrentPrincipal } from '../auth/current-principal.decorator';
 import { RequirePermissions } from '../auth/permissions.decorator';
+import type { ShieldPrincipal } from '../auth/auth.types';
 import { CrmService } from './crm.service';
 
 @Controller()
@@ -29,8 +32,20 @@ export class CrmController {
 
   @RequirePermissions('crm.create')
   @Post('crm/activities')
-  async createActivity(@Body() body: any) {
-    const staffId = body.created_by ? BigInt(body.created_by) : BigInt(1);
+  async createActivity(
+    @Body() body: any,
+    @CurrentPrincipal() principal?: ShieldPrincipal,
+  ) {
+    const staffId = body.created_by
+      ? BigInt(body.created_by)
+      : principal?.userId
+        ? BigInt(principal.userId)
+        : undefined;
+
+    if (!staffId) {
+      throw new UnauthorizedException('Authentication required');
+    }
+
     const act = await this.crmService.createActivity({
       customerId: BigInt(body.customer_id),
       activityType: body.activity_type,

@@ -7,6 +7,7 @@ import {
   Param,
   Body,
   Query,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { CurrentPrincipal } from '../auth/current-principal.decorator';
 import { RequirePermissions } from '../auth/permissions.decorator';
@@ -110,8 +111,21 @@ export class CustomerController {
 
   @RequirePermissions('customers.approve')
   @Post(':id/approve')
-  async approve(@Param('id') id: string, @Body() body: any) {
-    const staffId = body.staff_id ? BigInt(body.staff_id) : BigInt(1);
+  async approve(
+    @Param('id') id: string,
+    @Body() body: any,
+    @CurrentPrincipal() principal?: ShieldPrincipal,
+  ) {
+    const staffId = body.staff_id
+      ? BigInt(body.staff_id)
+      : principal?.userId
+        ? BigInt(principal.userId)
+        : undefined;
+
+    if (!staffId) {
+      throw new UnauthorizedException('Authentication required');
+    }
+
     const customer = await this.customerService.approve(BigInt(id), staffId);
     return {
       success: true,
@@ -122,8 +136,21 @@ export class CustomerController {
 
   @RequirePermissions('customers.approve')
   @Post(':id/suspend')
-  async suspend(@Param('id') id: string, @Body() body: any) {
-    const staffId = body.staff_id ? BigInt(body.staff_id) : BigInt(1);
+  async suspend(
+    @Param('id') id: string,
+    @Body() body: any,
+    @CurrentPrincipal() principal?: ShieldPrincipal,
+  ) {
+    const staffId = body.staff_id
+      ? BigInt(body.staff_id)
+      : principal?.userId
+        ? BigInt(principal.userId)
+        : undefined;
+
+    if (!staffId) {
+      throw new UnauthorizedException('Authentication required');
+    }
+
     const customer = await this.customerService.suspend(BigInt(id), staffId);
     return {
       success: true,

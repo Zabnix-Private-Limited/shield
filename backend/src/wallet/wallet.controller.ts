@@ -6,6 +6,7 @@ import {
   Param,
   Body,
   Query,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { CurrentPrincipal } from '../auth/current-principal.decorator';
 import { RequirePermissions } from '../auth/permissions.decorator';
@@ -43,7 +44,10 @@ export class WalletController {
   @RequirePermissions('wallet.update')
   @Post('recharge')
   async recharge(@Body() body: any, @CurrentPrincipal() principal?: ShieldPrincipal) {
-    const staffId = BigInt(1);
+    if (!principal || !principal.userId) {
+      throw new UnauthorizedException('Authentication required');
+    }
+    const staffId = BigInt(principal.userId);
     if (
       (body.ledger_type || WALLET_LEDGER_TYPES.CASH) ===
         WALLET_LEDGER_TYPES.SHIELD_BENEFIT &&
@@ -70,7 +74,10 @@ export class WalletController {
   @RequirePermissions('wallet.update')
   @Post('adjustments')
   async adjust(@Body() body: any, @CurrentPrincipal() principal?: ShieldPrincipal) {
-    const staffId = BigInt(1);
+    if (!principal || !principal.userId) {
+      throw new UnauthorizedException('Authentication required');
+    }
+    const staffId = BigInt(principal.userId);
     if (
       (body.ledger_type || WALLET_LEDGER_TYPES.CASH) ===
         WALLET_LEDGER_TYPES.SHIELD_BENEFIT &&
@@ -117,8 +124,11 @@ export class WalletController {
 
   @RequirePermissions('wallet.update')
   @Post('redeem-points')
-  async redeemPoints(@Body() body: any) {
-    const staffId = BigInt(1);
+  async redeemPoints(@Body() body: any, @CurrentPrincipal() principal?: ShieldPrincipal) {
+    if (!principal || !principal.userId) {
+      throw new UnauthorizedException('Authentication required');
+    }
+    const staffId = BigInt(principal.userId);
     const result = await this.walletService.redeemRewardPoints(
       BigInt(body.customer_id),
       Number(body.points),
