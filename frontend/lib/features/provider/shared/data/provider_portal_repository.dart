@@ -1,6 +1,7 @@
 import '../../../../shared/models/appointment.dart';
 import '../../../../shared/models/customer.dart';
 import '../../../../shared/models/document.dart';
+import '../../../../shared/models/notification.dart';
 import '../../../../shared/services/api_service.dart';
 
 class ProviderPortalRepository {
@@ -22,6 +23,10 @@ class ProviderPortalRepository {
     return ApiService.getAuthenticatedProfile();
   }
 
+  Future<Map<String, dynamic>> getPatientWorkspace(String customerId) {
+    return ApiService.getProviderPatientWorkspace(customerId);
+  }
+
   Future<Customer> getCustomerProfile(String customerId) {
     return ApiService.getCustomerProfile(customerId);
   }
@@ -36,6 +41,14 @@ class ProviderPortalRepository {
 
   Future<List<Document>> getCustomerDocuments(String customerId) {
     return ApiService.getCustomerDocumentsStrict(customerId);
+  }
+
+  Future<List<NotificationModel>> getCustomerNotifications(String customerId) {
+    return ApiService.getCustomerNotificationsStrict(customerId);
+  }
+
+  Future<List<Map<String, dynamic>>> getCustomerPurchases(String customerId) {
+    return ApiService.getCustomerPurchases(customerId);
   }
 
   Future<List<Appointment>> getCustomerAppointments(String customerId) {

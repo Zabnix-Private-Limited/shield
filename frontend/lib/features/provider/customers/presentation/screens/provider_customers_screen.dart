@@ -285,20 +285,48 @@ class _ProviderCustomersScreenState extends State<ProviderCustomersScreen> {
               .toList(),
         );
       case 'records':
-        final documents = controller.selectedRecentDocuments as List<dynamic>;
+        final prescriptions =
+            controller.selectedPrescriptionDocuments as List<dynamic>;
+        final labReports =
+            controller.selectedLabReportDocuments as List<dynamic>;
+        final invoices = controller.selectedInvoiceDocuments as List<dynamic>;
+        final otherDocuments = controller.selectedOtherDocuments as List<dynamic>;
+        final documents = [
+          ...prescriptions,
+          ...labReports,
+          ...invoices,
+          ...otherDocuments,
+        ];
         if (documents.isEmpty) {
           return _PanelText(controller.patientTabEmptyState(activeTab));
         }
         return Column(
-          children: documents
-              .map(
-                (document) => _SummaryCard(
-                  title: document.fileName,
-                  subtitle: '${document.typeLabel} • ${document.statusLabel}',
-                  meta: document.extractionPreview ?? 'No preview available yet',
-                ),
-              )
-              .toList(),
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildDocumentGroup(
+              title: 'Prescriptions',
+              documents: prescriptions,
+              emptyMessage: 'No prescription files are linked to this patient yet.',
+            ),
+            const SizedBox(height: 14),
+            _buildDocumentGroup(
+              title: 'Lab Reports',
+              documents: labReports,
+              emptyMessage: 'No lab reports have been uploaded yet.',
+            ),
+            const SizedBox(height: 14),
+            _buildDocumentGroup(
+              title: 'Invoices',
+              documents: invoices,
+              emptyMessage: 'No invoice files are available yet.',
+            ),
+            const SizedBox(height: 14),
+            _buildDocumentGroup(
+              title: 'Other Records',
+              documents: otherDocuments,
+              emptyMessage: 'No additional medical records are available yet.',
+            ),
+          ],
         );
       case 'payments':
         final cashWallet =
@@ -307,24 +335,104 @@ class _ProviderCustomersScreenState extends State<ProviderCustomersScreen> {
         final rewardWallet =
             controller.selectedWallet?['rewardPoints'] as Map<String, dynamic>? ??
             const <String, dynamic>{};
-        return Wrap(
-          spacing: 12,
-          runSpacing: 12,
+        final benefitSummary =
+            controller.selectedBenefitSummary as Map<String, dynamic>;
+        final walletStatistics =
+            controller.selectedWalletStatistics as Map<String, dynamic>;
+        final purchases = controller.selectedPurchases as List<dynamic>;
+        final walletTransactions =
+            controller.selectedWalletTransactions as List<dynamic>;
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _MetricCard(
-              label: 'Wallet balance',
-              value: controller.formatCurrency(cashWallet['available']),
+            Wrap(
+              spacing: 12,
+              runSpacing: 12,
+              children: [
+                _MetricCard(
+                  label: 'Wallet balance',
+                  value: controller.formatCurrency(cashWallet['available']),
+                ),
+                _MetricCard(
+                  label: 'Reward points',
+                  value: '${rewardWallet['available'] ?? 0}',
+                ),
+                _MetricCard(
+                  label: 'Credit available',
+                  value: controller.formatCurrency(
+                    controller.selectedWallet?['creditAvailable'],
+                  ),
+                ),
+                _MetricCard(
+                  label: 'Benefits used',
+                  value: controller.formatCurrency(
+                    benefitSummary['benefitsUsed'],
+                  ),
+                ),
+                _MetricCard(
+                  label: 'Monthly spend',
+                  value: controller.formatCurrency(
+                    walletStatistics['monthlySpend'],
+                  ),
+                ),
+                _MetricCard(
+                  label: 'Invoices',
+                  value: '${purchases.length}',
+                ),
+              ],
             ),
-            _MetricCard(
-              label: 'Reward points',
-              value: '${rewardWallet['available'] ?? 0}',
+            const SizedBox(height: 18),
+            _TabSectionHeader(
+              title: 'Recent Billing',
+              subtitle:
+                  'Latest invoices, wallet deductions, and benefit usage linked to this patient.',
             ),
-            _MetricCard(
-              label: 'Credit available',
-              value: controller.formatCurrency(
-                controller.selectedWallet?['creditAvailable'],
+            const SizedBox(height: 10),
+            if (purchases.isEmpty)
+              _PanelText('No patient billing details are available yet.')
+            else
+              Column(
+                children: purchases.take(5).map((purchase) {
+                  final items =
+                      (purchase['purchaseItems'] as List? ?? const <dynamic>[]);
+                  final itemCount = items.length;
+                  return _SummaryCard(
+                    title:
+                        purchase['invoiceNumber']?.toString() ??
+                        purchase['invoice_number']?.toString() ??
+                        'Invoice',
+                    subtitle:
+                        '${itemCount.toString()} line item${itemCount == 1 ? '' : 's'} • ${controller.formatCurrency(purchase['payableAmount'] ?? purchase['payable_amount'])}',
+                    meta:
+                        'Discount ${controller.formatCurrency(purchase['discountAmount'] ?? purchase['discount_amount'])}',
+                  );
+                }).toList(),
               ),
+            const SizedBox(height: 18),
+            _TabSectionHeader(
+              title: 'Recent Wallet Activity',
+              subtitle:
+                  'Latest credits and debits that affected this patient during care.',
             ),
+            const SizedBox(height: 10),
+            if (walletTransactions.isEmpty)
+              _PanelText('No wallet activity has been recorded yet.')
+            else
+              Column(
+                children: walletTransactions.take(5).map((transaction) {
+                  return _SummaryCard(
+                    title: transaction.remarks?.toString().trim().isNotEmpty == true
+                        ? transaction.remarks.toString()
+                        : transaction.isCredit
+                        ? 'Wallet credit'
+                        : 'Wallet debit',
+                    subtitle:
+                        '${transaction.subLedgerType} • ${transaction.isCredit ? 'Credit' : 'Debit'}',
+                    meta:
+                        '${controller.formatCurrency(transaction.amount)} • ${_formatTimelineDate(transaction.createdAt)}',
+                  );
+                }).toList(),
+              ),
           ],
         );
       case 'membership':
@@ -390,6 +498,26 @@ class _ProviderCustomersScreenState extends State<ProviderCustomersScreen> {
             _MetricCard(
               label: 'SHIELD card',
               value: controller.selectedCustomer?.shieldCardNumber ?? 'Pending',
+            ),
+            _MetricCard(
+              label: 'Prescriptions',
+              value: '${controller.selectedPrescriptionDocuments.length}',
+            ),
+            _MetricCard(
+              label: 'Notifications',
+              value: '${controller.selectedNotifications.length}',
+            ),
+            _MetricCard(
+              label: 'Billing total',
+              value: controller.formatCurrency(
+                controller.selectedTotalPurchaseValue,
+              ),
+            ),
+            _MetricCard(
+              label: 'Benefits used',
+              value: controller.formatCurrency(
+                controller.selectedBenefitSummary['benefitsUsed'],
+              ),
             ),
           ],
         );
@@ -616,6 +744,34 @@ class _ProviderCustomersScreenState extends State<ProviderCustomersScreen> {
       default:
         return controller.patientWorkspaceDescription as String;
     }
+  }
+
+  Widget _buildDocumentGroup({
+    required String title,
+    required List<dynamic> documents,
+    required String emptyMessage,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(title, style: AppTypography.h5),
+        const SizedBox(height: 8),
+        if (documents.isEmpty)
+          _PanelText(emptyMessage)
+        else
+          Column(
+            children: documents.take(4).map((document) {
+              return _SummaryCard(
+                title: document.fileName,
+                subtitle: '${document.typeLabel} • ${document.statusLabel}',
+                meta:
+                    document.extractionPreview ??
+                    _formatTimelineDate(document.uploadedAt),
+              );
+            }).toList(),
+          ),
+      ],
+    );
   }
 }
 

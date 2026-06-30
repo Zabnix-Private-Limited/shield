@@ -6113,3 +6113,124 @@ est build, ackend/vercel.json, ackend/src/auth/auth.service.ts, and uth_devic
 
 ---
 2026-06-30 22:45:00 IST
+
+## 175. Patient Workspace 2.0: Live Billing, Wallet Activity, Notifications, And Structured Records
+**High-level description**: Deepened the Provider patient workspace so it now integrates more of SHIELD's existing backend capabilities instead of leaving records and payments as shallow placeholder summaries. This slice turns the patient workspace into a stronger operational screen by wiring billing history, wallet activity, customer notifications, and grouped documents into the live provider workflow.
+- Extended the provider frontend API/repository layer to consume existing backend services that were already available but not yet surfaced in the Provider Portal:
+  - customer-scoped notifications through `/notifications?customer_id=...`
+  - customer-scoped pharmacy purchase history through `/pharmacy/purchases?customer_id=...`
+- Expanded `ProviderPortalController` so selecting a patient now loads and keeps together:
+  - profile
+  - wallet bundle
+  - membership bundle
+  - documents
+  - appointments
+  - notifications
+  - billing / purchase history
+- Reworked the patient timeline to become more of a unified patient story by aggregating live events from:
+  - current visit timeline entries
+  - appointments
+  - uploaded documents
+  - wallet transactions
+  - billing / invoice records
+  - customer notifications
+- Upgraded the Patient Workspace tabs so they are more operationally useful:
+  - `Records` now groups live files into Prescriptions, Lab Reports, Invoices, and Other Records instead of showing one flat generic list
+  - `Payments` now shows wallet balance, reward points, credit, benefits used, monthly spend, invoice count, recent billing rows, and recent wallet activity
+  - `Overview` now includes stronger cross-domain signals such as prescription count, notification count, billing total, and benefits used
+- Upgraded the standalone Provider Documents and Provider Prescriptions screens so they now read like real patient record workspaces instead of thin placeholder lists.
+- Why this approach was chosen:
+  - the backend already had wallet, notifications, documents, appointments, and pharmacy purchase capabilities, so the highest-value next step was to make the Provider Portal consume them instead of adding more backend breadth.
+  - the patient workspace is the screen providers will live in for most of the day, so deepening it vertically creates more value than building another isolated module.
+  - this keeps SHIELD aligned with the roadmap direction of finishing the Provider Portal through integration and workflow depth before expanding other portals.
+
+### Files Modified/Created
+**Frontend Files (Modified)**:
+- frontend/lib/shared/services/api_service.dart
+- frontend/lib/features/provider/shared/data/provider_portal_repository.dart
+- frontend/lib/features/provider/shared/presentation/controllers/provider_portal_controller.dart
+- frontend/lib/features/provider/customers/presentation/screens/provider_customers_screen.dart
+- frontend/lib/features/provider/documents/presentation/screens/provider_documents_screen.dart
+- frontend/lib/features/provider/prescriptions/presentation/screens/provider_prescriptions_screen.dart
+
+### Verification
+- flutter analyze --no-pub frontend/lib/shared/services/api_service.dart frontend/lib/features/provider/shared/data/provider_portal_repository.dart frontend/lib/features/provider/shared/presentation/controllers/provider_portal_controller.dart frontend/lib/features/provider/customers/presentation/screens/provider_customers_screen.dart frontend/lib/features/provider/documents/presentation/screens/provider_documents_screen.dart frontend/lib/features/provider/prescriptions/presentation/screens/provider_prescriptions_screen.dart
+- npm run build
+- Verified the touched Provider Portal files analyze cleanly after wiring billing, wallet activity, notifications, and grouped records into the workspace, and confirmed the backend still builds cleanly against the existing service surface.
+
+### Remaining Blockers / Risks
+- This slice integrates more live services into the patient workspace, but billing is still read-oriented here. A true provider billing engine still needs visit-native bill creation, editable line items, mixed payment capture, and print/export flows.
+- Notifications are now visible as part of the patient story, but there is still no dedicated provider notification center or provider-specific event stream in the Provider Portal shell.
+- Timeline breadth is much better now, but it is still composed in Flutter from multiple backend sources. A future backend-owned timeline engine should become the single event source for visits, documents, billing, wallet, consultations, and notifications.
+- No database changes were required for this integration slice, so no SQL file is needed.
+
+---
+2026-06-30 23:20:00 IST
+
+## 176. Provider Patient Workspace Aggregation: One Backend Contract For The Care Workspace
+**High-level description**: Replaced the Provider Portal patient-workspace fan-out loading path with one backend-composed workspace contract so the backend now owns patient-workspace orchestration, timeline assembly, and active-visit hydration instead of leaving that composition in Flutter.
+- Added a provider patient workspace endpoint under the existing service-provider slice:
+  - `GET /service-providers/workspace/patients/:customerId`
+  - kept RBAC on the existing `providers.view` permission
+  - extended the existing `ServiceProviderService` instead of creating a parallel module or duplicate repository layer
+- Reused existing backend services rather than duplicating logic:
+  - `CustomerService.findOne(...)`
+  - `CustomerService.getCustomerPortalMembership(...)`
+  - `WalletService.getCustomerWalletBundle(...)`
+  - `AppointmentService.list(...)`
+  - `AppointmentService.getConsultationWorkspace(...)`
+  - `DocumentService.list(...)`
+  - `NotificationService.list(...)`
+  - `PharmacyService.listPurchases(...)`
+- The new backend-composed patient workspace now returns one contract containing:
+  - patient
+  - membership
+  - wallet
+  - active visit
+  - timeline
+  - documents
+  - billing
+  - notifications
+  - appointments
+  - analytics
+  - workspace actions
+- Moved primary visit resolution into the backend for this workspace payload so the active visit and its consultation workspace are part of the same response.
+- Moved patient timeline composition into the backend for this workspace payload:
+  - visit timeline entries
+  - appointments
+  - documents
+  - wallet activity
+  - billing events
+  - notifications
+  - each entry now carries structured metadata such as icon, color, timestamp, actor, linked record id, and navigation target
+- Updated the Flutter provider API/repository/controller path to consume the aggregated backend contract instead of making seven separate patient-loading requests every time a provider opens or refreshes a patient.
+- Preserved the existing UI contract by hydrating the current controller state from the aggregated payload, which means the completed patient workspace screens keep their styling and behavior while loading from one backend-owned source.
+- Why this approach was chosen:
+  - the current architectural weakness was not missing backend capability but frontend orchestration across many existing endpoints.
+  - extending the existing service-provider slice keeps SHIELD aligned with the rule to avoid duplicate modules, duplicate endpoints, and parallel architectures.
+  - this makes the Provider Portal a stronger blueprint for the other portals because the patient workspace contract is now reusable across Flutter Web, Android, and future clients.
+
+### Files Modified/Created
+**Frontend Files (Modified)**:
+- frontend/lib/shared/services/api_service.dart
+- frontend/lib/features/provider/shared/data/provider_portal_repository.dart
+- frontend/lib/features/provider/shared/presentation/controllers/provider_portal_controller.dart
+
+**Backend Files (Modified)**:
+- backend/src/service-provider/service-provider.controller.ts
+- backend/src/service-provider/service-provider.service.ts
+- backend/src/service-provider/service-provider.module.ts
+
+### Verification
+- flutter analyze --no-pub frontend/lib/shared/services/api_service.dart frontend/lib/features/provider/shared/data/provider_portal_repository.dart frontend/lib/features/provider/shared/presentation/controllers/provider_portal_controller.dart
+- npm run build
+- Verified the backend builds cleanly after extending the existing provider slice with a backend-composed patient workspace contract, and confirmed the touched Flutter provider workspace files analyze cleanly after replacing the multi-call patient loading path.
+
+### Remaining Blockers / Risks
+- This slice centralizes patient workspace aggregation and timeline assembly for the Provider Portal, but it does not yet create a shared persisted timeline event engine. Events are still assembled inside the provider workspace service response rather than emitted and stored by a universal timeline service.
+- Billing is now part of the aggregated patient workspace contract, but it is still history-oriented. True visit-native billing with editable line items, mixed payments, invoice finalization, and payment recording still needs a deeper backend workflow.
+- Provider quick actions are now available in the backend workspace payload, but the patient workspace screen still needs a follow-up slice to render and execute the full action set directly from this contract.
+- No database changes were required for this aggregation slice, so no SQL file is needed.
+
+---
+2026-06-30 23:45:00 IST

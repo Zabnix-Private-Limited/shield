@@ -74,6 +74,19 @@ export class ServiceProviderController {
   }
 
   @RequirePermissions('providers.view')
+  @Get('workspace/patients/:customerId')
+  async getPatientWorkspace(@Param('customerId') customerId: string) {
+    const workspace = await this.serviceProviderService.getPatientWorkspace(
+      BigInt(customerId),
+    );
+    return {
+      success: true,
+      message: 'Provider patient workspace retrieved successfully.',
+      data: workspace,
+    };
+  }
+
+  @RequirePermissions('providers.view')
   @Get(':id')
   async findOne(@Param('id') id: string) {
     const provider = await this.serviceProviderService.findOne(BigInt(id));

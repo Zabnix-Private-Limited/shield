@@ -15,8 +15,8 @@ import '../models/wallet.dart';
 class ApiService {
   static String? _accessToken;
   static String? _activeCustomerId;
-  static final Map<String, Map<String, dynamic>> _providerPlatformWorkspaceCache =
-      <String, Map<String, dynamic>>{};
+  static final Map<String, Map<String, dynamic>>
+  _providerPlatformWorkspaceCache = <String, Map<String, dynamic>>{};
   static Future<String?> Function()? _onRefreshToken;
   static Future<void> Function()? _onSessionExpired;
   static final Dio _dio =
@@ -242,7 +242,9 @@ class ApiService {
   static Future<Map<String, dynamic>> startAppointmentConsultation(
     String appointmentId,
   ) async {
-    final response = await _dio.post('/appointments/$appointmentId/start-consultation');
+    final response = await _dio.post(
+      '/appointments/$appointmentId/start-consultation',
+    );
     return _readEnvelope(response);
   }
 
@@ -280,9 +282,9 @@ class ApiService {
       queryParameters: {'customer_id': customerId},
       options: Options(receiveTimeout: const Duration(minutes: 1)),
     );
-    return _readEnvelopeList(response)
-        .map((item) => Document.fromJson(item as Map<String, dynamic>))
-        .toList()
+    return _readEnvelopeList(
+        response,
+      ).map((item) => Document.fromJson(item as Map<String, dynamic>)).toList()
       ..sort((a, b) => b.uploadedAt.compareTo(a.uploadedAt));
   }
 
@@ -301,6 +303,51 @@ class ApiService {
       ..sort((a, b) => b.uploadedAt.compareTo(a.uploadedAt));
   }
 
+  static Future<List<NotificationModel>> getCustomerNotificationsStrict(
+    String customerId,
+  ) async {
+    final resolvedCustomerId = _requireCustomerId(customerId);
+    final response = await _dio.get(
+      '/notifications',
+      queryParameters: {'customer_id': resolvedCustomerId},
+    );
+    return _readEnvelopeList(response)
+        .map((item) => NotificationModel.fromJson(item as Map<String, dynamic>))
+        .toList()
+      ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+  }
+
+  static Future<List<Map<String, dynamic>>> getCustomerPurchases(
+    String customerId,
+  ) async {
+    final resolvedCustomerId = _requireCustomerId(customerId);
+    final response = await _dio.get(
+      '/pharmacy/purchases',
+      queryParameters: {'customer_id': resolvedCustomerId},
+    );
+    final purchases = _readEnvelopeList(
+      response,
+    ).map((item) => Map<String, dynamic>.from(item as Map)).toList();
+    purchases.sort((left, right) {
+      final leftDate =
+          DateTime.tryParse(
+            left['purchaseDate']?.toString() ??
+                left['purchase_date']?.toString() ??
+                '',
+          ) ??
+          DateTime.fromMillisecondsSinceEpoch(0);
+      final rightDate =
+          DateTime.tryParse(
+            right['purchaseDate']?.toString() ??
+                right['purchase_date']?.toString() ??
+                '',
+          ) ??
+          DateTime.fromMillisecondsSinceEpoch(0);
+      return rightDate.compareTo(leftDate);
+    });
+    return purchases;
+  }
+
   static Future<List<NotificationModel>> getNotifications(
     SHIELDRole role,
   ) async {
@@ -315,9 +362,7 @@ class ApiService {
       queryParameters: {'customer_id': customerId},
     );
     return _readEnvelopeList(response)
-        .map(
-          (item) => NotificationModel.fromJson(item as Map<String, dynamic>),
-        )
+        .map((item) => NotificationModel.fromJson(item as Map<String, dynamic>))
         .toList()
       ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
   }
@@ -413,6 +458,16 @@ class ApiService {
     return _readEnvelope(response);
   }
 
+  static Future<Map<String, dynamic>> getProviderPatientWorkspace(
+    String customerId,
+  ) async {
+    final resolvedCustomerId = _requireCustomerId(customerId);
+    final response = await _dio.get(
+      '/service-providers/workspace/patients/$resolvedCustomerId',
+    );
+    return _readEnvelope(response);
+  }
+
   static Future<Map<String, dynamic>> getAuthenticatedProfile() async {
     final response = await _dio.get('/auth/me');
     return _readEnvelope(response);
@@ -420,9 +475,9 @@ class ApiService {
 
   static Future<List<Map<String, dynamic>>> getAuthenticatedSessions() async {
     final response = await _dio.get('/auth/sessions');
-    return _readEnvelopeList(response)
-        .map((item) => Map<String, dynamic>.from(item as Map))
-        .toList();
+    return _readEnvelopeList(
+      response,
+    ).map((item) => Map<String, dynamic>.from(item as Map)).toList();
   }
 
   static Future<List<Map<String, dynamic>>> getLoginHistory({
@@ -432,9 +487,9 @@ class ApiService {
       '/auth/login-history',
       queryParameters: {'limit': limit},
     );
-    return _readEnvelopeList(response)
-        .map((item) => Map<String, dynamic>.from(item as Map))
-        .toList();
+    return _readEnvelopeList(
+      response,
+    ).map((item) => Map<String, dynamic>.from(item as Map)).toList();
   }
 
   static Future<void> revokeSession(String sessionId) async {
@@ -569,9 +624,7 @@ class ApiService {
     final walletData = customerPayload['wallet'] as Map<String, dynamic>?;
     final transactions = walletData == null
         ? <WalletTransaction>[]
-        : await _getWalletTransactionsFromBackend(
-            walletData['id'].toString(),
-          );
+        : await _getWalletTransactionsFromBackend(walletData['id'].toString());
 
     return Membership.fromApi(
       customer: customer,
@@ -841,8 +894,11 @@ class ApiService {
       providerType?.trim() ?? '',
       businessId?.trim() ?? '',
     ].join('|');
-    if (!forceRefresh && _providerPlatformWorkspaceCache.containsKey(cacheKey)) {
-      return Map<String, dynamic>.from(_providerPlatformWorkspaceCache[cacheKey]!);
+    if (!forceRefresh &&
+        _providerPlatformWorkspaceCache.containsKey(cacheKey)) {
+      return Map<String, dynamic>.from(
+        _providerPlatformWorkspaceCache[cacheKey]!,
+      );
     }
     final response = await _dio.get(
       '/platform/workspace/provider',
