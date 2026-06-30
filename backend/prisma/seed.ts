@@ -31,7 +31,7 @@ async function main() {
   // 2. Seed Businesses
   const businessesData = [
     { code: 'SHG', name: 'Sahakar Healthcare Group', type: 'HEALTHCARE_PROVIDER' },
-    { code: 'HYP-PERINTHALMANNA', name: 'SHIELD Hyper Pharmacy Perinthalmanna', type: 'PHARMACY' },
+    { code: 'HYP-PERINTHALMANNA', name: 'Sahakar Hyper Pharmacy - Perinthalmanna', type: 'PHARMACY' },
     { code: 'HYP-MANJERI', name: 'SHIELD Hyper Pharmacy Manjeri', type: 'PHARMACY' },
   ];
 
@@ -118,11 +118,11 @@ async function main() {
 
   // 5. Seed Staff Users
   const staffData = [
-    { email: 'Zabnixprivatelimited@gmail.com', mobile: '9000000001', roleCode: 'ADMIN', deptCode: 'ADMIN', first: 'Zabnix', last: 'Admin', branchBizCode: 'SHG' },
-    { email: 'softwareengineerzabnix@gmail.com', mobile: '9000000002', roleCode: 'SHIELD_AGENT', deptCode: 'ADMIN', first: 'Arjun', last: 'Menon', branchBizCode: 'SHG' },
-    { email: 'platformcatalystzabnix@gmail.com', mobile: '9000000003', roleCode: 'CRM_EXECUTIVE', deptCode: 'CRM', first: 'Naila', last: 'Thomas', branchBizCode: 'SHG' },
-    { email: 'juniordeveloperzabnix@gmail.com', mobile: '9000000004', roleCode: 'PHARMACY_PROVIDER', deptCode: 'PHARMACY', first: 'Rafi', last: 'Hassan', branchBizCode: 'HYP-PERINTHALMANNA' },
-    { email: 'juniordeveloper02zabnix@gmail.com', mobile: '9000000005', roleCode: 'DOCTOR', deptCode: 'CLINIC', first: 'Devika', last: 'Nair', branchBizCode: 'SHG' },
+    { email: 'Zabnixprivatelimited@gmail.com', mobile: '9000000001', roleCode: 'ADMIN', deptCode: 'ADMIN', first: 'Zabnix', last: 'Administrator', branchBizCode: 'SHG' },
+    { email: 'softwareengineerzabnix@gmail.com', mobile: '9000000002', roleCode: 'SHIELD_AGENT', deptCode: 'ADMIN', first: 'Rahul', last: 'Nair', branchBizCode: 'SHG' },
+    { email: 'platformcatalystzabnix@gmail.com', mobile: '9000000003', roleCode: 'CRM_EXECUTIVE', deptCode: 'CRM', first: 'Arya', last: 'Menon', branchBizCode: 'SHG' },
+    { email: 'juniordeveloperzabnix@gmail.com', mobile: '9000000004', roleCode: 'PHARMACY_PROVIDER', deptCode: 'PHARMACY', first: 'Sahakar', last: 'Pharmacy', branchBizCode: 'HYP-PERINTHALMANNA' },
+    { email: 'juniordeveloper02zabnix@gmail.com', mobile: '9000000005', roleCode: 'DOCTOR', deptCode: 'CLINIC', first: 'Arjun', last: 'Menon', branchBizCode: 'SHG' },
     { email: 'juniordeveloper03zabnix@gmail.com', mobile: '9000000006', roleCode: 'DENTAL_PROVIDER', deptCode: 'DENTAL', first: 'Ishan', last: 'Roy', branchBizCode: 'SHG' },
   ];
   const retiredSeedEmails = [

@@ -21,11 +21,10 @@ class ProviderDashboardScreen extends StatelessWidget {
           children: [
             _DashboardHero(
               providerName: controller.providerDisplayName,
-              roleCode: controller.providerRoleCode,
+              roleLabel: controller.providerRoleLabel,
+              branchLabel: controller.providerBranchLabel,
               appointmentsToday: summary['appointmentsToday'] ?? 0,
-              pendingItems:
-                  (summary['pendingAppointments'] ?? 0) +
-                  (summary['pendingDocuments'] ?? 0),
+              waitingPatients: queueCounts['WAITING'] ?? 0,
             ),
             const SizedBox(height: 18),
             Wrap(
@@ -35,25 +34,25 @@ class ProviderDashboardScreen extends StatelessWidget {
                 _StageMetricCard(
                   title: 'Urgent',
                   value: '${urgentItems.length}',
-                  note: 'needs attention',
+                  note: 'needs attention now',
                   accent: AppColors.error,
                 ),
                 _StageMetricCard(
                   title: 'Waiting',
                   value: '${queueCounts['WAITING'] ?? 0}',
-                  note: 'customer or review hold',
+                  note: 'patients or payments pending',
                   accent: AppColors.warning,
                 ),
                 _StageMetricCard(
-                  title: 'In Progress',
+                  title: 'In Consultation',
                   value: '${queueCounts['IN_PROGRESS'] ?? 0}',
-                  note: 'active operational work',
+                  note: 'patient care in progress',
                   accent: AppColors.shieldBlue,
                 ),
                 _StageMetricCard(
-                  title: 'Ready',
+                  title: 'Ready to Complete',
                   value: '${queueCounts['READY'] ?? 0}',
-                  note: 'can be completed now',
+                  note: 'can be finished now',
                   accent: AppColors.shieldGreen,
                 ),
               ],
@@ -63,12 +62,12 @@ class ProviderDashboardScreen extends StatelessWidget {
               builder: (context, constraints) {
                 final stacked = constraints.maxWidth < 1040;
                 final schedulePanel = _InfoPanel(
-                  title: "Today's schedule",
-                  subtitle: 'Start from appointments already linked to your workspace.',
+                  title: "Today's appointments",
+                  subtitle: 'Patients already scheduled for today appear here first.',
                   child: schedule.isEmpty
                       ? _EmptyWorkPanel(
                           message:
-                              'No upcoming customer appointments are loaded yet. The queue and customer workspace will populate this area as live assignments grow.',
+                              'No upcoming appointments are loaded yet. As patients are assigned, today\'s appointments will appear here.',
                         )
                       : Column(
                           children: schedule
@@ -86,27 +85,26 @@ class ProviderDashboardScreen extends StatelessWidget {
                         ),
                 );
                 final workPanel = _InfoPanel(
-                  title: 'Continue current work',
+                  title: 'Patients needing attention',
                   subtitle:
-                      'The highest-priority queue items should be the first actions in the day.',
+                      'Start with the patients and payment items that need action next.',
                   child: urgentItems.isEmpty
                       ? _EmptyWorkPanel(
                           message:
-                              'No urgent queue items are waiting right now. Use the queue to pick the next assigned customer workflow.',
+                              'Everything is up to date right now. New patient activity will appear here automatically.',
                         )
                       : Column(
                           children: urgentItems
                               .map(
                                 (item) => _WorkContinueCard(
-                                  stage: item['status']?.toString() ?? 'NEW',
+                                  stage: item['stageLabel']?.toString() ?? 'Waiting',
                                   title: item['title']?.toString() ?? 'Work item',
                                   subtitle:
                                       item['subtitle']?.toString() ??
                                       item['meta']?.toString() ??
-                                      'Operational task',
+                                      'Patient care activity',
                                   type:
-                                      item['workflowType']?.toString() ??
-                                      'TASK',
+                                      item['workflowLabel']?.toString() ?? 'Task',
                                 ),
                               )
                               .toList(),
@@ -150,15 +148,17 @@ class ProviderDashboardScreen extends StatelessWidget {
 class _DashboardHero extends StatelessWidget {
   const _DashboardHero({
     required this.providerName,
-    required this.roleCode,
+    required this.roleLabel,
+    required this.branchLabel,
     required this.appointmentsToday,
-    required this.pendingItems,
+    required this.waitingPatients,
   });
 
   final String providerName;
-  final String roleCode;
+  final String roleLabel;
+  final String branchLabel;
   final Object appointmentsToday;
-  final Object pendingItems;
+  final Object waitingPatients;
 
   @override
   Widget build(BuildContext context) {
@@ -177,7 +177,7 @@ class _DashboardHero extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Provider Operating Workspace',
+            'SHIELD Provider Access',
             style: AppTypography.tiny.copyWith(
               color: Colors.white70,
               fontWeight: FontWeight.w700,
@@ -191,7 +191,14 @@ class _DashboardHero extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            '$roleCode • $appointmentsToday scheduled today • $pendingItems active items needing action',
+            '$roleLabel • $branchLabel',
+            style: AppTypography.body.copyWith(
+              color: const Color(0xFFD7E3FF),
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            '$appointmentsToday appointments today • $waitingPatients waiting for attention',
             style: AppTypography.body.copyWith(
               color: const Color(0xFFD7E3FF),
             ),

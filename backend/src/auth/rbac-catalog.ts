@@ -93,7 +93,7 @@ export const RBAC_PERMISSIONS: PermissionDefinition[] = RESOURCES.flatMap(
 export const RBAC_ROLES: RoleDefinition[] = [
   {
     code: 'ADMIN',
-    name: 'Admin',
+    name: 'Administrator',
     description:
       'Full-platform SHIELD administrator. Layouts may differ, permissions do not.',
     userType: 'EMPLOYEE',
@@ -136,7 +136,7 @@ export const RBAC_ROLES: RoleDefinition[] = [
   },
   {
     code: 'PHARMACY_PROVIDER',
-    name: 'Pharmacy Provider',
+    name: 'Pharmacist',
     description:
       'Pharmacy service-provider role for prescriptions, wallet redemption, and billing.',
     userType: 'SERVICE_PROVIDER',
@@ -154,7 +154,7 @@ export const RBAC_ROLES: RoleDefinition[] = [
   },
   {
     code: 'LAB_PROVIDER',
-    name: 'Lab Provider',
+    name: 'Laboratory',
     description:
       'Lab operations role for assigned customers, documents, and reports.',
     userType: 'SERVICE_PROVIDER',
@@ -188,7 +188,7 @@ export const RBAC_ROLES: RoleDefinition[] = [
   },
   {
     code: 'HOMECARE_PROVIDER',
-    name: 'Homecare Provider',
+    name: 'Home Care',
     description:
       'Homecare role for assigned visits, notes, and document uploads.',
     userType: 'SERVICE_PROVIDER',
@@ -205,7 +205,7 @@ export const RBAC_ROLES: RoleDefinition[] = [
   },
   {
     code: 'DENTAL_PROVIDER',
-    name: 'Dental Provider',
+    name: 'Dentist',
     description:
       'Dental role for assigned customers, records, and visit documentation.',
     userType: 'SERVICE_PROVIDER',
@@ -222,7 +222,7 @@ export const RBAC_ROLES: RoleDefinition[] = [
   },
   {
     code: 'COSMETIC_PROVIDER',
-    name: 'Cosmetic Provider',
+    name: 'Cosmetic Clinic',
     description:
       'Cosmetic provider role for assigned customers and service documentation.',
     userType: 'SERVICE_PROVIDER',

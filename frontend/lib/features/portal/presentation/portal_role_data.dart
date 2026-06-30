@@ -185,9 +185,9 @@ PortalRoleData portalDataForRole(SHIELDRole role) {
     case SHIELDRole.provider:
       return PortalRoleData(
         role: role,
-        operatorName: 'Provider Workspace',
-        headline: 'Operations queue, customer workspace, and care delivery',
-        regionLabel: 'Unified provider portal',
+        operatorName: 'Provider Care Hub',
+        headline: 'Patients, appointments, records, and payments in one place',
+        regionLabel: 'Unified provider care portal',
         icon: Icons.local_hospital_outlined,
         accentColor: AppColors.shieldGreen,
         sections: [
@@ -392,18 +392,19 @@ class _PortalSectionFactory {
 
   static final PortalSectionData providerDashboard = _section(
     'dashboard',
-    summary: 'Live provider queue, daily volume, and customer access summary.',
-    actions: const ['Open queue', 'Open customer workspace'],
+    summary: 'Daily appointments, waiting patients, and care activity summary.',
+    actions: const ['Open patient queue', 'Open patient search'],
   );
 
   static final PortalSectionData providerQueue = _section(
     'queue',
-    summary: 'Incoming operational work across appointments and billing.',
+    summary: 'Waiting patients, payments, and care activity for today.',
   );
 
   static final PortalSectionData providerCustomers = _section(
     'customers',
-    summary: 'Customer workspace with profile, membership, wallet, and history.',
+    title: 'Patients',
+    summary: 'Patient profile, appointments, medical records, membership, and payments.',
   );
 
   static final PortalSectionData providerAppointments = _section(
@@ -413,7 +414,8 @@ class _PortalSectionFactory {
 
   static final PortalSectionData providerDocuments = _section(
     'documents',
-    summary: 'Customer-linked records and uploaded provider documents.',
+    title: 'Medical Records',
+    summary: 'Patient records, uploads, and linked care documents.',
   );
 
   static final PortalSectionData providerPrescriptions = _section(

@@ -27,10 +27,10 @@ class ProviderQueueScreen extends StatelessWidget {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Smart operations queue', style: AppTypography.h4),
+            Text("Today's queue", style: AppTypography.h4),
             const SizedBox(height: 8),
             Text(
-              'Every provider workflow should move through a clear operational stage instead of hiding inside separate pages.',
+              'Keep track of who is waiting, who is under care, and what can be completed next.',
               style: AppTypography.small.copyWith(color: AppColors.gray),
             ),
             const SizedBox(height: 18),
@@ -40,7 +40,7 @@ class ProviderQueueScreen extends StatelessWidget {
               children: _stageOrder
                   .map(
                     (stage) => _StagePill(
-                      label: stage.replaceAll('_', ' '),
+                      label: _stageLabel(stage),
                       count: counts[stage] ?? 0,
                     ),
                   )
@@ -62,6 +62,7 @@ class ProviderQueueScreen extends StatelessWidget {
                           ),
                           child: _QueueColumn(
                             stage: stage,
+                            label: _stageLabel(stage),
                             items: stageBuckets[stage] ?? const [],
                           ),
                         ),
@@ -73,6 +74,25 @@ class ProviderQueueScreen extends StatelessWidget {
         );
       },
     );
+  }
+
+  static String _stageLabel(String stage) {
+    switch (stage) {
+      case 'NEW':
+        return 'Waiting';
+      case 'ASSIGNED':
+        return 'Accepted';
+      case 'IN_PROGRESS':
+        return 'In Consultation';
+      case 'WAITING':
+        return 'Waiting';
+      case 'READY':
+        return 'Ready to Complete';
+      case 'COMPLETED':
+        return 'Completed';
+      default:
+        return stage.replaceAll('_', ' ');
+    }
   }
 }
 
@@ -100,10 +120,11 @@ class _StagePill extends StatelessWidget {
 }
 
 class _QueueColumn extends StatelessWidget {
-  const _QueueColumn({required this.stage, required this.items});
+  const _QueueColumn({required this.stage, required this.items, required this.label});
 
   final String stage;
   final List<Map<String, dynamic>> items;
+  final String label;
 
   @override
   Widget build(BuildContext context) {
@@ -120,10 +141,10 @@ class _QueueColumn extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(stage.replaceAll('_', ' '), style: AppTypography.h5),
+              Text(label, style: AppTypography.h5),
               const SizedBox(height: 4),
               Text(
-                '${items.length} items',
+                '${items.length} patients',
                 style: AppTypography.tiny.copyWith(color: AppColors.gray),
               ),
               const SizedBox(height: 14),
@@ -136,7 +157,7 @@ class _QueueColumn extends StatelessWidget {
                     borderRadius: BorderRadius.circular(16),
                   ),
                   child: Text(
-                    'No workflow cards in this stage.',
+                    _emptyStateText(stage),
                     style: AppTypography.small.copyWith(color: AppColors.gray),
                   ),
                 )
@@ -148,6 +169,24 @@ class _QueueColumn extends StatelessWidget {
       ),
     );
   }
+
+  String _emptyStateText(String stage) {
+    switch (stage) {
+      case 'NEW':
+      case 'WAITING':
+        return 'No patients are waiting right now.';
+      case 'ASSIGNED':
+        return 'No accepted patients are queued here.';
+      case 'IN_PROGRESS':
+        return 'No consultations are in progress.';
+      case 'READY':
+        return 'Nothing is waiting to be completed.';
+      case 'COMPLETED':
+        return 'No completed items have been loaded yet.';
+      default:
+        return 'Everything is up to date.';
+    }
+  }
 }
 
 class _QueueCard extends StatelessWidget {
@@ -158,9 +197,13 @@ class _QueueCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final type = item['workflowType']?.toString() ?? 'TASK';
+    final typeLabel = item['workflowLabel']?.toString() ?? type;
     final title = item['title']?.toString() ?? 'Workflow item';
     final subtitle = item['subtitle']?.toString() ?? 'Operational work';
     final meta = item['meta']?.toString();
+    final statusLabel = item['stageLabel']?.toString() ?? item['statusLabel']?.toString() ?? 'Waiting';
+    final secondaryActionLabel = item['secondaryActionLabel']?.toString() ?? 'Open patient';
+    final primaryActionLabel = item['primaryActionLabel']?.toString() ?? 'Open';
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -179,7 +222,7 @@ class _QueueCard extends StatelessWidget {
               borderRadius: BorderRadius.circular(999),
             ),
             child: Text(
-              type,
+              typeLabel,
               style: AppTypography.tiny.copyWith(
                 color: AppColors.shieldNavy,
                 fontWeight: FontWeight.w700,
@@ -192,6 +235,14 @@ class _QueueCard extends StatelessWidget {
           Text(
             subtitle,
             style: AppTypography.small.copyWith(color: AppColors.darkGray),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            statusLabel,
+            style: AppTypography.tiny.copyWith(
+              color: AppColors.shieldBlue,
+              fontWeight: FontWeight.w700,
+            ),
           ),
           if (meta != null && meta.trim().isNotEmpty) ...[
             const SizedBox(height: 6),
@@ -212,7 +263,7 @@ class _QueueCard extends StatelessWidget {
                       borderRadius: BorderRadius.circular(14),
                     ),
                   ),
-                  child: const Text('Review'),
+                  child: Text(secondaryActionLabel),
                 ),
               ),
               const SizedBox(width: 10),
@@ -225,7 +276,7 @@ class _QueueCard extends StatelessWidget {
                       borderRadius: BorderRadius.circular(14),
                     ),
                   ),
-                  child: const Text('Start'),
+                  child: Text(primaryActionLabel),
                 ),
               ),
             ],
@@ -248,7 +299,7 @@ class _QueueEmptyState extends StatelessWidget {
         border: Border.all(color: AppColors.divider),
       ),
       child: Text(
-        'No active operational items are assigned right now. As appointments, billing work, and provider actions enter SHIELD, this board will become the live center of daily work.',
+        'No patients or payment items are assigned right now. New appointments and care activity will appear here as the day progresses.',
         style: AppTypography.body.copyWith(color: AppColors.gray),
       ),
     );

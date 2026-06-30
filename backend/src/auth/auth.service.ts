@@ -404,8 +404,51 @@ export class AuthService {
         },
       });
       return {
-        principal,
+        principal: {
+          ...principal,
+          roleLabel: this.getRoleLabel(user?.role?.name, principal.roleCode),
+          branchLabel: this.getBranchLabel({
+            businessName: user?.branchBusiness?.name,
+            businessCode: user?.branchBusiness?.code,
+            roleCode: principal.roleCode,
+            departmentCode: user?.department?.code,
+          }),
+          displayName: this.getDisplayName(
+            user?.firstName,
+            user?.lastName,
+            principal.email,
+          ),
+        },
         profile: user,
+        display: user
+          ? {
+              fullName: this.getDisplayName(
+                user.firstName,
+                user.lastName,
+                user.email ?? undefined,
+              ),
+              designation: this.getRoleLabel(user.role?.name, principal.roleCode),
+              departmentName: user.department?.name ?? null,
+              branch: user.branchBusiness
+                ? {
+                    id: user.branchBusiness.id.toString(),
+                    code: user.branchBusiness.code,
+                    name: this.getBranchLabel({
+                      businessName: user.branchBusiness.name,
+                      businessCode: user.branchBusiness.code,
+                      roleCode: principal.roleCode,
+                      departmentCode: user.department?.code,
+                    }),
+                    status: user.branchBusiness.status,
+                    businessType: user.branchBusiness.businessType,
+                  }
+                : null,
+              email: user.email,
+              mobile: user.mobile,
+              employeeCode: user.employeeCode,
+              roleCode: principal.roleCode,
+            }
+          : null,
       };
     }
 
@@ -413,6 +456,71 @@ export class AuthService {
       principal,
       profile: null,
     };
+  }
+
+  private getDisplayName(
+    firstName?: string | null,
+    lastName?: string | null,
+    fallback?: string,
+  ) {
+    const fullName = `${firstName ?? ''} ${lastName ?? ''}`.trim();
+    return fullName || fallback || 'SHIELD User';
+  }
+
+  private getRoleLabel(roleName?: string | null, roleCode?: string | null) {
+    if (roleName && roleName.trim().length > 0) {
+      return roleName.trim();
+    }
+    switch (roleCode) {
+      case 'ADMIN':
+        return 'Administrator';
+      case 'SHIELD_AGENT':
+        return 'SHIELD Agent';
+      case 'CRM_EXECUTIVE':
+        return 'CRM Executive';
+      case 'PHARMACY_PROVIDER':
+        return 'Pharmacist';
+      case 'LAB_PROVIDER':
+        return 'Laboratory';
+      case 'DOCTOR':
+        return 'Doctor';
+      case 'HOMECARE_PROVIDER':
+        return 'Home Care';
+      case 'DENTAL_PROVIDER':
+        return 'Dentist';
+      case 'COSMETIC_PROVIDER':
+        return 'Cosmetic Clinic';
+      case 'DIETITIAN':
+        return 'Dietitian';
+      default:
+        return roleCode?.replaceAll('_', ' ') ?? 'Provider';
+    }
+  }
+
+  private getBranchLabel(input: {
+    businessName?: string | null;
+    businessCode?: string | null;
+    roleCode?: string | null;
+    departmentCode?: string | null;
+  }) {
+    if (input.businessCode === 'HYP-PERINTHALMANNA') {
+      return 'Sahakar Hyper Pharmacy - Perinthalmanna';
+    }
+    if (input.businessCode === 'HYP-MANJERI') {
+      return 'Sahakar Hyper Pharmacy - Manjeri';
+    }
+    if (input.businessCode === 'SHG') {
+      if (input.roleCode === 'ADMIN') {
+        return 'SHG Head Office';
+      }
+      if (input.roleCode === 'DENTAL_PROVIDER' || input.departmentCode === 'DENTAL') {
+        return 'SHG Dental Care';
+      }
+      if (input.roleCode === 'DOCTOR' || input.departmentCode === 'CLINIC') {
+        return 'SHG Medical Centre';
+      }
+    }
+    return input.businessName?.trim() || 'Branch not assigned';
   }
 
   async listSessions(principal: ShieldPrincipal) {

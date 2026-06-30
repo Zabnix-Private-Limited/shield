@@ -57,14 +57,26 @@ class ProviderPortalController extends ChangeNotifier {
       List<Map<String, dynamic>>.from(queues['billing'] ?? const []);
   List<Map<String, dynamic>> get workflowQueue => [
     ...appointmentQueue.map(
-      (item) => <String, dynamic>{...item, 'workflowType': 'APPOINTMENT'},
+      (item) => <String, dynamic>{...item},
     ),
     ...billingQueue.map(
-      (item) => <String, dynamic>{...item, 'workflowType': 'BILLING'},
+      (item) => <String, dynamic>{...item},
     ),
   ];
 
   String get providerDisplayName {
+    final display = authProfile['display'] as Map<String, dynamic>? ??
+        const <String, dynamic>{};
+    final displayName = display['fullName']?.toString().trim() ?? '';
+    if (displayName.isNotEmpty) {
+      return displayName;
+    }
+    final principal = authProfile['principal'] as Map<String, dynamic>? ??
+        const <String, dynamic>{};
+    final principalDisplayName = principal['displayName']?.toString().trim() ?? '';
+    if (principalDisplayName.isNotEmpty) {
+      return principalDisplayName;
+    }
     final profile = authProfile['profile'] as Map<String, dynamic>? ??
         const <String, dynamic>{};
     final firstName = profile['firstName']?.toString().trim() ?? '';
@@ -73,10 +85,32 @@ class ProviderPortalController extends ChangeNotifier {
     return fullName.isEmpty ? 'SHIELD Provider' : fullName;
   }
 
-  String get providerRoleCode {
+  String get providerRoleLabel {
+    final display = authProfile['display'] as Map<String, dynamic>? ??
+        const <String, dynamic>{};
+    final designation = display['designation']?.toString().trim() ?? '';
+    if (designation.isNotEmpty) {
+      return designation;
+    }
     final principal = authProfile['principal'] as Map<String, dynamic>? ??
         const <String, dynamic>{};
-    return principal['roleCode']?.toString() ?? 'SERVICE_PROVIDER';
+    return principal['roleLabel']?.toString() ??
+        principal['roleCode']?.toString().replaceAll('_', ' ') ??
+        'Provider';
+  }
+
+  String get providerBranchLabel {
+    final display = authProfile['display'] as Map<String, dynamic>? ??
+        const <String, dynamic>{};
+    final branch = display['branch'] as Map<String, dynamic>? ??
+        const <String, dynamic>{};
+    final branchName = branch['name']?.toString().trim() ?? '';
+    if (branchName.isNotEmpty) {
+      return branchName;
+    }
+    final principal = authProfile['principal'] as Map<String, dynamic>? ??
+        const <String, dynamic>{};
+    return principal['branchLabel']?.toString() ?? 'Branch not assigned';
   }
 
   Map<String, List<Map<String, dynamic>>> get queueByStage {
@@ -90,7 +124,7 @@ class ProviderPortalController extends ChangeNotifier {
     };
 
     for (final item in workflowQueue) {
-      final stage = _resolveWorkflowStage(item['status']?.toString());
+      final stage = _resolveWorkflowStage(item);
       buckets.putIfAbsent(stage, () => <Map<String, dynamic>>[]).add(item);
     }
 
@@ -109,8 +143,7 @@ class ProviderPortalController extends ChangeNotifier {
         if (left != right) {
           return left.compareTo(right);
         }
-        return _resolveWorkflowStage(a['status']?.toString())
-            .compareTo(_resolveWorkflowStage(b['status']?.toString()));
+        return _resolveWorkflowStage(a).compareTo(_resolveWorkflowStage(b));
       });
     return ranked.take(4).toList();
   }
@@ -256,8 +289,24 @@ class ProviderPortalController extends ChangeNotifier {
     await loadSettingsData();
   }
 
-  String _resolveWorkflowStage(String? rawStatus) {
-    final normalized = (rawStatus ?? '').trim().toUpperCase();
+  String _resolveWorkflowStage(Map<String, dynamic> item) {
+    final backendStage = item['stageCode']?.toString().trim().toUpperCase() ?? '';
+    if (backendStage.isNotEmpty) {
+      switch (backendStage) {
+        case 'ACCEPTED':
+          return 'ASSIGNED';
+        case 'CONSULTATION':
+          return 'IN_PROGRESS';
+        case 'WAITING_PAYMENT':
+        case 'WAITING':
+          return 'WAITING';
+        case 'READY_TO_COMPLETE':
+          return 'READY';
+        case 'COMPLETED':
+          return 'COMPLETED';
+      }
+    }
+    final normalized = (item['status']?.toString() ?? '').trim().toUpperCase();
     if (normalized.contains('COMPLETE') || normalized.contains('APPROVED')) {
       return 'COMPLETED';
     }

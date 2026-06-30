@@ -16,10 +16,16 @@ class ProviderProfileScreen extends StatelessWidget {
         final profile =
             controller.authProfile['profile'] as Map<String, dynamic>? ??
             const <String, dynamic>{};
+        final display =
+            controller.authProfile['display'] as Map<String, dynamic>? ??
+            const <String, dynamic>{};
+        final branch =
+            display['branch'] as Map<String, dynamic>? ??
+            const <String, dynamic>{};
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Profile', style: AppTypography.h4),
+            Text('My profile', style: AppTypography.h4),
             const SizedBox(height: 12),
             Card(
               child: Padding(
@@ -28,13 +34,19 @@ class ProviderProfileScreen extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '${profile['firstName'] ?? ''} ${profile['lastName'] ?? ''}'.trim(),
+                      display['fullName']?.toString() ??
+                          '${profile['firstName'] ?? ''} ${profile['lastName'] ?? ''}'.trim(),
                     ),
-                    Text('Email: ${principal['email'] ?? 'Not available'}'),
-                    Text('Role: ${principal['roleCode'] ?? 'Unknown'}'),
-                    Text(
-                      'Branch business: ${principal['branchBusinessId'] ?? 'Unassigned'}',
-                    ),
+                    const SizedBox(height: 8),
+                    Text(display['designation']?.toString() ?? 'Provider'),
+                    Text(branch['name']?.toString() ?? 'Branch not assigned'),
+                    const SizedBox(height: 12),
+                    Text('Email: ${display['email'] ?? principal['email'] ?? 'Not available'}'),
+                    Text('Phone: ${display['mobile'] ?? principal['mobile'] ?? 'Not available'}'),
+                    if ((display['departmentName']?.toString() ?? '').isNotEmpty)
+                      Text('Department: ${display['departmentName']}'),
+                    if ((display['employeeCode']?.toString() ?? '').isNotEmpty)
+                      Text('Staff code: ${display['employeeCode']}'),
                   ],
                 ),
               ),

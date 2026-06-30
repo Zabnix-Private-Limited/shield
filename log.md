@@ -5716,3 +5716,52 @@ est build, ackend/vercel.json, ackend/src/auth/auth.service.ts, and uth_devic
 
 ---
 2026-06-30 16:23:27 IST
+
+## 166. Provider Display Semantics Ownership: Backend-Owned Role, Branch, Queue, And Patient Labels
+**High-level description**: Moved more of the Provider Portal's user-facing semantics into backend-owned DTOs and seed data so the frontend stops exposing technical role codes, queue stages, and branch identifiers directly to healthcare staff.
+- Updated RBAC role names for service-provider-facing roles so backend role metadata now uses presentation-ready titles such as `Administrator`, `Pharmacist`, `Laboratory`, `Dentist`, `Home Care`, and `Cosmetic Clinic` instead of technical provider-role strings.
+- Enriched `AuthService.getProfile()` for internal users to return human-readable provider display semantics alongside the existing principal/profile payloads, including:
+  - `display.fullName`
+  - `display.designation`
+  - `display.departmentName`
+  - `display.branch.name`
+  - `principal.roleLabel`
+  - `principal.branchLabel`
+  - `principal.displayName`
+- Centralized branch-label shaping in the backend so `SHG` and pharmacy branch codes can resolve to readable labels like `SHG Head Office`, `SHG Medical Centre`, `SHG Dental Care`, and `Sahakar Hyper Pharmacy - Perinthalmanna` without frontend role/branch switch statements.
+- Reworked provider queue DTOs in `OperationsQueueService` to emit workflow-ready display fields (`workflowLabel`, `statusLabel`, `stageCode`, `stageLabel`, `primaryActionLabel`, `secondaryActionLabel`) plus formatted branch/date/payment copy, so the frontend no longer has to present raw queue-status semantics directly.
+- Updated seeded internal-user identities to match the intended real-test display names more closely:
+  - `Zabnixprivatelimited@gmail.com` -> `Zabnix Administrator`
+  - `softwareengineerzabnix@gmail.com` -> `Rahul Nair`
+  - `platformcatalystzabnix@gmail.com` -> `Arya Menon`
+  - `juniordeveloperzabnix@gmail.com` -> `Sahakar Pharmacy`
+  - `juniordeveloper02zabnix@gmail.com` -> `Arjun Menon`
+- Adjusted the Perinthalmanna pharmacy business seed label to `Sahakar Hyper Pharmacy - Perinthalmanna` so the branch name itself is already closer to UI-ready wording at the data layer.
+- Updated the provider dashboard, queue, patient search/workspace, provider profile, and provider role metadata to consume the richer backend semantics and stop surfacing developer-centric wording like raw role codes, `Branch business`, technical queue-stage labels, or `Customer workspace` copy.
+- Why this approach was chosen:
+  - the Provider Portal is for healthcare staff, so the backend should own business semantics and the frontend should mainly render display-ready DTOs.
+  - keeping role, branch, and workflow labels in backend/domain output reduces duplicated mapping logic across Flutter screens and keeps future web/mobile clients aligned.
+  - this batch improves professionalism and comprehension without weakening RBAC, changing schema, or reintroducing dummy data.
+
+### Files Modified/Created
+**Frontend Files (Modified)**:
+- frontend/lib/features/provider/shared/presentation/controllers/provider_portal_controller.dart
+- frontend/lib/features/provider/dashboard/presentation/screens/provider_dashboard_screen.dart
+- frontend/lib/features/provider/queue/presentation/screens/provider_queue_screen.dart
+- frontend/lib/features/provider/customers/presentation/screens/provider_customers_screen.dart
+- frontend/lib/features/provider/profile/presentation/screens/provider_profile_screen.dart
+- frontend/lib/features/portal/presentation/portal_role_data.dart
+
+**Backend Files (Modified)**:
+- backend/src/auth/rbac-catalog.ts
+- backend/src/auth/auth.service.ts
+- backend/src/operations-queue/operations-queue.service.ts
+- backend/prisma/seed.ts
+
+### Verification
+- flutter analyze lib/features/provider/shared/presentation/controllers/provider_portal_controller.dart lib/features/provider/dashboard/presentation/screens/provider_dashboard_screen.dart lib/features/provider/queue/presentation/screens/provider_queue_screen.dart lib/features/provider/customers/presentation/screens/provider_customers_screen.dart lib/features/provider/profile/presentation/screens/provider_profile_screen.dart lib/features/portal/presentation/portal_role_data.dart
+- npm run build
+- Verified the provider frontend compiles cleanly against backend-owned display semantics and the backend compiles after the richer auth/profile/queue DTO updates.
+
+---
+2026-06-30 17:05:00 IST

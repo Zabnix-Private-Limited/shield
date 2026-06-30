@@ -46,10 +46,10 @@ class _ProviderCustomersScreenState extends State<ProviderCustomersScreen> {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Customer workspace', style: AppTypography.h4),
+            Text('Patient search', style: AppTypography.h4),
             const SizedBox(height: 8),
             Text(
-              'Search once and keep the entire member context in one operational workspace.',
+              'Open one patient and keep appointments, medical records, membership, and payments together in a single view.',
               style: AppTypography.small.copyWith(color: AppColors.gray),
             ),
             const SizedBox(height: 16),
@@ -61,7 +61,7 @@ class _ProviderCustomersScreenState extends State<ProviderCustomersScreen> {
                 });
               },
               decoration: InputDecoration(
-                hintText: 'Search by name, customer code, phone, membership, or card',
+                hintText: 'Search by name, patient ID, phone, membership, or SHIELD card',
                 prefixIcon: const Icon(Icons.search_rounded),
                 filled: true,
                 fillColor: Colors.white,
@@ -87,7 +87,7 @@ class _ProviderCustomersScreenState extends State<ProviderCustomersScreen> {
                 children: [
                   if (matchingCustomers.isEmpty)
                     Text(
-                      'No provider-linked customers match this search yet.',
+                      'No patients match this search yet.',
                       style: AppTypography.small.copyWith(color: AppColors.gray),
                     )
                   else
@@ -95,8 +95,7 @@ class _ProviderCustomersScreenState extends State<ProviderCustomersScreen> {
                       (customer) => _CustomerResultTile(
                         title:
                             customer['fullName']?.toString() ?? 'SHIELD Member',
-                        customerCode:
-                            customer['customerCode']?.toString() ?? 'Customer',
+                        patientLabel: _patientLabel(customer),
                         mobile: customer['mobile']?.toString() ?? 'No mobile',
                         membership:
                             customer['membershipPlan']?.toString() ??
@@ -161,8 +160,8 @@ class _ProviderCustomersScreenState extends State<ProviderCustomersScreen> {
                             'overview',
                             'timeline',
                             'appointments',
-                            'documents',
-                            'wallet',
+                            'records',
+                            'payments',
                             'membership',
                           ])
                             Padding(
@@ -196,16 +195,14 @@ class _ProviderCustomersScreenState extends State<ProviderCustomersScreen> {
       case 'timeline':
         final timeline = controller.selectedTimeline as List<Map<String, dynamic>>;
         if (timeline.isEmpty) {
-          return _PanelText(
-            'No timeline events are available yet for this customer.',
-          );
+          return const _PanelText('No patient history is available yet.');
         }
         return Column(
           children: timeline
               .take(10)
               .map(
                 (entry) => _TimelineTile(
-                  kind: entry['kind']?.toString() ?? 'EVENT',
+                  kind: _timelineLabel(entry['kind']?.toString()),
                   title: entry['title']?.toString() ?? 'Activity',
                   subtitle: entry['subtitle']?.toString() ?? '',
                   timestamp: entry['timestamp'] as DateTime,
@@ -216,8 +213,8 @@ class _ProviderCustomersScreenState extends State<ProviderCustomersScreen> {
       case 'appointments':
         final appointments = controller.selectedAppointments as List<dynamic>;
         if (appointments.isEmpty) {
-          return _PanelText(
-            'No appointments are linked to this customer yet. New provider-facing scheduling and check-in workflows will land here.',
+          return const _PanelText(
+            'No appointments have been added for this patient yet.',
           );
         }
         return Column(
@@ -227,16 +224,16 @@ class _ProviderCustomersScreenState extends State<ProviderCustomersScreen> {
                   title: appointment.typeLabel,
                   subtitle:
                       '${appointment.statusLabel} • ${appointment.doctorName ?? 'Provider'}',
-                  meta: appointment.appointmentDate.toString(),
+                  meta: _formatTimelineDate(appointment.appointmentDate),
                 ),
               )
               .toList(),
         );
-      case 'documents':
+      case 'records':
         final documents = controller.selectedRecentDocuments as List<dynamic>;
         if (documents.isEmpty) {
-          return _PanelText(
-            'No documents are uploaded yet. Prescription review, reports, and supporting files will appear here.',
+          return const _PanelText(
+            'No medical records have been uploaded yet. Prescriptions, reports, and supporting files will appear here.',
           );
         }
         return Column(
@@ -245,12 +242,12 @@ class _ProviderCustomersScreenState extends State<ProviderCustomersScreen> {
                 (document) => _SummaryCard(
                   title: document.fileName,
                   subtitle: '${document.typeLabel} • ${document.statusLabel}',
-                  meta: document.extractionPreview ?? 'No extracted preview yet',
+                  meta: document.extractionPreview ?? 'No preview available yet',
                 ),
               )
               .toList(),
         );
-      case 'wallet':
+      case 'payments':
         final cashWallet =
             controller.selectedWallet?['cashWallet'] as Map<String, dynamic>? ??
             const <String, dynamic>{};
@@ -262,8 +259,8 @@ class _ProviderCustomersScreenState extends State<ProviderCustomersScreen> {
           runSpacing: 12,
           children: [
             _MetricCard(
-              label: 'Cash available',
-              value: 'Rs ${cashWallet['available'] ?? 0}',
+              label: 'Wallet balance',
+              value: _formatCurrency(cashWallet['available']),
             ),
             _MetricCard(
               label: 'Reward points',
@@ -271,8 +268,9 @@ class _ProviderCustomersScreenState extends State<ProviderCustomersScreen> {
             ),
             _MetricCard(
               label: 'Credit available',
-              value:
-                  'Rs ${controller.selectedWallet?['creditAvailable'] ?? 0}',
+              value: _formatCurrency(
+                controller.selectedWallet?['creditAvailable'],
+              ),
             ),
           ],
         );
@@ -311,7 +309,7 @@ class _ProviderCustomersScreenState extends State<ProviderCustomersScreen> {
               value: '${controller.selectedUpcomingAppointments.length}',
             ),
             _MetricCard(
-              label: 'Document count',
+              label: 'Medical records',
               value: '${controller.selectedDocuments.length}',
             ),
             _MetricCard(
@@ -319,7 +317,7 @@ class _ProviderCustomersScreenState extends State<ProviderCustomersScreen> {
               value: '${controller.selectedCompletedAppointments.length}',
             ),
             _MetricCard(
-              label: 'Card',
+              label: 'SHIELD card',
               value: controller.selectedCustomer?.shieldCardNumber ?? 'Pending',
             ),
           ],
@@ -330,26 +328,34 @@ class _ProviderCustomersScreenState extends State<ProviderCustomersScreen> {
   String _labelForTab(String value) {
     switch (value) {
       case 'timeline':
-        return 'Timeline';
+        return 'History';
       case 'appointments':
         return 'Appointments';
-      case 'documents':
-        return 'Documents';
-      case 'wallet':
-        return 'Wallet';
+      case 'records':
+        return 'Medical Records';
+      case 'payments':
+        return 'Payments';
       case 'membership':
         return 'Membership';
       case 'overview':
       default:
-        return 'Overview';
+        return 'Summary';
     }
+  }
+
+  String _patientLabel(Map<String, dynamic> customer) {
+    final customerCode = customer['customerCode']?.toString().trim() ?? '';
+    if (customerCode.isNotEmpty) {
+      return 'Patient ID: $customerCode';
+    }
+    return 'Patient';
   }
 }
 
 class _CustomerResultTile extends StatelessWidget {
   const _CustomerResultTile({
     required this.title,
-    required this.customerCode,
+    required this.patientLabel,
     required this.mobile,
     required this.membership,
     required this.selected,
@@ -357,7 +363,7 @@ class _CustomerResultTile extends StatelessWidget {
   });
 
   final String title;
-  final String customerCode;
+  final String patientLabel;
   final String mobile;
   final String membership;
   final bool selected;
@@ -389,7 +395,7 @@ class _CustomerResultTile extends StatelessWidget {
                   Text(title, style: AppTypography.body),
                   const SizedBox(height: 4),
                   Text(
-                    '$customerCode • $mobile',
+                    '$patientLabel • $mobile',
                     style: AppTypography.small.copyWith(color: AppColors.gray),
                   ),
                   const SizedBox(height: 4),
@@ -402,7 +408,7 @@ class _CustomerResultTile extends StatelessWidget {
             ),
             const SizedBox(width: 12),
             Text(
-              selected ? 'Open' : 'Workspace',
+              selected ? 'Open patient' : 'Patient details',
               style: AppTypography.small.copyWith(
                 color: AppColors.shieldBlue,
                 fontWeight: FontWeight.w700,
@@ -453,7 +459,7 @@ class _WorkspaceHeader extends StatelessWidget {
           Text(name, style: AppTypography.h3.copyWith(color: Colors.white)),
           const SizedBox(height: 6),
           Text(
-            '$customerCode • $mobile',
+            'Patient ID: $customerCode • $mobile',
             style: AppTypography.small.copyWith(color: Colors.white70),
           ),
           const SizedBox(height: 16),
@@ -462,7 +468,7 @@ class _WorkspaceHeader extends StatelessWidget {
             runSpacing: 10,
             children: [
               _HeaderChip(label: membership),
-              _HeaderChip(label: cardNumber),
+              _HeaderChip(label: 'SHIELD Card: $cardNumber'),
               _HeaderChip(label: 'Blood group: $bloodGroup'),
               _HeaderChip(label: location),
             ],
@@ -586,7 +592,7 @@ class _TimelineTile extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            width: 68,
+            width: 88,
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
             decoration: BoxDecoration(
               color: Colors.white,
@@ -613,7 +619,7 @@ class _TimelineTile extends StatelessWidget {
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  timestamp.toString(),
+                  _formatTimelineDate(timestamp),
                   style: AppTypography.tiny.copyWith(color: AppColors.gray),
                 ),
               ],
@@ -659,11 +665,51 @@ class _WorkspaceEmptyState extends StatelessWidget {
         border: Border.all(color: AppColors.divider),
       ),
       child: Text(
-        'Select a provider-linked customer to open the single workspace view. This screen is intended to become the main surface for appointments, documents, prescriptions, timeline, wallet, and membership context.',
+        'Select a patient to open their profile. Appointments, medical records, payments, membership, and history will stay together here.',
         style: AppTypography.body.copyWith(color: AppColors.gray),
       ),
     );
   }
+}
+
+String _timelineLabel(String? rawKind) {
+  switch ((rawKind ?? '').toUpperCase()) {
+    case 'APPOINTMENT':
+      return 'Visit';
+    case 'DOCUMENT':
+      return 'Record';
+    default:
+      return 'Activity';
+  }
+}
+
+String _formatCurrency(Object? value) {
+  final amount = double.tryParse('${value ?? 0}') ?? 0;
+  return 'Rs ${amount.toStringAsFixed(0)}';
+}
+
+String _formatTimelineDate(DateTime timestamp) {
+  const months = [
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
+  ];
+  final day = timestamp.day.toString().padLeft(2, '0');
+  final month = months[timestamp.month - 1];
+  final year = timestamp.year;
+  final hour = timestamp.hour % 12 == 0 ? 12 : timestamp.hour % 12;
+  final minute = timestamp.minute.toString().padLeft(2, '0');
+  final suffix = timestamp.hour >= 12 ? 'PM' : 'AM';
+  return '$day $month $year • $hour:$minute $suffix';
 }
 
 extension on String {

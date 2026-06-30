@@ -23,10 +23,17 @@ type AdminQueueQuery = {
 type QueueItem = {
   kind: string;
   id: string;
+  workflowType: string;
+  workflowLabel: string;
   title: string;
   subtitle: string;
   meta: string;
   status: string;
+  statusLabel: string;
+  stageCode: string;
+  stageLabel: string;
+  primaryActionLabel: string;
+  secondaryActionLabel: string;
 };
 
 @Injectable()
@@ -238,6 +245,9 @@ export class OperationsQueueService {
         membershipStatus: customer.membership?.status ?? null,
         membershipPlan: customer.membership?.membershipType?.name ?? null,
         shieldCardNumber: customer.shieldCard?.cardNumber ?? null,
+        displaySummary: customer.membership?.membershipType?.name
+          ? `${customer.membership.membershipType.name} • ${customer.mobile}`
+          : customer.mobile,
       })),
       queues: {
         appointments: openAppointments.map((appointment) =>
@@ -532,7 +542,7 @@ export class OperationsQueueService {
     provider?:
       | {
           providerName: string | null;
-          business?: { name: string | null } | null;
+          business?: { name: string | null; code?: string | null } | null;
         }
       | null;
   }): QueueItem {
@@ -541,14 +551,27 @@ export class OperationsQueueService {
         ? `${appointment.customer.firstName ?? ''} ${appointment.customer.lastName ?? ''}`.trim()
         : '';
     const providerName = appointment.provider?.providerName || 'Provider';
-    const branchName = appointment.provider?.business?.name || 'Branch not assigned';
+    const branchName = this.getBranchDisplayName(
+      appointment.provider?.business?.code,
+      appointment.provider?.business?.name,
+      appointment.provider?.providerName,
+      appointment.appointmentType,
+    );
+    const stageCode = this.resolveQueueStageFromStatus(appointment.status);
     return {
       kind: 'appointment',
       id: appointment.id.toString(),
+      workflowType: 'APPOINTMENT',
+      workflowLabel: 'Appointment',
       title: appointment.appointmentType || 'Appointment',
       subtitle: customerName || providerName,
-      meta: `${branchName} • ${appointment.appointmentDate?.toISOString() ?? 'No date'}`,
+      meta: `${branchName} • ${this.formatDateTime(appointment.appointmentDate)}`,
       status: appointment.status || 'PENDING',
+      statusLabel: this.getAppointmentStatusLabel(appointment.status),
+      stageCode,
+      stageLabel: this.getStageLabel(stageCode, appointment.status),
+      primaryActionLabel: this.getPrimaryActionLabel(stageCode, 'APPOINTMENT'),
+      secondaryActionLabel: 'Open patient',
     };
   }
 
@@ -569,14 +592,160 @@ export class OperationsQueueService {
       purchase.customer
         ? `${purchase.customer.firstName ?? ''} ${purchase.customer.lastName ?? ''}`.trim()
         : 'Customer not linked';
+    const stageCode = Number(purchase.payableAmount ?? 0) > 0 ? 'WAITING_PAYMENT' : 'COMPLETED';
     return {
       kind: 'purchase',
       id: purchase.id.toString(),
-      title: purchase.invoiceNumber || `Invoice ${purchase.id.toString()}`,
+      workflowType: 'PAYMENT',
+      workflowLabel: 'Payment',
+      title: purchase.invoiceNumber
+        ? `Invoice ${purchase.invoiceNumber}`
+        : `Invoice #${purchase.id.toString()}`,
       subtitle: `${customerName} • ${purchase.provider?.providerName || 'Provider'}`,
-      meta: purchase.purchaseDate?.toISOString() ?? 'No billing date',
-      status: `₹${Number(purchase.payableAmount ?? 0).toFixed(2)}`,
+      meta: this.formatDateTime(purchase.purchaseDate),
+      status: stageCode,
+      statusLabel: this.formatCurrency(Number(purchase.payableAmount ?? 0)),
+      stageCode,
+      stageLabel: this.getStageLabel(stageCode, null),
+      primaryActionLabel: this.getPrimaryActionLabel(stageCode, 'PAYMENT'),
+      secondaryActionLabel: 'Open patient',
     };
+  }
+
+  private resolveQueueStageFromStatus(status?: string | null) {
+    const normalized = (status ?? '').trim().toUpperCase();
+    if (normalized.includes('COMPLETE') || normalized.includes('APPROVE')) {
+      return 'COMPLETED';
+    }
+    if (normalized.includes('READY')) {
+      return 'READY_TO_COMPLETE';
+    }
+    if (normalized.includes('WAIT')) {
+      return 'WAITING';
+    }
+    if (
+      normalized.includes('CHECKED') ||
+      normalized.includes('PROCESS') ||
+      normalized.includes('PROGRESS')
+    ) {
+      return 'CONSULTATION';
+    }
+    if (
+      normalized.includes('CONFIRM') ||
+      normalized.includes('SCHEDULED') ||
+      normalized.includes('ASSIGN')
+    ) {
+      return 'ACCEPTED';
+    }
+    return 'WAITING';
+  }
+
+  private getStageLabel(stageCode: string, rawStatus?: string | null) {
+    switch (stageCode) {
+      case 'ACCEPTED':
+        return 'Accepted';
+      case 'CONSULTATION':
+        return 'Consultation in Progress';
+      case 'WAITING_PAYMENT':
+        return 'Waiting for Payment';
+      case 'WAITING':
+        if ((rawStatus ?? '').toUpperCase().includes('LAB')) {
+          return 'Waiting for Lab Report';
+        }
+        return 'Waiting for Patient';
+      case 'READY_TO_COMPLETE':
+        return 'Ready to Complete';
+      case 'COMPLETED':
+        return 'Completed';
+      default:
+        return 'Waiting';
+    }
+  }
+
+  private getPrimaryActionLabel(stageCode: string, workflowType: string) {
+    if (workflowType === 'PAYMENT') {
+      return stageCode === 'COMPLETED' ? 'View payment' : 'Collect payment';
+    }
+    switch (stageCode) {
+      case 'ACCEPTED':
+        return 'Open patient';
+      case 'CONSULTATION':
+        return 'Continue care';
+      case 'WAITING':
+        return 'Check patient';
+      case 'READY_TO_COMPLETE':
+        return 'Complete visit';
+      case 'COMPLETED':
+        return 'View summary';
+      default:
+        return 'Open patient';
+    }
+  }
+
+  private getAppointmentStatusLabel(status?: string | null) {
+    switch ((status ?? '').trim().toUpperCase()) {
+      case 'PENDING':
+        return 'Waiting';
+      case 'CONFIRMED':
+        return 'Confirmed';
+      case 'SCHEDULED':
+        return 'Scheduled';
+      case 'CHECKED_IN':
+        return 'Checked In';
+      case 'IN_PROGRESS':
+        return 'Consultation in Progress';
+      case 'COMPLETED':
+        return 'Completed';
+      case 'CANCELLED':
+        return 'Cancelled';
+      default:
+        return status?.replaceAll('_', ' ') ?? 'Appointment';
+    }
+  }
+
+  private getBranchDisplayName(
+    businessCode?: string | null,
+    businessName?: string | null,
+    providerName?: string | null,
+    appointmentType?: string | null,
+  ) {
+    if (businessCode === 'HYP-PERINTHALMANNA') {
+      return 'Sahakar Hyper Pharmacy - Perinthalmanna';
+    }
+    if (businessCode === 'HYP-MANJERI') {
+      return 'Sahakar Hyper Pharmacy - Manjeri';
+    }
+    if (businessCode === 'SHG') {
+      const combined = `${providerName ?? ''} ${appointmentType ?? ''}`.toUpperCase();
+      if (combined.includes('DENT')) {
+        return 'SHG Dental Care';
+      }
+      return 'SHG Medical Centre';
+    }
+    return businessName?.trim() ?? 'Branch not assigned';
+  }
+
+  private formatDateTime(value?: Date | null) {
+    if (!value) {
+      return 'Time not scheduled';
+    }
+    const day = value.getDate().toString().padStart(2, '0');
+    const month = value.toLocaleString('en-US', { month: 'short' });
+    const year = value.getFullYear();
+    let hour = value.getHours() % 12;
+    if (hour === 0) {
+      hour = 12;
+    }
+    const minute = value.getMinutes().toString().padStart(2, '0');
+    const suffix = value.getHours() >= 12 ? 'PM' : 'AM';
+    return `${day} ${month} ${year} • ${hour}:${minute} ${suffix}`;
+  }
+
+  private formatCurrency(value: number) {
+    return `Rs ${value.toLocaleString('en-IN', {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    })}`;
   }
 
   private normalizeLimit(limit: number | undefined, fallback: number) {
