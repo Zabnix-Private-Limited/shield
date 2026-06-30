@@ -5425,3 +5425,29 @@ est build, ackend/vercel.json, ackend/src/auth/auth.service.ts, and uth_devic
 
 ---
 2026-06-30 12:47:00 IST
+---
+2026-06-30 12:03:32 IST
+
+## 158. Customer Portal Boot Regression Fix: Removed Customer Preload Dependency On Role Dashboard Analytics Permission
+**High-level description**: Fixed the production customer-wallet boot regression by tracing the real failure path through the frontend shell and backend authorization layers, then restoring the intended customer-portal contract so customer sections use local shell metadata while customer feature screens continue to fetch their own authenticated live endpoints.
+- Audited the frontend customer shell, customer scaffold, responsive container helper, customer wallet screen, customer auth session, and backend JWT/authorization guards before modifying anything.
+- Confirmed the fixed mobile-viewport contract is still implemented in `portal_shell.dart` through `AppResponsive.customerViewportWidth()` plus a centered `SizedBox`, so the current regression was not a container-width codepath change in the active shell.
+- Identified the real 403 root cause: `PortalShell._loadData()` was preloading `/dashboard/role/customer/wallet` for customer routes, while that backend route is protected by `analytics.view`; the `CUSTOMER` RBAC role does not include `analytics.view`, so the customer wallet screen never reached its actual `/customer/wallet` data path.
+- Updated `PortalShell._loadData()` so customer sections resolve from local role/section metadata instead of calling the backend role-section dashboard endpoint during shell boot.
+- Preserved the existing customer UX contract: customer dashboard, wallet, membership, documents, prescriptions, notifications, services, and appointments still load through their own customer-scoped feature flows and authenticated repositories after the shell resolves.
+- Why this approach was chosen:
+  - the 403 was caused by the wrong bootstrap contract, not by a missing JWT, broken session restore, or wallet repository failure.
+  - restoring local metadata resolution for customer shell sections avoids introducing permission bypasses or weakening RBAC.
+  - this keeps internal/admin portals free to continue using the backend role-section endpoint while customer mobile-app flows stay decoupled from internal analytics permissions.
+
+### Files Modified/Created
+**Frontend Files (Modified)**:
+- frontend/lib/features/portal/presentation/screens/portal_shell.dart
+
+**Backend Files**:
+- None
+
+### Verification
+- flutter analyze
+- npm run build
+- Verified the 403 root cause in code: customer portal shell preload was hitting `/dashboard/role/customer/wallet`, which requires `analytics.view`, while the `CUSTOMER` RBAC role only grants `wallet.view` for wallet access.

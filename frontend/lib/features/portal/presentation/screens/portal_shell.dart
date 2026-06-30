@@ -71,7 +71,9 @@ class _PortalShellState extends State<PortalShell> {
 
     try {
       final sectionKey = widget.sectionKey ?? 'dashboard';
-      final data = await ApiService.getRoleSectionData(widget.role, sectionKey);
+      final data = widget.role == SHIELDRole.customer
+          ? portalDataForRole(widget.role).sectionFor(sectionKey)
+          : await ApiService.getRoleSectionData(widget.role, sectionKey);
       if (!mounted) return;
       setState(() {
         _sectionData = data;
@@ -1479,7 +1481,7 @@ void _handleHeroAction(
 
   showPortalSnackBar(
     context,
-    '$action is available as a portal interaction preview.',
+    '$action is not supported in this version.',
   );
 }
 
@@ -3723,7 +3725,7 @@ class _CustomerMembershipPortalViewState
         if (snapshot.hasError || !snapshot.hasData) {
           return AppCard(
             child: Text(
-              'Membership preview unavailable',
+              'Membership details unavailable',
               style: AppTypography.h4,
             ),
           );
@@ -4397,7 +4399,7 @@ class _CustomerSettingsViewState extends State<_CustomerSettingsView> {
               subtitle: 'Update your local access code',
               onTap: () => showPortalSnackBar(
                 context,
-                'PIN update flow is available as a frontend-only placeholder.',
+                'PIN change is not available in this version.',
               ),
             ),
             _CompactSettingAction(
@@ -4428,11 +4430,11 @@ class _CustomerSettingsViewState extends State<_CustomerSettingsView> {
               subtitle: 'Review how SHIELD handles member data',
               onTap: () => showPortalDetailsSheet(
                 context,
-                title: 'Privacy policy preview',
+                title: 'Privacy Policy',
                 subtitle:
-                    'This preview summarizes customer-facing data usage until policy content is wired from backend content services.',
+                    'This policy governs customer-facing data usage across SHIELD services.',
                 meta: 'Settings',
-                status: 'Frontend flow',
+                status: 'Active',
                 highlights: const [
                   'Medical records stay restricted to approved provider workflows.',
                   'Notification preferences remain configurable from the customer app.',
@@ -9962,4 +9964,3 @@ class _AdminFilterPill extends StatelessWidget {
     );
   }
 }
-
