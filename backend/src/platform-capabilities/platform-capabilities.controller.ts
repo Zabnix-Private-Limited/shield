@@ -11,6 +11,7 @@ import {
 } from '@nestjs/common';
 import { Observable } from 'rxjs';
 import { AuthService } from '../auth/auth.service';
+import { Public } from '../auth/public.decorator';
 import { PlatformPrintService } from './platform-print.service';
 import { PlatformRealtimeService } from './platform-realtime.service';
 import { PlatformReportService } from './platform-report.service';
@@ -77,6 +78,7 @@ export class PlatformCapabilitiesController {
     };
   }
 
+  @Public()
   @Sse('realtime/stream')
   async streamRealtime(
     @Query('workspace') workspace = 'provider',
