@@ -6,17 +6,40 @@ import '../../../../../../app/theme/app_typography.dart';
 import '../../../shared/presentation/controllers/provider_portal_controller.dart';
 import '../../../shared/presentation/widgets/provider_workspace_scaffold.dart';
 
-class ProviderQueueScreen extends StatelessWidget {
+class ProviderQueueScreen extends StatefulWidget {
   const ProviderQueueScreen({super.key});
+
+  @override
+  State<ProviderQueueScreen> createState() => _ProviderQueueScreenState();
+}
+
+class _ProviderQueueScreenState extends State<ProviderQueueScreen> {
+  String? _selectedFilter;
 
   @override
   Widget build(BuildContext context) {
     return ProviderWorkspaceScaffold(
       builder: (context, ref, controller) {
-        final stageBuckets = controller.queueByStage;
-        final counts = controller.queueStageCounts;
-        final hasItems = controller.workflowQueue.isNotEmpty;
+        final routeFilter = GoRouterState.of(context).uri.queryParameters['filter'];
+        final selectedFilter = (_selectedFilter ?? routeFilter)?.trim();
+        final queueItems = controller.queueItemsForFilter(selectedFilter);
+        final stageBuckets = <String, List<Map<String, dynamic>>>{};
+        for (final stage in controller.queueStagesMetadata) {
+          final code = stage['code']?.toString() ?? '';
+          if (code.isNotEmpty) {
+            stageBuckets[code] = <Map<String, dynamic>>[];
+          }
+        }
+        for (final item in queueItems) {
+          final stageCode = item['stageCode']?.toString() ?? '';
+          stageBuckets.putIfAbsent(stageCode, () => <Map<String, dynamic>>[]).add(item);
+        }
+        final counts = {
+          for (final entry in stageBuckets.entries) entry.key: entry.value.length,
+        };
+        final hasItems = queueItems.isNotEmpty;
         final stageMetadata = controller.queueStagesMetadata;
+        final queueFilters = controller.queueFilters;
         final roleKey =
             GoRouterState.of(context).pathParameters['role'] ?? 'provider';
 
@@ -30,6 +53,28 @@ class ProviderQueueScreen extends StatelessWidget {
               style: AppTypography.small.copyWith(color: AppColors.gray),
             ),
             const SizedBox(height: 18),
+            if (queueFilters.isNotEmpty) ...[
+              Wrap(
+                spacing: 10,
+                runSpacing: 10,
+                children: queueFilters.map((filter) {
+                  final code = filter['code']?.toString() ?? '';
+                  final active = selectedFilter == code;
+                  return ChoiceChip(
+                    label: Text(filter['title']?.toString() ?? 'Filter'),
+                    selected: active,
+                    onSelected: (_) {
+                      setState(() {
+                        _selectedFilter = active ? null : code;
+                      });
+                      final query = active ? '' : '?filter=$code';
+                      context.go('/portal/$roleKey/queue$query');
+                    },
+                  );
+                }).toList(),
+              ),
+              const SizedBox(height: 14),
+            ],
             Wrap(
               spacing: 10,
               runSpacing: 10,
@@ -39,6 +84,23 @@ class ProviderQueueScreen extends StatelessWidget {
                       label: stage['title']?.toString() ?? 'Queue',
                       count: counts[stage['code']?.toString() ?? ''] ?? 0,
                       colorId: stage['color']?.toString() ?? 'blue',
+                      onTap: () {
+                        final matchingFilter = queueFilters.where((filter) {
+                          final stageCodes = List<String>.from(
+                            filter['stageCodes'] ?? const <String>[],
+                          );
+                          return stageCodes.length == 1 &&
+                              stageCodes.first == stage['code']?.toString();
+                        });
+                        final filterCode = matchingFilter.isEmpty
+                            ? null
+                            : matchingFilter.first['code']?.toString();
+                        setState(() {
+                          _selectedFilter = filterCode;
+                        });
+                        final query = filterCode == null ? '' : '?filter=$filterCode';
+                        context.go('/portal/$roleKey/queue$query');
+                      },
                     ),
                   )
                   .toList(),
@@ -88,26 +150,32 @@ class _StagePill extends StatelessWidget {
     required this.label,
     required this.count,
     required this.colorId,
+    required this.onTap,
   });
 
   final String label;
   final int count;
   final String colorId;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: AppColors.divider),
-      ),
-      child: Text(
-        '$label • $count',
-        style: AppTypography.small.copyWith(
-          fontWeight: FontWeight.w700,
-          color: _colorForId(colorId),
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(999),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(color: AppColors.divider),
+        ),
+        child: Text(
+          '$label • $count',
+          style: AppTypography.small.copyWith(
+            fontWeight: FontWeight.w700,
+            color: _colorForId(colorId),
+          ),
         ),
       ),
     );
@@ -212,89 +280,93 @@ class _QueueCard extends StatelessWidget {
     final secondaryActionLabel = item['secondaryActionLabel']?.toString() ?? 'Open patient';
     final primaryActionLabel = item['primaryActionLabel']?.toString() ?? 'Open';
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppColors.lightGray,
-        borderRadius: BorderRadius.circular(18),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            decoration: BoxDecoration(
-              color: AppColors.shieldNavy.withValues(alpha: 0.08),
-              borderRadius: BorderRadius.circular(999),
+    return InkWell(
+      onTap: () => _openQueueAction(context, primary: true),
+      borderRadius: BorderRadius.circular(18),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: AppColors.lightGray,
+          borderRadius: BorderRadius.circular(18),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: AppColors.shieldNavy.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(999),
+              ),
+              child: Text(
+                typeLabel,
+                style: AppTypography.tiny.copyWith(
+                  color: AppColors.shieldNavy,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
             ),
-            child: Text(
-              typeLabel,
+            const SizedBox(height: 10),
+            Text(title, style: AppTypography.body),
+            const SizedBox(height: 6),
+            Text(
+              subtitle,
+              style: AppTypography.small.copyWith(color: AppColors.darkGray),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              statusLabel,
               style: AppTypography.tiny.copyWith(
-                color: AppColors.shieldNavy,
+                color: AppColors.shieldBlue,
                 fontWeight: FontWeight.w700,
               ),
             ),
-          ),
-          const SizedBox(height: 10),
-          Text(title, style: AppTypography.body),
-          const SizedBox(height: 6),
-          Text(
-            subtitle,
-            style: AppTypography.small.copyWith(color: AppColors.darkGray),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            statusLabel,
-            style: AppTypography.tiny.copyWith(
-              color: AppColors.shieldBlue,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          if (meta != null && meta.trim().isNotEmpty) ...[
-            const SizedBox(height: 6),
-            Text(
-              meta,
-              style: AppTypography.tiny.copyWith(color: AppColors.gray),
-            ),
-          ],
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: () => _openQueueAction(
-                    context,
-                    primary: false,
-                  ),
-                  style: OutlinedButton.styleFrom(
-                    side: const BorderSide(color: AppColors.divider),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                  ),
-                  child: Text(secondaryActionLabel),
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: FilledButton(
-                  onPressed: () => _openQueueAction(
-                    context,
-                    primary: true,
-                  ),
-                  style: FilledButton.styleFrom(
-                    backgroundColor: AppColors.shieldBlue,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                  ),
-                  child: Text(primaryActionLabel),
-                ),
+            if (meta != null && meta.trim().isNotEmpty) ...[
+              const SizedBox(height: 6),
+              Text(
+                meta,
+                style: AppTypography.tiny.copyWith(color: AppColors.gray),
               ),
             ],
-          ),
-        ],
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () => _openQueueAction(
+                      context,
+                      primary: false,
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: AppColors.divider),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                    child: Text(secondaryActionLabel),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: FilledButton(
+                    onPressed: () => _openQueueAction(
+                      context,
+                      primary: true,
+                    ),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: AppColors.shieldBlue,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                    child: Text(primaryActionLabel),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -363,6 +435,8 @@ Color _colorForId(String colorId) {
 }
 
 class _QueueEmptyState extends StatelessWidget {
+  const _QueueEmptyState();
+
   @override
   Widget build(BuildContext context) {
     return Container(

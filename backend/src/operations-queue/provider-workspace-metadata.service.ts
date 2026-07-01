@@ -908,10 +908,11 @@ export class ProviderWorkspaceMetadataService {
         },
         {
           code: 'today-visit',
-          title: "Today's Visit",
+          title: 'Current Visit',
           icon: 'care',
           order: 2,
-          emptyStateMessage: 'No live visit activity has been recorded for today.',
+          emptyStateMessage:
+            'No active visit is open right now. Start care from the next scheduled visit when the patient arrives.',
         },
         {
           code: 'timeline',
@@ -930,7 +931,7 @@ export class ProviderWorkspaceMetadataService {
         },
         {
           code: 'records',
-          title: this.getRecordsNavigationTitle(profile),
+          title: 'Medical Records',
           icon: 'folder',
           order: 5,
           emptyStateMessage:
@@ -951,10 +952,34 @@ export class ProviderWorkspaceMetadataService {
           emptyStateMessage: 'No membership details are available yet.',
         },
         {
-          code: 'history',
-          title: 'History',
-          icon: 'history',
+          code: 'activity',
+          title: 'Activity',
+          icon: 'notifications',
           order: 8,
+          emptyStateMessage:
+            'No recent care alerts or patient updates are available yet.',
+        },
+        {
+          code: 'print',
+          title: 'Print',
+          icon: 'print',
+          order: 9,
+          emptyStateMessage:
+            'Printable visit and patient documents will appear here when care data is ready.',
+        },
+        {
+          code: 'reports',
+          title: 'Reports',
+          icon: 'assessment',
+          order: 10,
+          emptyStateMessage:
+            'Reports become available here when there is enough visit and billing activity to export.',
+        },
+        {
+          code: 'history',
+          title: 'Visit History',
+          icon: 'history',
+          order: 11,
           emptyStateMessage: 'No completed visit history is available yet.',
         },
       ],

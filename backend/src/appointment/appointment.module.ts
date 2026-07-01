@@ -1,12 +1,13 @@
 import { Module } from '@nestjs/common';
 import { AppointmentController } from './appointment.controller';
 import { AppointmentService } from './appointment.service';
+import { PlatformCapabilitiesModule } from '../platform-capabilities/platform-capabilities.module';
 import { PrismaModule } from '../prisma/prisma.module';
 import { TimelineModule } from '../timeline/timeline.module';
 import { WalletModule } from '../wallet/wallet.module';
 
 @Module({
-  imports: [PrismaModule, WalletModule, TimelineModule],
+  imports: [PrismaModule, WalletModule, TimelineModule, PlatformCapabilitiesModule],
   controllers: [AppointmentController],
   providers: [AppointmentService],
   exports: [AppointmentService],

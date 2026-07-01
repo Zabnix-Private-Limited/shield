@@ -57,7 +57,7 @@ class _ProviderWorkspaceScaffoldState
               Text('Provider screen unavailable', style: AppTypography.h4),
               const SizedBox(height: 8),
               Text(
-                controller.error!,
+                'We could not load this provider screen right now. Check your connection and try again.',
                 style: AppTypography.body.copyWith(color: AppColors.gray),
                 textAlign: TextAlign.center,
               ),

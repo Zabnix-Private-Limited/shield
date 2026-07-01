@@ -394,7 +394,10 @@ CREATE TABLE "purchase_items" (
 	"product_id" bigint,
 	"quantity" numeric(12, 2),
 	"unit_price" numeric(15, 2),
-	"total_price" numeric(15, 2)
+	"total_price" numeric(15, 2),
+	"item_type" varchar(50) DEFAULT 'MEDICINE',
+	"item_name" varchar(255),
+	"metadata" jsonb
 );
 CREATE TABLE "purchases" (
 	"id" bigserial PRIMARY KEY,
@@ -405,7 +408,12 @@ CREATE TABLE "purchases" (
 	"total_amount" numeric(15, 2),
 	"discount_amount" numeric(15, 2),
 	"payable_amount" numeric(15, 2),
-	"purchase_date" timestamp with time zone
+	"purchase_date" timestamp with time zone,
+	"appointment_id" bigint,
+	"purchase_kind" varchar(50) DEFAULT 'GENERAL',
+	"payment_status" varchar(50) DEFAULT 'PENDING',
+	"payment_summary" jsonb,
+	"billing_snapshot" jsonb
 );
 CREATE TABLE "referral_reward_events" (
 	"id" bigserial PRIMARY KEY,
@@ -668,6 +676,9 @@ CREATE UNIQUE INDEX "product_categories_pkey" ON "product_categories" ("id");
 CREATE UNIQUE INDEX "products_pkey" ON "products" ("id");
 CREATE UNIQUE INDEX "products_uuid_key" ON "products" ("uuid");
 CREATE UNIQUE INDEX "purchase_items_pkey" ON "purchase_items" ("id");
+CREATE INDEX "idx_purchases_appointment" ON "purchases" ("appointment_id");
+CREATE INDEX "idx_purchases_kind" ON "purchases" ("purchase_kind");
+CREATE INDEX "idx_purchases_payment_status" ON "purchases" ("payment_status");
 CREATE UNIQUE INDEX "purchases_pkey" ON "purchases" ("id");
 CREATE UNIQUE INDEX "purchases_uuid_key" ON "purchases" ("uuid");
 CREATE INDEX "idx_referral_reward_events_referrer" ON "referral_reward_events" ("referrer_customer_id");
@@ -761,6 +772,7 @@ ALTER TABLE "pricing_rule_audits" ADD CONSTRAINT "pricing_rule_audits_wallet_id_
 ALTER TABLE "products" ADD CONSTRAINT "products_category_id_fkey" FOREIGN KEY ("category_id") REFERENCES "product_categories"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 ALTER TABLE "purchase_items" ADD CONSTRAINT "purchase_items_product_id_fkey" FOREIGN KEY ("product_id") REFERENCES "products"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 ALTER TABLE "purchase_items" ADD CONSTRAINT "purchase_items_purchase_id_fkey" FOREIGN KEY ("purchase_id") REFERENCES "purchases"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "purchases" ADD CONSTRAINT "purchases_appointment_id_fkey" FOREIGN KEY ("appointment_id") REFERENCES "appointments"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 ALTER TABLE "purchases" ADD CONSTRAINT "purchases_customer_id_fkey" FOREIGN KEY ("customer_id") REFERENCES "customers"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 ALTER TABLE "purchases" ADD CONSTRAINT "purchases_provider_id_fkey" FOREIGN KEY ("provider_id") REFERENCES "service_providers"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 ALTER TABLE "reward_point_transactions" ADD CONSTRAINT "reward_point_transactions_approved_by_fkey" FOREIGN KEY ("approved_by") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;

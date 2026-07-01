@@ -5,6 +5,8 @@ import '../../../../../shared/models/customer.dart';
 import '../../../../../shared/models/document.dart';
 import '../../../../../shared/models/notification.dart';
 import '../../../../../shared/models/wallet.dart';
+import '../../../../../shared/services/api_service.dart';
+import '../../../../../shared/services/platform_realtime_channel.dart';
 import '../../data/provider_portal_repository.dart';
 
 class ProviderPortalController extends ChangeNotifier {
@@ -38,6 +40,10 @@ class ProviderPortalController extends ChangeNotifier {
       const <Map<String, dynamic>>[];
   List<Map<String, dynamic>> _sessions = const <Map<String, dynamic>>[];
   List<Map<String, dynamic>> _loginHistory = const <Map<String, dynamic>>[];
+  bool _realtimeConnected = false;
+  bool _realtimeSubscribed = false;
+  String? _lastPlatformEventType;
+  PlatformRealtimeSubscription? _realtimeSubscription;
 
   bool get isLoading => _loading;
   bool get isWorkspaceLoaded => _workspaceLoaded;
@@ -66,6 +72,26 @@ class ProviderPortalController extends ChangeNotifier {
   List<Map<String, dynamic>> get selectedPurchases => _selectedPurchases;
   List<Map<String, dynamic>> get sessions => _sessions;
   List<Map<String, dynamic>> get loginHistory => _loginHistory;
+  bool get isRealtimeConnected => _realtimeConnected;
+  String? get lastPlatformEventType => _lastPlatformEventType;
+  Map<String, dynamic> get printRegistry =>
+      Map<String, dynamic>.from(platformWorkspace['printing'] ?? const {});
+  Map<String, dynamic> get reportRegistry =>
+      Map<String, dynamic>.from(platformWorkspace['reporting'] ?? const {});
+  Map<String, dynamic> get realtimeRegistry =>
+      Map<String, dynamic>.from(platformWorkspace['realtime'] ?? const {});
+  List<Map<String, dynamic>> get availablePrintTemplates =>
+      List<Map<String, dynamic>>.from(
+        (printRegistry['templates'] as List? ?? const <dynamic>[]).map(
+          (item) => Map<String, dynamic>.from(item as Map),
+        ),
+      );
+  List<Map<String, dynamic>> get availableReports =>
+      List<Map<String, dynamic>>.from(
+        ((reportRegistry['reports'] as List?) ?? const <dynamic>[]).map(
+          (item) => Map<String, dynamic>.from(item as Map),
+        ),
+      );
 
   List<Map<String, dynamic>> get providers =>
       List<Map<String, dynamic>>.from(workspace['providers'] ?? const []);
@@ -98,6 +124,12 @@ class ProviderPortalController extends ChangeNotifier {
   List<Map<String, dynamic>> get workspaceQuickActions =>
       List<Map<String, dynamic>>.from(
         (workspaceMeta['quickActions'] as List? ?? const <dynamic>[]).map(
+          (item) => Map<String, dynamic>.from(item as Map),
+        ),
+      );
+  List<Map<String, dynamic>> get queueFilters =>
+      List<Map<String, dynamic>>.from(
+        (workspaceFilters['queue'] as List? ?? const <dynamic>[]).map(
           (item) => Map<String, dynamic>.from(item as Map),
         ),
       );
@@ -313,6 +345,16 @@ class ProviderPortalController extends ChangeNotifier {
     return upcoming;
   }
 
+  List<Map<String, dynamic>> get workspaceAppointmentsToday {
+    final items = appointmentQueue.toList()
+      ..sort((left, right) {
+        final leftMeta = left['meta']?.toString() ?? '';
+        final rightMeta = right['meta']?.toString() ?? '';
+        return leftMeta.compareTo(rightMeta);
+      });
+    return items;
+  }
+
   List<Appointment> get selectedCompletedAppointments {
     final completed =
         selectedAppointments
@@ -431,6 +473,7 @@ class ProviderPortalController extends ChangeNotifier {
       return;
     }
     await refreshWorkspace();
+    await attachRealtimeStream();
   }
 
   Future<void> refreshWorkspace() async {
@@ -468,6 +511,51 @@ class ProviderPortalController extends ChangeNotifier {
     if (_selectedCustomerId != null) {
       await selectCustomer(_selectedCustomerId!);
     }
+  }
+
+  Future<void> attachRealtimeStream() async {
+    if (_realtimeSubscribed) {
+      return;
+    }
+    final accessToken = ApiService.currentAccessToken;
+    if (accessToken == null || accessToken.isEmpty) {
+      return;
+    }
+
+    final workspaceKey =
+        realtimeRegistry['workspace']?.toString().trim().toLowerCase() ??
+        'provider';
+    _realtimeSubscription = connectPlatformRealtimeStream(
+      baseUrl: ApiService.currentBaseUrl,
+      workspace: workspaceKey,
+      accessToken: accessToken,
+      onEvent: (event) {
+        _realtimeConnected = true;
+        _lastPlatformEventType = event['type']?.toString();
+        notifyListeners();
+        if (_lastPlatformEventType == 'STREAM_CONNECTED') {
+          return;
+        }
+        Future<void>.microtask(() async {
+          await refreshWorkspace();
+          final selectedId = _selectedCustomerId;
+          final eventCustomerId = event['customerId']?.toString().trim();
+          if (selectedId != null &&
+              (eventCustomerId == null ||
+                  eventCustomerId.isEmpty ||
+                  eventCustomerId == selectedId)) {
+            await selectCustomer(selectedId);
+          }
+        });
+      },
+      onError: (error) {
+        _realtimeConnected = false;
+        _error = error.toString();
+        notifyListeners();
+      },
+    );
+    _realtimeSubscribed = true;
+    notifyListeners();
   }
 
   Future<void> selectCustomer(String customerId) async {
@@ -537,6 +625,51 @@ class ProviderPortalController extends ChangeNotifier {
       _error = error.toString();
     } finally {
       _consultationLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> openAppointmentWorkflow(
+    Appointment appointment, {
+    bool loadConsultation = false,
+  }) async {
+    await selectCustomer(appointment.customerId);
+    _activeVisitAppointmentId = appointment.id;
+    if (loadConsultation) {
+      await loadConsultationWorkspace(appointment.id);
+    } else {
+      notifyListeners();
+    }
+  }
+
+  Future<void> confirmAppointment(String appointmentId) async {
+    _consultationSaving = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      final updated = await _repository.confirmAppointment(appointmentId);
+      await _reloadAppointmentState(updated);
+    } catch (error) {
+      _error = error.toString();
+    } finally {
+      _consultationSaving = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> cancelAppointment(String appointmentId) async {
+    _consultationSaving = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      final updated = await _repository.cancelAppointment(appointmentId);
+      await _reloadAppointmentState(updated);
+    } catch (error) {
+      _error = error.toString();
+    } finally {
+      _consultationSaving = false;
       notifyListeners();
     }
   }
@@ -678,6 +811,49 @@ class ProviderPortalController extends ChangeNotifier {
     }
   }
 
+  Future<Map<String, dynamic>> generatePatientPrint(String templateId) async {
+    final payloads =
+        selectedPatientWorkspace['printing'] is Map
+            ? Map<String, dynamic>.from(selectedPatientWorkspace['printing'])
+            : const <String, dynamic>{};
+    final rawPayload =
+        payloads['payloads'] is Map
+            ? Map<String, dynamic>.from(payloads['payloads'] as Map)
+            : const <String, dynamic>{};
+    final templatePayload =
+        rawPayload[templateId] is Map
+            ? Map<String, dynamic>.from(rawPayload[templateId] as Map)
+            : const <String, dynamic>{};
+    if (templatePayload.isEmpty) {
+      throw StateError('No shared print payload is available for $templateId.');
+    }
+    return _repository.generatePlatformPrint(templateId, templatePayload);
+  }
+
+  Future<Map<String, dynamic>> runProviderReport(
+    String reportId, {
+    String format = 'PDF',
+  }) {
+    final principal =
+        authProfile['principal'] as Map<String, dynamic>? ??
+        const <String, dynamic>{};
+    final display =
+        authProfile['display'] as Map<String, dynamic>? ??
+        const <String, dynamic>{};
+    final branch = display['branch'] as Map<String, dynamic>? ?? const {};
+    return _repository.runPlatformReport(
+      reportId: reportId,
+      workspace: 'provider',
+      format: format,
+      providerId: principal['subjectId']?.toString(),
+      businessId: branch['id']?.toString(),
+    );
+  }
+
+  Future<String> getPatientDocumentDownloadUrl(String documentId) {
+    return _repository.getDocumentDownloadUrl(documentId);
+  }
+
   String queueStageTitle(String stageCode) {
     for (final stage in queueStagesMetadata) {
       if (stage['code']?.toString() == stageCode) {
@@ -800,6 +976,31 @@ class ProviderPortalController extends ChangeNotifier {
     }
     final isSupported = tabs.any((tab) => tab['code']?.toString() == requested);
     return isSupported ? requested : defaultTab;
+  }
+
+  List<Map<String, dynamic>> queueItemsForFilter(String? filterCode) {
+    final normalized = filterCode?.trim();
+    if (normalized == null || normalized.isEmpty || normalized == 'all') {
+      return workflowQueue;
+    }
+    Map<String, dynamic>? filter;
+    for (final item in queueFilters) {
+      if (item['code']?.toString() == normalized) {
+        filter = item;
+        break;
+      }
+    }
+    if (filter == null) {
+      return workflowQueue;
+    }
+    final stageCodes = List<String>.from(filter['stageCodes'] ?? const <String>[]);
+    if (stageCodes.isEmpty) {
+      return workflowQueue;
+    }
+    return workflowQueue
+        .where((item) => stageCodes.contains(_resolveWorkflowStage(item)))
+        .map((item) => <String, dynamic>{...item})
+        .toList();
   }
 
   int dashboardHighlightValue(Map<String, dynamic> meta) {
@@ -942,6 +1143,16 @@ class ProviderPortalController extends ChangeNotifier {
     }
   }
 
+  Future<void> _reloadAppointmentState(Appointment appointment) async {
+    if (selectedCustomerId == appointment.customerId) {
+      await _reloadSelectedCustomerData(preferredAppointmentId: appointment.id);
+    } else {
+      await selectCustomer(appointment.customerId);
+      _activeVisitAppointmentId = appointment.id;
+    }
+    await refreshWorkspace();
+  }
+
   void _applySelectedPatientWorkspace(
     Map<String, dynamic> workspace, {
     String? preferredAppointmentId,
@@ -1024,5 +1235,11 @@ class ProviderPortalController extends ChangeNotifier {
       ),
     );
     return timeline;
+  }
+
+  @override
+  void dispose() {
+    _realtimeSubscription?.dispose();
+    super.dispose();
   }
 }

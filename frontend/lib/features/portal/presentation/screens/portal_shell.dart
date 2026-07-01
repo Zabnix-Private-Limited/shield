@@ -8,11 +8,8 @@ import '../../../customer/membership/presentation/screens/membership_screen.dart
 import '../../../customer/prescriptions/presentation/screens/customer_prescriptions_screen.dart';
 import '../../../customer/shared/domain/customer_access_state.dart';
 import '../../../customer/wallet/presentation/screens/wallet_screen.dart';
-import '../../../provider/appointments/presentation/screens/provider_appointments_screen.dart';
 import '../../../provider/customers/presentation/screens/provider_customers_screen.dart';
 import '../../../provider/dashboard/presentation/screens/provider_dashboard_screen.dart';
-import '../../../provider/documents/presentation/screens/provider_documents_screen.dart';
-import '../../../provider/prescriptions/presentation/screens/provider_prescriptions_screen.dart';
 import '../../../provider/profile/presentation/screens/provider_profile_screen.dart';
 import '../../../provider/queue/presentation/screens/provider_queue_screen.dart';
 import '../../../provider/settings/presentation/screens/provider_settings_screen.dart';
@@ -576,11 +573,11 @@ class _RoleContent extends StatelessWidget {
       case 'patient-workspace':
         return const ProviderCustomersScreen();
       case 'appointments':
-        return const ProviderAppointmentsScreen();
+        return const ProviderCustomersScreen(forcedTab: 'appointments');
       case 'documents':
-        return const ProviderDocumentsScreen();
+        return const ProviderCustomersScreen(forcedTab: 'records');
       case 'prescriptions':
-        return const ProviderPrescriptionsScreen();
+        return const ProviderCustomersScreen(forcedTab: 'records');
       case 'profile':
         return const ProviderProfileScreen();
       case 'settings':

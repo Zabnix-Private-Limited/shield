@@ -3,10 +3,17 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../../../app/theme/app_colors.dart';
 import '../../../../../../app/theme/app_typography.dart';
+import '../../../../../../shared/models/appointment.dart';
+import '../../../../../../shared/services/platform_file_actions.dart';
 import '../../../shared/presentation/widgets/provider_workspace_scaffold.dart';
 
 class ProviderCustomersScreen extends StatefulWidget {
-  const ProviderCustomersScreen({super.key});
+  const ProviderCustomersScreen({
+    super.key,
+    this.forcedTab,
+  });
+
+  final String? forcedTab;
 
   @override
   State<ProviderCustomersScreen> createState() => _ProviderCustomersScreenState();
@@ -46,7 +53,10 @@ class _ProviderCustomersScreenState extends State<ProviderCustomersScreen> {
   Widget build(BuildContext context) {
     return ProviderWorkspaceScaffold(
       builder: (context, ref, controller) {
-        final activeTab = controller.resolvePatientTab(_routeTab(context));
+        final roleKey =
+            GoRouterState.of(context).pathParameters['role'] ?? 'provider';
+        final activeTab =
+            controller.resolvePatientTab(widget.forcedTab ?? _routeTab(context));
         final selected = controller.selectedCustomer;
         final workspaceTabs = controller.patientWorkspaceTabs;
         _syncConsultationEditors(controller);
@@ -241,7 +251,12 @@ class _ProviderCustomersScreenState extends State<ProviderCustomersScreen> {
                       subtitle: _tabSubtitle(controller, activeTab),
                     ),
                     const SizedBox(height: 14),
-                    _buildTabContent(controller, activeTab),
+                    _buildTabContent(
+                      context,
+                      controller,
+                      activeTab,
+                      roleKey: roleKey,
+                    ),
                   ],
                 ),
               ),
@@ -251,7 +266,12 @@ class _ProviderCustomersScreenState extends State<ProviderCustomersScreen> {
     );
   }
 
-  Widget _buildTabContent(dynamic controller, String activeTab) {
+  Widget _buildTabContent(
+    BuildContext context,
+    dynamic controller,
+    String activeTab, {
+    required String roleKey,
+  }) {
     switch (activeTab) {
       case 'timeline':
         final timeline = controller.selectedTimeline as List<Map<String, dynamic>>;
@@ -284,11 +304,98 @@ class _ProviderCustomersScreenState extends State<ProviderCustomersScreen> {
         return Column(
           children: appointments
               .map(
-                (appointment) => _SummaryCard(
-                  title: appointment.typeLabel,
-                  subtitle:
-                      '${appointment.statusLabel} • ${appointment.doctorName ?? 'Provider'}',
-                  meta: _formatTimelineDate(appointment.appointmentDate),
+                (appointment) => Container(
+                  width: double.infinity,
+                  margin: const EdgeInsets.only(bottom: 12),
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: AppColors.lightGray,
+                    borderRadius: BorderRadius.circular(18),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(appointment.typeLabel, style: AppTypography.body),
+                      const SizedBox(height: 4),
+                      Text(
+                        '${appointment.statusLabel} • ${appointment.doctorName ?? 'Provider'}',
+                        style: AppTypography.small,
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        _formatTimelineDate(appointment.appointmentDate),
+                        style: AppTypography.tiny.copyWith(color: AppColors.gray),
+                      ),
+                      const SizedBox(height: 10),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          OutlinedButton(
+                            onPressed: () async {
+                              await controller.openAppointmentWorkflow(
+                                appointment,
+                                loadConsultation: false,
+                              );
+                              if (!context.mounted) {
+                                return;
+                              }
+                              context.go('/portal/$roleKey/customers?tab=overview');
+                            },
+                            child: const Text('Open Patient'),
+                          ),
+                          FilledButton(
+                            onPressed: controller.isConsultationSaving
+                                ? null
+                                : () async {
+                                    await controller.openAppointmentWorkflow(
+                                      appointment,
+                                      loadConsultation: true,
+                                    );
+                                    if (!context.mounted) {
+                                      return;
+                                    }
+                                    context.go('/portal/$roleKey/customers?tab=today-visit');
+                                  },
+                            child: Text(
+                              appointment.status == AppointmentStatus.completed
+                                  ? 'View Visit'
+                                  : 'Open Visit',
+                            ),
+                          ),
+                          if (appointment.status == AppointmentStatus.scheduled)
+                            OutlinedButton(
+                              onPressed: controller.isConsultationSaving
+                                  ? null
+                                  : () => _handleAppointmentMutation(
+                                        context,
+                                        controller: controller,
+                                        actionLabel: 'Appointment confirmed',
+                                        action: () => controller.confirmAppointment(
+                                          appointment.id,
+                                        ),
+                                      ),
+                              child: const Text('Accept'),
+                            ),
+                          if (appointment.status != AppointmentStatus.completed &&
+                              appointment.status != AppointmentStatus.cancelled)
+                            OutlinedButton(
+                              onPressed: controller.isConsultationSaving
+                                  ? null
+                                  : () => _handleAppointmentMutation(
+                                        context,
+                                        controller: controller,
+                                        actionLabel: 'Appointment cancelled',
+                                        action: () => controller.cancelAppointment(
+                                          appointment.id,
+                                        ),
+                                      ),
+                              child: const Text('Cancel'),
+                            ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
               )
               .toList(),
@@ -313,28 +420,87 @@ class _ProviderCustomersScreenState extends State<ProviderCustomersScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildDocumentGroup(
+              context: context,
+              controller: controller,
               title: 'Prescriptions',
               documents: prescriptions,
               emptyMessage: 'No prescription files are linked to this patient yet.',
             ),
             const SizedBox(height: 14),
             _buildDocumentGroup(
+              context: context,
+              controller: controller,
               title: 'Lab Reports',
               documents: labReports,
               emptyMessage: 'No lab reports have been uploaded yet.',
             ),
             const SizedBox(height: 14),
             _buildDocumentGroup(
+              context: context,
+              controller: controller,
               title: 'Invoices',
               documents: invoices,
               emptyMessage: 'No invoice files are available yet.',
             ),
             const SizedBox(height: 14),
             _buildDocumentGroup(
+              context: context,
+              controller: controller,
               title: 'Other Records',
               documents: otherDocuments,
               emptyMessage: 'No additional medical records are available yet.',
             ),
+          ],
+        );
+      case 'activity':
+        final notifications = controller.selectedNotifications as List<dynamic>;
+        if (notifications.isEmpty) {
+          return _ActionEmptyState(
+            title: 'No recent updates yet',
+            message:
+                'Patient alerts, payment updates, prescriptions, and follow-up reminders will appear here as activity happens.',
+            actionLabel: 'Open Timeline',
+            onAction: () => _openTab(context, 'timeline'),
+          );
+        }
+        return Column(
+          children: notifications
+              .take(8)
+              .map(
+                (notification) => _SummaryCard(
+                  title: notification.title,
+                  subtitle:
+                      '${notification.typeLabel} • ${notification.isRead ? 'Read' : 'Unread'}',
+                  meta:
+                      '${notification.body} • ${_formatTimelineDate(notification.createdAt)}',
+                ),
+              )
+              .toList(),
+        );
+      case 'print':
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _TabSectionHeader(
+              title: 'Printable Documents',
+              subtitle:
+                  'Generate visit-ready documents directly from the patient record.',
+            ),
+            const SizedBox(height: 10),
+            _buildPrintActions(context, controller),
+          ],
+        );
+      case 'reports':
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _TabSectionHeader(
+              title: 'Care Reports',
+              subtitle:
+                  'Export patient and provider care summaries without leaving this record.',
+            ),
+            const SizedBox(height: 10),
+            _buildReportActions(context, controller),
           ],
         );
       case 'payments':
@@ -442,6 +608,14 @@ class _ProviderCustomersScreenState extends State<ProviderCustomersScreen> {
                   );
                 }).toList(),
               ),
+            const SizedBox(height: 18),
+            _TabSectionHeader(
+              title: 'Documents and Exports',
+              subtitle:
+                  'Generate patient-ready documents and exports from the current care record.',
+            ),
+            const SizedBox(height: 10),
+            _buildPrintAndReportActions(context, controller, includeReports: true),
           ],
         );
       case 'membership':
@@ -488,46 +662,75 @@ class _ProviderCustomersScreenState extends State<ProviderCustomersScreen> {
                 .toList(),
           );
         }
-        return Wrap(
-          spacing: 12,
-          runSpacing: 12,
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _MetricCard(
-              label: 'Upcoming appointments',
-              value: '${controller.selectedUpcomingAppointments.length}',
+            Wrap(
+              spacing: 12,
+              runSpacing: 12,
+              children: [
+                _MetricCard(
+                  label: 'Upcoming appointments',
+                  value: '${controller.selectedUpcomingAppointments.length}',
+                ),
+                _MetricCard(
+                  label: 'Medical records',
+                  value: '${controller.selectedDocuments.length}',
+                ),
+                _MetricCard(
+                  label: 'Completed visits',
+                  value: '${controller.selectedCompletedAppointments.length}',
+                ),
+                _MetricCard(
+                  label: 'SHIELD card',
+                  value:
+                      controller.selectedCustomer?.shieldCardNumber ?? 'Pending',
+                ),
+                _MetricCard(
+                  label: 'Prescriptions',
+                  value: '${controller.selectedPrescriptionDocuments.length}',
+                ),
+                _MetricCard(
+                  label: 'Notifications',
+                  value: '${controller.selectedNotifications.length}',
+                ),
+                _MetricCard(
+                  label: 'Live Updates',
+                  value:
+                      controller.isRealtimeConnected
+                          ? 'Live'
+                          : 'Connecting',
+                ),
+                _MetricCard(
+                  label: 'Billing total',
+                  value: controller.formatCurrency(
+                    controller.selectedTotalPurchaseValue,
+                  ),
+                ),
+                _MetricCard(
+                  label: 'Benefits used',
+                  value: controller.formatCurrency(
+                    controller.selectedBenefitSummary['benefitsUsed'],
+                  ),
+                ),
+                _MetricCard(
+                  label: 'Printable Forms',
+                  value: '${controller.availablePrintTemplates.length}',
+                ),
+                _MetricCard(
+                  label: 'Reports',
+                  value: '${controller.availableReports.length}',
+                ),
+              ],
             ),
-            _MetricCard(
-              label: 'Medical records',
-              value: '${controller.selectedDocuments.length}',
+            const SizedBox(height: 18),
+            _TabSectionHeader(
+              title: 'Print and Export',
+              subtitle:
+                  'Generate patient documents, visit summaries, and exports from this record.',
             ),
-            _MetricCard(
-              label: 'Completed visits',
-              value: '${controller.selectedCompletedAppointments.length}',
-            ),
-            _MetricCard(
-              label: 'SHIELD card',
-              value: controller.selectedCustomer?.shieldCardNumber ?? 'Pending',
-            ),
-            _MetricCard(
-              label: 'Prescriptions',
-              value: '${controller.selectedPrescriptionDocuments.length}',
-            ),
-            _MetricCard(
-              label: 'Notifications',
-              value: '${controller.selectedNotifications.length}',
-            ),
-            _MetricCard(
-              label: 'Billing total',
-              value: controller.formatCurrency(
-                controller.selectedTotalPurchaseValue,
-              ),
-            ),
-            _MetricCard(
-              label: 'Benefits used',
-              value: controller.formatCurrency(
-                controller.selectedBenefitSummary['benefitsUsed'],
-              ),
-            ),
+            const SizedBox(height: 10),
+            _buildPrintAndReportActions(context, controller, includeReports: true),
           ],
         );
       default:
@@ -558,7 +761,8 @@ class _ProviderCustomersScreenState extends State<ProviderCustomersScreen> {
       children: [
         _VisitSummaryCard(
           title: visit['title']?.toString() ?? 'Current Visit',
-          subtitle: visit['subtitle']?.toString() ?? 'Provider visit in progress',
+          subtitle:
+              visit['subtitle']?.toString() ?? 'Care activity is in progress for this patient.',
           appointmentDateLabel:
               visit['appointmentDateLabel']?.toString() ?? 'Time not scheduled',
           statusLabel: controller.activeVisitStatusLabel,
@@ -623,7 +827,17 @@ class _ProviderCustomersScreenState extends State<ProviderCustomersScreen> {
         Text('Visit timeline', style: AppTypography.h5),
         const SizedBox(height: 10),
         if (timeline.isEmpty)
-          _PanelText('No visit activity has been recorded yet.')
+          _ActionEmptyState(
+            title: 'No visit updates yet',
+            message:
+                'Start the visit or save consultation progress to build the care timeline here.',
+            actionLabel: 'Save Progress',
+            onAction: () => _handleConsultationAction(
+              context,
+              controller,
+              'SAVE_PROGRESS',
+            ),
+          )
         else
           Column(
             children: timeline
@@ -696,11 +910,216 @@ class _ProviderCustomersScreenState extends State<ProviderCustomersScreen> {
       SnackBar(
         content: Text(
           error != null && error.isNotEmpty
-              ? error
+              ? _friendlyProviderError(error)
               : _consultationActionMessage(actionCode),
         ),
       ),
     );
+  }
+
+  Widget _buildPrintAndReportActions(
+    BuildContext context,
+    dynamic controller, {
+    required bool includeReports,
+  }) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.lightGray,
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: [
+              OutlinedButton(
+                onPressed: () => _downloadPrintArtifact(
+                  context,
+                  controller,
+                  'VISIT_SUMMARY',
+                ),
+                child: const Text('Visit Summary'),
+              ),
+              OutlinedButton(
+                onPressed: () => _downloadPrintArtifact(
+                  context,
+                  controller,
+                  'PRESCRIPTION',
+                ),
+                child: const Text('Prescription'),
+              ),
+              OutlinedButton(
+                onPressed: () => _downloadPrintArtifact(
+                  context,
+                  controller,
+                  'INVOICE',
+                ),
+                child: const Text('Invoice'),
+              ),
+            ],
+          ),
+          if (includeReports) ...[
+            const SizedBox(height: 12),
+            _buildReportButtons(context, controller),
+          ],
+          const SizedBox(height: 12),
+          Text(
+            controller.isRealtimeConnected
+                ? 'Live updates are active${controller.lastPlatformEventType != null ? ' • Last update: ${controller.lastPlatformEventType}' : ''}'
+                : 'Live updates are connecting for this patient record.',
+            style: AppTypography.tiny.copyWith(color: AppColors.gray),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPrintActions(BuildContext context, dynamic controller) {
+    return _buildPrintAndReportActions(
+      context,
+      controller,
+      includeReports: false,
+    );
+  }
+
+  Widget _buildReportActions(BuildContext context, dynamic controller) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.lightGray,
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: _buildReportButtons(context, controller),
+    );
+  }
+
+  Widget _buildReportButtons(BuildContext context, dynamic controller) {
+    return Wrap(
+      spacing: 10,
+      runSpacing: 10,
+      children: [
+        FilledButton(
+          onPressed: () => _exportReportArtifact(
+            context,
+            controller,
+            'PROVIDER_DAILY_REVENUE',
+            'PDF',
+          ),
+          child: const Text('Daily Revenue PDF'),
+        ),
+        OutlinedButton(
+          onPressed: () => _exportReportArtifact(
+            context,
+            controller,
+            'PROVIDER_APPOINTMENTS',
+            'CSV',
+          ),
+          child: const Text('Appointments CSV'),
+        ),
+        OutlinedButton(
+          onPressed: () => _exportReportArtifact(
+            context,
+            controller,
+            'PROVIDER_PRESCRIPTION_STATISTICS',
+            'EXCEL',
+          ),
+          child: const Text('Prescriptions Excel'),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _downloadPrintArtifact(
+    BuildContext context,
+    dynamic controller,
+    String templateId,
+  ) async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final result = await controller.generatePatientPrint(templateId)
+          as Map<String, dynamic>;
+      final downloaded = await downloadPlatformFile(
+        fileName: result['fileName']?.toString() ?? '$templateId.pdf',
+        mimeType: result['mimeType']?.toString() ?? 'application/pdf',
+        contentBase64: result['contentBase64']?.toString() ?? '',
+      );
+      if (!mounted) {
+        return;
+      }
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            downloaded
+                ? 'Document ready: ${result['fileName'] ?? templateId}'
+                : 'The document is ready, but automatic download is not available on this device.',
+          ),
+        ),
+      );
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('We could not generate that document right now.'),
+        ),
+      );
+    }
+  }
+
+  Future<void> _exportReportArtifact(
+    BuildContext context,
+    dynamic controller,
+    String reportId,
+    String format,
+  ) async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final result = await controller.runProviderReport(
+            reportId,
+            format: format,
+          )
+          as Map<String, dynamic>;
+      final exportFile =
+          result['exportFile'] is Map
+              ? Map<String, dynamic>.from(result['exportFile'] as Map)
+              : const <String, dynamic>{};
+      if (exportFile.isEmpty) {
+        throw StateError('The shared report export is empty.');
+      }
+      final downloaded = await downloadPlatformFile(
+        fileName: exportFile['fileName']?.toString() ?? '$reportId.$format',
+        mimeType:
+            exportFile['mimeType']?.toString() ?? 'application/octet-stream',
+        contentBase64: exportFile['contentBase64']?.toString() ?? '',
+      );
+      if (!mounted) {
+        return;
+      }
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            downloaded
+                ? 'Report ready: ${exportFile['fileName'] ?? reportId}'
+                : 'The report is ready, but automatic download is not available on this device.',
+          ),
+        ),
+      );
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('We could not export that report right now.'),
+        ),
+      );
+    }
   }
 
   Map<String, String> _consultationFormPayload() => {
@@ -1018,16 +1437,61 @@ class _ProviderCustomersScreenState extends State<ProviderCustomersScreen> {
     context.go('/portal/$roleKey/customers?tab=$tab');
   }
 
+  Future<void> _handleAppointmentMutation(
+    BuildContext context, {
+    required dynamic controller,
+    required String actionLabel,
+    required Future<void> Function() action,
+  }) async {
+    final messenger = ScaffoldMessenger.of(context);
+    await action();
+    if (!mounted) {
+      return;
+    }
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(
+          controller.error?.toString().trim().isNotEmpty == true
+              ? _friendlyProviderError(controller.error.toString())
+              : actionLabel,
+        ),
+      ),
+    );
+  }
+
+  String _friendlyProviderError(String error) {
+    final normalized = error.toLowerCase();
+    if (normalized.contains('500')) {
+      return 'We could not complete that action because the server ran into a problem.';
+    }
+    if (normalized.contains('network') || normalized.contains('socket')) {
+      return 'The connection was interrupted. Please try again.';
+    }
+    if (normalized.contains('forbidden') || normalized.contains('unauthorized')) {
+      return 'You do not have permission to complete that action.';
+    }
+    if (normalized.contains('not found')) {
+      return 'The latest patient record could not be found. Refresh and try again.';
+    }
+    return 'We could not complete that action right now.';
+  }
+
   String _tabSubtitle(dynamic controller, String activeTab) {
     switch (activeTab) {
       case 'today-visit':
-        return 'Keep the current visit, next steps, and live care work together for this patient.';
+        return 'Keep the active visit, consultation, billing, and next steps together for this patient.';
       case 'timeline':
         return controller.timelineSubtitle as String;
       case 'appointments':
         return 'Review upcoming and past appointments without leaving the patient record.';
       case 'records':
         return 'Open the latest uploaded records, reports, and supporting files for this patient.';
+      case 'activity':
+        return 'Follow patient alerts, care updates, reminders, and recent communication in one place.';
+      case 'print':
+        return 'Generate patient-facing documents directly from the latest visit and billing data.';
+      case 'reports':
+        return 'Export provider-ready care and billing reports from the shared reporting service.';
       case 'payments':
         return 'Check billing, wallet, and available credit in the same care view.';
       case 'membership':
@@ -1041,6 +1505,8 @@ class _ProviderCustomersScreenState extends State<ProviderCustomersScreen> {
   }
 
   Widget _buildDocumentGroup({
+    required BuildContext context,
+    required dynamic controller,
     required String title,
     required List<dynamic> documents,
     required String emptyMessage,
@@ -1051,21 +1517,67 @@ class _ProviderCustomersScreenState extends State<ProviderCustomersScreen> {
         Text(title, style: AppTypography.h5),
         const SizedBox(height: 8),
         if (documents.isEmpty)
-          _PanelText(emptyMessage)
+          _ActionEmptyState(
+            title: title,
+            message: emptyMessage,
+            actionLabel: 'Open Current Visit',
+            onAction: () => _openTab(context, 'today-visit'),
+          )
         else
           Column(
             children: documents.take(4).map((document) {
-              return _SummaryCard(
-                title: document.fileName,
-                subtitle: '${document.typeLabel} • ${document.statusLabel}',
+              return _DocumentSummaryCard(
+                document: document,
                 meta:
                     document.extractionPreview ??
                     _formatTimelineDate(document.uploadedAt),
+                onOpen: () => _openPatientDocument(
+                  context,
+                  controller,
+                  document.id,
+                ),
               );
             }).toList(),
           ),
       ],
     );
+  }
+
+  Future<void> _openPatientDocument(
+    BuildContext context,
+    dynamic controller,
+    String documentId,
+  ) async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final url = await controller.getPatientDocumentDownloadUrl(documentId)
+          as String;
+      if (url.trim().isEmpty) {
+        throw StateError('Document link unavailable');
+      }
+      final opened = await openPlatformUrl(url);
+      if (!mounted) {
+        return;
+      }
+      if (!opened) {
+        messenger.showSnackBar(
+          const SnackBar(
+            content: Text(
+              'This device cannot open the document automatically yet.',
+            ),
+          ),
+        );
+      }
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('We could not open that document right now.'),
+        ),
+      );
+    }
   }
 }
 
@@ -1284,6 +1796,45 @@ class _QuickActionButton extends StatelessWidget {
   }
 }
 
+class _ActionEmptyState extends StatelessWidget {
+  const _ActionEmptyState({
+    required this.title,
+    required this.message,
+    required this.actionLabel,
+    required this.onAction,
+  });
+
+  final String title;
+  final String message;
+  final String actionLabel;
+  final VoidCallback onAction;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.lightGray,
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(title, style: AppTypography.body),
+          const SizedBox(height: 6),
+          Text(
+            message,
+            style: AppTypography.small.copyWith(color: AppColors.gray),
+          ),
+          const SizedBox(height: 12),
+          OutlinedButton(onPressed: onAction, child: Text(actionLabel)),
+        ],
+      ),
+    );
+  }
+}
+
 class _SearchHintChip extends StatelessWidget {
   const _SearchHintChip({required this.label});
 
@@ -1368,6 +1919,58 @@ class _VisitSummaryCard extends StatelessWidget {
           Text(
             reason,
             style: AppTypography.body.copyWith(color: AppColors.darkGray),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DocumentSummaryCard extends StatelessWidget {
+  const _DocumentSummaryCard({
+    required this.document,
+    required this.meta,
+    required this.onOpen,
+  });
+
+  final dynamic document;
+  final String meta;
+  final VoidCallback onOpen;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.lightGray,
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(document.fileName, style: AppTypography.body),
+          const SizedBox(height: 4),
+          Text(
+            '${document.typeLabel} • ${document.statusLabel}',
+            style: AppTypography.small.copyWith(color: AppColors.gray),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            meta,
+            style: AppTypography.tiny.copyWith(color: AppColors.gray),
+          ),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              OutlinedButton(
+                onPressed: onOpen,
+                child: const Text('Open File'),
+              ),
+            ],
           ),
         ],
       ),

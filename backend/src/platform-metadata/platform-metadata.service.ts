@@ -2,6 +2,8 @@ import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { AuthService } from '../auth/auth.service';
 import type { ShieldPrincipal } from '../auth/auth.types';
+import { PlatformPrintService } from '../platform-capabilities/platform-print.service';
+import { PlatformReportService } from '../platform-capabilities/platform-report.service';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   ProviderWorkflowProfileCode,
@@ -20,6 +22,8 @@ export class PlatformMetadataService {
     private readonly prisma: PrismaService,
     private readonly authService: AuthService,
     private readonly providerWorkspaceMetadataService: ProviderWorkspaceMetadataService,
+    private readonly platformPrintService: PlatformPrintService,
+    private readonly platformReportService: PlatformReportService,
   ) {}
 
   async getProviderWorkspaceMetadata(
@@ -120,6 +124,21 @@ export class PlatformMetadataService {
           permissions,
         },
       ),
+      reporting: this.platformReportService.listMetadata('provider'),
+      printing: {
+        title: 'Shared Print Engine',
+        description:
+          'Shared backend template registry with generate(templateId, payload).',
+        templates: this.platformPrintService.listTemplates(),
+      },
+      realtime: {
+        title: 'Shared Realtime Engine',
+        description:
+          'Backend-owned SSE stream for provider and future portal workspace updates.',
+        endpoint: '/platform/realtime/stream',
+        workspace: 'provider',
+        active: true,
+      },
     };
   }
 

@@ -43,6 +43,10 @@ class ProviderPortalRepository {
     return ApiService.getCustomerDocumentsStrict(customerId);
   }
 
+  Future<String> getDocumentDownloadUrl(String documentId) {
+    return ApiService.getDocumentDownloadUrl(documentId);
+  }
+
   Future<List<NotificationModel>> getCustomerNotifications(String customerId) {
     return ApiService.getCustomerNotificationsStrict(customerId);
   }
@@ -96,6 +100,40 @@ class ProviderPortalRepository {
     Map<String, dynamic> payload,
   ) {
     return ApiService.recordAppointmentVisitPayment(appointmentId, payload);
+  }
+
+  Future<Appointment> confirmAppointment(String appointmentId) {
+    return ApiService.confirmProviderAppointment(appointmentId);
+  }
+
+  Future<Appointment> cancelAppointment(String appointmentId) {
+    return ApiService.cancelProviderAppointment(appointmentId);
+  }
+
+  Future<Map<String, dynamic>> generatePlatformPrint(
+    String templateId,
+    Map<String, dynamic> payload,
+  ) {
+    return ApiService.generatePlatformPrint(
+      templateId: templateId,
+      payload: payload,
+    );
+  }
+
+  Future<Map<String, dynamic>> runPlatformReport({
+    required String reportId,
+    String workspace = 'provider',
+    String format = 'PDF',
+    String? providerId,
+    String? businessId,
+  }) {
+    return ApiService.runPlatformReport(
+      reportId: reportId,
+      workspace: workspace,
+      format: format,
+      providerId: providerId,
+      businessId: businessId,
+    );
   }
 
   Future<List<Map<String, dynamic>>> getSessions() {

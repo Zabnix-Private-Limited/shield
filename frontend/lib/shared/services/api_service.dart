@@ -90,6 +90,13 @@ class ApiService {
     _activeCustomerId = customerId?.trim();
   }
 
+  static String? get currentAccessToken {
+    final token = _accessToken?.trim();
+    return token == null || token.isEmpty ? null : token;
+  }
+
+  static String get currentBaseUrl => _resolveBaseUrl();
+
   static String requireAuthenticatedCustomerId([String? customerId]) {
     return _requireCustomerId(customerId);
   }
@@ -303,6 +310,16 @@ class ApiService {
     return _readEnvelope(response);
   }
 
+  static Future<Appointment> confirmProviderAppointment(String appointmentId) async {
+    final response = await _dio.post('/appointments/$appointmentId/confirm');
+    return Appointment.fromJson(_readEnvelope(response));
+  }
+
+  static Future<Appointment> cancelProviderAppointment(String appointmentId) async {
+    final response = await _dio.post('/appointments/$appointmentId/cancel');
+    return Appointment.fromJson(_readEnvelope(response));
+  }
+
   static Future<List<Document>> getDocuments(SHIELDRole role) async {
     if (role != SHIELDRole.customer) {
       throw UnsupportedError(
@@ -334,6 +351,12 @@ class ApiService {
         response,
       ).map((item) => Document.fromJson(item as Map<String, dynamic>)).toList()
       ..sort((a, b) => b.uploadedAt.compareTo(a.uploadedAt));
+  }
+
+  static Future<String> getDocumentDownloadUrl(String documentId) async {
+    final response = await _dio.get('/documents/$documentId/download');
+    final data = _readEnvelope(response);
+    return data['url']?.toString() ?? '';
   }
 
   static Future<List<NotificationModel>> getCustomerNotificationsStrict(
@@ -944,6 +967,51 @@ class ApiService {
     final data = _readEnvelope(response);
     _providerPlatformWorkspaceCache[cacheKey] = Map<String, dynamic>.from(data);
     return Map<String, dynamic>.from(data);
+  }
+
+  static Future<Map<String, dynamic>> generatePlatformPrint({
+    required String templateId,
+    required Map<String, dynamic> payload,
+  }) async {
+    final response = await _dio.post(
+      '/platform/print/generate',
+      data: {
+        'templateId': templateId,
+        'payload': payload,
+      },
+    );
+    return _readEnvelope(response);
+  }
+
+  static Future<Map<String, dynamic>> runPlatformReport({
+    required String reportId,
+    String workspace = 'provider',
+    String format = 'PDF',
+    String? providerId,
+    String? businessId,
+    String? dateFrom,
+    String? dateTo,
+    String? status,
+    String? search,
+  }) async {
+    final response = await _dio.post(
+      '/platform/reports/run',
+      data: {
+        'reportId': reportId,
+        'workspace': workspace,
+        'format': format,
+        if (providerId != null && providerId.trim().isNotEmpty)
+          'providerId': providerId.trim(),
+        if (businessId != null && businessId.trim().isNotEmpty)
+          'businessId': businessId.trim(),
+        if (dateFrom != null && dateFrom.trim().isNotEmpty)
+          'dateFrom': dateFrom.trim(),
+        if (dateTo != null && dateTo.trim().isNotEmpty) 'dateTo': dateTo.trim(),
+        if (status != null && status.trim().isNotEmpty) 'status': status.trim(),
+        if (search != null && search.trim().isNotEmpty) 'search': search.trim(),
+      },
+    );
+    return _readEnvelope(response);
   }
 
   static Future<Map<String, dynamic>?> getCrmOperationsQueue({

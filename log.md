@@ -6481,3 +6481,269 @@ est build, ackend/vercel.json, ackend/src/auth/auth.service.ts, and uth_devic
 - Provider printing/export templates are still not implemented as a shared production print system.
 - Provider reports are still not complete enough to call the portal fully frozen.
 - Live provider notifications are not yet wired to a real-time transport layer, although the portal is structured to support that next.
+## 181. Platform Freeze Phase 1: Shared print, shared reports, and shared realtime platform capabilities
+**Timestamp:** 2026-07-01 11:42:55 IST
+
+### Why this was changed
+- Entry 180 left three platform blockers before SHIELD could stop building infrastructure and move fully into portal-specific workflow work: shared printing, shared reporting, and real-time delivery.
+- Those capabilities could not be completed safely as Provider-only features because Customer, Agent, CRM, Manager, Executive, and Super Admin all need the same backend-owned contracts later.
+- The Provider Portal is now the first consumer, but the platform ownership had to be established centrally so future portals reuse the same registry, builder, export, and event layers instead of creating duplicates.
+
+### What was changed
+- Added one shared PlatformCapabilitiesModule that owns three reusable backend services:
+  - PlatformPrintService
+  - PlatformReportService
+  - PlatformRealtimeService
+- Added one shared controller surface for those capabilities:
+  - GET /platform/print/templates
+  - POST /platform/print/generate
+  - GET /platform/reports
+  - POST /platform/reports/run
+  - GET /platform/realtime/stream
+- Built a shared print registry with generic generate(templateId, payload) support instead of module-specific generators.
+- Registered reusable print templates for patient, visit, consultation, prescription, invoice, receipt, membership, registration, referral, consent, certificate, lab, appointment, token, and payment outputs.
+- Extended provider patient workspace payloads to expose backend-built print payloads so Flutter requests shared documents instead of composing printable content locally.
+- Built a shared reporting registry, builder, filter metadata, and export layer with PDF, Excel, and CSV export support.
+- Added provider reports as the first consumer of the shared reporting engine, including consultations, revenue, appointments, completed/cancelled/pending visits, wallet usage, document statistics, prescription statistics, service utilization, provider performance, and branch performance.
+- Added a shared realtime event bus and SSE stream so business modules publish backend-owned events and Flutter reacts with instant refresh rather than refresh-only behavior.
+- Wired appointment workflow actions and notification lifecycle events into the shared realtime platform event bus.
+- Extended provider platform metadata so backend now exposes shared reporting, printing, and realtime metadata alongside the existing workspace metadata contract.
+- Wired the Provider patient record screen to consume the shared print/report/realtime capabilities without creating separate provider-only engines or report pages.
+- Removed temporary compile-risk and placeholder seams encountered during the integration so the repository is not left in a partial migration state.
+
+### Architectural decisions
+- Printing is now a platform service with template registry ownership in backend; modules and portals request 	emplateId + payload instead of shipping their own layout logic.
+- Reporting is now a platform service with backend-owned registry, filters, aggregations, and export builders; Flutter renders metadata and downloads exported artifacts only.
+- Realtime delivery is now a platform event layer with publish/stream semantics rather than a provider-specific websocket bolt-on.
+- Existing platform surfaces were extended instead of duplicated: provider workspace, platform metadata, notification flows, appointment workflow, and timeline-backed refresh paths remain the integration points.
+- Provider Portal was used only as the first consumer path so future portals can attach to the same /platform/* contracts without branching the architecture again.
+
+### New platform services
+- PlatformCapabilitiesModule
+- PlatformPrintService
+- PlatformReportService
+- PlatformRealtimeService
+- PlatformCapabilitiesController
+
+### Backend files modified
+- ackend/src/app.module.ts
+- ackend/src/appointment/appointment.module.ts
+- ackend/src/appointment/appointment.service.ts
+- ackend/src/notification/notification.module.ts
+- ackend/src/notification/notification.service.ts
+- ackend/src/platform-metadata/platform-metadata.module.ts
+- ackend/src/platform-metadata/platform-metadata.service.ts
+- ackend/src/service-provider/service-provider.module.ts
+- ackend/src/service-provider/service-provider.service.ts
+
+### Backend files created
+- ackend/src/platform-capabilities/platform-capabilities.controller.ts
+- ackend/src/platform-capabilities/platform-capabilities.module.ts
+- ackend/src/platform-capabilities/platform-print.service.ts
+- ackend/src/platform-capabilities/platform-realtime.service.ts
+- ackend/src/platform-capabilities/platform-report.service.ts
+
+### Frontend files modified
+- rontend/lib/features/provider/customers/presentation/screens/provider_customers_screen.dart
+- rontend/lib/features/provider/shared/data/provider_portal_repository.dart
+- rontend/lib/features/provider/shared/presentation/controllers/provider_portal_controller.dart
+- rontend/lib/shared/services/api_service.dart
+- rontend/lib/shared/services/platform_file_actions_web.dart
+- rontend/lib/shared/services/platform_realtime_channel_web.dart
+
+### Frontend files created
+- rontend/lib/shared/services/platform_file_actions.dart
+- rontend/lib/shared/services/platform_file_actions_stub.dart
+- rontend/lib/shared/services/platform_realtime_channel.dart
+- rontend/lib/shared/services/platform_realtime_channel_stub.dart
+
+### New endpoints
+- GET /platform/print/templates
+- POST /platform/print/generate
+- GET /platform/reports
+- POST /platform/reports/run
+- GET /platform/realtime/stream
+
+### How future portals consume this
+- Load shared capability metadata from backend platform workspace contracts instead of hardcoding print/report/realtime behavior in Flutter.
+- Request printable artifacts through POST /platform/print/generate with a backend-supported 	emplateId and payload.
+- Request reports through POST /platform/reports/run and render/download the returned export artifact.
+- Subscribe to /platform/realtime/stream for workspace updates and refresh the relevant backend-owned workspace screen when events arrive.
+- Extend registries and payload builders inside the shared platform services when a new portal needs additional templates, reports, or event types.
+
+### Validation performed
+- cd backend && npm run build
+- cd frontend && flutter analyze --no-pub
+- cd frontend && flutter test
+- Verified backend build passes after introducing the shared platform capabilities module and integrations.
+- Verified Flutter analyze reports no issues.
+- Verified Flutter test suite passes:
+  - 	est/app_responsive_test.dart
+  - 	est/widget_test.dart
+
+### SQL migration required
+- No SQL migration required for this slice.
+
+### Breaking changes
+- Provider workspace consumers should now prefer the backend-provided shared printing, eporting, and ealtime metadata/contracts rather than adding new local orchestration.
+- No database schema or existing public domain endpoint was removed in this slice.
+
+### Remaining blockers
+- Platform Freeze Phase 1 is complete for the three listed infrastructure blockers.
+- The next architectural discipline step should be freeze enforcement: stop creating new platform infrastructure and build only portal-specific workflows on top of these shared services unless a critical defect forces a platform patch.
+## 182. Correction to entry 181: canonical file paths and command strings
+**Timestamp:** 2026-07-01 11:43:31 IST
+
+### Why this correction was added
+- A small part of entry 181 was appended through a shell string that interpreted a few backtick sequences inside code-formatted paths and commands.
+- The architecture summary in entry 181 remains correct, but a subset of file path and command lines needs a clean engineer-readable correction.
+
+### Canonical backend files modified/created for entry 181
+**Backend Files (Modified)**:
+- `backend/src/app.module.ts`
+- `backend/src/appointment/appointment.module.ts`
+- `backend/src/appointment/appointment.service.ts`
+- `backend/src/notification/notification.module.ts`
+- `backend/src/notification/notification.service.ts`
+- `backend/src/platform-metadata/platform-metadata.module.ts`
+- `backend/src/platform-metadata/platform-metadata.service.ts`
+- `backend/src/service-provider/service-provider.module.ts`
+- `backend/src/service-provider/service-provider.service.ts`
+
+**Backend Files (Created)**:
+- `backend/src/platform-capabilities/platform-capabilities.controller.ts`
+- `backend/src/platform-capabilities/platform-capabilities.module.ts`
+- `backend/src/platform-capabilities/platform-print.service.ts`
+- `backend/src/platform-capabilities/platform-realtime.service.ts`
+- `backend/src/platform-capabilities/platform-report.service.ts`
+
+### Canonical frontend files modified/created for entry 181
+**Frontend Files (Modified)**:
+- `frontend/lib/features/provider/customers/presentation/screens/provider_customers_screen.dart`
+- `frontend/lib/features/provider/shared/data/provider_portal_repository.dart`
+- `frontend/lib/features/provider/shared/presentation/controllers/provider_portal_controller.dart`
+- `frontend/lib/shared/services/api_service.dart`
+- `frontend/lib/shared/services/platform_file_actions_web.dart`
+- `frontend/lib/shared/services/platform_realtime_channel_web.dart`
+
+**Frontend Files (Created)**:
+- `frontend/lib/shared/services/platform_file_actions.dart`
+- `frontend/lib/shared/services/platform_file_actions_stub.dart`
+- `frontend/lib/shared/services/platform_realtime_channel.dart`
+- `frontend/lib/shared/services/platform_realtime_channel_stub.dart`
+- `frontend/lib/shared/services/platform_realtime_channel_web.dart`
+
+### Canonical commands from entry 181
+- `cd backend && npm run build`
+- `cd frontend && flutter analyze --no-pub`
+- `cd frontend && flutter test`
+
+### Notes
+- Entry 181 should still be treated as the main architecture and verification record for the shared print/report/realtime platform slice.
+- This correction exists only to restore exact path and command readability without rewriting history.
+## 183. Provider Portal workflow completion: dashboard, queue, and patient workspace now converge into real actions
+**Timestamp:** 2026-07-01 12:28:44 IST
+
+**High-level description**: Completed the Provider Portal production wiring pass by removing decorative workflow surfaces and routing visible provider actions back into the backend-owned patient workspace flow. The patient workspace now acts as the operational center for provider care activity, while dashboard cards, queue cards, and appointment actions deep-link into the appropriate workspace tab instead of leaving users in disconnected module screens.
+- Provider dashboard now uses backend-owned workspace queue and appointment data for actionable cards instead of selected-patient-only summaries.
+- Dashboard KPI cards now open filtered queue views so waiting, active-care, urgent, and completion metrics are operational filters rather than display-only counters.
+- Patients needing attention cards now open either the relevant patient workspace tab or the billing/payments tab for the linked customer.
+- Today's appointments cards now support Open Patient and Open Visit actions that preload the correct patient and consultation workspace before navigation.
+- Provider queue is now filterable from backend metadata and query parameters, with clickable stage pills, clickable queue cards, and patient-aware deep links.
+- Provider appointments, provider documents, and provider prescriptions routes now converge into the shared patient workspace instead of acting as disconnected provider-only pages.
+- Patient workspace appointment history now supports Accept, Cancel, Open Patient, and Open Visit actions through existing backend appointment endpoints and consultation workspace loading.
+- The implementation preserved backend ownership of workflow semantics: Flutter only triggers navigation, selection, and endpoint calls already defined by provider workspace metadata and appointment services.
+- Removed the remaining placeholder interaction seams encountered during the pass so visible provider actions now either perform meaningful work or route to the correct workspace tab.
+
+### Frontend Files Modified
+- frontend/lib/features/portal/presentation/screens/portal_shell.dart
+- frontend/lib/features/provider/customers/presentation/screens/provider_customers_screen.dart
+- frontend/lib/features/provider/dashboard/presentation/screens/provider_dashboard_screen.dart
+- frontend/lib/features/provider/queue/presentation/screens/provider_queue_screen.dart
+- frontend/lib/features/provider/shared/data/provider_portal_repository.dart
+- frontend/lib/features/provider/shared/presentation/controllers/provider_portal_controller.dart
+- frontend/lib/shared/services/api_service.dart
+
+### Backend Files Reused/Extended In This Slice
+- backend/src/appointment/appointment.service.ts
+- backend/src/service-provider/service-provider.service.ts
+- backend/src/platform-metadata/platform-metadata.service.ts
+- backend/src/notification/notification.service.ts
+
+### Architectural Notes
+- Patient Workspace remains the single source of truth for provider patient operations.
+- Shared platform capabilities introduced in the prior slice remain the only print, report, and realtime path; this pass consumed them and did not create parallel implementations.
+- Portal routing now prefers workspace convergence over feature-specific provider screens, which keeps later Agent, CRM, Manager, Executive, and Admin portals aligned with the same backend-first pattern.
+
+### Endpoints Used By The Wired Flows
+- GET /service-providers/workspace/patients/:customerId
+- GET /appointments/:appointmentId/consultation-workspace
+- POST /appointments/:appointmentId/consultation/start
+- POST /appointments/:appointmentId/confirm
+- POST /appointments/:appointmentId/cancel
+
+### Verification
+- cd frontend && flutter analyze --no-pub
+- cd frontend && flutter test
+- Verified Flutter analyze reports no issues after the workflow wiring pass.
+- Verified Flutter test suite passes.
+- Backend platform build had already been validated earlier in the same Platform Freeze slice before this follow-up wiring pass, and this follow-up did not introduce a new backend-only implementation branch.
+
+### Breaking Changes
+- Provider route entries for appointments, documents, and prescriptions now resolve through the patient workspace flow instead of separate disconnected screens.
+- Any future provider workflow control should deep-link into the patient workspace or another backend-owned workspace contract rather than opening a new isolated module screen.
+
+### Remaining Blockers
+- Provider Portal feature completion is materially closer to production readiness, but any remaining visible control with no meaningful action should be treated as bug-fix work, not as a new architecture slice.
+- The next major delivery should stay focused on portal workflows built on the frozen platform layer rather than introducing new infrastructure.
+
+## 184. Provider freeze follow-up: richer patient record tabs, current visit polish, document opening, and user-facing language cleanup
+**Timestamp:** 2026-07-01 13:57:31 IST
+
+**High-level description**: Extended the existing Provider patient record and current visit flow without changing the architecture. This pass focused on completion and production language quality: more meaningful patient-record tabs, a better current visit/consultation vocabulary, real document opening from the patient record, and friendlier error and empty-state handling so providers see healthcare-oriented actions instead of internal platform wording.
+- Extended backend-owned patient record metadata so the patient record now exposes Current Visit, Activity, Print, Reports, and Visit History as first-class tabs rather than leaving visit outputs and alerts buried behind generic sections.
+- Renamed the live visit tab to Current Visit and updated empty-state guidance so the screen now directs providers back toward the active visit workflow instead of showing passive status text.
+- Refined consultation field labels in backend metadata from technical or generic terms into more clinical wording: Present Illness, Examination, Treatment Plan, Follow-up Instructions, and Clinical Notes.
+- Added patient activity rendering in Flutter using existing backend notification data so providers can review recent alerts and care updates inside the patient record instead of switching context.
+- Added dedicated Print and Reports tabs that consume the shared print and report engines already introduced in the Platform Freeze slice, keeping the patient record self-contained for export work.
+- Wired patient-record document cards to real backend download URLs so providers can open uploaded records directly from the Medical Records tab.
+- Removed remaining provider-facing copy such as Shared Platform Actions and raw internal error text from the patient record flow, replacing it with patient-care language and safer operational messages.
+- Improved provider empty states so records and visit sections now offer meaningful next actions instead of passive "nothing here" copy.
+
+### Backend Files Modified
+- backend/src/appointment/appointment.service.ts
+- backend/src/operations-queue/provider-workspace-metadata.service.ts
+
+### Frontend Files Modified
+- frontend/lib/features/provider/customers/presentation/screens/provider_customers_screen.dart
+- frontend/lib/features/provider/shared/data/provider_portal_repository.dart
+- frontend/lib/features/provider/shared/presentation/controllers/provider_portal_controller.dart
+- frontend/lib/features/provider/shared/presentation/widgets/provider_workspace_scaffold.dart
+- frontend/lib/shared/services/api_service.dart
+- frontend/lib/shared/services/platform_file_actions_stub.dart
+- frontend/lib/shared/services/platform_file_actions_web.dart
+
+### APIs Added or Changed
+- Added frontend consumption for GET /documents/:id/download inside the Provider patient record so uploaded records can be opened from the Medical Records tab.
+- No new backend endpoint was introduced in this slice; existing patient workspace, consultation workspace, reporting, printing, and document download contracts were extended through metadata and frontend consumption only.
+
+### Architecture Notes
+- Backend remains the owner of patient-record tab metadata and consultation field semantics.
+- Flutter still acts only as the renderer and action trigger for patient record, current visit, print, report, and document behaviors.
+- This pass intentionally extended the existing Provider Portal and shared platform contracts instead of creating separate visit/report/document implementations.
+
+### Database Changes
+- No database changes.
+- No SQL migration required for this slice.
+
+### Verification
+- cd backend && npm run build
+- cd frontend && flutter analyze --no-pub
+- cd frontend && flutter test
+- Verified Flutter analyze reports no issues.
+- Verified Flutter test suite passes.
+- Verified backend build completes after the provider metadata and consultation wording updates.
+
+### Remaining Known Issues
+- The Provider Portal is materially closer to feature freeze, but full prescription authoring, richer profile/settings editing, and deeper visit-owned billing/refund history still need dedicated workflow work before it can be honestly declared fully frozen.
+- Those remaining items are workflow-completion issues, not shared-platform or architecture blockers.

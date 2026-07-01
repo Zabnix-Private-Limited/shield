@@ -8,6 +8,7 @@ import type { ShieldPrincipal } from '../auth/auth.types';
 import { DocumentService } from '../document/document.service';
 import { NotificationService } from '../notification/notification.service';
 import { PharmacyService } from '../pharmacy/pharmacy.service';
+import { PlatformPrintService } from '../platform-capabilities/platform-print.service';
 import { TimelineService } from '../timeline/timeline.service';
 
 @Injectable()
@@ -21,6 +22,7 @@ export class ServiceProviderService {
     private readonly notificationService: NotificationService,
     private readonly pharmacyService: PharmacyService,
     private readonly timelineService: TimelineService,
+    private readonly platformPrintService: PlatformPrintService,
   ) {}
 
   async create(data: any) {
@@ -259,6 +261,41 @@ export class ServiceProviderService {
       (notification) =>
         (notification.status || '').toString().toUpperCase() !== 'READ',
     );
+    const printing = this.platformPrintService.buildProviderPatientPrintContext({
+      providerContext: principal
+        ? {
+            providerName: 'SHIELD Provider',
+            role: principal.roleCode ?? 'Provider',
+            branch: { name: 'Branch not assigned' },
+            business: { name: 'SHIELD' },
+          }
+        : null,
+      patient: patient as Record<string, any>,
+      membership: membership as Record<string, any>,
+      wallet: wallet as Record<string, any>,
+      activeVisit: activeAppointment
+        ? {
+            appointmentId: activeAppointment.id.toString(),
+            appointment: activeAppointment,
+            status:
+              activeVisitWorkspace?.statusLabel ??
+              this.humanizeCode(activeAppointment.status),
+            workspace: activeVisitWorkspace,
+          }
+        : null,
+      billing: {
+        summary: {
+          totalInvoices: purchases.length,
+          totalBilled,
+          totalPayable,
+          totalDiscount,
+          lastInvoiceDate: purchases[0]?.purchaseDate ?? null,
+          lastInvoiceNumber: purchases[0]?.invoiceNumber ?? null,
+        },
+      },
+      timeline: timeline as Array<Record<string, any>>,
+      documents: documents as Array<Record<string, any>>,
+    });
 
     return {
       patient,
@@ -335,6 +372,7 @@ export class ServiceProviderService {
         pendingAppointments: openAppointments.length,
         completedAppointments: completedAppointments.length,
       },
+      printing,
       actions: this.buildWorkspaceActions(!!activeAppointment),
     };
   }

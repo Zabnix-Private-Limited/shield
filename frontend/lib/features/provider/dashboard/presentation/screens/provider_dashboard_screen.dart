@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../../../../app/theme/app_colors.dart';
 import '../../../../../../app/theme/app_typography.dart';
@@ -12,9 +13,10 @@ class ProviderDashboardScreen extends StatelessWidget {
     return ProviderWorkspaceScaffold(
       builder: (context, ref, controller) {
         final summary = controller.summary;
-        final schedule = controller.selectedUpcomingAppointments.take(4).toList();
+        final schedule = controller.workspaceAppointmentsToday.take(4).toList();
         final urgentItems = controller.urgentQueueItems;
         final dashboardHighlights = controller.dashboardHighlights;
+        final roleKey = GoRouterState.of(context).pathParameters['role'] ?? 'provider';
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -44,6 +46,13 @@ class ProviderDashboardScreen extends StatelessWidget {
                       icon: _dashboardIconForId(
                         meta['icon']?.toString() ?? 'queue',
                       ),
+                      onTap: () {
+                        final filterCode = _queueFilterForHighlight(meta);
+                        final query = filterCode == null || filterCode.isEmpty
+                            ? ''
+                            : '?filter=$filterCode';
+                        context.go('/portal/$roleKey/queue$query');
+                      },
                     ),
                   )
                   .toList(),
@@ -64,12 +73,36 @@ class ProviderDashboardScreen extends StatelessWidget {
                           children: schedule
                               .map(
                                 (appointment) => _ScheduleTile(
-                                  timeLabel: _formatTime(
-                                    appointment.appointmentDate,
-                                  ),
-                                  title: appointment.typeLabel,
-                                  subtitle:
-                                      '${appointment.doctorName ?? 'Provider'} • ${appointment.statusLabel}',
+                                  item: appointment,
+                                  onOpenPatient: () async {
+                                    final customerId =
+                                        appointment['customerId']?.toString().trim() ?? '';
+                                    if (customerId.isEmpty) {
+                                      return;
+                                    }
+                                    await controller.selectCustomer(customerId);
+                                    if (!context.mounted) {
+                                      return;
+                                    }
+                                    context.go('/portal/$roleKey/customers?tab=overview');
+                                  },
+                                  onOpenVisit: () async {
+                                    final customerId =
+                                        appointment['customerId']?.toString().trim() ?? '';
+                                    if (customerId.isEmpty) {
+                                      return;
+                                    }
+                                    await controller.selectCustomer(customerId);
+                                    final appointmentId =
+                                        appointment['id']?.toString().trim() ?? '';
+                                    if (appointmentId.isNotEmpty) {
+                                      await controller.loadConsultationWorkspace(appointmentId);
+                                    }
+                                    if (!context.mounted) {
+                                      return;
+                                    }
+                                    context.go('/portal/$roleKey/customers?tab=today-visit');
+                                  },
                                 ),
                               )
                               .toList(),
@@ -88,6 +121,7 @@ class ProviderDashboardScreen extends StatelessWidget {
                           children: urgentItems
                               .map(
                                 (item) => _WorkContinueCard(
+                                  item: item,
                                   stage: item['stageLabel']?.toString() ?? 'Waiting',
                                   title: item['title']?.toString() ?? 'Work item',
                                   subtitle:
@@ -96,6 +130,35 @@ class ProviderDashboardScreen extends StatelessWidget {
                                       'Patient care activity',
                                   type:
                                       item['workflowLabel']?.toString() ?? 'Task',
+                                  onOpen: () async {
+                                    final customerId =
+                                        item['customerId']?.toString().trim() ?? '';
+                                    if (customerId.isEmpty) {
+                                      context.go('/portal/$roleKey/queue');
+                                      return;
+                                    }
+                                    await controller.selectCustomer(customerId);
+                                    if (!context.mounted) {
+                                      return;
+                                    }
+                                    final tab =
+                                        item['primaryTargetTab']?.toString().trim().isNotEmpty == true
+                                            ? item['primaryTargetTab'].toString()
+                                            : 'overview';
+                                    context.go('/portal/$roleKey/customers?tab=$tab');
+                                  },
+                                  onSecondaryOpen: () async {
+                                    final customerId =
+                                        item['customerId']?.toString().trim() ?? '';
+                                    if (customerId.isEmpty) {
+                                      return;
+                                    }
+                                    await controller.selectCustomer(customerId);
+                                    if (!context.mounted) {
+                                      return;
+                                    }
+                                    context.go('/portal/$roleKey/customers?tab=payments');
+                                  },
                                 ),
                               )
                               .toList(),
@@ -207,6 +270,7 @@ class _StageMetricCard extends StatelessWidget {
     required this.note,
     required this.accent,
     required this.icon,
+    required this.onTap,
   });
 
   final String title;
@@ -214,28 +278,33 @@ class _StageMetricCard extends StatelessWidget {
   final String note;
   final Color accent;
   final IconData icon;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 220,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.divider),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, color: accent, size: 18),
-          const SizedBox(height: 10),
-          Text(title, style: AppTypography.small.copyWith(color: AppColors.gray)),
-          const SizedBox(height: 8),
-          Text(value, style: AppTypography.h3),
-          const SizedBox(height: 4),
-          Text(note, style: AppTypography.tiny.copyWith(color: AppColors.gray)),
-        ],
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        width: 220,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: AppColors.divider),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(icon, color: accent, size: 18),
+            const SizedBox(height: 10),
+            Text(title, style: AppTypography.small.copyWith(color: AppColors.gray)),
+            const SizedBox(height: 8),
+            Text(value, style: AppTypography.h3),
+            const SizedBox(height: 4),
+            Text(note, style: AppTypography.tiny.copyWith(color: AppColors.gray)),
+          ],
+        ),
       ),
     );
   }
@@ -309,17 +378,22 @@ class _InfoPanel extends StatelessWidget {
 
 class _ScheduleTile extends StatelessWidget {
   const _ScheduleTile({
-    required this.timeLabel,
-    required this.title,
-    required this.subtitle,
+    required this.item,
+    required this.onOpenPatient,
+    required this.onOpenVisit,
   });
 
-  final String timeLabel;
-  final String title;
-  final String subtitle;
+  final Map<String, dynamic> item;
+  final VoidCallback onOpenPatient;
+  final VoidCallback onOpenVisit;
 
   @override
   Widget build(BuildContext context) {
+    final title = item['title']?.toString() ?? 'Appointment';
+    final subtitle = item['subtitle']?.toString() ?? 'Patient care visit';
+    final meta = item['meta']?.toString() ?? '';
+    final status = item['stageLabel']?.toString() ?? item['statusLabel']?.toString() ?? 'Scheduled';
+    final timeLabel = _timeFromMeta(meta);
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(14),
@@ -347,8 +421,30 @@ class _ScheduleTile extends StatelessWidget {
                 Text(title, style: AppTypography.body),
                 const SizedBox(height: 4),
                 Text(
-                  subtitle,
+                  '$subtitle • $status',
                   style: AppTypography.small.copyWith(color: AppColors.gray),
+                ),
+                if (meta.trim().isNotEmpty) ...[
+                  const SizedBox(height: 6),
+                  Text(
+                    meta,
+                    style: AppTypography.tiny.copyWith(color: AppColors.gray),
+                  ),
+                ],
+                const SizedBox(height: 10),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    OutlinedButton(
+                      onPressed: onOpenPatient,
+                      child: const Text('Open Patient'),
+                    ),
+                    FilledButton(
+                      onPressed: onOpenVisit,
+                      child: const Text('Open Visit'),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -361,57 +457,110 @@ class _ScheduleTile extends StatelessWidget {
 
 class _WorkContinueCard extends StatelessWidget {
   const _WorkContinueCard({
+    required this.item,
     required this.stage,
     required this.title,
     required this.subtitle,
     required this.type,
+    required this.onOpen,
+    required this.onSecondaryOpen,
   });
 
+  final Map<String, dynamic> item;
   final String stage;
   final String title;
   final String subtitle;
   final String type;
+  final VoidCallback onOpen;
+  final VoidCallback onSecondaryOpen;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.lightGray,
-        borderRadius: BorderRadius.circular(18),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                decoration: BoxDecoration(
-                  color: AppColors.shieldBlue.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(999),
-                ),
-                child: Text(
-                  '$type • $stage',
-                  style: AppTypography.tiny.copyWith(
-                    color: AppColors.shieldBlue,
-                    fontWeight: FontWeight.w700,
+    return InkWell(
+      onTap: onOpen,
+      borderRadius: BorderRadius.circular(18),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: AppColors.lightGray,
+          borderRadius: BorderRadius.circular(18),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: AppColors.shieldBlue.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Text(
+                    '$type • $stage',
+                    style: AppTypography.tiny.copyWith(
+                      color: AppColors.shieldBlue,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Text(title, style: AppTypography.body),
-          const SizedBox(height: 6),
-          Text(
-            subtitle,
-            style: AppTypography.small.copyWith(color: AppColors.gray),
-          ),
-        ],
+              ],
+            ),
+            const SizedBox(height: 12),
+            Text(title, style: AppTypography.body),
+            const SizedBox(height: 6),
+            Text(
+              subtitle,
+              style: AppTypography.small.copyWith(color: AppColors.gray),
+            ),
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                OutlinedButton(
+                  onPressed: onSecondaryOpen,
+                  child: Text(item['secondaryActionLabel']?.toString() ?? 'Open patient'),
+                ),
+                FilledButton(
+                  onPressed: onOpen,
+                  child: Text(item['primaryActionLabel']?.toString() ?? 'Open'),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
+  }
+}
+
+String _timeFromMeta(String meta) {
+  final parts = meta.split('•');
+  if (parts.length < 2) {
+    return 'Today';
+  }
+  final datePortion = parts.last.trim();
+  final parsed = DateTime.tryParse(datePortion);
+  if (parsed == null) {
+    return datePortion;
+  }
+  return ProviderDashboardScreen._formatTime(parsed);
+}
+
+String? _queueFilterForHighlight(Map<String, dynamic> meta) {
+  final code = meta['code']?.toString().trim().toUpperCase() ?? '';
+  switch (code) {
+    case 'WAITING':
+      return 'waiting';
+    case 'CONSULTATION':
+    case 'READY_TO_COMPLETE':
+      return 'active-care';
+    case 'URGENT':
+      return 'all-open';
+    default:
+      return null;
   }
 }
 

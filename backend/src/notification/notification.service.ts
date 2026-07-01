@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { randomUUID } from 'crypto';
+import { PlatformRealtimeService } from '../platform-capabilities/platform-realtime.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { FirebaseAdminService } from './firebase-admin.service';
 
@@ -25,6 +26,7 @@ export class NotificationService {
   constructor(
     private prisma: PrismaService,
     private firebaseAdminService: FirebaseAdminService,
+    private readonly platformRealtimeService: PlatformRealtimeService,
   ) {}
 
   async list(customerId?: bigint) {
@@ -39,10 +41,23 @@ export class NotificationService {
   }
 
   async markAsRead(id: bigint) {
-    return this.prisma.notification.update({
+    const notification = await this.prisma.notification.update({
       where: { id },
       data: { status: 'READ' },
     });
+    this.platformRealtimeService.publish({
+      id: `notification-read:${notification.id.toString()}`,
+      type: 'NOTIFICATION_READ',
+      category: 'notification',
+      title: 'Notification marked as read',
+      description: notification.title ?? 'Notification marked as read',
+      workspace: 'provider',
+      customerId: notification.customerId?.toString(),
+      metadata: {
+        notificationId: notification.id.toString(),
+      },
+    });
+    return notification;
   }
 
   async registerDeviceToken(input: RegisterTokenInput) {
@@ -95,6 +110,20 @@ export class NotificationService {
         channel: 'IN_APP',
         status: 'UNREAD',
         sentAt: new Date(),
+      },
+    });
+    this.platformRealtimeService.publish({
+      id: `notification:${notification.id.toString()}`,
+      type: 'NOTIFICATION_CREATED',
+      category: 'notification',
+      title: notification.title ?? 'Notification',
+      description: notification.message ?? 'A new notification was created.',
+      workspace: 'provider',
+      customerId: data.customerId.toString(),
+      metadata: {
+        notificationId: notification.id.toString(),
+        channel: notification.channel,
+        status: notification.status,
       },
     });
 

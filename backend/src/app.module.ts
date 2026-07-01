@@ -25,6 +25,7 @@ import { OperationsQueueModule } from './operations-queue/operations-queue.modul
 import { PlatformMetadataModule } from './platform-metadata/platform-metadata.module';
 import { ServiceProviderModule } from './service-provider/service-provider.module';
 import { TimelineModule } from './timeline/timeline.module';
+import { PlatformCapabilitiesModule } from './platform-capabilities/platform-capabilities.module';
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { TimelineModule } from './timeline/timeline.module';
     AuthModule,
     MasterDataModule,
     PlatformMetadataModule,
+    PlatformCapabilitiesModule,
     OperationsQueueModule,
     ServiceProviderModule,
     TimelineModule,

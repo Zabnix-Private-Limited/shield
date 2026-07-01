@@ -7,6 +7,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { randomUUID } from 'crypto';
 import { PricingService } from '../pricing/pricing.service';
 import { SERVICE_TYPES, type ShieldServiceType } from '../pricing/pricing.types';
+import { PlatformRealtimeService } from '../platform-capabilities/platform-realtime.service';
 import { TimelineService } from '../timeline/timeline.service';
 import { WalletService } from '../wallet/wallet.service';
 
@@ -62,6 +63,7 @@ export class AppointmentService {
     private readonly pricingService: PricingService,
     private readonly timelineService: TimelineService,
     private readonly walletService: WalletService,
+    private readonly platformRealtimeService: PlatformRealtimeService,
   ) {}
 
   async list(customerId?: bigint) {
@@ -154,6 +156,7 @@ export class AppointmentService {
         actorRole: this.humanizeCode(auditActor?.roleCode),
       },
     });
+    this.publishVisitEvent(appointment, 'VISIT_STARTED', 'Visit started', 'Consultation workflow started.');
 
     return this.getConsultationWorkspace(id);
   }
@@ -200,6 +203,12 @@ export class AppointmentService {
         actorRole: this.humanizeCode(auditActor?.roleCode),
       },
     });
+    this.publishVisitEvent(
+      appointment,
+      'CONSULTATION_UPDATED',
+      'Consultation updated',
+      'Consultation details were saved.',
+    );
 
     return this.getConsultationWorkspace(id);
   }
@@ -229,6 +238,12 @@ export class AppointmentService {
         actorRole: this.humanizeCode(auditActor?.roleCode),
       },
     });
+    this.publishVisitEvent(
+      appointment,
+      'VISIT_BILLING_UPDATED',
+      'Visit billing updated',
+      'Visit billing draft was saved.',
+    );
 
     return this.getConsultationWorkspace(id);
   }
@@ -269,6 +284,12 @@ export class AppointmentService {
         actorRole: this.humanizeCode(auditActor?.roleCode),
       },
     });
+    this.publishVisitEvent(
+      appointment,
+      'INVOICE_GENERATED',
+      'Invoice generated',
+      'A visit invoice was generated from the shared billing workflow.',
+    );
     return this.getConsultationWorkspace(id);
   }
 
@@ -291,6 +312,12 @@ export class AppointmentService {
         actorRole: this.humanizeCode(auditActor?.roleCode),
       },
     });
+    this.publishVisitEvent(
+      appointment,
+      'PAYMENT_RECORDED',
+      'Payment recorded',
+      'Visit payment details were recorded.',
+    );
     return this.getConsultationWorkspace(id);
   }
 
@@ -342,6 +369,12 @@ export class AppointmentService {
         actorRole: this.humanizeCode(auditActor?.roleCode),
       },
     });
+    this.publishVisitEvent(
+      refreshedAppointment,
+      'VISIT_COMPLETED',
+      'Visit completed',
+      'Visit workflow was completed.',
+    );
 
     return this.getConsultationWorkspace(id);
   }
@@ -770,14 +803,14 @@ export class AppointmentService {
         },
         {
           code: 'symptoms',
-          title: 'Symptoms',
-          placeholder: 'Record what the patient is experiencing today.',
+          title: 'Present Illness',
+          placeholder: 'Record the current illness story, symptoms, and recent changes.',
           order: 2,
         },
         {
           code: 'clinicalFindings',
-          title: 'Clinical Findings',
-          placeholder: 'Record examination notes, vitals, or observed findings.',
+          title: 'Examination',
+          placeholder: 'Record examination notes, vitals, and observed findings.',
           order: 3,
         },
         {
@@ -800,20 +833,20 @@ export class AppointmentService {
         },
         {
           code: 'advice',
-          title: 'Advice',
-          placeholder: 'Record care advice or treatment guidance shared with the patient.',
+          title: 'Treatment Plan',
+          placeholder: 'Record treatment decisions, medicines, and care guidance shared with the patient.',
           order: 7,
         },
         {
           code: 'followUp',
-          title: 'Follow-up Advice',
+          title: 'Follow-up Instructions',
           placeholder: 'Record the next review, return visit, or follow-up timing.',
           order: 8,
         },
         {
           code: 'providerNotes',
-          title: 'Provider Notes',
-          placeholder: 'Add provider-only notes that should stay with this visit.',
+          title: 'Clinical Notes',
+          placeholder: 'Add visit notes that should remain with this encounter.',
           order: 9,
         },
       ],
@@ -1097,6 +1130,27 @@ export class AppointmentService {
       entityId: input.entityId,
       userId: input.userId,
       newData: input.details ?? {},
+    });
+  }
+
+  private publishVisitEvent(
+    appointment: { id: bigint; customerId: bigint | null; appointmentType: string | null },
+    type: string,
+    title: string,
+    description: string,
+  ) {
+    this.platformRealtimeService.publish({
+      id: `${type.toLowerCase()}:${appointment.id.toString()}`,
+      type,
+      category: 'workflow',
+      title,
+      description,
+      workspace: 'provider',
+      appointmentId: appointment.id.toString(),
+      customerId: appointment.customerId?.toString() ?? undefined,
+      metadata: {
+        appointmentType: appointment.appointmentType ?? 'VISIT',
+      },
     });
   }
 
