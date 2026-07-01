@@ -6853,3 +6853,55 @@ est build, ackend/vercel.json, ackend/src/auth/auth.service.ts, and uth_devic
 - Provider Profile & Settings is not fully feature-frozen yet against the current live schema and auth model. The repository still lacks persisted backend fields/contracts for provider photo, digital signature, qualifications, specialization, license/registration details, multi-branch assignment, consultation availability, working hours, notification preferences, theme, language, printer preferences, and other advanced security/settings state.
 - Change password is also not a valid provider-owned workflow in the current internal-user Google Sign-In architecture without explicit authentication-provider support.
 - Because those persistence gaps are real production workflow gaps rather than QA-only polish, the Provider Portal should not yet be formally declared feature frozen.
+
+## 187. Provider profile and settings persistence: unified provider-owned resource, live asset uploads, and settings-backed provider UI
+**High-level description**: Completed the final Provider Portal persistence slice for profile and settings by introducing one backend-owned provider profile resource tied to the authenticated internal user, then wiring the existing provider profile/settings screens to that resource without creating a parallel identity system.
+- Backend persistence model and schema work:
+  - Added `ProviderProfile` as the single provider-owned persistence resource for editable provider-facing metadata and preferences while keeping branch scope and department ownership on the existing `users` table.
+  - Added `ProviderProfileBranchAssignment` so assigned branches remain relational instead of being hidden inside free-form JSON, while `users.branch_business_id` continues to represent the primary branch.
+  - Stored provider-specific profile assets and preferences in a way that keeps Google Sign-In identity intact: professional contact details, display name, qualifications, specialization, registration metadata, consultation availability, working hours, notification preferences, print preferences, theme, language, default printer, and timezone.
+  - Added SQL migration scaffolding under `backend/prisma/migrations/20260701_provider_profile_settings/migration.sql` without making schema-apply part of normal build execution.
+- Backend API and service integration:
+  - Extended `service-provider` with live authenticated-provider endpoints for reading and updating the unified profile resource, updating preferences, and uploading provider profile photo / digital signature.
+  - Reused the shared storage layer by adding scoped private-object persistence for provider assets instead of abusing patient document storage or creating a duplicate upload service.
+  - Kept the auth model intact: no password workflow was added, and the authenticated `/auth/me` payload now prefers persisted provider display name where present so provider-facing identity stays consistent across the portal shell.
+  - Preserved existing architecture boundaries by keeping provider profile ownership inside `service-provider`, using `users` for existing branch/department scope, and reusing the shared storage capability.
+- Flutter provider portal wiring:
+  - Replaced the old display-only provider profile card with a live editable provider profile form backed by the new API.
+  - Added live upload actions for profile photo and digital signature using the existing cross-platform file-picking pattern already used elsewhere in the app.
+  - Replaced the old session-only settings placeholder with persistent provider preferences for notifications, theme, language, timezone, default printer, and print behavior while retaining live session management controls.
+  - Updated the provider portal repository/controller/api-service flow so profile/settings screens now load and save real backend data instead of local placeholder state.
+- Why this approach was chosen:
+  - The remaining Provider Portal blocker was domain persistence, not new workflow construction, so the solution needed to be structurally small but semantically complete.
+  - Keeping provider-owned preferences in a single resource prevents the settings surface from fragmenting into unrelated field-specific endpoints.
+  - Branch and department ownership already existed in the authenticated user model, so this slice extends that model instead of duplicating identity or bypassing authorization boundaries.
+  - Provider asset uploads belong to the shared storage capability, but not to patient documents, so scoped private storage was the cleanest reuse path.
+- Verification completed for this pass:
+  - `cd backend && npm run build`
+  - `cd frontend && flutter analyze --no-pub`
+  - `cd frontend && flutter test`
+
+### Files Modified/Created
+**Backend Files (Modified)**:
+- backend/prisma/schema.prisma
+- backend/src/auth/auth.service.ts
+- backend/src/service-provider/service-provider.controller.ts
+- backend/src/service-provider/service-provider.service.ts
+- backend/src/storage/storage.service.ts
+
+**Backend Files (Created)**:
+- backend/prisma/migrations/20260701_provider_profile_settings/migration.sql
+
+**Frontend Files (Modified)**:
+- frontend/lib/features/provider/profile/presentation/screens/provider_profile_screen.dart
+- frontend/lib/features/provider/settings/presentation/screens/provider_settings_screen.dart
+- frontend/lib/features/provider/shared/data/provider_portal_repository.dart
+- frontend/lib/features/provider/shared/presentation/controllers/provider_portal_controller.dart
+- frontend/lib/shared/services/api_service.dart
+
+**Verification Commands**:
+- `cd backend && npm run build`
+- `cd frontend && flutter analyze --no-pub`
+- `cd frontend && flutter test`
+---
+2026-07-01 20:58:52 IST

@@ -401,6 +401,17 @@ export class AuthService {
           role: true,
           department: true,
           branchBusiness: true,
+          providerProfile: {
+            select: {
+              id: true,
+              displayName: true,
+              specialization: true,
+              themePreference: true,
+              languagePreference: true,
+              defaultPrinter: true,
+              timezone: true,
+            },
+          },
         },
       });
       return {
@@ -413,20 +424,20 @@ export class AuthService {
             roleCode: principal.roleCode,
             departmentCode: user?.department?.code,
           }),
-          displayName: this.getDisplayName(
-            user?.firstName,
-            user?.lastName,
-            principal.email,
-          ),
+          displayName:
+            user?.providerProfile?.displayName?.trim() ||
+            this.getDisplayName(user?.firstName, user?.lastName, principal.email),
         },
         profile: user,
         display: user
           ? {
-              fullName: this.getDisplayName(
-                user.firstName,
-                user.lastName,
-                user.email ?? undefined,
-              ),
+              fullName:
+                user.providerProfile?.displayName?.trim() ||
+                this.getDisplayName(
+                  user.firstName,
+                  user.lastName,
+                  user.email ?? undefined,
+                ),
               designation: this.getRoleLabel(user.role?.name, principal.roleCode),
               departmentName: user.department?.name ?? null,
               branch: user.branchBusiness
@@ -447,6 +458,7 @@ export class AuthService {
               mobile: user.mobile,
               employeeCode: user.employeeCode,
               roleCode: principal.roleCode,
+              providerProfile: user.providerProfile,
             }
           : null,
       };

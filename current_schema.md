@@ -388,6 +388,39 @@ CREATE TABLE "products" (
 	"category_id" bigint,
 	"unit" varchar(50)
 );
+CREATE TABLE "provider_profile_branch_assignments" (
+	"provider_profile_id" bigint,
+	"business_id" bigint,
+	"is_primary" boolean DEFAULT false NOT NULL,
+	"assigned_at" timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+	CONSTRAINT "provider_profile_branch_assignments_pkey" PRIMARY KEY("provider_profile_id","business_id")
+);
+CREATE TABLE "provider_profiles" (
+	"id" bigserial PRIMARY KEY,
+	"uuid" uuid NOT NULL,
+	"user_id" bigint NOT NULL,
+	"display_name" varchar(255),
+	"contact_email" varchar(255),
+	"contact_phone" varchar(20),
+	"profile_photo_storage_path" text,
+	"profile_photo_file_name" varchar(255),
+	"signature_storage_path" text,
+	"signature_file_name" varchar(255),
+	"qualifications" text,
+	"specialization" varchar(255),
+	"registration_details" jsonb,
+	"consultation_availability" jsonb,
+	"working_hours" jsonb,
+	"notification_preferences" jsonb,
+	"print_preferences" jsonb,
+	"theme_preference" varchar(50),
+	"language_preference" varchar(20),
+	"default_printer" varchar(255),
+	"timezone" varchar(100),
+	"created_at" timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+	"updated_at" timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+	"deleted_at" timestamp with time zone
+);
 CREATE TABLE "purchase_items" (
 	"id" bigserial PRIMARY KEY,
 	"purchase_id" bigint,
@@ -675,6 +708,11 @@ CREATE UNIQUE INDEX "pricing_rule_audits_uuid_key" ON "pricing_rule_audits" ("uu
 CREATE UNIQUE INDEX "product_categories_pkey" ON "product_categories" ("id");
 CREATE UNIQUE INDEX "products_pkey" ON "products" ("id");
 CREATE UNIQUE INDEX "products_uuid_key" ON "products" ("uuid");
+CREATE INDEX "idx_provider_profile_branch_business" ON "provider_profile_branch_assignments" ("business_id");
+CREATE UNIQUE INDEX "provider_profile_branch_assignments_pkey" ON "provider_profile_branch_assignments" ("provider_profile_id","business_id");
+CREATE UNIQUE INDEX "provider_profiles_pkey" ON "provider_profiles" ("id");
+CREATE UNIQUE INDEX "provider_profiles_user_id_key" ON "provider_profiles" ("user_id");
+CREATE UNIQUE INDEX "provider_profiles_uuid_key" ON "provider_profiles" ("uuid");
 CREATE UNIQUE INDEX "purchase_items_pkey" ON "purchase_items" ("id");
 CREATE INDEX "idx_purchases_appointment" ON "purchases" ("appointment_id");
 CREATE INDEX "idx_purchases_kind" ON "purchases" ("purchase_kind");
@@ -770,6 +808,9 @@ ALTER TABLE "prescriptions" ADD CONSTRAINT "prescriptions_document_id_fkey" FORE
 ALTER TABLE "pricing_rule_audits" ADD CONSTRAINT "pricing_rule_audits_customer_id_fkey" FOREIGN KEY ("customer_id") REFERENCES "customers"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 ALTER TABLE "pricing_rule_audits" ADD CONSTRAINT "pricing_rule_audits_wallet_id_fkey" FOREIGN KEY ("wallet_id") REFERENCES "wallets"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 ALTER TABLE "products" ADD CONSTRAINT "products_category_id_fkey" FOREIGN KEY ("category_id") REFERENCES "product_categories"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "provider_profile_branch_assignments" ADD CONSTRAINT "provider_profile_branch_assignments_business_fkey" FOREIGN KEY ("business_id") REFERENCES "businesses"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "provider_profile_branch_assignments" ADD CONSTRAINT "provider_profile_branch_assignments_profile_fkey" FOREIGN KEY ("provider_profile_id") REFERENCES "provider_profiles"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "provider_profiles" ADD CONSTRAINT "provider_profiles_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 ALTER TABLE "purchase_items" ADD CONSTRAINT "purchase_items_product_id_fkey" FOREIGN KEY ("product_id") REFERENCES "products"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 ALTER TABLE "purchase_items" ADD CONSTRAINT "purchase_items_purchase_id_fkey" FOREIGN KEY ("purchase_id") REFERENCES "purchases"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 ALTER TABLE "purchases" ADD CONSTRAINT "purchases_appointment_id_fkey" FOREIGN KEY ("appointment_id") REFERENCES "appointments"("id") ON DELETE SET NULL ON UPDATE CASCADE;

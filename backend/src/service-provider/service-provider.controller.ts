@@ -1,13 +1,19 @@
 import {
+  HttpCode,
   Controller,
   Get,
   Post,
+  Patch,
   Put,
   Delete,
   Param,
   Body,
   Query,
+  UploadedFile,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import * as multer from 'multer';
 import { CurrentPrincipal } from '../auth/current-principal.decorator';
 import type { ShieldPrincipal } from '../auth/auth.types';
 import { OperationsQueueService } from '../operations-queue/operations-queue.service';
@@ -89,6 +95,105 @@ export class ServiceProviderController {
       success: true,
       message: 'Patient record retrieved successfully.',
       data: workspace,
+    };
+  }
+
+  @RequirePermissions('providers.view')
+  @Get('me/profile')
+  async getCurrentProviderProfile(
+    @CurrentPrincipal() principal?: ShieldPrincipal,
+  ) {
+    const profile =
+      await this.serviceProviderService.getCurrentProviderProfile(principal);
+    return {
+      success: true,
+      message: 'Provider profile retrieved successfully.',
+      data: profile,
+    };
+  }
+
+  @RequirePermissions('providers.update')
+  @Patch('me/profile')
+  async updateCurrentProviderProfile(
+    @Body() body: any,
+    @CurrentPrincipal() principal?: ShieldPrincipal,
+  ) {
+    const profile = await this.serviceProviderService.updateCurrentProviderProfile(
+      principal,
+      body,
+    );
+    return {
+      success: true,
+      message: 'Provider profile updated successfully.',
+      data: profile,
+    };
+  }
+
+  @RequirePermissions('providers.update')
+  @Patch('me/preferences')
+  async updateCurrentProviderPreferences(
+    @Body() body: any,
+    @CurrentPrincipal() principal?: ShieldPrincipal,
+  ) {
+    const profile =
+      await this.serviceProviderService.updateCurrentProviderPreferences(
+        principal,
+        body,
+      );
+    return {
+      success: true,
+      message: 'Provider preferences updated successfully.',
+      data: profile,
+    };
+  }
+
+  @RequirePermissions('providers.update')
+  @Post('me/profile/photo')
+  @HttpCode(200)
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: multer.memoryStorage(),
+      limits: { fileSize: 5 * 1024 * 1024 },
+    }),
+  )
+  async uploadCurrentProviderPhoto(
+    @UploadedFile() file: any,
+    @CurrentPrincipal() principal?: ShieldPrincipal,
+  ) {
+    const profile = await this.serviceProviderService.uploadCurrentProviderAsset(
+      principal,
+      'photo',
+      file,
+    );
+    return {
+      success: true,
+      message: 'Provider profile photo updated successfully.',
+      data: profile,
+    };
+  }
+
+  @RequirePermissions('providers.update')
+  @Post('me/profile/signature')
+  @HttpCode(200)
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: multer.memoryStorage(),
+      limits: { fileSize: 5 * 1024 * 1024 },
+    }),
+  )
+  async uploadCurrentProviderSignature(
+    @UploadedFile() file: any,
+    @CurrentPrincipal() principal?: ShieldPrincipal,
+  ) {
+    const profile = await this.serviceProviderService.uploadCurrentProviderAsset(
+      principal,
+      'signature',
+      file,
+    );
+    return {
+      success: true,
+      message: 'Provider digital signature updated successfully.',
+      data: profile,
     };
   }
 

@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import '../../../../shared/models/appointment.dart';
 import '../../../../shared/models/customer.dart';
 import '../../../../shared/models/document.dart';
@@ -21,6 +23,50 @@ class ProviderPortalRepository {
 
   Future<Map<String, dynamic>> getAuthenticatedProfile() {
     return ApiService.getAuthenticatedProfile();
+  }
+
+  Future<Map<String, dynamic>> getProviderProfile() {
+    return ApiService.getProviderProfile();
+  }
+
+  Future<Map<String, dynamic>> updateProviderProfile(
+    Map<String, dynamic> payload,
+  ) {
+    return ApiService.updateProviderProfile(payload);
+  }
+
+  Future<Map<String, dynamic>> updateProviderPreferences(
+    Map<String, dynamic> payload,
+  ) {
+    return ApiService.updateProviderPreferences(payload);
+  }
+
+  Future<Map<String, dynamic>> uploadProviderProfilePhoto({
+    required String fileName,
+    required List<int> fileBytes,
+    required String mimeType,
+    required int fileSize,
+  }) {
+    return ApiService.uploadProviderProfilePhoto(
+      fileName: fileName,
+      fileBytes: fileBytes is Uint8List ? fileBytes : Uint8List.fromList(fileBytes),
+      mimeType: mimeType,
+      fileSize: fileSize,
+    );
+  }
+
+  Future<Map<String, dynamic>> uploadProviderSignature({
+    required String fileName,
+    required List<int> fileBytes,
+    required String mimeType,
+    required int fileSize,
+  }) {
+    return ApiService.uploadProviderSignature(
+      fileName: fileName,
+      fileBytes: fileBytes is Uint8List ? fileBytes : Uint8List.fromList(fileBytes),
+      mimeType: mimeType,
+      fileSize: fileSize,
+    );
   }
 
   Future<Map<String, dynamic>> getPatientWorkspace(String customerId) {

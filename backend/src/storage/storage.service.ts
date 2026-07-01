@@ -7,6 +7,7 @@ import { getAppEnv } from '../config/app-env';
 
 @Injectable()
 export class StorageService {
+  private readonly localUploadBaseRoot = join(process.cwd(), 'uploads');
   private readonly localUploadRoot = join(process.cwd(), 'uploads', 'documents');
   private readonly env = getAppEnv();
   private readonly r2Client =
@@ -61,6 +62,20 @@ export class StorageService {
     }
   }
 
+  buildScopedObjectKey(data: {
+    scope: string;
+    ownerId: string;
+    objectUuid: string;
+    fileName: string;
+    createdAt?: Date;
+  }) {
+    const year = (data.createdAt ?? new Date()).getUTCFullYear();
+    const safeScope = data.scope.replace(/[^a-zA-Z0-9/_-]+/g, '-');
+    const safeOwnerId = data.ownerId.replace(/[^a-zA-Z0-9._-]+/g, '-');
+    const safeFileName = this.safeFileName(data.fileName);
+    return `${safeScope}/${safeOwnerId}/${year}/${data.objectUuid}_${safeFileName}`;
+  }
+
   async persistPrivateObject(data: {
     customerId: bigint;
     documentUuid: string;
@@ -103,6 +118,57 @@ export class StorageService {
 
     return {
       storagePath: `/uploads/documents/customer-${data.customerId.toString()}/${data.documentUuid}_${this.safeFileName(data.fileName)}`,
+      absolutePath,
+      provider: 'LOCAL' as const,
+    };
+  }
+
+  async persistScopedPrivateObject(data: {
+    scope: string;
+    ownerId: string;
+    objectUuid: string;
+    fileName: string;
+    mimeType: string;
+    buffer?: Buffer;
+  }) {
+    if (!data.buffer?.length) {
+      return null;
+    }
+
+    const objectKey = this.buildScopedObjectKey(data);
+
+    if (this.r2Client) {
+      await this.r2Client.send(
+        new PutObjectCommand({
+          Bucket: this.env.r2Bucket,
+          Key: objectKey,
+          Body: data.buffer,
+          ContentType: data.mimeType,
+        }),
+      );
+
+      return {
+        storagePath: `r2://${this.env.r2Bucket}/${objectKey}`,
+        objectKey,
+        provider: 'R2' as const,
+      };
+    }
+
+    const scopedDirectory = join(
+      this.localUploadBaseRoot,
+      ...data.scope.split('/'),
+      data.ownerId,
+    );
+    await mkdir(scopedDirectory, { recursive: true });
+
+    const absolutePath = join(
+      scopedDirectory,
+      `${data.objectUuid}_${this.safeFileName(data.fileName)}`,
+    );
+    await writeFile(absolutePath, data.buffer);
+
+    return {
+      storagePath: `/uploads/${data.scope}/${data.ownerId}/${data.objectUuid}_${this.safeFileName(data.fileName)}`,
       absolutePath,
       provider: 'LOCAL' as const,
     };

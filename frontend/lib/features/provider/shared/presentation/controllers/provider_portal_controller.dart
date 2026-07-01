@@ -20,12 +20,14 @@ class ProviderPortalController extends ChangeNotifier {
   bool _settingsLoading = false;
   bool _consultationLoading = false;
   bool _consultationSaving = false;
+  bool _providerProfileSaving = false;
   String? _error;
   String? _selectedCustomerId;
   String? _activeVisitAppointmentId;
   Map<String, dynamic>? _workspace;
   Map<String, dynamic>? _platformWorkspace;
   Map<String, dynamic>? _authProfile;
+  Map<String, dynamic>? _providerProfile;
   Map<String, dynamic>? _consultationWorkspace;
   Map<String, dynamic>? _selectedPatientWorkspace;
   Customer? _selectedCustomer;
@@ -51,6 +53,7 @@ class ProviderPortalController extends ChangeNotifier {
   bool get isSettingsLoading => _settingsLoading;
   bool get isConsultationLoading => _consultationLoading;
   bool get isConsultationSaving => _consultationSaving;
+  bool get isProviderProfileSaving => _providerProfileSaving;
   String? get error => _error;
   String? get activeVisitAppointmentId => _activeVisitAppointmentId;
   Map<String, dynamic> get workspace => _workspace ?? const <String, dynamic>{};
@@ -58,6 +61,8 @@ class ProviderPortalController extends ChangeNotifier {
       _platformWorkspace ?? const <String, dynamic>{};
   Map<String, dynamic> get authProfile =>
       _authProfile ?? const <String, dynamic>{};
+  Map<String, dynamic> get providerProfile =>
+      _providerProfile ?? const <String, dynamic>{};
   Map<String, dynamic> get consultationWorkspace =>
       _consultationWorkspace ?? const <String, dynamic>{};
   Map<String, dynamic> get selectedPatientWorkspace =>
@@ -490,6 +495,7 @@ class ProviderPortalController extends ChangeNotifier {
         _repository.getOperationalWorkspace(),
         _repository.getPlatformWorkspace(),
         _repository.getAuthenticatedProfile(),
+        _repository.getProviderProfile(),
       ]);
       final operationalWorkspace = Map<String, dynamic>.from(results[0]);
       final platformWorkspace = Map<String, dynamic>.from(results[1]);
@@ -501,6 +507,7 @@ class ProviderPortalController extends ChangeNotifier {
       _workspace = mergedWorkspace;
       _platformWorkspace = platformWorkspace;
       _authProfile = results[2];
+      _providerProfile = results[3];
       _workspaceLoaded = true;
       _selectedCustomerId ??= customers.isNotEmpty
           ? customers.first['id']?.toString()
@@ -596,12 +603,12 @@ class ProviderPortalController extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final results = await Future.wait([
-        _repository.getSessions(),
-        _repository.getLoginHistory(),
-      ]);
-      _sessions = results[0];
-      _loginHistory = results[1];
+      final profile = await _repository.getProviderProfile();
+      final sessions = await _repository.getSessions();
+      final loginHistory = await _repository.getLoginHistory();
+      _providerProfile = profile;
+      _sessions = sessions;
+      _loginHistory = loginHistory;
     } catch (error) {
       _error = error.toString();
     } finally {
@@ -613,6 +620,105 @@ class ProviderPortalController extends ChangeNotifier {
   Future<void> revokeOwnedSession(String sessionId) async {
     await _repository.revokeSession(sessionId);
     await loadSettingsData();
+  }
+
+  Future<void> reloadProviderProfile() async {
+    try {
+      _providerProfile = await _repository.getProviderProfile();
+      _authProfile = await _repository.getAuthenticatedProfile();
+    } catch (error) {
+      _error = error.toString();
+    } finally {
+      notifyListeners();
+    }
+  }
+
+  Future<void> saveProviderProfile(Map<String, dynamic> payload) async {
+    _providerProfileSaving = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      _providerProfile = await _repository.updateProviderProfile(payload);
+      _authProfile = await _repository.getAuthenticatedProfile();
+    } catch (error) {
+      _error = error.toString();
+      rethrow;
+    } finally {
+      _providerProfileSaving = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> saveProviderPreferences(Map<String, dynamic> payload) async {
+    _providerProfileSaving = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      _providerProfile = await _repository.updateProviderPreferences(payload);
+      _authProfile = await _repository.getAuthenticatedProfile();
+    } catch (error) {
+      _error = error.toString();
+      rethrow;
+    } finally {
+      _providerProfileSaving = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> uploadProviderProfilePhoto({
+    required String fileName,
+    required List<int> fileBytes,
+    required String mimeType,
+    required int fileSize,
+  }) async {
+    _providerProfileSaving = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      _providerProfile = await _repository.uploadProviderProfilePhoto(
+        fileName: fileName,
+        fileBytes: fileBytes,
+        mimeType: mimeType,
+        fileSize: fileSize,
+      );
+      _authProfile = await _repository.getAuthenticatedProfile();
+    } catch (error) {
+      _error = error.toString();
+      rethrow;
+    } finally {
+      _providerProfileSaving = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> uploadProviderSignature({
+    required String fileName,
+    required List<int> fileBytes,
+    required String mimeType,
+    required int fileSize,
+  }) async {
+    _providerProfileSaving = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      _providerProfile = await _repository.uploadProviderSignature(
+        fileName: fileName,
+        fileBytes: fileBytes,
+        mimeType: mimeType,
+        fileSize: fileSize,
+      );
+      _authProfile = await _repository.getAuthenticatedProfile();
+    } catch (error) {
+      _error = error.toString();
+      rethrow;
+    } finally {
+      _providerProfileSaving = false;
+      notifyListeners();
+    }
   }
 
   Future<void> loadConsultationWorkspace(String appointmentId) async {

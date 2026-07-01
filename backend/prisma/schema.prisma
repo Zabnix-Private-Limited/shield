@@ -28,6 +28,7 @@ model Business {
   serviceProviders ServiceProvider[]
   shieldCards   ShieldCard[]
   branchScopedUsers User[] @relation("BranchScopedUsers")
+  providerProfileBranchAssignments ProviderProfileBranchAssignment[]
 
   @@map("businesses")
 }
@@ -128,6 +129,7 @@ model User {
   authSessions AuthSession[]
   loginHistory LoginHistory[]
   documents Document[]
+  providerProfile ProviderProfile?
 
   @@index([mobile], map: "idx_user_mobile")
   @@index([email], map: "idx_user_email")
@@ -574,6 +576,52 @@ model ServiceProvider {
   appointments  Appointment[]
 
   @@map("service_providers")
+}
+
+model ProviderProfile {
+  id                        BigInt     @id @default(autoincrement())
+  uuid                      String     @unique @db.Uuid
+  userId                    BigInt     @unique @map("user_id")
+  displayName               String?    @db.VarChar(255) @map("display_name")
+  contactEmail              String?    @db.VarChar(255) @map("contact_email")
+  contactPhone              String?    @db.VarChar(20) @map("contact_phone")
+  profilePhotoStoragePath   String?    @db.Text @map("profile_photo_storage_path")
+  profilePhotoFileName      String?    @db.VarChar(255) @map("profile_photo_file_name")
+  signatureStoragePath      String?    @db.Text @map("signature_storage_path")
+  signatureFileName         String?    @db.VarChar(255) @map("signature_file_name")
+  qualifications            String?    @db.Text
+  specialization            String?    @db.VarChar(255)
+  registrationDetails       Json?      @map("registration_details")
+  consultationAvailability  Json?      @map("consultation_availability")
+  workingHours              Json?      @map("working_hours")
+  notificationPreferences   Json?      @map("notification_preferences")
+  printPreferences          Json?      @map("print_preferences")
+  themePreference           String?    @db.VarChar(50) @map("theme_preference")
+  languagePreference        String?    @db.VarChar(20) @map("language_preference")
+  defaultPrinter            String?    @db.VarChar(255) @map("default_printer")
+  timezone                  String?    @db.VarChar(100)
+  createdAt                 DateTime   @default(now()) @db.Timestamptz(6) @map("created_at")
+  updatedAt                 DateTime   @default(now()) @updatedAt @db.Timestamptz(6) @map("updated_at")
+  deletedAt                 DateTime?  @db.Timestamptz(6) @map("deleted_at")
+
+  user                      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  branchAssignments         ProviderProfileBranchAssignment[]
+
+  @@map("provider_profiles")
+}
+
+model ProviderProfileBranchAssignment {
+  providerProfileId BigInt    @map("provider_profile_id")
+  businessId        BigInt    @map("business_id")
+  isPrimary         Boolean   @default(false) @map("is_primary")
+  assignedAt        DateTime  @default(now()) @db.Timestamptz(6) @map("assigned_at")
+
+  providerProfile   ProviderProfile @relation(fields: [providerProfileId], references: [id], onDelete: Cascade)
+  business          Business        @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@id([providerProfileId, businessId])
+  @@index([businessId], map: "idx_provider_profile_branch_business")
+  @@map("provider_profile_branch_assignments")
 }
 
 model ProductCategory {

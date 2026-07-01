@@ -1,4 +1,9 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { randomUUID } from 'crypto';
 import { CustomerService } from '../customer/customer.service';
@@ -10,6 +15,9 @@ import { NotificationService } from '../notification/notification.service';
 import { PharmacyService } from '../pharmacy/pharmacy.service';
 import { PlatformPrintService } from '../platform-capabilities/platform-print.service';
 import { TimelineService } from '../timeline/timeline.service';
+import { StorageService } from '../storage/storage.service';
+
+type ProviderProfileAssetType = 'photo' | 'signature';
 
 @Injectable()
 export class ServiceProviderService {
@@ -23,6 +31,7 @@ export class ServiceProviderService {
     private readonly pharmacyService: PharmacyService,
     private readonly timelineService: TimelineService,
     private readonly platformPrintService: PlatformPrintService,
+    private readonly storageService: StorageService,
   ) {}
 
   async create(data: any) {
@@ -197,6 +206,162 @@ export class ServiceProviderService {
       })),
       providers: analytics,
     };
+  }
+
+  async getCurrentProviderProfile(principal?: ShieldPrincipal) {
+    const context = await this.resolveCurrentProviderContext(principal);
+    return this.buildCurrentProviderProfileResponse(context.user, context.profile);
+  }
+
+  async updateCurrentProviderProfile(principal: ShieldPrincipal | undefined, data: any) {
+    const context = await this.resolveCurrentProviderContext(principal);
+    const normalized = await this.normalizeProviderProfileInput(
+      data,
+      context.user,
+      context.profile,
+    );
+
+    const profile = await this.prisma.$transaction(async (tx) => {
+      await tx.user.update({
+        where: { id: context.user.id },
+        data: {
+          branchBusinessId: normalized.primaryBranchId,
+          departmentId: normalized.departmentId,
+        },
+      });
+
+      const ensuredProfile = context.profile
+        ? context.profile
+        : await tx.providerProfile.create({
+            data: {
+              uuid: randomUUID(),
+              userId: context.user.id,
+            },
+          });
+
+      await tx.providerProfile.update({
+        where: { id: ensuredProfile.id },
+        data: {
+          displayName: normalized.displayName,
+          contactEmail: normalized.contactEmail,
+          contactPhone: normalized.contactPhone,
+          qualifications: normalized.qualifications,
+          specialization: normalized.specialization,
+          registrationDetails: normalized.registrationDetails,
+          consultationAvailability: normalized.consultationAvailability,
+          workingHours: normalized.workingHours,
+          notificationPreferences: normalized.notificationPreferences,
+          printPreferences: normalized.printPreferences,
+          themePreference: normalized.themePreference,
+          languagePreference: normalized.languagePreference,
+          defaultPrinter: normalized.defaultPrinter,
+          timezone: normalized.timezone,
+        },
+      });
+
+      await tx.providerProfileBranchAssignment.deleteMany({
+        where: { providerProfileId: ensuredProfile.id },
+      });
+
+      if (normalized.assignedBranchIds.length > 0) {
+        await tx.providerProfileBranchAssignment.createMany({
+          data: normalized.assignedBranchIds.map((businessId) => ({
+            providerProfileId: ensuredProfile.id,
+            businessId,
+            isPrimary:
+              normalized.primaryBranchId != null &&
+              businessId === normalized.primaryBranchId,
+          })),
+        });
+      }
+
+      return tx.user.findUnique({
+        where: { id: context.user.id },
+        include: this.providerProfileInclude(),
+      });
+    });
+
+    return this.buildCurrentProviderProfileResponse(profile, profile?.providerProfile);
+  }
+
+  async updateCurrentProviderPreferences(
+    principal: ShieldPrincipal | undefined,
+    data: any,
+  ) {
+    return this.updateCurrentProviderProfile(principal, { preferences: data });
+  }
+
+  async uploadCurrentProviderAsset(
+    principal: ShieldPrincipal | undefined,
+    assetType: ProviderProfileAssetType,
+    file: any,
+  ) {
+    const context = await this.resolveCurrentProviderContext(principal);
+    if (!file?.buffer?.length) {
+      throw new BadRequestException('Select a file to continue.');
+    }
+
+    const mimeType = (file.mimetype || '').toString().trim().toLowerCase();
+    const allowedMimeTypes =
+      assetType === 'photo'
+        ? ['image/png', 'image/jpeg', 'image/webp']
+        : ['image/png', 'image/jpeg', 'image/webp'];
+    if (!allowedMimeTypes.includes(mimeType)) {
+      throw new BadRequestException(
+        assetType === 'photo'
+          ? 'Profile photo must be a PNG, JPG, or WEBP image.'
+          : 'Digital signature must be a PNG, JPG, or WEBP image.',
+      );
+    }
+
+    const fileName =
+      file.originalname?.toString().trim() ||
+      (assetType === 'photo' ? 'profile-photo.png' : 'digital-signature.png');
+    const persistedFile = await this.storageService.persistScopedPrivateObject({
+      scope: `providers/${assetType === 'photo' ? 'photos' : 'signatures'}`,
+      ownerId: `user-${context.user.id.toString()}`,
+      objectUuid: randomUUID(),
+      fileName,
+      mimeType,
+      buffer: file.buffer,
+    });
+    if (!persistedFile?.storagePath) {
+      throw new BadRequestException('Unable to store the uploaded file.');
+    }
+
+    const profile = await this.prisma.providerProfile.upsert({
+      where: { userId: context.user.id },
+      update:
+        assetType === 'photo'
+          ? {
+              profilePhotoStoragePath: persistedFile.storagePath,
+              profilePhotoFileName: fileName,
+            }
+          : {
+              signatureStoragePath: persistedFile.storagePath,
+              signatureFileName: fileName,
+            },
+      create: {
+        uuid: randomUUID(),
+        userId: context.user.id,
+        ...(assetType === 'photo'
+          ? {
+              profilePhotoStoragePath: persistedFile.storagePath,
+              profilePhotoFileName: fileName,
+            }
+          : {
+              signatureStoragePath: persistedFile.storagePath,
+              signatureFileName: fileName,
+            }),
+      },
+    });
+
+    const user = await this.prisma.user.findUnique({
+      where: { id: context.user.id },
+      include: this.providerProfileInclude(),
+    });
+
+    return this.buildCurrentProviderProfileResponse(user, profile ?? user?.providerProfile);
   }
 
   async getPatientWorkspace(customerId: bigint, principal?: ShieldPrincipal) {
@@ -375,6 +540,359 @@ export class ServiceProviderService {
       printing,
       actions: this.buildWorkspaceActions(!!activeAppointment),
     };
+  }
+
+  private providerProfileInclude() {
+    return {
+      role: true,
+      department: true,
+      branchBusiness: true,
+      providerProfile: {
+        include: {
+          branchAssignments: {
+            include: {
+              business: true,
+            },
+            orderBy: {
+              businessId: 'asc' as const,
+            },
+          },
+        },
+      },
+    };
+  }
+
+  private async resolveCurrentProviderContext(principal?: ShieldPrincipal) {
+    if (!principal?.userId) {
+      throw new UnauthorizedException('Authenticated provider context is required.');
+    }
+
+    const user = await this.prisma.user.findUnique({
+      where: { id: BigInt(principal.userId) },
+      include: this.providerProfileInclude(),
+    });
+    if (!user) {
+      throw new NotFoundException('Provider account not found.');
+    }
+
+    return {
+      user,
+      profile: user.providerProfile,
+    };
+  }
+
+  private async buildCurrentProviderProfileResponse(user: any, profile: any) {
+    if (!user) {
+      throw new NotFoundException('Provider account not found.');
+    }
+
+    const activeBusinesses = await this.prisma.business.findMany({
+      where: { status: 'ACTIVE' },
+      orderBy: [{ name: 'asc' }],
+      select: {
+        id: true,
+        uuid: true,
+        code: true,
+        name: true,
+        businessType: true,
+        status: true,
+      },
+    });
+    const activeDepartments = await this.prisma.department.findMany({
+      where: { status: 'ACTIVE' },
+      orderBy: [{ name: 'asc' }],
+      select: {
+        id: true,
+        uuid: true,
+        code: true,
+        name: true,
+        status: true,
+        businessId: true,
+        business: {
+          select: {
+            id: true,
+            code: true,
+            name: true,
+          },
+        },
+      },
+    });
+
+    const assignedBranches = new Map<string, any>();
+    for (const assignment of profile?.branchAssignments ?? []) {
+      if (assignment.business) {
+        assignedBranches.set(assignment.businessId.toString(), {
+          id: assignment.business.id.toString(),
+          code: assignment.business.code,
+          name: assignment.business.name,
+          businessType: assignment.business.businessType,
+          status: assignment.business.status,
+          isPrimary: assignment.isPrimary === true,
+        });
+      }
+    }
+    if (user.branchBusiness) {
+      assignedBranches.set(user.branchBusiness.id.toString(), {
+        id: user.branchBusiness.id.toString(),
+        code: user.branchBusiness.code,
+        name: user.branchBusiness.name,
+        businessType: user.branchBusiness.businessType,
+        status: user.branchBusiness.status,
+        isPrimary: true,
+      });
+    }
+
+    const photoUrl = profile?.profilePhotoStoragePath
+      ? await this.storageService.createDownloadUrl(profile.profilePhotoStoragePath)
+      : null;
+    const signatureUrl = profile?.signatureStoragePath
+      ? await this.storageService.createDownloadUrl(profile.signatureStoragePath)
+      : null;
+
+    return {
+      profileId: profile?.id?.toString() ?? null,
+      userId: user.id.toString(),
+      displayName:
+        profile?.displayName?.trim() ||
+        [user.firstName, user.lastName].filter(Boolean).join(' ').trim() ||
+        user.email ||
+        'SHIELD Provider',
+      contact: {
+        email: profile?.contactEmail?.trim() || user.email || null,
+        phone: profile?.contactPhone?.trim() || user.mobile || null,
+        signInEmail: user.email || null,
+        signInMobile: user.mobile || null,
+      },
+      role: user.role
+        ? {
+            code: user.role.code,
+            name: user.role.name,
+          }
+        : null,
+      department: user.department
+        ? {
+            id: user.department.id.toString(),
+            code: user.department.code,
+            name: user.department.name,
+            businessId: user.department.businessId?.toString() ?? null,
+          }
+        : null,
+      primaryBranch: user.branchBusiness
+        ? {
+            id: user.branchBusiness.id.toString(),
+            code: user.branchBusiness.code,
+            name: user.branchBusiness.name,
+            businessType: user.branchBusiness.businessType,
+            status: user.branchBusiness.status,
+          }
+        : null,
+      assignedBranches: Array.from(assignedBranches.values()),
+      qualifications: profile?.qualifications ?? '',
+      specialization: profile?.specialization ?? '',
+      registration: this.normalizeStoredObject(profile?.registrationDetails),
+      consultationAvailability: this.normalizeStoredObject(
+        profile?.consultationAvailability,
+      ),
+      workingHours: this.normalizeStoredObject(profile?.workingHours),
+      assets: {
+        profilePhoto: {
+          fileName: profile?.profilePhotoFileName ?? null,
+          url: photoUrl,
+        },
+        digitalSignature: {
+          fileName: profile?.signatureFileName ?? null,
+          url: signatureUrl,
+        },
+      },
+      preferences: {
+        notifications: this.normalizeStoredObject(profile?.notificationPreferences, {
+          appointmentChanges: true,
+          visitUpdates: true,
+          prescriptionUpdates: true,
+          billingUpdates: true,
+        }),
+        theme: profile?.themePreference ?? 'system',
+        language: profile?.languagePreference ?? 'en',
+        defaultPrinter: profile?.defaultPrinter ?? '',
+        print: this.normalizeStoredObject(profile?.printPreferences, {
+          autoOpenPdf: true,
+          includeSignature: true,
+          paperSize: 'A4',
+        }),
+        timezone: profile?.timezone ?? 'Asia/Calcutta',
+      },
+      lookups: {
+        branches: activeBusinesses.map((business) => ({
+          id: business.id.toString(),
+          uuid: business.uuid,
+          code: business.code,
+          name: business.name,
+          businessType: business.businessType,
+          status: business.status,
+        })),
+        departments: activeDepartments.map((department) => ({
+          id: department.id.toString(),
+          uuid: department.uuid,
+          code: department.code,
+          name: department.name,
+          status: department.status,
+          businessId: department.businessId.toString(),
+          businessName: department.business?.name ?? null,
+          businessCode: department.business?.code ?? null,
+        })),
+      },
+      updatedAt: profile?.updatedAt ? profile.updatedAt.toISOString() : null,
+    };
+  }
+
+  private async normalizeProviderProfileInput(data: any, user: any, profile: any) {
+    const preferences = this.normalizeObject(data?.preferences);
+    const existingAssignedBranchIds = [
+      ...(profile?.branchAssignments ?? []).map((assignment: any) => assignment.businessId),
+      ...(user.branchBusinessId != null ? [user.branchBusinessId] : []),
+    ];
+    const branchIds = this.normalizeIdList(
+      data?.assignedBranchIds ??
+        data?.assignedBranches?.map?.((branch: any) => branch?.id ?? branch) ??
+        existingAssignedBranchIds,
+    );
+    const primaryBranchId = this.normalizeOptionalBigInt(
+      data?.primaryBranchId ?? data?.primaryBranch?.id ?? user.branchBusinessId,
+    );
+    if (primaryBranchId != null && !branchIds.some((branchId) => branchId === primaryBranchId)) {
+      branchIds.unshift(primaryBranchId);
+    }
+
+    const uniqueBranchIds = Array.from(
+      new Map(branchIds.map((branchId) => [branchId.toString(), branchId])).values(),
+    );
+    if (uniqueBranchIds.length > 0) {
+      const branchCount = await this.prisma.business.count({
+        where: {
+          id: { in: uniqueBranchIds },
+        },
+      });
+      if (branchCount !== uniqueBranchIds.length) {
+        throw new BadRequestException('One or more assigned branches are invalid.');
+      }
+    }
+
+    const departmentId = this.normalizeOptionalBigInt(
+      data?.departmentId ?? data?.department?.id ?? user.departmentId,
+    );
+    if (departmentId != null) {
+      const department = await this.prisma.department.findUnique({
+        where: { id: departmentId },
+        select: { id: true, businessId: true },
+      });
+      if (!department) {
+        throw new BadRequestException('Selected department is invalid.');
+      }
+      if (
+        uniqueBranchIds.length > 0 &&
+        !uniqueBranchIds.some((branchId) => branchId === department.businessId)
+      ) {
+        throw new BadRequestException(
+          'Selected department must belong to an assigned branch.',
+        );
+      }
+    }
+
+    return {
+      displayName: this.normalizeOptionalText(
+        data?.displayName ?? profile?.displayName,
+      ),
+      contactEmail: this.normalizeOptionalText(
+        data?.contactEmail ?? data?.contact?.email ?? profile?.contactEmail,
+      ),
+      contactPhone: this.normalizeOptionalText(
+        data?.contactPhone ?? data?.contact?.phone ?? profile?.contactPhone,
+      ),
+      qualifications: this.normalizeOptionalText(
+        data?.qualifications ?? profile?.qualifications,
+      ),
+      specialization: this.normalizeOptionalText(
+        data?.specialization ?? profile?.specialization,
+      ),
+      registrationDetails: this.normalizeObject(
+        data?.registration ?? data?.registrationDetails ?? profile?.registrationDetails,
+      ),
+      consultationAvailability: this.normalizeObject(
+        data?.consultationAvailability ?? profile?.consultationAvailability,
+      ),
+      workingHours: this.normalizeObject(
+        data?.workingHours ?? profile?.workingHours,
+      ),
+      notificationPreferences: this.normalizeObject(
+        preferences['notifications'] ??
+          data?.notificationPreferences ??
+          profile?.notificationPreferences,
+      ),
+      printPreferences: this.normalizeObject(
+        preferences['print'] ?? data?.printPreferences ?? profile?.printPreferences,
+      ),
+      themePreference: this.normalizeOptionalText(
+        preferences['theme'] ?? data?.themePreference ?? profile?.themePreference,
+      ),
+      languagePreference: this.normalizeOptionalText(
+        preferences['language'] ??
+          data?.languagePreference ??
+          profile?.languagePreference,
+      ),
+      defaultPrinter: this.normalizeOptionalText(
+        preferences['defaultPrinter'] ??
+          data?.defaultPrinter ??
+          profile?.defaultPrinter,
+      ),
+      timezone: this.normalizeOptionalText(
+        preferences['timezone'] ?? data?.timezone ?? profile?.timezone,
+      ),
+      primaryBranchId,
+      departmentId,
+      assignedBranchIds: uniqueBranchIds,
+    };
+  }
+
+  private normalizeOptionalText(value: unknown) {
+    if (value == null) {
+      return null;
+    }
+    const normalized = value.toString().trim();
+    return normalized.length === 0 ? null : normalized;
+  }
+
+  private normalizeOptionalBigInt(value: unknown) {
+    if (value == null) {
+      return null;
+    }
+    const normalized = value.toString().trim();
+    if (!normalized) {
+      return null;
+    }
+    return BigInt(normalized);
+  }
+
+  private normalizeIdList(value: unknown) {
+    if (!Array.isArray(value)) {
+      return [] as bigint[];
+    }
+    return value
+      .map((entry) => this.normalizeOptionalBigInt(entry))
+      .filter((entry): entry is bigint => entry != null);
+  }
+
+  private normalizeObject(value: unknown, fallback: Record<string, any> = {}) {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) {
+      return fallback;
+    }
+    return JSON.parse(JSON.stringify(value));
+  }
+
+  private normalizeStoredObject(value: unknown, fallback: Record<string, any> = {}) {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) {
+      return fallback;
+    }
+    return value as Record<string, any>;
   }
 
   private resolvePrimaryVisitAppointment(appointments: Array<any>) {

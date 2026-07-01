@@ -590,6 +590,71 @@ class ApiService {
     return _readEnvelope(response);
   }
 
+  static Future<Map<String, dynamic>> getProviderProfile() async {
+    final response = await _dio.get('/service-providers/me/profile');
+    return _readEnvelope(response);
+  }
+
+  static Future<Map<String, dynamic>> updateProviderProfile(
+    Map<String, dynamic> payload,
+  ) async {
+    final response = await _dio.patch(
+      '/service-providers/me/profile',
+      data: payload,
+    );
+    return _readEnvelope(response);
+  }
+
+  static Future<Map<String, dynamic>> updateProviderPreferences(
+    Map<String, dynamic> payload,
+  ) async {
+    final response = await _dio.patch(
+      '/service-providers/me/preferences',
+      data: payload,
+    );
+    return _readEnvelope(response);
+  }
+
+  static Future<Map<String, dynamic>> uploadProviderProfilePhoto({
+    required String fileName,
+    required Uint8List fileBytes,
+    required String mimeType,
+    required int fileSize,
+  }) async {
+    final formData = FormData.fromMap({
+      'file': MultipartFile.fromBytes(fileBytes, filename: fileName),
+      'file_name': fileName,
+      'mime_type': mimeType,
+      'file_size': fileSize,
+    });
+    final response = await _dio.post(
+      '/service-providers/me/profile/photo',
+      data: formData,
+      options: Options(contentType: 'multipart/form-data'),
+    );
+    return _readEnvelope(response);
+  }
+
+  static Future<Map<String, dynamic>> uploadProviderSignature({
+    required String fileName,
+    required Uint8List fileBytes,
+    required String mimeType,
+    required int fileSize,
+  }) async {
+    final formData = FormData.fromMap({
+      'file': MultipartFile.fromBytes(fileBytes, filename: fileName),
+      'file_name': fileName,
+      'mime_type': mimeType,
+      'file_size': fileSize,
+    });
+    final response = await _dio.post(
+      '/service-providers/me/profile/signature',
+      data: formData,
+      options: Options(contentType: 'multipart/form-data'),
+    );
+    return _readEnvelope(response);
+  }
+
   static Future<List<Map<String, dynamic>>> getAuthenticatedSessions() async {
     final response = await _dio.get('/auth/sessions');
     return _readEnvelopeList(
