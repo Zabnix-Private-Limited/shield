@@ -32,6 +32,12 @@ class InternalAuthSession extends ChangeNotifier {
   String? _displayName;
   String? _branchBusinessId;
 
+  void _trace(String message) {
+    if (kDebugMode) {
+      debugPrint('[InternalAuthSession] $message');
+    }
+  }
+
   bool get isInitialized => _initialized;
   bool get isAuthenticated => _isAuthenticated;
   String? get userId => _userId;
@@ -43,8 +49,11 @@ class InternalAuthSession extends ChangeNotifier {
 
   Future<void> initialize() async {
     if (_initialized) {
+      _trace('initialize skipped; already initialized');
       return;
     }
+
+    _trace('initialize started');
 
     final values = await _storage.readAll();
     _accessToken = values[_accessTokenKey]?.trim();
@@ -54,6 +63,9 @@ class InternalAuthSession extends ChangeNotifier {
     _email = values[_emailKey]?.trim();
     _displayName = values[_displayNameKey]?.trim();
     _branchBusinessId = values[_branchBusinessIdKey]?.trim();
+    _trace(
+      'token loaded: hasAccessToken=${_accessToken != null && _accessToken!.isNotEmpty}',
+    );
 
     final activeKind = await ActiveAuthSession.getActiveKind();
     final canRestore =
@@ -65,12 +77,14 @@ class InternalAuthSession extends ChangeNotifier {
       );
       ApiService.setAccessToken(_accessToken!);
       final validated = await _validateOrRefreshSession();
+      _trace('auth bootstrap completed; validated=$validated');
       if (!validated) {
         await _clearSessionStorage(notify: false);
       }
     }
 
     _initialized = true;
+    _trace('initialize completed');
     notifyListeners();
   }
 
@@ -95,6 +109,9 @@ class InternalAuthSession extends ChangeNotifier {
     final fullName = '$firstName $lastName'.trim();
     _displayName = fullName.isNotEmpty ? fullName : (_email ?? 'Internal User');
     _isAuthenticated = _accessToken != null && _accessToken!.isNotEmpty;
+    _trace(
+      'completeLogin received token payload; hasAccessToken=$_isAuthenticated userId=${_userId ?? 'unknown'}',
+    );
 
     if (_accessToken == null || _accessToken!.isEmpty) {
       throw StateError('Internal session token is missing.');
@@ -107,6 +124,7 @@ class InternalAuthSession extends ChangeNotifier {
     );
     ApiService.setAccessToken(_accessToken!);
     ApiService.setActiveCustomerId(null);
+    _trace('api access token configured for internal session');
 
     await _storage.write(key: _accessTokenKey, value: _accessToken);
     if (_refreshToken != null && _refreshToken!.isNotEmpty) {
@@ -131,6 +149,7 @@ class InternalAuthSession extends ChangeNotifier {
       );
     }
 
+    _trace('token stored and session persistence completed');
     notifyListeners();
   }
 
@@ -159,18 +178,23 @@ class InternalAuthSession extends ChangeNotifier {
       final payload = await ApiService.getAuthenticatedProfile();
       _hydrateProfile(payload);
       _isAuthenticated = true;
+      _trace('validateOrRefreshSession succeeded with existing token');
       return true;
     } catch (_) {
+      _trace('validateOrRefreshSession failed; attempting refresh');
       final refreshed = await _refreshAccessToken();
       if (refreshed == null || refreshed.isEmpty) {
+        _trace('refresh access token failed');
         return false;
       }
       try {
         final payload = await ApiService.getAuthenticatedProfile();
         _hydrateProfile(payload);
         _isAuthenticated = true;
+        _trace('validateOrRefreshSession succeeded after refresh');
         return true;
       } catch (_) {
+        _trace('validateOrRefreshSession still failed after refresh');
         return false;
       }
     }
@@ -213,6 +237,7 @@ class InternalAuthSession extends ChangeNotifier {
       ApiService.setAccessToken(_accessToken!);
       ApiService.setActiveCustomerId(null);
       _isAuthenticated = true;
+      _trace('refreshAccessToken completed and ApiService token updated');
 
       await _storage.write(key: _accessTokenKey, value: _accessToken);
       await _storage.write(key: _refreshTokenKey, value: _refreshToken);
@@ -240,6 +265,7 @@ class InternalAuthSession extends ChangeNotifier {
   }
 
   Future<void> _handleSessionExpired() async {
+    _trace('session expired handler invoked');
     AuthRedirectNotice.instance.showSessionExpired(
       sessionKind: ShieldSessionKind.internal,
       message:
@@ -272,6 +298,7 @@ class InternalAuthSession extends ChangeNotifier {
   }
 
   Future<void> _clearSessionStorage({bool notify = true}) async {
+    _trace('clearing session storage');
     _isAuthenticated = false;
     _accessToken = null;
     _refreshToken = null;

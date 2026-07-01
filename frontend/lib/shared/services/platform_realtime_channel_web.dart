@@ -2,6 +2,7 @@
 
 import 'dart:convert';
 import 'dart:html' as html;
+import 'package:flutter/foundation.dart';
 
 typedef PlatformRealtimeEventHandler = void Function(Map<String, dynamic> event);
 typedef PlatformRealtimeErrorHandler = void Function(Object error);
@@ -13,6 +14,12 @@ class PlatformRealtimeSubscription {
 
   void dispose() {
     _source.close();
+  }
+}
+
+void _trace(String message) {
+  if (kDebugMode) {
+    debugPrint('[ProviderRealtime] $message');
   }
 }
 
@@ -34,7 +41,16 @@ PlatformRealtimeSubscription connectPlatformRealtimeStream({
         'customer_id': customerId.trim(),
     },
   );
+  final tokenPreview = accessToken.length <= 12
+      ? accessToken
+      : '${accessToken.substring(0, 6)}...${accessToken.substring(accessToken.length - 4)}';
+  _trace(
+    'realtime connect requested workspace=$workspace customerId=${customerId ?? ''} token=$tokenPreview',
+  );
   final source = html.EventSource(uri.toString());
+  source.onOpen.listen((_) {
+    _trace('realtime connected workspace=$workspace');
+  });
   source.onMessage.listen((event) {
     try {
       final rawData = event.data;
@@ -52,6 +68,7 @@ PlatformRealtimeSubscription connectPlatformRealtimeStream({
     }
   });
   source.onError.listen((event) {
+    _trace('realtime failed workspace=$workspace error=$event');
     onError?.call(event);
   });
   return PlatformRealtimeSubscription(source);

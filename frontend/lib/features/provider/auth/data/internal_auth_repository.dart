@@ -12,7 +12,14 @@ class InternalAuthRepository {
   static final InternalAuthRepository instance = InternalAuthRepository._();
   final FirebaseAuth _firebaseAuth = FirebaseAuth.instance;
 
+  void _trace(String message) {
+    if (kDebugMode) {
+      debugPrint('[ProviderAuthLogin] $message');
+    }
+  }
+
   Future<void> signInWithGoogle() async {
+    _trace('google sign-in started');
     final googleProvider = GoogleAuthProvider();
     UserCredential userCredential;
     if (kIsWeb) {
@@ -42,11 +49,15 @@ class InternalAuthRepository {
       if (accessToken.isEmpty) {
         throw StateError('Internal sign-in did not return an access token.');
       }
+      _trace('login completed; access token received (${accessToken.length} chars)');
       ApiService.setAccessToken(accessToken);
+      _trace('api access token primed before profile bootstrap');
       ApiService.setActiveCustomerId(null);
       final profile = await ApiService.getAuthenticatedProfile();
+      _trace('authenticated profile bootstrap completed');
       payload['profile'] = profile['profile'];
       await InternalAuthSession.instance.completeLogin(tokenPayload: payload);
+      _trace('internal auth session completeLogin finished');
     } on DioException catch (error) {
       final data = error.response?.data;
       final message = data is Map

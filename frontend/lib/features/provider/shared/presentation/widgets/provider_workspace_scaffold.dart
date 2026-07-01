@@ -63,7 +63,7 @@ class _ProviderWorkspaceScaffoldState
               ),
               const SizedBox(height: 16),
               FilledButton(
-                onPressed: controller.refreshWorkspace,
+                onPressed: controller.retryStartup,
                 child: const Text('Retry'),
               ),
             ],

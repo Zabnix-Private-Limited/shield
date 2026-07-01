@@ -6,6 +6,7 @@ import '../../../../../shared/models/document.dart';
 import '../../../../../shared/models/notification.dart';
 import '../../../../../shared/models/wallet.dart';
 import '../../../../../shared/services/api_service.dart';
+import '../../../../../shared/services/internal_auth_session.dart';
 import '../../../../../shared/services/platform_realtime_channel.dart';
 import '../../data/provider_portal_repository.dart';
 
@@ -13,6 +14,23 @@ class ProviderPortalController extends ChangeNotifier {
   ProviderPortalController(this._repository);
 
   final ProviderPortalRepository _repository;
+
+  void _trace(String message) {
+    if (kDebugMode) {
+      debugPrint('[ProviderPortalController] $message');
+    }
+  }
+
+  String _tokenPreview(String? token) {
+    final normalized = token?.trim() ?? '';
+    if (normalized.isEmpty) {
+      return 'missing';
+    }
+    if (normalized.length <= 12) {
+      return normalized;
+    }
+    return '${normalized.substring(0, 6)}...${normalized.substring(normalized.length - 4)}';
+  }
 
   bool _loading = false;
   bool _workspaceLoaded = false;
@@ -22,6 +40,7 @@ class ProviderPortalController extends ChangeNotifier {
   bool _consultationSaving = false;
   bool _providerProfileSaving = false;
   String? _error;
+  String? _realtimeError;
   String? _selectedCustomerId;
   String? _activeVisitAppointmentId;
   Map<String, dynamic>? _workspace;
@@ -55,6 +74,7 @@ class ProviderPortalController extends ChangeNotifier {
   bool get isConsultationSaving => _consultationSaving;
   bool get isProviderProfileSaving => _providerProfileSaving;
   String? get error => _error;
+  String? get realtimeError => _realtimeError;
   String? get activeVisitAppointmentId => _activeVisitAppointmentId;
   Map<String, dynamic> get workspace => _workspace ?? const <String, dynamic>{};
   Map<String, dynamic> get platformWorkspace =>
@@ -479,15 +499,33 @@ class ProviderPortalController extends ChangeNotifier {
 
   Future<void> ensureLoaded() async {
     if (_loading || _workspaceLoaded) {
+      _trace(
+        'ensureLoaded skipped loading=$_loading workspaceLoaded=$_workspaceLoaded',
+      );
       return;
     }
+    _trace(
+      'ensureLoaded started authInitialized=${InternalAuthSession.instance.isInitialized} authAuthenticated=${InternalAuthSession.instance.isAuthenticated}',
+    );
     await refreshWorkspace();
-    await attachRealtimeStream();
+    if (_workspaceLoaded) {
+      await attachRealtimeStream();
+    }
+  }
+
+  Future<void> retryStartup() async {
+    _trace('startup retry requested');
+    _resetRealtimeSubscription();
+    await refreshWorkspace();
+    if (_workspaceLoaded) {
+      await attachRealtimeStream();
+    }
   }
 
   Future<void> refreshWorkspace() async {
     _loading = true;
     _error = null;
+    _trace('workspace load started');
     notifyListeners();
 
     try {
@@ -509,10 +547,12 @@ class ProviderPortalController extends ChangeNotifier {
       _authProfile = results[2];
       _providerProfile = results[3];
       _workspaceLoaded = true;
+      _trace('workspace loaded successfully');
       _selectedCustomerId ??= customers.isNotEmpty
           ? customers.first['id']?.toString()
           : null;
     } catch (error) {
+      _trace('workspace load failed error=$error');
       _error = error.toString();
     } finally {
       _loading = false;
@@ -526,23 +566,40 @@ class ProviderPortalController extends ChangeNotifier {
 
   Future<void> attachRealtimeStream() async {
     if (_realtimeSubscribed) {
+      _trace(
+        'realtime attach skipped subscribed=4_realtimeSubscribed connected=4_realtimeConnected',
+      );
+      return;
+    }
+    final authSession = InternalAuthSession.instance;
+    if (!authSession.isInitialized || !authSession.isAuthenticated) {
+      _trace(
+        'realtime attach skipped authInitialized=4{authSession.isInitialized} authAuthenticated=4{authSession.isAuthenticated}',
+      );
       return;
     }
     final accessToken = ApiService.currentAccessToken;
     if (accessToken == null || accessToken.isEmpty) {
+      _trace('realtime attach skipped token missing');
       return;
     }
 
     final workspaceKey =
         realtimeRegistry['workspace']?.toString().trim().toLowerCase() ??
         'provider';
+    _trace(
+      'realtime connect requested workspace=4workspaceKey token=4{_tokenPreview(accessToken)}',
+    );
+    _realtimeError = null;
     _realtimeSubscription = connectPlatformRealtimeStream(
       baseUrl: ApiService.currentBaseUrl,
       workspace: workspaceKey,
       accessToken: accessToken,
       onEvent: (event) {
         _realtimeConnected = true;
+        _realtimeError = null;
         _lastPlatformEventType = event['type']?.toString();
+        _trace('realtime event received type=4_lastPlatformEventType');
         notifyListeners();
         if (_lastPlatformEventType == 'STREAM_CONNECTED') {
           return;
@@ -560,13 +617,25 @@ class ProviderPortalController extends ChangeNotifier {
         });
       },
       onError: (error) {
+        _trace('realtime failed error=4error');
         _realtimeConnected = false;
-        _error = error.toString();
+        _realtimeError = error.toString();
+        _realtimeSubscribed = false;
+        _realtimeSubscription?.dispose();
+        _realtimeSubscription = null;
         notifyListeners();
       },
     );
     _realtimeSubscribed = true;
+    _trace('realtime subscription created');
     notifyListeners();
+  }
+
+  void _resetRealtimeSubscription() {
+    _realtimeSubscription?.dispose();
+    _realtimeSubscription = null;
+    _realtimeSubscribed = false;
+    _realtimeConnected = false;
   }
 
   Future<void> selectCustomer(String customerId) async {
@@ -1494,7 +1563,9 @@ class ProviderPortalController extends ChangeNotifier {
 
   @override
   void dispose() {
-    _realtimeSubscription?.dispose();
+    _resetRealtimeSubscription();
     super.dispose();
   }
 }
+
+
