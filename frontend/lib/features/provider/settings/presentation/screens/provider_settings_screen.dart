@@ -17,9 +17,25 @@ class ProviderSettingsScreen extends StatelessWidget {
           children: [
             Text('Settings', style: AppTypography.h4),
             const SizedBox(height: 12),
+            const Card(
+              child: Padding(
+                padding: EdgeInsets.all(16),
+                child: Text(
+                  'Provider sign-in is managed through the shared SHIELD authentication flow. Session controls below are live. Password changes and advanced profile preferences remain managed by the authentication provider and platform settings.',
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
             FilledButton(
               onPressed: InternalAuthSession.instance.signOut,
               child: const Text('Sign out'),
+            ),
+            const SizedBox(height: 8),
+            OutlinedButton(
+              onPressed: controller.isSettingsLoading
+                  ? null
+                  : controller.revokeOtherOwnedSessions,
+              child: const Text('Sign out other devices'),
             ),
             const SizedBox(height: 18),
             Text('Sessions', style: AppTypography.h5),

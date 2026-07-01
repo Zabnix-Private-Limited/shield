@@ -148,6 +148,19 @@ export class AuthController {
     };
   }
 
+  @Post('sessions/revoke-others')
+  async revokeOtherSessions(@CurrentPrincipal() principal?: ShieldPrincipal) {
+    if (!principal) {
+      throw new UnauthorizedException('Authenticated principal is missing.');
+    }
+
+    return {
+      success: true,
+      message: 'Other sessions revoked successfully.',
+      data: await this.authService.revokeOtherOwnedSessions(principal),
+    };
+  }
+
   private extractRequestContext(
     request: Request,
     body: any,

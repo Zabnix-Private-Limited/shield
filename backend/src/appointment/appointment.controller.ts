@@ -274,6 +274,26 @@ export class AppointmentController {
   }
 
   @RequirePermissions('appointments.update')
+  @Post(':id/prescription/copy-to-open-visit')
+  async copyPrescriptionToOpenVisit(
+    @Param('id') id: string,
+    @CurrentPrincipal() principal?: ShieldPrincipal,
+  ) {
+    const workspace = await this.appointmentService.copyPrescriptionToOpenVisit(
+      BigInt(id),
+      {
+        userId: principal?.userId ? BigInt(principal.userId) : undefined,
+        roleCode: principal?.roleCode,
+      },
+    );
+    return {
+      success: true,
+      message: 'Historical prescription copied to the active visit successfully',
+      data: workspace,
+    };
+  }
+
+  @RequirePermissions('appointments.update')
   @Post(':id/prescription/finalize')
   async finalizePrescription(
     @Param('id') id: string,

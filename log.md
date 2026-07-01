@@ -6797,3 +6797,59 @@ est build, ackend/vercel.json, ackend/src/auth/auth.service.ts, and uth_devic
 ### Remaining Known Issues
 - Provider profile editing, provider settings editing, and deeper finalized prescription persistence beyond the current visit-state pattern still need dedicated completion work before the Provider Portal can be honestly marked feature frozen.
 - Billing is stronger now, but partial payment UX refinement, richer refund history presentation, and broader visit-history drill-in still remain workflow polish work rather than platform architecture work.
+
+## 186. Provider final completion sprint: history drill-down, shared notifications, receipt printing, and session controls
+**Timestamp:** 2026-07-01 16:35:00 IST
+
+**High-level description**: Completed the next provider-finalization slice by tightening the existing appointment, patient workspace, print engine, and auth session flows instead of adding new modules. This pass focused on making historical visit records navigable inside the patient record, turning completed prescriptions into reusable historical records, routing visit lifecycle updates through the shared notification engine, and finishing provider-facing receipt and print paths.
+- Extended the appointment consultation workspace with explicit read-only handling for completed visits so historical consultations and prescriptions open as review records instead of editable active-visit drafts.
+- Added historical-prescription copy-forward support that reuses the existing appointment prescription workflow to copy a finalized prescription from a past visit into the patient’s current open visit draft without creating a parallel prescription system.
+- Routed appointment confirmation, cancellation, visit start, visit completion, invoice generation, payment/refund activity, prescription finalization, and invoice voiding through the shared notification engine while preserving the existing realtime event stream.
+- Completed provider patient-record navigation so completed visit history entries open the full historical visit record inside the existing patient workspace rather than stopping at disconnected summary cards.
+- Expanded provider print actions to use the shared Platform Print Engine for consultation summary, payment receipt, medical certificate, and referral letter in addition to the existing prescription, visit summary, and invoice outputs.
+- Polished visit billing presentation with explicit invoice/receipt print actions and surfaced refund information alongside payment history in the visit-owned billing card.
+- Added provider self-service session cleanup with a live "sign out other devices" action backed by the shared auth session store; kept password and advanced profile-preference gaps explicit because the current Google-sign-in and schema model do not yet persist those settings.
+
+### Backend Files Modified
+- backend/src/appointment/appointment.controller.ts
+- backend/src/appointment/appointment.module.ts
+- backend/src/appointment/appointment.service.ts
+- backend/src/auth/auth.controller.ts
+- backend/src/auth/auth.service.ts
+- backend/src/platform-capabilities/platform-print.service.ts
+
+### Frontend Files Modified
+- frontend/lib/features/provider/customers/presentation/screens/provider_customers_screen.dart
+- frontend/lib/features/provider/settings/presentation/screens/provider_settings_screen.dart
+- frontend/lib/features/provider/shared/data/provider_portal_repository.dart
+- frontend/lib/features/provider/shared/presentation/controllers/provider_portal_controller.dart
+- frontend/lib/shared/services/api_service.dart
+
+### APIs Added or Changed
+- Added POST /appointments/:id/prescription/copy-to-open-visit
+- Added POST /auth/sessions/revoke-others
+- Extended appointment lifecycle behavior so existing confirm/cancel/start/generate-invoice/record-payment/finalize-prescription/void-invoice flows now also emit shared patient notifications.
+- Extended provider consultation workspace payloads with completed-visit read-only metadata and historical prescription copy-forward availability.
+- Extended provider print payload exposure to include MEDICAL_CERTIFICATE and REFERRAL_LETTER through the shared print context.
+
+### Architecture Notes
+- The Provider Portal still uses the existing appointment consultation workspace, patient workspace, shared notification engine, shared print engine, and auth session model; no new provider module or duplicate workflow was introduced.
+- Historical prescription reuse now flows through the same appointment-owned prescription structure used for active visits, preserving a single prescription system.
+- Completed visits are treated as backend-owned historical records, with Flutter acting as a renderer for read-only review, print, and copy-forward actions.
+
+### Database Changes
+- No database changes.
+- No SQL migration required for this slice.
+
+### Verification
+- cd backend && npm run build
+- cd frontend && flutter analyze --no-pub
+- cd frontend && flutter test
+- Verified backend build completes successfully.
+- Verified Flutter analyze reports no issues.
+- Verified Flutter test suite passes.
+
+### Remaining Known Issues
+- Provider Profile & Settings is not fully feature-frozen yet against the current live schema and auth model. The repository still lacks persisted backend fields/contracts for provider photo, digital signature, qualifications, specialization, license/registration details, multi-branch assignment, consultation availability, working hours, notification preferences, theme, language, printer preferences, and other advanced security/settings state.
+- Change password is also not a valid provider-owned workflow in the current internal-user Google Sign-In architecture without explicit authentication-provider support.
+- Because those persistence gaps are real production workflow gaps rather than QA-only polish, the Provider Portal should not yet be formally declared feature frozen.

@@ -126,6 +126,12 @@ class ProviderPortalRepository {
     return ApiService.duplicateAppointmentPrescription(appointmentId);
   }
 
+  Future<Map<String, dynamic>> copyPrescriptionToOpenVisit(
+    String appointmentId,
+  ) {
+    return ApiService.copyAppointmentPrescriptionToOpenVisit(appointmentId);
+  }
+
   Future<Map<String, dynamic>> voidVisitInvoice(
     String appointmentId, {
     String? reason,
@@ -180,5 +186,9 @@ class ProviderPortalRepository {
 
   Future<void> revokeSession(String sessionId) {
     return ApiService.revokeSession(sessionId);
+  }
+
+  Future<Map<String, dynamic>> revokeOtherSessions() {
+    return ApiService.revokeOtherSessions();
   }
 }

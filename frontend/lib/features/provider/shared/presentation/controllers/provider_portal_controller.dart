@@ -895,6 +895,33 @@ class ProviderPortalController extends ChangeNotifier {
     }
   }
 
+  Future<void> copyHistoricalPrescriptionToOpenVisit() async {
+    final appointmentId = _activeVisitAppointmentId;
+    if (appointmentId == null || appointmentId.isEmpty) {
+      return;
+    }
+    _consultationSaving = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      _consultationWorkspace = await _repository.copyPrescriptionToOpenVisit(
+        appointmentId,
+      );
+      final targetAppointmentId =
+          _consultationWorkspace?['appointmentId']?.toString() ?? appointmentId;
+      _activeVisitAppointmentId = targetAppointmentId;
+      await _reloadSelectedCustomerData(
+        preferredAppointmentId: targetAppointmentId,
+      );
+    } catch (error) {
+      _error = error.toString();
+    } finally {
+      _consultationSaving = false;
+      notifyListeners();
+    }
+  }
+
   Future<void> voidActiveVisitInvoice({String? reason}) async {
     final appointmentId = _activeVisitAppointmentId;
     if (appointmentId == null || appointmentId.isEmpty) {
@@ -935,6 +962,21 @@ class ProviderPortalController extends ChangeNotifier {
       throw StateError('No shared print payload is available for $templateId.');
     }
     return _repository.generatePlatformPrint(templateId, templatePayload);
+  }
+
+  Future<void> revokeOtherOwnedSessions() async {
+    _settingsLoading = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      await _repository.revokeOtherSessions();
+      await loadSettingsData();
+    } catch (error) {
+      _error = error.toString();
+      _settingsLoading = false;
+      notifyListeners();
+    }
   }
 
   Future<Map<String, dynamic>> runProviderReport(

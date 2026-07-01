@@ -616,6 +616,28 @@ export class AuthService {
     return { success: true };
   }
 
+  async revokeOtherOwnedSessions(principal: ShieldPrincipal) {
+    const owner = this.getOwnerFromPrincipal(principal);
+    const sessions = await this.prisma.authSession.findMany({
+      where: {
+        ownerType: owner.ownerType,
+        ownerId: owner.ownerId,
+        sessionId: { not: principal.sessionId },
+        revokedAt: null,
+      },
+      select: { sessionId: true },
+    });
+
+    for (const session of sessions) {
+      await this.revokeSessionById(session.sessionId, 'OWNER_REVOKED_OTHER');
+    }
+
+    return {
+      success: true,
+      revokedSessionCount: sessions.length,
+    };
+  }
+
   private async buildPrincipal(input: {
     subjectId: string;
     principalType: ShieldPrincipalType;

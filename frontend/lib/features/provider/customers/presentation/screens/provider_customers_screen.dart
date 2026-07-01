@@ -663,6 +663,17 @@ class _ProviderCustomersScreenState extends State<ProviderCustomersScreen> {
                     subtitle:
                         '${appointment.statusLabel} • ${appointment.doctorName ?? 'Provider'}',
                     meta: _formatTimelineDate(appointment.appointmentDate),
+                    actionLabel: 'Open Visit Record',
+                    onTap: () async {
+                      await controller.openAppointmentWorkflow(
+                        appointment,
+                        loadConsultation: true,
+                      );
+                      if (!context.mounted) {
+                        return;
+                      }
+                      context.go('/portal/$roleKey/customers?tab=today-visit');
+                    },
                   ),
                 )
                 .toList(),
@@ -753,11 +764,15 @@ class _ProviderCustomersScreenState extends State<ProviderCustomersScreen> {
       );
     }
 
-    final visit = controller.activeVisitSummary as Map<String, dynamic>;
-    final statusSummary =
-        controller.activeVisitStatusSummary as Map<String, dynamic>;
-    final billing = controller.activeVisitBilling as Map<String, dynamic>;
-    final prescription = controller.activeVisitPrescription as Map<String, dynamic>;
+        final visit = controller.activeVisitSummary as Map<String, dynamic>;
+        final statusSummary =
+            controller.activeVisitStatusSummary as Map<String, dynamic>;
+        final billing = controller.activeVisitBilling as Map<String, dynamic>;
+        final prescription = controller.activeVisitPrescription as Map<String, dynamic>;
+        final isReadOnly =
+            controller.consultationWorkspace['isReadOnly'] == true;
+        final readOnlyMessage =
+            controller.consultationWorkspace['readOnlyMessage']?.toString() ?? '';
     final actions = controller.consultationActions as List<Map<String, dynamic>>;
     final sections =
         controller.consultationFormSections as List<Map<String, dynamic>>;
@@ -779,6 +794,15 @@ class _ProviderCustomersScreenState extends State<ProviderCustomersScreen> {
         const SizedBox(height: 16),
         _VisitStatusSummaryCard(statusSummary: statusSummary),
         const SizedBox(height: 16),
+        if (isReadOnly && readOnlyMessage.isNotEmpty) ...[
+          _ActionEmptyState(
+            title: 'Completed visit record',
+            message: readOnlyMessage,
+            actionLabel: 'Open Print',
+            onAction: () => _openTab(context, 'print'),
+          ),
+          const SizedBox(height: 16),
+        ],
         if (actions.isNotEmpty)
           Wrap(
             spacing: 10,
@@ -811,6 +835,7 @@ class _ProviderCustomersScreenState extends State<ProviderCustomersScreen> {
               controller: _controllerForConsultationField(
                 section['code']?.toString() ?? '',
               ),
+              enabled: !isReadOnly,
             ),
           ),
         ),
@@ -825,7 +850,7 @@ class _ProviderCustomersScreenState extends State<ProviderCustomersScreen> {
             controller,
             index,
           ),
-          onRemoveMedicine: (index) {
+          onRemoveMedicine: isReadOnly ? null : (index) {
             setState(() {
               _prescriptionDraftItems = List<Map<String, dynamic>>.from(
                 _prescriptionDraftItems,
@@ -852,6 +877,10 @@ class _ProviderCustomersScreenState extends State<ProviderCustomersScreen> {
             controller,
             'PRESCRIPTION',
           ),
+          onCopyToCurrentVisit: () => _copyPrescriptionToCurrentVisit(
+            context,
+            controller,
+          ),
         ),
         const SizedBox(height: 18),
         _VisitBillingCard(
@@ -869,6 +898,10 @@ class _ProviderCustomersScreenState extends State<ProviderCustomersScreen> {
           ),
           onRecordPayment: () => _showPaymentDialog(context, controller),
           onVoidInvoice: () => _showVoidInvoiceDialog(context, controller),
+          onPrintInvoice: () =>
+              _downloadPrintArtifact(context, controller, 'INVOICE'),
+          onPrintReceipt: () =>
+              _downloadPrintArtifact(context, controller, 'PAYMENT_RECEIPT'),
         ),
         const SizedBox(height: 18),
         Text('Visit timeline', style: AppTypography.h5),
@@ -1006,9 +1039,41 @@ class _ProviderCustomersScreenState extends State<ProviderCustomersScreen> {
                 onPressed: () => _downloadPrintArtifact(
                   context,
                   controller,
+                  'CONSULTATION_SUMMARY',
+                ),
+                child: const Text('Consultation Summary'),
+              ),
+              OutlinedButton(
+                onPressed: () => _downloadPrintArtifact(
+                  context,
+                  controller,
                   'INVOICE',
                 ),
                 child: const Text('Invoice'),
+              ),
+              OutlinedButton(
+                onPressed: () => _downloadPrintArtifact(
+                  context,
+                  controller,
+                  'PAYMENT_RECEIPT',
+                ),
+                child: const Text('Payment Receipt'),
+              ),
+              OutlinedButton(
+                onPressed: () => _downloadPrintArtifact(
+                  context,
+                  controller,
+                  'MEDICAL_CERTIFICATE',
+                ),
+                child: const Text('Medical Certificate'),
+              ),
+              OutlinedButton(
+                onPressed: () => _downloadPrintArtifact(
+                  context,
+                  controller,
+                  'REFERRAL_LETTER',
+                ),
+                child: const Text('Referral Letter'),
               ),
             ],
           ),
@@ -1622,6 +1687,27 @@ class _ProviderCustomersScreenState extends State<ProviderCustomersScreen> {
           controller.error?.toString().trim().isNotEmpty == true
               ? _friendlyProviderError(controller.error.toString())
               : 'Previous prescription copied into this draft.',
+        ),
+      ),
+    );
+  }
+
+  Future<void> _copyPrescriptionToCurrentVisit(
+    BuildContext context,
+    dynamic controller,
+  ) async {
+    final messenger = ScaffoldMessenger.of(context);
+    await controller.copyHistoricalPrescriptionToOpenVisit();
+    if (!context.mounted) {
+      return;
+    }
+    _syncPrescriptionDraft(controller);
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(
+          controller.error?.toString().trim().isNotEmpty == true
+              ? _friendlyProviderError(controller.error.toString())
+              : 'The historical prescription was copied into the active visit.',
         ),
       ),
     );
@@ -2672,6 +2758,8 @@ class _VisitBillingCard extends StatelessWidget {
     required this.onGenerateInvoice,
     required this.onRecordPayment,
     required this.onVoidInvoice,
+    required this.onPrintInvoice,
+    required this.onPrintReceipt,
   });
 
   final Map<String, dynamic> billing;
@@ -2680,6 +2768,8 @@ class _VisitBillingCard extends StatelessWidget {
   final VoidCallback onGenerateInvoice;
   final VoidCallback onRecordPayment;
   final VoidCallback onVoidInvoice;
+  final VoidCallback onPrintInvoice;
+  final VoidCallback onPrintReceipt;
 
   @override
   Widget build(BuildContext context) {
@@ -2741,6 +2831,16 @@ class _VisitBillingCard extends StatelessWidget {
                     onPressed: busy ? null : onRecordPayment,
                     child: const Text('Record Payment'),
                   ),
+                  if (invoice != null)
+                    OutlinedButton(
+                      onPressed: busy ? null : onPrintInvoice,
+                      child: const Text('Print Invoice'),
+                    ),
+                  if (invoice != null)
+                    OutlinedButton(
+                      onPressed: busy ? null : onPrintReceipt,
+                      child: const Text('Print Receipt'),
+                    ),
                   if (invoice != null)
                     OutlinedButton(
                       onPressed: busy ? null : onVoidInvoice,
@@ -2816,6 +2916,7 @@ class _VisitBillingCard extends StatelessWidget {
               _InfoChip(label: 'Cash: ${payment['cashLabel'] ?? 'Rs 0.00'}'),
               _InfoChip(label: 'UPI: ${payment['upiLabel'] ?? 'Rs 0.00'}'),
               _InfoChip(label: 'Card: ${payment['cardLabel'] ?? 'Rs 0.00'}'),
+              _InfoChip(label: 'Refund: ${payment['refundLabel'] ?? 'Rs 0.00'}'),
               _InfoChip(
                 label:
                     'Status: ${payment['statusLabel']?.toString() ?? 'Payment Pending'}',
@@ -2869,6 +2970,7 @@ class _VisitPrescriptionCard extends StatelessWidget {
     required this.onFinalize,
     required this.onSendToPharmacy,
     required this.onPrint,
+    required this.onCopyToCurrentVisit,
   });
 
   final Map<String, dynamic> prescription;
@@ -2876,12 +2978,13 @@ class _VisitPrescriptionCard extends StatelessWidget {
   final TextEditingController remarksController;
   final VoidCallback onAddMedicine;
   final void Function(int index) onEditMedicine;
-  final void Function(int index) onRemoveMedicine;
+  final void Function(int index)? onRemoveMedicine;
   final VoidCallback onDuplicatePrevious;
   final VoidCallback onSaveDraft;
   final VoidCallback onFinalize;
   final VoidCallback onSendToPharmacy;
   final VoidCallback onPrint;
+  final VoidCallback onCopyToCurrentVisit;
 
   @override
   Widget build(BuildContext context) {
@@ -2890,6 +2993,9 @@ class _VisitPrescriptionCard extends StatelessWidget {
             .whereType<Map>()
             .map((item) => Map<String, dynamic>.from(item))
             .toList();
+    final readOnly = prescription['readOnly'] == true;
+    final canCopyToCurrentVisit =
+        prescription['canCopyToCurrentVisit'] == true;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
@@ -2922,15 +3028,20 @@ class _VisitPrescriptionCard extends StatelessWidget {
                 runSpacing: 8,
                 children: [
                   OutlinedButton(
-                    onPressed: busy ? null : onAddMedicine,
+                    onPressed: busy || readOnly ? null : onAddMedicine,
                     child: const Text('Add Medicine'),
                   ),
                   OutlinedButton(
-                    onPressed: busy ? null : onDuplicatePrevious,
+                    onPressed: busy || readOnly ? null : onDuplicatePrevious,
                     child: const Text('Copy Last Visit'),
                   ),
+                  if (canCopyToCurrentVisit)
+                    OutlinedButton(
+                      onPressed: busy ? null : onCopyToCurrentVisit,
+                      child: const Text('Copy to Current Visit'),
+                    ),
                   FilledButton(
-                    onPressed: busy ? null : onSaveDraft,
+                    onPressed: busy || readOnly ? null : onSaveDraft,
                     child: const Text('Save Draft'),
                   ),
                 ],
@@ -2962,6 +3073,7 @@ class _VisitPrescriptionCard extends StatelessWidget {
           TextField(
             controller: remarksController,
             maxLines: 3,
+            enabled: !readOnly,
             decoration: const InputDecoration(
               labelText: 'Clinical Remarks',
               hintText: 'Add remarks for the pharmacist or patient.',
@@ -3022,11 +3134,13 @@ class _VisitPrescriptionCard extends StatelessWidget {
                         runSpacing: 8,
                         children: [
                           OutlinedButton(
-                            onPressed: busy ? null : () => onEditMedicine(index),
+                            onPressed: busy || readOnly ? null : () => onEditMedicine(index),
                             child: const Text('Edit'),
                           ),
                           OutlinedButton(
-                            onPressed: busy ? null : () => onRemoveMedicine(index),
+                            onPressed: busy || readOnly || onRemoveMedicine == null
+                                ? null
+                                : () => onRemoveMedicine!(index),
                             child: const Text('Remove'),
                           ),
                         ],
@@ -3042,11 +3156,11 @@ class _VisitPrescriptionCard extends StatelessWidget {
             runSpacing: 8,
             children: [
               FilledButton(
-                onPressed: busy ? null : onFinalize,
+                onPressed: busy || readOnly ? null : onFinalize,
                 child: const Text('Finalize'),
               ),
               OutlinedButton(
-                onPressed: busy ? null : onSendToPharmacy,
+                onPressed: busy || readOnly ? null : onSendToPharmacy,
                 child: const Text('Send to Pharmacy'),
               ),
               OutlinedButton(
@@ -3107,11 +3221,13 @@ class _ConsultationField extends StatelessWidget {
     required this.title,
     required this.placeholder,
     required this.controller,
+    this.enabled = true,
   });
 
   final String title;
   final String placeholder;
   final TextEditingController controller;
+  final bool enabled;
 
   @override
   Widget build(BuildContext context) {
@@ -3122,6 +3238,7 @@ class _ConsultationField extends StatelessWidget {
         const SizedBox(height: 8),
         TextField(
           controller: controller,
+          enabled: enabled,
           minLines: 3,
           maxLines: 5,
           decoration: InputDecoration(
@@ -3295,15 +3412,19 @@ class _SummaryCard extends StatelessWidget {
     required this.title,
     required this.subtitle,
     required this.meta,
+    this.actionLabel,
+    this.onTap,
   });
 
   final String title;
   final String subtitle;
   final String meta;
+  final String? actionLabel;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    final card = Container(
       width: double.infinity,
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(14),
@@ -3319,8 +3440,26 @@ class _SummaryCard extends StatelessWidget {
           Text(subtitle, style: AppTypography.small),
           const SizedBox(height: 6),
           Text(meta, style: AppTypography.tiny.copyWith(color: AppColors.gray)),
+          if (actionLabel != null && onTap != null) ...[
+            const SizedBox(height: 10),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: OutlinedButton(
+                onPressed: onTap,
+                child: Text(actionLabel!),
+              ),
+            ),
+          ],
         ],
       ),
+    );
+    if (onTap == null) {
+      return card;
+    }
+    return InkWell(
+      borderRadius: BorderRadius.circular(18),
+      onTap: onTap,
+      child: card,
     );
   }
 }

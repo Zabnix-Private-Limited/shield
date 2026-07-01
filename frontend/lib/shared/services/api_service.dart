@@ -351,6 +351,15 @@ class ApiService {
     return _readEnvelope(response);
   }
 
+  static Future<Map<String, dynamic>> copyAppointmentPrescriptionToOpenVisit(
+    String appointmentId,
+  ) async {
+    final response = await _dio.post(
+      '/appointments/$appointmentId/prescription/copy-to-open-visit',
+    );
+    return _readEnvelope(response);
+  }
+
   static Future<Map<String, dynamic>> voidAppointmentVisitInvoice(
     String appointmentId, {
     String? reason,
@@ -602,6 +611,11 @@ class ApiService {
 
   static Future<void> revokeSession(String sessionId) async {
     await _dio.post('/auth/sessions/$sessionId/revoke');
+  }
+
+  static Future<Map<String, dynamic>> revokeOtherSessions() async {
+    final response = await _dio.post('/auth/sessions/revoke-others');
+    return _readEnvelope(response);
   }
 
   static Future<Map<String, dynamic>> customerLogin({

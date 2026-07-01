@@ -273,6 +273,8 @@ export class PlatformPrintService {
         'PRESCRIPTION',
         'INVOICE',
         'PAYMENT_RECEIPT',
+        'MEDICAL_CERTIFICATE',
+        'REFERRAL_LETTER',
         'APPOINTMENT_SLIP',
         'LAB_REPORT',
       ]
@@ -455,6 +457,62 @@ export class PlatformPrintService {
           ],
           footer: this.buildFooter(activeVisit['appointmentId']?.toString()),
           verification: this.buildVerification(billingSummary['lastInvoiceNumber']?.toString()),
+        },
+        MEDICAL_CERTIFICATE: {
+          documentTitle: 'Medical Certificate',
+          fileName: `medical-certificate-${activeVisit['appointmentId'] ?? basePatient['patientId'] ?? 'visit'}.pdf`,
+          header: baseHeader,
+          patient: basePatient,
+          provider: baseProvider,
+          sections: [
+            {
+              title: 'Certificate Details',
+              rows: [
+                {
+                  label: 'Diagnosis',
+                  value:
+                    activeVisit['workspace']?.['form']?.['diagnosis']?.toString() ??
+                    'Not recorded',
+                },
+                {
+                  label: 'Follow Up',
+                  value:
+                    activeVisit['workspace']?.['form']?.['followUp']?.toString() ??
+                    'Not recorded',
+                },
+              ],
+            },
+          ],
+          footer: this.buildFooter(activeVisit['appointmentId']?.toString()),
+          verification: this.buildVerification(activeVisit['appointmentId']?.toString()),
+        },
+        REFERRAL_LETTER: {
+          documentTitle: 'Referral Letter',
+          fileName: `referral-letter-${activeVisit['appointmentId'] ?? basePatient['patientId'] ?? 'visit'}.pdf`,
+          header: baseHeader,
+          patient: basePatient,
+          provider: baseProvider,
+          sections: [
+            {
+              title: 'Referral Summary',
+              rows: [
+                {
+                  label: 'Diagnosis',
+                  value:
+                    activeVisit['workspace']?.['form']?.['diagnosis']?.toString() ??
+                    'Not recorded',
+                },
+                {
+                  label: 'Clinical Notes',
+                  value:
+                    activeVisit['workspace']?.['form']?.['providerNotes']?.toString() ??
+                    'Not recorded',
+                },
+              ],
+            },
+          ],
+          footer: this.buildFooter(activeVisit['appointmentId']?.toString()),
+          verification: this.buildVerification(activeVisit['appointmentId']?.toString()),
         },
         APPOINTMENT_SLIP: {
           documentTitle: 'Appointment Slip',

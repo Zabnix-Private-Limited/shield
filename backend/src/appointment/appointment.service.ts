@@ -7,6 +7,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { randomUUID } from 'crypto';
 import { PricingService } from '../pricing/pricing.service';
 import { SERVICE_TYPES, type ShieldServiceType } from '../pricing/pricing.types';
+import { NotificationService } from '../notification/notification.service';
 import { PlatformRealtimeService } from '../platform-capabilities/platform-realtime.service';
 import { TimelineService } from '../timeline/timeline.service';
 import { WalletService } from '../wallet/wallet.service';
@@ -106,6 +107,7 @@ export class AppointmentService {
     private readonly pricingService: PricingService,
     private readonly timelineService: TimelineService,
     private readonly walletService: WalletService,
+    private readonly notificationService: NotificationService,
     private readonly platformRealtimeService: PlatformRealtimeService,
   ) {}
 
@@ -155,18 +157,32 @@ export class AppointmentService {
 
   async cancel(id: bigint) {
     const appt = await this.findOne(id);
-    return this.prisma.appointment.update({
+    const updated = await this.prisma.appointment.update({
       where: { id: appt.id },
       data: { status: 'CANCELLED' },
     });
+    this.publishVisitEvent(updated, 'APPOINTMENT_CANCELLED', 'Appointment cancelled', 'The appointment was cancelled.');
+    await this.sendPatientNotification(updated, {
+      title: 'Appointment cancelled',
+      message: 'This appointment has been cancelled. Contact SHIELD if you need to reschedule.',
+      eventType: 'APPOINTMENT_CANCELLED',
+    });
+    return updated;
   }
 
   async confirm(id: bigint) {
     const appt = await this.findOne(id);
-    return this.prisma.appointment.update({
+    const updated = await this.prisma.appointment.update({
       where: { id: appt.id },
       data: { status: 'CONFIRMED' },
     });
+    this.publishVisitEvent(updated, 'APPOINTMENT_CONFIRMED', 'Appointment confirmed', 'The appointment was confirmed.');
+    await this.sendPatientNotification(updated, {
+      title: 'Appointment confirmed',
+      message: 'Your appointment has been confirmed and is ready for the visit workflow.',
+      eventType: 'APPOINTMENT_CONFIRMED',
+    });
+    return updated;
   }
 
   async getConsultationWorkspace(id: bigint) {
@@ -200,6 +216,11 @@ export class AppointmentService {
       },
     });
     this.publishVisitEvent(appointment, 'VISIT_STARTED', 'Visit started', 'Consultation workflow started.');
+    await this.sendPatientNotification(appointment, {
+      title: 'Visit started',
+      message: 'Your visit has started and the provider has opened the consultation workspace.',
+      eventType: 'VISIT_STARTED',
+    });
 
     return this.getConsultationWorkspace(id);
   }
@@ -333,6 +354,11 @@ export class AppointmentService {
       'Invoice generated',
       'A visit invoice was generated from the shared billing workflow.',
     );
+    await this.sendPatientNotification(appointment, {
+      title: 'Invoice generated',
+      message: 'A visit invoice is ready in your SHIELD records.',
+      eventType: 'INVOICE_GENERATED',
+    });
     return this.getConsultationWorkspace(id);
   }
 
@@ -344,7 +370,7 @@ export class AppointmentService {
     const appointment = await this.getWorkspaceAppointment(id);
     await this.ensureConsultationRecord(appointment, undefined, data);
     await this.upsertVisitInvoice(appointment.id);
-    await this.applyVisitPayment(appointment.id);
+    const paymentResult = await this.applyVisitPayment(appointment.id);
     await this.recordAuditAction({
       action: 'RECEIVED_PAYMENT',
       entityType: 'PAYMENT',
@@ -361,6 +387,16 @@ export class AppointmentService {
       'Payment recorded',
       'Visit payment details were recorded.',
     );
+    await this.sendPatientNotification(appointment, {
+      title:
+        paymentResult.refundAmount > 0 ? 'Refund processed' : 'Payment received',
+      message:
+        paymentResult.refundAmount > 0
+          ? 'A refund has been recorded for your visit invoice.'
+          : 'A payment has been recorded for your visit invoice.',
+      eventType:
+        paymentResult.refundAmount > 0 ? 'REFUND_PROCESSED' : 'PAYMENT_RECORDED',
+    });
     return this.getConsultationWorkspace(id);
   }
 
@@ -418,6 +454,11 @@ export class AppointmentService {
       'Visit completed',
       'Visit workflow was completed.',
     );
+    await this.sendPatientNotification(refreshedAppointment, {
+      title: 'Visit completed',
+      message: 'This visit has been completed and added to your care history.',
+      eventType: 'VISIT_COMPLETED',
+    });
 
     return this.getConsultationWorkspace(id);
   }
@@ -760,6 +801,13 @@ export class AppointmentService {
         billingSnapshot,
       },
     });
+
+    return {
+      paymentStatus: nextPaymentStatus,
+      paidAmount: nextPayment.paidAmount,
+      refundAmount: nextPayment.refund,
+      balanceDue: nextPayment.balanceDue,
+    };
   }
 
   private async buildConsultationWorkspacePayload(appointment: {
@@ -808,12 +856,16 @@ export class AppointmentService {
       : 'Patient';
     const visitTitle = `${this.getAppointmentTypeLabel(appointment.appointmentType)} for ${patientName}`;
     const statusLabel = this.getAppointmentStatusLabel(statusCode);
+    const isReadOnly = this.isCompletedAppointmentStatus(statusCode);
     const visitInvoice =
       appointment.purchases?.find((purchase) =>
         this.isVisitPurchase(purchase.purchaseKind),
       ) ?? null;
     const billingWorkspace = this.buildBillingWorkspace(appointment, state, visitInvoice);
     const timeline = await this.timelineService.getVisitTimeline(appointment.id);
+    const copyTargetAppointment = isReadOnly && appointment.customerId
+      ? await this.findOpenVisitForCustomer(appointment.customerId, appointment.id)
+      : null;
     const statusSummary = this.buildVisitStatusSummary(
       statusCode,
       consultation,
@@ -825,6 +877,10 @@ export class AppointmentService {
     return {
       appointmentId: appointment.id.toString(),
       consultationId: consultation?.id?.toString() ?? null,
+      isReadOnly,
+      readOnlyMessage: isReadOnly
+        ? 'This visit is complete. You can review records, print documents, or copy the prescription into an active visit.'
+        : null,
       statusCode,
       statusLabel,
       statusSummary,
@@ -859,6 +915,9 @@ export class AppointmentService {
         sentToPharmacyAtLabel: state.prescriptionDraft.sentToPharmacyAt
           ? this.formatDateTime(new Date(state.prescriptionDraft.sentToPharmacyAt))
           : 'Not sent',
+        readOnly: isReadOnly,
+        canCopyToCurrentVisit: isReadOnly && state.prescriptionDraft.items.length > 0,
+        copyTargetAppointmentId: copyTargetAppointment?.id?.toString() ?? null,
         items: state.prescriptionDraft.items.map((item, index) => ({
           index,
           productId: item.productId,
@@ -1185,6 +1244,10 @@ export class AppointmentService {
   ) {
     const actions: Array<Record<string, string>> = [];
 
+    if (statusCode === 'COMPLETED') {
+      return actions;
+    }
+
     if (statusCode !== 'IN_PROGRESS' && statusCode !== 'COMPLETED') {
       actions.push({
         code: 'START_CONSULTATION',
@@ -1275,6 +1338,62 @@ export class AppointmentService {
       customerId: appointment.customerId?.toString() ?? undefined,
       metadata: {
         appointmentType: appointment.appointmentType ?? 'VISIT',
+      },
+    });
+  }
+
+  private async sendPatientNotification(
+    appointment: { id: bigint; customerId: bigint | null; appointmentType?: string | null },
+    input: { title: string; message: string; eventType: string },
+  ) {
+    if (!appointment.customerId) {
+      return;
+    }
+    await this.notificationService.send({
+      customerId: appointment.customerId,
+      title: input.title,
+      message: input.message,
+      data: {
+        appointmentId: appointment.id.toString(),
+        appointmentType: appointment.appointmentType ?? 'VISIT',
+        eventType: input.eventType,
+      },
+    });
+  }
+
+  private async findOpenVisitForCustomer(customerId: bigint, excludeAppointmentId: bigint) {
+    return this.prisma.appointment.findFirst({
+      where: {
+        customerId,
+        id: { not: excludeAppointmentId },
+        status: {
+          in: ['PENDING', 'CONFIRMED', 'IN_PROGRESS'],
+        },
+      },
+      orderBy: [{ appointmentDate: 'asc' }, { id: 'asc' }],
+      include: {
+        customer: true,
+        provider: {
+          include: {
+            business: true,
+          },
+        },
+        consultations: {
+          include: {
+            prescriptions: true,
+          },
+          orderBy: [{ id: 'desc' }],
+        },
+        purchases: {
+          include: {
+            purchaseItems: {
+              include: {
+                product: true,
+              },
+            },
+          },
+          orderBy: [{ purchaseDate: 'desc' }, { id: 'desc' }],
+        },
       },
     });
   }
@@ -1434,6 +1553,20 @@ export class AppointmentService {
         ? 'The finalized prescription was sent to the pharmacy workflow.'
         : 'The prescription is ready for printing and review.',
     );
+    await this.sendPatientNotification(appointment, {
+      title:
+        data.sendToPharmacy === true
+          ? 'Prescription sent to pharmacy'
+          : 'Prescription finalized',
+      message:
+        data.sendToPharmacy === true
+          ? 'Your finalized prescription has been sent to the pharmacy workflow.'
+          : 'A finalized prescription is now available in your medical records.',
+      eventType:
+        data.sendToPharmacy === true
+          ? 'PRESCRIPTION_SENT_TO_PHARMACY'
+          : 'PRESCRIPTION_FINALIZED',
+    });
     return this.buildConsultationWorkspacePayload(
       await this.getWorkspaceAppointment(id),
     );
@@ -1490,6 +1623,60 @@ export class AppointmentService {
       'Medicines from an earlier visit were copied into this draft.',
     );
     return this.buildConsultationWorkspacePayload(refreshed);
+  }
+
+  async copyPrescriptionToOpenVisit(
+    id: bigint,
+    auditActor?: { userId?: bigint | null; roleCode?: string | null },
+  ) {
+    const sourceAppointment = await this.getWorkspaceAppointment(id);
+    if (!sourceAppointment.customerId) {
+      throw new BadRequestException('Patient is not attached to this visit.');
+    }
+
+    const sourceConsultation = sourceAppointment.consultations?.[0];
+    const sourceState = this.parseStructuredConsultationState(sourceConsultation?.notes);
+    if (sourceState.prescriptionDraft.items.length === 0) {
+      throw new BadRequestException('No historical prescription is available to copy.');
+    }
+
+    const targetAppointment = await this.findOpenVisitForCustomer(
+      sourceAppointment.customerId,
+      sourceAppointment.id,
+    );
+    if (!targetAppointment) {
+      throw new BadRequestException(
+        'There is no active visit available for this patient right now.',
+      );
+    }
+
+    await this.upsertVisitPrescription(
+      targetAppointment.id,
+      {
+        clinicalRemarks: sourceState.prescriptionDraft.clinicalRemarks,
+        items: sourceState.prescriptionDraft.items,
+      },
+      { finalized: false, sendToPharmacy: false },
+    );
+    await this.recordAuditAction({
+      action: 'PRESCRIPTION_COPIED_TO_ACTIVE_VISIT',
+      entityType: 'APPOINTMENT',
+      entityId: targetAppointment.id,
+      userId: auditActor?.userId,
+      details: {
+        sourceAppointmentId: sourceAppointment.id.toString(),
+        targetAppointmentId: targetAppointment.id.toString(),
+      },
+    });
+    this.publishVisitEvent(
+      targetAppointment,
+      'PRESCRIPTION_COPIED_TO_ACTIVE_VISIT',
+      'Historical prescription copied',
+      'A past prescription was copied into the active visit draft.',
+    );
+    return this.buildConsultationWorkspacePayload(
+      await this.getWorkspaceAppointment(targetAppointment.id),
+    );
   }
 
   async searchMedicineCatalog(query?: string) {
@@ -1567,6 +1754,12 @@ export class AppointmentService {
       'Invoice voided',
       nextPayment.invoiceVoidReason ?? 'The invoice was voided for this visit.',
     );
+    await this.sendPatientNotification(appointment, {
+      title: 'Invoice voided',
+      message:
+        nextPayment.invoiceVoidReason ?? 'A visit invoice was voided for this record.',
+      eventType: 'VISIT_INVOICE_VOIDED',
+    });
 
     return this.buildConsultationWorkspacePayload(
       await this.getWorkspaceAppointment(id),
