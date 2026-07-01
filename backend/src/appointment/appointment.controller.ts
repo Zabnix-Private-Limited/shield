@@ -246,4 +246,99 @@ export class AppointmentController {
       data: workspace,
     };
   }
+
+  @RequirePermissions('appointments.update')
+  @Post(':id/prescription/draft')
+  async savePrescriptionDraft(
+    @Param('id') id: string,
+    @Body() body: any,
+    @CurrentPrincipal() principal?: ShieldPrincipal,
+  ) {
+    const workspace = await this.appointmentService.savePrescriptionDraft(
+      BigInt(id),
+      {
+        clinicalRemarks:
+          body.clinical_remarks ?? body.clinicalRemarks ?? body.notes,
+        items: body.items,
+      },
+      {
+        userId: principal?.userId ? BigInt(principal.userId) : undefined,
+        roleCode: principal?.roleCode,
+      },
+    );
+    return {
+      success: true,
+      message: 'Prescription draft saved successfully',
+      data: workspace,
+    };
+  }
+
+  @RequirePermissions('appointments.update')
+  @Post(':id/prescription/finalize')
+  async finalizePrescription(
+    @Param('id') id: string,
+    @Body() body: any,
+    @CurrentPrincipal() principal?: ShieldPrincipal,
+  ) {
+    const workspace = await this.appointmentService.finalizePrescription(
+      BigInt(id),
+      {
+        clinicalRemarks:
+          body.clinical_remarks ?? body.clinicalRemarks ?? body.notes,
+        items: body.items,
+        sendToPharmacy: body.send_to_pharmacy ?? body.sendToPharmacy,
+      },
+      {
+        userId: principal?.userId ? BigInt(principal.userId) : undefined,
+        roleCode: principal?.roleCode,
+      },
+    );
+    return {
+      success: true,
+      message: 'Prescription finalized successfully',
+      data: workspace,
+    };
+  }
+
+  @RequirePermissions('appointments.update')
+  @Post(':id/prescription/duplicate-last')
+  async duplicatePreviousPrescription(
+    @Param('id') id: string,
+    @CurrentPrincipal() principal?: ShieldPrincipal,
+  ) {
+    const workspace = await this.appointmentService.duplicatePreviousPrescription(
+      BigInt(id),
+      {
+        userId: principal?.userId ? BigInt(principal.userId) : undefined,
+        roleCode: principal?.roleCode,
+      },
+    );
+    return {
+      success: true,
+      message: 'Previous prescription copied successfully',
+      data: workspace,
+    };
+  }
+
+  @RequirePermissions('appointments.update')
+  @Post(':id/void-invoice')
+  async voidVisitInvoice(
+    @Param('id') id: string,
+    @Body() body: any,
+    @CurrentPrincipal() principal?: ShieldPrincipal,
+  ) {
+    const workspace = await this.appointmentService.voidVisitInvoice(
+      BigInt(id),
+      body.reason,
+      {
+        userId: principal?.userId ? BigInt(principal.userId) : undefined,
+        roleCode: principal?.roleCode,
+      },
+    );
+    return {
+      success: true,
+      message: 'Visit invoice voided successfully',
+      data: workspace,
+    };
+  }
 }

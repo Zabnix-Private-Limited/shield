@@ -6747,3 +6747,53 @@ est build, ackend/vercel.json, ackend/src/auth/auth.service.ts, and uth_devic
 ### Remaining Known Issues
 - The Provider Portal is materially closer to feature freeze, but full prescription authoring, richer profile/settings editing, and deeper visit-owned billing/refund history still need dedicated workflow work before it can be honestly declared fully frozen.
 - Those remaining items are workflow-completion issues, not shared-platform or architecture blockers.
+
+## 185. Provider finalization slice: prescription authoring draft/finalize flow and visit-owned billing void history
+**Timestamp:** 2026-07-01 15:05:00 IST
+
+**High-level description**: Extended the existing Provider current-visit workflow to support real prescription authoring actions and richer visit-owned billing state without introducing a separate prescription or billing subsystem. This pass kept the appointment consultation workspace as the owner of visit care progress while using live product search, visit-attached prescription state, and backend-owned invoice/payment metadata.
+- Added visit-owned prescription draft and finalize support on the existing appointment consultation workflow so providers can add medicines, save a draft, finalize the prescription, and optionally send it to the pharmacy path without leaving the current visit.
+- Reused the live product catalog through `/products/search` for medicine lookup instead of hardcoding a local medicine list in Flutter.
+- Extended structured consultation state to preserve prescription items, clinical remarks, finalize status, and pharmacy-send status as backend-owned visit data.
+- Added previous-prescription duplication support so providers can carry forward medicines from the last recorded visit into the current visit draft.
+- Extended billing payment metadata to retain payment-history rows and invoice void details, which keeps visit billing attached to the same care workflow instead of creating a detached billing screen.
+- Wired provider UI actions for add/edit/remove medicine, save draft, finalize, send to pharmacy, and void invoice directly against the existing backend consultation and billing contracts.
+- Cleaned up async interaction handling in the provider patient record so the new flows analyze cleanly and keep user feedback in healthcare-oriented messages.
+
+### Backend Files Modified
+- backend/src/appointment/appointment.controller.ts
+- backend/src/appointment/appointment.service.ts
+
+### Frontend Files Modified
+- frontend/lib/features/provider/customers/presentation/screens/provider_customers_screen.dart
+- frontend/lib/features/provider/shared/data/provider_portal_repository.dart
+- frontend/lib/features/provider/shared/presentation/controllers/provider_portal_controller.dart
+- frontend/lib/shared/services/api_service.dart
+
+### APIs Added or Changed
+- Added POST /appointments/:id/prescription/draft
+- Added POST /appointments/:id/prescription/finalize
+- Added POST /appointments/:id/prescription/duplicate-last
+- Added POST /appointments/:id/void-invoice
+- Added frontend consumption for GET /products/search as the live medicine catalog source for provider prescription authoring.
+
+### Architecture Notes
+- The current visit remains the owner of consultation, prescription, billing, and payment progression; no separate provider prescription engine or standalone billing workflow was introduced.
+- Backend continues to own prescription and billing metadata exposed through the consultation workspace contract, while Flutter only renders and submits actions.
+- This pass intentionally reused the shared print/report/platform direction already established in the freeze work and only extended the existing appointment workflow.
+
+### Database Changes
+- No database changes.
+- No SQL migration required for this slice.
+
+### Verification
+- cd backend && npm run build
+- cd frontend && flutter analyze --no-pub
+- cd frontend && flutter test
+- Verified backend build completes after the prescription-state and billing-history updates.
+- Verified Flutter analyze reports no issues.
+- Verified Flutter test suite passes.
+
+### Remaining Known Issues
+- Provider profile editing, provider settings editing, and deeper finalized prescription persistence beyond the current visit-state pattern still need dedicated completion work before the Provider Portal can be honestly marked feature frozen.
+- Billing is stronger now, but partial payment UX refinement, richer refund history presentation, and broader visit-history drill-in still remain workflow polish work rather than platform architecture work.

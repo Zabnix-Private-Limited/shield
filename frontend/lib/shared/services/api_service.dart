@@ -310,6 +310,58 @@ class ApiService {
     return _readEnvelope(response);
   }
 
+  static Future<List<Map<String, dynamic>>> searchProducts(String query) async {
+    final response = await _dio.get(
+      '/products/search',
+      queryParameters: {'query': query},
+    );
+    return _readEnvelopeList(
+      response,
+    ).map((item) => Map<String, dynamic>.from(item as Map)).toList();
+  }
+
+  static Future<Map<String, dynamic>> saveAppointmentPrescriptionDraft(
+    String appointmentId,
+    Map<String, dynamic> payload,
+  ) async {
+    final response = await _dio.post(
+      '/appointments/$appointmentId/prescription/draft',
+      data: payload,
+    );
+    return _readEnvelope(response);
+  }
+
+  static Future<Map<String, dynamic>> finalizeAppointmentPrescription(
+    String appointmentId,
+    Map<String, dynamic> payload,
+  ) async {
+    final response = await _dio.post(
+      '/appointments/$appointmentId/prescription/finalize',
+      data: payload,
+    );
+    return _readEnvelope(response);
+  }
+
+  static Future<Map<String, dynamic>> duplicateAppointmentPrescription(
+    String appointmentId,
+  ) async {
+    final response = await _dio.post(
+      '/appointments/$appointmentId/prescription/duplicate-last',
+    );
+    return _readEnvelope(response);
+  }
+
+  static Future<Map<String, dynamic>> voidAppointmentVisitInvoice(
+    String appointmentId, {
+    String? reason,
+  }) async {
+    final response = await _dio.post(
+      '/appointments/$appointmentId/void-invoice',
+      data: {'reason': reason},
+    );
+    return _readEnvelope(response);
+  }
+
   static Future<Appointment> confirmProviderAppointment(String appointmentId) async {
     final response = await _dio.post('/appointments/$appointmentId/confirm');
     return Appointment.fromJson(_readEnvelope(response));

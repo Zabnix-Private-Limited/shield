@@ -102,6 +102,40 @@ class ProviderPortalRepository {
     return ApiService.recordAppointmentVisitPayment(appointmentId, payload);
   }
 
+  Future<List<Map<String, dynamic>>> searchProducts(String query) {
+    return ApiService.searchProducts(query);
+  }
+
+  Future<Map<String, dynamic>> savePrescriptionDraft(
+    String appointmentId,
+    Map<String, dynamic> payload,
+  ) {
+    return ApiService.saveAppointmentPrescriptionDraft(appointmentId, payload);
+  }
+
+  Future<Map<String, dynamic>> finalizePrescription(
+    String appointmentId,
+    Map<String, dynamic> payload,
+  ) {
+    return ApiService.finalizeAppointmentPrescription(appointmentId, payload);
+  }
+
+  Future<Map<String, dynamic>> duplicatePreviousPrescription(
+    String appointmentId,
+  ) {
+    return ApiService.duplicateAppointmentPrescription(appointmentId);
+  }
+
+  Future<Map<String, dynamic>> voidVisitInvoice(
+    String appointmentId, {
+    String? reason,
+  }) {
+    return ApiService.voidAppointmentVisitInvoice(
+      appointmentId,
+      reason: reason,
+    );
+  }
+
   Future<Appointment> confirmAppointment(String appointmentId) {
     return ApiService.confirmProviderAppointment(appointmentId);
   }

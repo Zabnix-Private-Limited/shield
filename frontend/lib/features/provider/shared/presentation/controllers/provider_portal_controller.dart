@@ -454,6 +454,10 @@ class ProviderPortalController extends ChangeNotifier {
 
   Map<String, dynamic> get activeVisitBilling =>
       Map<String, dynamic>.from(consultationWorkspace['billing'] ?? const {});
+  Map<String, dynamic> get activeVisitPrescription =>
+      Map<String, dynamic>.from(
+        consultationWorkspace['prescription'] ?? const {},
+      );
 
   List<Map<String, dynamic>> get activeVisitTimeline =>
       List<Map<String, dynamic>>.from(
@@ -801,6 +805,109 @@ class ProviderPortalController extends ChangeNotifier {
       _consultationWorkspace = await _repository.recordVisitPayment(
         appointmentId,
         payload,
+      );
+      await _reloadSelectedCustomerData(preferredAppointmentId: appointmentId);
+    } catch (error) {
+      _error = error.toString();
+    } finally {
+      _consultationSaving = false;
+      notifyListeners();
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> searchMedicineCatalog(String query) {
+    return _repository.searchProducts(query);
+  }
+
+  Future<void> saveActiveVisitPrescriptionDraft(
+    Map<String, dynamic> payload,
+  ) async {
+    final appointmentId = _activeVisitAppointmentId;
+    if (appointmentId == null || appointmentId.isEmpty) {
+      return;
+    }
+    _consultationSaving = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      _consultationWorkspace = await _repository.savePrescriptionDraft(
+        appointmentId,
+        payload,
+      );
+      await _reloadSelectedCustomerData(preferredAppointmentId: appointmentId);
+    } catch (error) {
+      _error = error.toString();
+    } finally {
+      _consultationSaving = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> finalizeActiveVisitPrescription(
+    Map<String, dynamic> payload, {
+    bool sendToPharmacy = false,
+  }) async {
+    final appointmentId = _activeVisitAppointmentId;
+    if (appointmentId == null || appointmentId.isEmpty) {
+      return;
+    }
+    _consultationSaving = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      _consultationWorkspace = await _repository.finalizePrescription(
+        appointmentId,
+        {
+          ...payload,
+          'sendToPharmacy': sendToPharmacy,
+        },
+      );
+      await _reloadSelectedCustomerData(preferredAppointmentId: appointmentId);
+    } catch (error) {
+      _error = error.toString();
+    } finally {
+      _consultationSaving = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> duplicatePreviousPrescription() async {
+    final appointmentId = _activeVisitAppointmentId;
+    if (appointmentId == null || appointmentId.isEmpty) {
+      return;
+    }
+    _consultationSaving = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      _consultationWorkspace = await _repository.duplicatePreviousPrescription(
+        appointmentId,
+      );
+      await _reloadSelectedCustomerData(preferredAppointmentId: appointmentId);
+    } catch (error) {
+      _error = error.toString();
+    } finally {
+      _consultationSaving = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> voidActiveVisitInvoice({String? reason}) async {
+    final appointmentId = _activeVisitAppointmentId;
+    if (appointmentId == null || appointmentId.isEmpty) {
+      return;
+    }
+    _consultationSaving = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      _consultationWorkspace = await _repository.voidVisitInvoice(
+        appointmentId,
+        reason: reason,
       );
       await _reloadSelectedCustomerData(preferredAppointmentId: appointmentId);
     } catch (error) {

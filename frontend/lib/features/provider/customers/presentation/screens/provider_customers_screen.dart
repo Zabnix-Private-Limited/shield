@@ -31,8 +31,12 @@ class _ProviderCustomersScreenState extends State<ProviderCustomersScreen> {
   final TextEditingController _labOrdersController = TextEditingController();
   final TextEditingController _followUpController = TextEditingController();
   final TextEditingController _notesController = TextEditingController();
+  final TextEditingController _prescriptionRemarksController =
+      TextEditingController();
   String _searchQuery = '';
   String? _syncedConsultationKey;
+  String? _syncedPrescriptionKey;
+  List<Map<String, dynamic>> _prescriptionDraftItems = <Map<String, dynamic>>[];
 
   @override
   void dispose() {
@@ -46,6 +50,7 @@ class _ProviderCustomersScreenState extends State<ProviderCustomersScreen> {
     _labOrdersController.dispose();
     _followUpController.dispose();
     _notesController.dispose();
+    _prescriptionRemarksController.dispose();
     super.dispose();
   }
 
@@ -60,6 +65,7 @@ class _ProviderCustomersScreenState extends State<ProviderCustomersScreen> {
         final selected = controller.selectedCustomer;
         final workspaceTabs = controller.patientWorkspaceTabs;
         _syncConsultationEditors(controller);
+        _syncPrescriptionDraft(controller);
         final matchingCustomers = controller.customers.where((customer) {
           final query = _searchQuery.trim().toLowerCase();
           if (query.isEmpty) {
@@ -751,6 +757,7 @@ class _ProviderCustomersScreenState extends State<ProviderCustomersScreen> {
     final statusSummary =
         controller.activeVisitStatusSummary as Map<String, dynamic>;
     final billing = controller.activeVisitBilling as Map<String, dynamic>;
+    final prescription = controller.activeVisitPrescription as Map<String, dynamic>;
     final actions = controller.consultationActions as List<Map<String, dynamic>>;
     final sections =
         controller.consultationFormSections as List<Map<String, dynamic>>;
@@ -808,6 +815,45 @@ class _ProviderCustomersScreenState extends State<ProviderCustomersScreen> {
           ),
         ),
         const SizedBox(height: 18),
+        _VisitPrescriptionCard(
+          prescription: prescription,
+          busy: controller.isConsultationSaving as bool,
+          remarksController: _prescriptionRemarksController,
+          onAddMedicine: () => _addPrescriptionMedicine(context, controller),
+          onEditMedicine: (index) => _editPrescriptionMedicine(
+            context,
+            controller,
+            index,
+          ),
+          onRemoveMedicine: (index) {
+            setState(() {
+              _prescriptionDraftItems = List<Map<String, dynamic>>.from(
+                _prescriptionDraftItems,
+              )..removeAt(index);
+            });
+          },
+          onDuplicatePrevious: () => _duplicatePreviousPrescription(
+            context,
+            controller,
+          ),
+          onSaveDraft: () => _savePrescriptionDraft(context, controller),
+          onFinalize: () => _finalizePrescription(
+            context,
+            controller,
+            sendToPharmacy: false,
+          ),
+          onSendToPharmacy: () => _finalizePrescription(
+            context,
+            controller,
+            sendToPharmacy: true,
+          ),
+          onPrint: () => _downloadPrintArtifact(
+            context,
+            controller,
+            'PRESCRIPTION',
+          ),
+        ),
+        const SizedBox(height: 18),
         _VisitBillingCard(
           billing: billing,
           busy: controller.isConsultationSaving as bool,
@@ -822,6 +868,7 @@ class _ProviderCustomersScreenState extends State<ProviderCustomersScreen> {
             generateInvoiceAfterSave: true,
           ),
           onRecordPayment: () => _showPaymentDialog(context, controller),
+          onVoidInvoice: () => _showVoidInvoiceDialog(context, controller),
         ),
         const SizedBox(height: 18),
         Text('Visit timeline', style: AppTypography.h5),
@@ -887,6 +934,9 @@ class _ProviderCustomersScreenState extends State<ProviderCustomersScreen> {
         break;
       case 'RECORD_PAYMENT':
         performed = await _showPaymentDialog(context, controller);
+        break;
+      case 'VOID_INVOICE':
+        performed = await _showVoidInvoiceDialog(context, controller);
         break;
       case 'COMPLETE_VISIT':
         await controller.completeActiveConsultation(payload);
@@ -1134,6 +1184,33 @@ class _ProviderCustomersScreenState extends State<ProviderCustomersScreen> {
     'providerNotes': _notesController.text,
   };
 
+  Map<String, dynamic> _prescriptionPayload() => {
+    'clinicalRemarks': _prescriptionRemarksController.text.trim(),
+    'items': _prescriptionDraftItems
+        .map(
+          (item) => {
+            'productId': item['productId'],
+            'productCode': item['productCode'],
+            'productName': item['productName'],
+            'brand': item['brand'],
+            'unit': item['unit'],
+            'strength': item['strength'],
+            'dosage': item['dosage'],
+            'route': item['route'],
+            'frequency': item['frequency'],
+            'duration': item['duration'],
+            'morning': item['morning'] == true,
+            'afternoon': item['afternoon'] == true,
+            'night': item['night'] == true,
+            'beforeFood': item['beforeFood'] == true,
+            'afterFood': item['afterFood'] == true,
+            'specialInstructions': item['specialInstructions'],
+            'clinicalRemarks': item['clinicalRemarks'],
+          },
+        )
+        .toList(),
+  };
+
   TextEditingController _controllerForConsultationField(String code) {
     switch (code) {
       case 'chiefComplaint':
@@ -1183,6 +1260,27 @@ class _ProviderCustomersScreenState extends State<ProviderCustomersScreen> {
     _syncedConsultationKey = syncKey;
   }
 
+  void _syncPrescriptionDraft(dynamic controller) {
+    final appointmentId = controller.activeVisitAppointmentId?.toString() ?? '';
+    final prescription =
+        controller.activeVisitPrescription as Map<String, dynamic>? ??
+        const <String, dynamic>{};
+    final statusCode = prescription['statusCode']?.toString() ?? '';
+    final syncKey = '$appointmentId|$statusCode|${prescription['totalItems'] ?? 0}';
+    if (_syncedPrescriptionKey == syncKey || appointmentId.isEmpty) {
+      return;
+    }
+    final items =
+        (prescription['items'] as List? ?? const <dynamic>[])
+            .whereType<Map>()
+            .map((item) => Map<String, dynamic>.from(item))
+            .toList();
+    _prescriptionRemarksController.text =
+        prescription['clinicalRemarks']?.toString() ?? '';
+    _prescriptionDraftItems = items;
+    _syncedPrescriptionKey = syncKey;
+  }
+
   String _consultationActionMessage(String actionCode) {
     switch (actionCode) {
       case 'START_CONSULTATION':
@@ -1195,6 +1293,8 @@ class _ProviderCustomersScreenState extends State<ProviderCustomersScreen> {
         return 'Invoice generated for this visit.';
       case 'RECORD_PAYMENT':
         return 'Payment recorded for this visit.';
+      case 'VOID_INVOICE':
+        return 'Invoice voided for this visit.';
       case 'SAVE_PROGRESS':
       default:
         return 'Visit notes saved.';
@@ -1414,6 +1514,485 @@ class _ProviderCustomersScreenState extends State<ProviderCustomersScreen> {
       ..._consultationFormPayload(),
       'billing_draft': billingDraft,
     });
+    return true;
+  }
+
+  Future<void> _addPrescriptionMedicine(
+    BuildContext context,
+    dynamic controller,
+  ) async {
+    final selectedProduct = await _showMedicineSearchDialog(context, controller);
+    if (selectedProduct == null || !context.mounted) {
+      return;
+    }
+    final item = await _showPrescriptionItemDialog(
+      context,
+      product: selectedProduct,
+    );
+    if (item == null || !mounted) {
+      return;
+    }
+    setState(() {
+      _prescriptionDraftItems = [..._prescriptionDraftItems, item];
+    });
+  }
+
+  Future<void> _editPrescriptionMedicine(
+    BuildContext context,
+    dynamic controller,
+    int index,
+  ) async {
+    if (index < 0 || index >= _prescriptionDraftItems.length) {
+      return;
+    }
+    final updated = await _showPrescriptionItemDialog(
+      context,
+      product: _prescriptionDraftItems[index],
+      existing: _prescriptionDraftItems[index],
+    );
+    if (updated == null || !mounted) {
+      return;
+    }
+    setState(() {
+      _prescriptionDraftItems = List<Map<String, dynamic>>.from(
+        _prescriptionDraftItems,
+      )..[index] = updated;
+    });
+  }
+
+  Future<void> _savePrescriptionDraft(
+    BuildContext context,
+    dynamic controller,
+  ) async {
+    final messenger = ScaffoldMessenger.of(context);
+    await controller.saveActiveVisitPrescriptionDraft(_prescriptionPayload());
+    if (!context.mounted) {
+      return;
+    }
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(
+          controller.error?.toString().trim().isNotEmpty == true
+              ? _friendlyProviderError(controller.error.toString())
+              : 'Prescription draft saved.',
+        ),
+      ),
+    );
+  }
+
+  Future<void> _finalizePrescription(
+    BuildContext context,
+    dynamic controller, {
+    required bool sendToPharmacy,
+  }) async {
+    final messenger = ScaffoldMessenger.of(context);
+    await controller.finalizeActiveVisitPrescription(
+      _prescriptionPayload(),
+      sendToPharmacy: sendToPharmacy,
+    );
+    if (!context.mounted) {
+      return;
+    }
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(
+          controller.error?.toString().trim().isNotEmpty == true
+              ? _friendlyProviderError(controller.error.toString())
+              : sendToPharmacy
+                  ? 'Prescription finalized and sent to pharmacy.'
+                  : 'Prescription finalized.',
+        ),
+      ),
+    );
+  }
+
+  Future<void> _duplicatePreviousPrescription(
+    BuildContext context,
+    dynamic controller,
+  ) async {
+    final messenger = ScaffoldMessenger.of(context);
+    await controller.duplicatePreviousPrescription();
+    if (!context.mounted) {
+      return;
+    }
+    _syncPrescriptionDraft(controller);
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(
+          controller.error?.toString().trim().isNotEmpty == true
+              ? _friendlyProviderError(controller.error.toString())
+              : 'Previous prescription copied into this draft.',
+        ),
+      ),
+    );
+  }
+
+  Future<Map<String, dynamic>?> _showMedicineSearchDialog(
+    BuildContext context,
+    dynamic controller,
+  ) async {
+    final searchController = TextEditingController();
+    List<Map<String, dynamic>> results = const <Map<String, dynamic>>[];
+    bool loading = false;
+
+    return showDialog<Map<String, dynamic>>(
+      context: context,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            Future<void> runSearch() async {
+              final query = searchController.text.trim();
+              if (query.isEmpty) {
+                setDialogState(() {
+                  results = const <Map<String, dynamic>>[];
+                });
+                return;
+              }
+              setDialogState(() {
+                loading = true;
+              });
+              final rows = await controller.searchMedicineCatalog(query)
+                  as List<Map<String, dynamic>>;
+              if (!context.mounted) {
+                return;
+              }
+              setDialogState(() {
+                results = rows;
+                loading = false;
+              });
+            }
+
+            return AlertDialog(
+              title: const Text('Search Medicine'),
+              content: SizedBox(
+                width: 520,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: searchController,
+                            onSubmitted: (_) => runSearch(),
+                            decoration: const InputDecoration(
+                              labelText: 'Medicine name, brand, or code',
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        FilledButton(
+                          onPressed: loading ? null : runSearch,
+                          child: const Text('Search'),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    if (loading)
+                      const Padding(
+                        padding: EdgeInsets.all(16),
+                        child: CircularProgressIndicator(),
+                      )
+                    else if (results.isEmpty)
+                      const Text(
+                        'Search the medicine catalog to add an item to the prescription.',
+                      )
+                    else
+                      SizedBox(
+                        height: 280,
+                        child: ListView.builder(
+                          itemCount: results.length,
+                          itemBuilder: (context, index) {
+                            final product = results[index];
+                            return ListTile(
+                              title: Text(
+                                product['productName']?.toString() ??
+                                    'Medicine',
+                              ),
+                              subtitle: Text(
+                                [
+                                  product['brand']?.toString() ?? '',
+                                  product['productCode']?.toString() ?? '',
+                                  product['unit']?.toString() ?? '',
+                                ].where((value) => value.trim().isNotEmpty).join(
+                                      ' • ',
+                                    ),
+                              ),
+                              onTap: () => Navigator.of(dialogContext).pop(
+                                product,
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(dialogContext).pop(),
+                  child: const Text('Cancel'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Future<Map<String, dynamic>?> _showPrescriptionItemDialog(
+    BuildContext context, {
+    required Map<String, dynamic> product,
+    Map<String, dynamic>? existing,
+  }) async {
+    final strengthController = TextEditingController(
+      text: existing?['strength']?.toString() ?? '',
+    );
+    final dosageController = TextEditingController(
+      text: existing?['dosage']?.toString() ?? '',
+    );
+    final routeController = TextEditingController(
+      text: existing?['route']?.toString() ?? 'Oral',
+    );
+    final frequencyController = TextEditingController(
+      text: existing?['frequency']?.toString() ?? '',
+    );
+    final durationController = TextEditingController(
+      text: existing?['duration']?.toString() ?? '',
+    );
+    final instructionsController = TextEditingController(
+      text: existing?['specialInstructions']?.toString() ?? '',
+    );
+    final remarksController = TextEditingController(
+      text: existing?['clinicalRemarks']?.toString() ?? '',
+    );
+    bool morning = existing?['morning'] == true;
+    bool afternoon = existing?['afternoon'] == true;
+    bool night = existing?['night'] == true;
+    bool beforeFood = existing?['beforeFood'] == true;
+    bool afterFood = existing?['afterFood'] == true;
+
+    return showDialog<Map<String, dynamic>>(
+      context: context,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: Text(
+                existing == null ? 'Add Medicine' : 'Edit Medicine',
+              ),
+              content: SizedBox(
+                width: 520,
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        product['productName']?.toString() ?? 'Medicine',
+                        style: AppTypography.body,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        [
+                          product['brand']?.toString() ?? '',
+                          product['productCode']?.toString() ?? '',
+                        ].where((value) => value.trim().isNotEmpty).join(' • '),
+                        style: AppTypography.small.copyWith(
+                          color: AppColors.gray,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      TextField(
+                        controller: strengthController,
+                        decoration: const InputDecoration(
+                          labelText: 'Strength',
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: dosageController,
+                        decoration: const InputDecoration(
+                          labelText: 'Dosage',
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: routeController,
+                        decoration: const InputDecoration(
+                          labelText: 'Route',
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: frequencyController,
+                        decoration: const InputDecoration(
+                          labelText: 'Frequency',
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: durationController,
+                        decoration: const InputDecoration(
+                          labelText: 'Duration',
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Text('Schedule', style: AppTypography.small),
+                      Wrap(
+                        spacing: 8,
+                        children: [
+                          FilterChip(
+                            label: const Text('Morning'),
+                            selected: morning,
+                            onSelected: (value) =>
+                                setDialogState(() => morning = value),
+                          ),
+                          FilterChip(
+                            label: const Text('Afternoon'),
+                            selected: afternoon,
+                            onSelected: (value) =>
+                                setDialogState(() => afternoon = value),
+                          ),
+                          FilterChip(
+                            label: const Text('Night'),
+                            selected: night,
+                            onSelected: (value) =>
+                                setDialogState(() => night = value),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      Wrap(
+                        spacing: 8,
+                        children: [
+                          FilterChip(
+                            label: const Text('Before Food'),
+                            selected: beforeFood,
+                            onSelected: (value) => setDialogState(() {
+                              beforeFood = value;
+                              if (value) {
+                                afterFood = false;
+                              }
+                            }),
+                          ),
+                          FilterChip(
+                            label: const Text('After Food'),
+                            selected: afterFood,
+                            onSelected: (value) => setDialogState(() {
+                              afterFood = value;
+                              if (value) {
+                                beforeFood = false;
+                              }
+                            }),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: instructionsController,
+                        maxLines: 2,
+                        decoration: const InputDecoration(
+                          labelText: 'Special Instructions',
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: remarksController,
+                        maxLines: 2,
+                        decoration: const InputDecoration(
+                          labelText: 'Clinical Remarks',
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(dialogContext).pop(),
+                  child: const Text('Cancel'),
+                ),
+                FilledButton(
+                  onPressed: () => Navigator.of(dialogContext).pop({
+                    'productId': product['id']?.toString() ?? '',
+                    'productCode': product['productCode']?.toString() ?? '',
+                    'productName': product['productName']?.toString() ?? '',
+                    'brand': product['brand']?.toString() ?? '',
+                    'unit': product['unit']?.toString() ?? '',
+                    'strength': strengthController.text.trim(),
+                    'dosage': dosageController.text.trim(),
+                    'route': routeController.text.trim(),
+                    'frequency': frequencyController.text.trim(),
+                    'duration': durationController.text.trim(),
+                    'morning': morning,
+                    'afternoon': afternoon,
+                    'night': night,
+                    'beforeFood': beforeFood,
+                    'afterFood': afterFood,
+                    'specialInstructions': instructionsController.text.trim(),
+                    'clinicalRemarks': remarksController.text.trim(),
+                  }),
+                  child: const Text('Save Medicine'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Future<bool> _showVoidInvoiceDialog(
+    BuildContext context,
+    dynamic controller,
+  ) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final reasonController = TextEditingController();
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Void Invoice'),
+          content: TextField(
+            controller: reasonController,
+            maxLines: 3,
+            decoration: const InputDecoration(
+              labelText: 'Reason for voiding',
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: const Text('Void Invoice'),
+            ),
+          ],
+        );
+      },
+    );
+    if (confirmed != true) {
+      return false;
+    }
+    await controller.voidActiveVisitInvoice(
+      reason: reasonController.text.trim(),
+    );
+    if (!context.mounted) {
+      return false;
+    }
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(
+          controller.error?.toString().trim().isNotEmpty == true
+              ? _friendlyProviderError(controller.error.toString())
+              : 'Invoice voided.',
+        ),
+      ),
+    );
     return true;
   }
 
@@ -2092,6 +2671,7 @@ class _VisitBillingCard extends StatelessWidget {
     required this.onEditBilling,
     required this.onGenerateInvoice,
     required this.onRecordPayment,
+    required this.onVoidInvoice,
   });
 
   final Map<String, dynamic> billing;
@@ -2099,6 +2679,7 @@ class _VisitBillingCard extends StatelessWidget {
   final VoidCallback onEditBilling;
   final VoidCallback onGenerateInvoice;
   final VoidCallback onRecordPayment;
+  final VoidCallback onVoidInvoice;
 
   @override
   Widget build(BuildContext context) {
@@ -2112,6 +2693,11 @@ class _VisitBillingCard extends StatelessWidget {
         Map<String, dynamic>.from(billing['payment'] as Map? ?? const {});
     final invoice =
         billing['invoice'] is Map ? Map<String, dynamic>.from(billing['invoice']) : null;
+    final history =
+        (payment['history'] as List? ?? const <dynamic>[])
+            .whereType<Map>()
+            .map((item) => Map<String, dynamic>.from(item))
+            .toList();
 
     return Container(
       width: double.infinity,
@@ -2155,6 +2741,11 @@ class _VisitBillingCard extends StatelessWidget {
                     onPressed: busy ? null : onRecordPayment,
                     child: const Text('Record Payment'),
                   ),
+                  if (invoice != null)
+                    OutlinedButton(
+                      onPressed: busy ? null : onVoidInvoice,
+                      child: const Text('Void Invoice'),
+                    ),
                 ],
               ),
             ],
@@ -2228,6 +2819,239 @@ class _VisitBillingCard extends StatelessWidget {
               _InfoChip(
                 label:
                     'Status: ${payment['statusLabel']?.toString() ?? 'Payment Pending'}',
+              ),
+              if ((payment['invoiceVoidedAtLabel']?.toString() ?? '').isNotEmpty)
+                _InfoChip(
+                  label:
+                      'Voided: ${payment['invoiceVoidedAtLabel']?.toString() ?? ''}',
+                ),
+            ],
+          ),
+          if ((payment['invoiceVoidReason']?.toString() ?? '').isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Text(
+              'Void reason: ${payment['invoiceVoidReason']}',
+              style: AppTypography.small.copyWith(color: AppColors.gray),
+            ),
+          ],
+          if (history.isNotEmpty) ...[
+            const SizedBox(height: 14),
+            Text('Payment History', style: AppTypography.body),
+            const SizedBox(height: 8),
+            ...history.map(
+              (entry) => _SummaryCard(
+                title: entry['kind']?.toString() == 'REFUND'
+                    ? 'Refund Update'
+                    : 'Payment Update',
+                subtitle:
+                    '${entry['status']?.toString() ?? 'Pending'} • Paid ${entry['paidAmountLabel']?.toString() ?? 'Rs 0.00'}',
+                meta:
+                    '${entry['recordedAtLabel']?.toString() ?? ''} • Balance ${entry['balanceDueLabel']?.toString() ?? 'Rs 0.00'}',
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _VisitPrescriptionCard extends StatelessWidget {
+  const _VisitPrescriptionCard({
+    required this.prescription,
+    required this.busy,
+    required this.remarksController,
+    required this.onAddMedicine,
+    required this.onEditMedicine,
+    required this.onRemoveMedicine,
+    required this.onDuplicatePrevious,
+    required this.onSaveDraft,
+    required this.onFinalize,
+    required this.onSendToPharmacy,
+    required this.onPrint,
+  });
+
+  final Map<String, dynamic> prescription;
+  final bool busy;
+  final TextEditingController remarksController;
+  final VoidCallback onAddMedicine;
+  final void Function(int index) onEditMedicine;
+  final void Function(int index) onRemoveMedicine;
+  final VoidCallback onDuplicatePrevious;
+  final VoidCallback onSaveDraft;
+  final VoidCallback onFinalize;
+  final VoidCallback onSendToPharmacy;
+  final VoidCallback onPrint;
+
+  @override
+  Widget build(BuildContext context) {
+    final items =
+        (prescription['items'] as List? ?? const <dynamic>[])
+            .whereType<Map>()
+            .map((item) => Map<String, dynamic>.from(item))
+            .toList();
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.divider),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Prescription', style: AppTypography.h5),
+                    const SizedBox(height: 6),
+                    Text(
+                      prescription['statusLabel']?.toString() ??
+                          'No prescription yet',
+                      style: AppTypography.small.copyWith(color: AppColors.gray),
+                    ),
+                  ],
+                ),
+              ),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  OutlinedButton(
+                    onPressed: busy ? null : onAddMedicine,
+                    child: const Text('Add Medicine'),
+                  ),
+                  OutlinedButton(
+                    onPressed: busy ? null : onDuplicatePrevious,
+                    child: const Text('Copy Last Visit'),
+                  ),
+                  FilledButton(
+                    onPressed: busy ? null : onSaveDraft,
+                    child: const Text('Save Draft'),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: [
+              _InfoChip(
+                label:
+                    'Medicines: ${prescription['totalItemsLabel']?.toString() ?? '0 medicines'}',
+              ),
+              _InfoChip(
+                label:
+                    'Finalized: ${prescription['finalizedAtLabel']?.toString() ?? 'Not finalized'}',
+              ),
+              _InfoChip(
+                label:
+                    prescription['sentToPharmacy'] == true
+                        ? 'Sent to Pharmacy'
+                        : 'Not Sent to Pharmacy',
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: remarksController,
+            maxLines: 3,
+            decoration: const InputDecoration(
+              labelText: 'Clinical Remarks',
+              hintText: 'Add remarks for the pharmacist or patient.',
+            ),
+          ),
+          const SizedBox(height: 14),
+          if (items.isEmpty)
+            const _PanelText(
+              'No medicines have been added yet. Search the live medicine catalog to build this prescription.',
+            )
+          else
+            Column(
+              children: items.asMap().entries.map((entry) {
+                final index = entry.key;
+                final item = entry.value;
+                return Container(
+                  width: double.infinity,
+                  margin: const EdgeInsets.only(bottom: 10),
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: AppColors.lightGray,
+                    borderRadius: BorderRadius.circular(18),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        item['title']?.toString() ?? 'Medicine',
+                        style: AppTypography.body,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        [
+                          item['subtitle']?.toString() ?? '',
+                          item['dosage']?.toString() ?? '',
+                          item['duration']?.toString() ?? '',
+                        ].where((value) => value.trim().isNotEmpty).join(' • '),
+                        style: AppTypography.small.copyWith(
+                          color: AppColors.gray,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        [
+                          item['mealPlan']?.toString() ?? '',
+                          if ((item['specialInstructions']?.toString() ?? '')
+                              .trim()
+                              .isNotEmpty)
+                            item['specialInstructions']?.toString() ?? '',
+                        ].where((value) => value.trim().isNotEmpty).join(' • '),
+                        style: AppTypography.tiny.copyWith(
+                          color: AppColors.gray,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          OutlinedButton(
+                            onPressed: busy ? null : () => onEditMedicine(index),
+                            child: const Text('Edit'),
+                          ),
+                          OutlinedButton(
+                            onPressed: busy ? null : () => onRemoveMedicine(index),
+                            child: const Text('Remove'),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                );
+              }).toList(),
+            ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              FilledButton(
+                onPressed: busy ? null : onFinalize,
+                child: const Text('Finalize'),
+              ),
+              OutlinedButton(
+                onPressed: busy ? null : onSendToPharmacy,
+                child: const Text('Send to Pharmacy'),
+              ),
+              OutlinedButton(
+                onPressed: busy ? null : onPrint,
+                child: const Text('Print'),
               ),
             ],
           ),

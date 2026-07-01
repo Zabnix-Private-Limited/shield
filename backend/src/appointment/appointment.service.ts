@@ -49,11 +49,54 @@ type PaymentSummaryState = {
   paidAmount: number;
   balanceDue: number;
   recordedAt: string | null;
+  history: Array<{
+    kind: string;
+    status: string;
+    recordedAt: string;
+    walletUsed: number;
+    cash: number;
+    upi: number;
+    card: number;
+    refund: number;
+    paidAmount: number;
+    balanceDue: number;
+  }>;
+  invoiceVoidedAt?: string | null;
+  invoiceVoidReason?: string | null;
+};
+
+type PrescriptionMedicineState = {
+  productId: string;
+  productCode: string;
+  productName: string;
+  brand: string;
+  unit: string;
+  strength: string;
+  dosage: string;
+  route: string;
+  frequency: string;
+  duration: string;
+  morning: boolean;
+  afternoon: boolean;
+  night: boolean;
+  beforeFood: boolean;
+  afterFood: boolean;
+  specialInstructions: string;
+  clinicalRemarks: string;
+};
+
+type PrescriptionDraftState = {
+  status: 'EMPTY' | 'DRAFT' | 'FINALIZED';
+  clinicalRemarks: string;
+  items: PrescriptionMedicineState[];
+  finalizedAt: string | null;
+  sentToPharmacyAt: string | null;
 };
 
 type StructuredConsultationState = {
   form: ConsultationFormState;
   billingDraft: VisitBillingDraftState;
+  prescriptionDraft: PrescriptionDraftState;
 };
 
 @Injectable()
@@ -434,6 +477,9 @@ export class AppointmentService {
     const mergedState = {
       form: this.mergeConsultationForm(existingState.form, formData),
       billingDraft: this.mergeBillingDraft(existingState.billingDraft, billingDraft),
+      prescriptionDraft: this.mergePrescriptionDraft(
+        existingState.prescriptionDraft,
+      ),
     };
 
     if (existing) {
@@ -794,6 +840,50 @@ export class AppointmentService {
         paymentStatusLabel: statusSummary.paymentStatus.label,
       },
       actions: this.buildConsultationActions(statusCode, visitInvoice, billingWorkspace),
+      prescription: {
+        statusCode: state.prescriptionDraft.status,
+        statusLabel:
+          state.prescriptionDraft.status === 'FINALIZED'
+            ? 'Prescription Finalized'
+            : state.prescriptionDraft.status === 'DRAFT'
+              ? 'Prescription Draft'
+              : 'No Prescription Yet',
+        totalItems: state.prescriptionDraft.items.length,
+        totalItemsLabel: `${state.prescriptionDraft.items.length} medicine${state.prescriptionDraft.items.length == 1 ? '' : 's'}`,
+        clinicalRemarks: state.prescriptionDraft.clinicalRemarks,
+        finalizedAtLabel: state.prescriptionDraft.finalizedAt
+          ? this.formatDateTime(new Date(state.prescriptionDraft.finalizedAt))
+          : 'Not finalized',
+        sentToPharmacy:
+          state.prescriptionDraft.sentToPharmacyAt != null,
+        sentToPharmacyAtLabel: state.prescriptionDraft.sentToPharmacyAt
+          ? this.formatDateTime(new Date(state.prescriptionDraft.sentToPharmacyAt))
+          : 'Not sent',
+        items: state.prescriptionDraft.items.map((item, index) => ({
+          index,
+          productId: item.productId,
+          productCode: item.productCode,
+          title: item.productName,
+          subtitle: [item.brand, item.strength, item.frequency]
+            .filter((value) => value.trim().length > 0)
+            .join(' • '),
+          dosage: item.dosage,
+          route: item.route,
+          duration: item.duration,
+          schedule: {
+            morning: item.morning,
+            afternoon: item.afternoon,
+            night: item.night,
+          },
+          mealPlan: item.beforeFood
+            ? 'Before food'
+            : item.afterFood
+              ? 'After food'
+              : 'Flexible',
+          specialInstructions: item.specialInstructions,
+          clinicalRemarks: item.clinicalRemarks,
+        })),
+      },
       formSections: [
         {
           code: 'chiefComplaint',
@@ -1055,9 +1145,36 @@ export class AppointmentService {
         recordedAtLabel: payment.recordedAt == null
             ? 'Payment not recorded'
             : this.formatDateTime(new Date(payment.recordedAt)),
+        invoiceVoidedAtLabel: payment.invoiceVoidedAt == null
+            ? null
+            : this.formatDateTime(new Date(payment.invoiceVoidedAt)),
+        invoiceVoidReason: payment.invoiceVoidReason ?? null,
+        history: payment.history.map((entry) => ({
+          kind: entry.kind,
+          status: entry.status,
+          recordedAt: entry.recordedAt,
+          recordedAtLabel: this.formatDateTime(new Date(entry.recordedAt)),
+          paidAmount: entry.paidAmount,
+          paidAmountLabel: this.formatMoney(entry.paidAmount),
+          balanceDue: entry.balanceDue,
+          balanceDueLabel: this.formatMoney(entry.balanceDue),
+          walletUsedLabel: this.formatMoney(entry.walletUsed),
+          cashLabel: this.formatMoney(entry.cash),
+          upiLabel: this.formatMoney(entry.upi),
+          cardLabel: this.formatMoney(entry.card),
+          refundLabel: this.formatMoney(entry.refund),
+        })),
       },
-      statusLabel: invoice == null ? 'Billing In Progress' : 'Invoice Generated',
-      paymentStatusLabel: this.getPaymentStatusLabel(invoice?.paymentStatus),
+      statusLabel:
+        payment.invoiceVoidedAt != null
+          ? 'Invoice Voided'
+          : invoice == null
+            ? 'Billing In Progress'
+            : 'Invoice Generated',
+      paymentStatusLabel:
+        payment.invoiceVoidedAt != null
+          ? 'Invoice Voided'
+          : this.getPaymentStatusLabel(invoice?.paymentStatus),
     };
   }
 
@@ -1105,6 +1222,14 @@ export class AppointmentService {
         code: 'RECORD_PAYMENT',
         title: 'Record Payment',
         emphasis: 'primary',
+      });
+    }
+
+    if (invoice != null && (invoice.paymentStatus ?? '').toUpperCase() !== 'VOID') {
+      actions.push({
+        code: 'VOID_INVOICE',
+        title: 'Void Invoice',
+        emphasis: 'secondary',
       });
     }
 
@@ -1199,6 +1324,7 @@ export class AppointmentService {
         providerNotes: '',
       },
       billingDraft: this.defaultBillingDraft(),
+      prescriptionDraft: this.defaultPrescriptionDraft(),
     };
 
     const raw = notes?.trim() ?? '';
@@ -1223,6 +1349,10 @@ export class AppointmentService {
           fallback.billingDraft,
           parsed['billingDraft'] as Record<string, unknown> | undefined,
         ),
+        prescriptionDraft: this.mergePrescriptionDraft(
+          fallback.prescriptionDraft,
+          parsed['prescriptionDraft'] as Record<string, unknown> | undefined,
+        ),
       };
     } catch {
       return {
@@ -1233,6 +1363,297 @@ export class AppointmentService {
         },
       };
     }
+  }
+
+  async savePrescriptionDraft(
+    id: bigint,
+    data: {
+      clinicalRemarks?: string;
+      items?: Array<Record<string, unknown>>;
+    },
+    auditActor?: { userId?: bigint | null; roleCode?: string | null },
+  ) {
+    await this.upsertVisitPrescription(id, data, {
+      finalized: false,
+      sendToPharmacy: false,
+    });
+    await this.recordAuditAction({
+      action: 'PRESCRIPTION_DRAFT_SAVED',
+      entityType: 'APPOINTMENT',
+      entityId: id,
+      userId: auditActor?.userId,
+      details: { appointmentId: id.toString() },
+    });
+    const appointment = await this.getWorkspaceAppointment(id);
+    this.publishVisitEvent(
+      appointment,
+      'PRESCRIPTION_DRAFT_SAVED',
+      'Prescription draft saved',
+      'Prescription changes were saved for this visit.',
+    );
+    return this.buildConsultationWorkspacePayload(
+      await this.getWorkspaceAppointment(id),
+    );
+  }
+
+  async finalizePrescription(
+    id: bigint,
+    data: {
+      clinicalRemarks?: string;
+      items?: Array<Record<string, unknown>>;
+      sendToPharmacy?: boolean;
+    },
+    auditActor?: { userId?: bigint | null; roleCode?: string | null },
+  ) {
+    await this.upsertVisitPrescription(id, data, {
+      finalized: true,
+      sendToPharmacy: data.sendToPharmacy === true,
+    });
+    await this.recordAuditAction({
+      action: data.sendToPharmacy === true
+        ? 'PRESCRIPTION_SENT_TO_PHARMACY'
+        : 'PRESCRIPTION_FINALIZED',
+      entityType: 'APPOINTMENT',
+      entityId: id,
+      userId: auditActor?.userId,
+      details: {
+        appointmentId: id.toString(),
+        sendToPharmacy: data.sendToPharmacy === true,
+      },
+    });
+    const appointment = await this.getWorkspaceAppointment(id);
+    this.publishVisitEvent(
+      appointment,
+      data.sendToPharmacy === true
+        ? 'PRESCRIPTION_SENT_TO_PHARMACY'
+        : 'PRESCRIPTION_FINALIZED',
+      data.sendToPharmacy === true
+        ? 'Prescription sent to pharmacy'
+        : 'Prescription finalized',
+      data.sendToPharmacy === true
+        ? 'The finalized prescription was sent to the pharmacy workflow.'
+        : 'The prescription is ready for printing and review.',
+    );
+    return this.buildConsultationWorkspacePayload(
+      await this.getWorkspaceAppointment(id),
+    );
+  }
+
+  async duplicatePreviousPrescription(
+    id: bigint,
+    auditActor?: { userId?: bigint | null; roleCode?: string | null },
+  ) {
+    const appointment = await this.getWorkspaceAppointment(id);
+    if (!appointment.customerId) {
+      throw new BadRequestException('Patient is not attached to this visit.');
+    }
+
+    const previousConsultations = await this.prisma.consultation.findMany({
+      where: {
+        customerId: appointment.customerId,
+        appointmentId: { not: appointment.id },
+      },
+      orderBy: { id: 'desc' },
+      take: 10,
+    });
+
+    const previousState = previousConsultations
+      .map((consultation) => this.parseStructuredConsultationState(consultation.notes))
+      .find((state) => state.prescriptionDraft.items.length > 0);
+
+    if (!previousState) {
+      throw new BadRequestException(
+        'No previous prescription was found for this patient.',
+      );
+    }
+
+    await this.upsertVisitPrescription(
+      id,
+      {
+        clinicalRemarks: previousState.prescriptionDraft.clinicalRemarks,
+        items: previousState.prescriptionDraft.items,
+      },
+      { finalized: false, sendToPharmacy: false },
+    );
+    await this.recordAuditAction({
+      action: 'PRESCRIPTION_DUPLICATED',
+      entityType: 'APPOINTMENT',
+      entityId: id,
+      userId: auditActor?.userId,
+      details: { appointmentId: id.toString() },
+    });
+    const refreshed = await this.getWorkspaceAppointment(id);
+    this.publishVisitEvent(
+      refreshed,
+      'PRESCRIPTION_DUPLICATED',
+      'Previous prescription copied',
+      'Medicines from an earlier visit were copied into this draft.',
+    );
+    return this.buildConsultationWorkspacePayload(refreshed);
+  }
+
+  async searchMedicineCatalog(query?: string) {
+    const normalized = query?.trim();
+    return this.prisma.product.findMany({
+      where: normalized
+        ? {
+            OR: [
+              { productName: { contains: normalized, mode: 'insensitive' } },
+              { brand: { contains: normalized, mode: 'insensitive' } },
+              { productCode: { contains: normalized, mode: 'insensitive' } },
+            ],
+          }
+        : undefined,
+      orderBy: [{ productName: 'asc' }],
+      take: 15,
+    });
+  }
+
+  async voidVisitInvoice(
+    id: bigint,
+    reason?: string,
+    auditActor?: { userId?: bigint | null; roleCode?: string | null },
+  ) {
+    const appointment = await this.getWorkspaceAppointment(id);
+    const invoice = appointment.purchases?.find((purchase) =>
+      this.isVisitPurchase(purchase.purchaseKind),
+    );
+    if (!invoice) {
+      throw new BadRequestException('There is no visit invoice to void.');
+    }
+
+    const payment = this.parsePaymentSummary(invoice.paymentSummary);
+    if (payment.paidAmount > 0 || payment.walletUsed > 0) {
+      throw new BadRequestException(
+        'Paid invoices cannot be voided. Record a refund instead.',
+      );
+    }
+
+    const voidedAt = new Date().toISOString();
+    const nextPayment: PaymentSummaryState = {
+      ...payment,
+      invoiceVoidedAt: voidedAt,
+      invoiceVoidReason: this.normalizeText(reason, 'Invoice voided by provider'),
+    };
+
+    await this.prisma.purchase.update({
+      where: { id: invoice.id },
+      data: {
+        paymentStatus: 'VOID',
+        paymentSummary: nextPayment,
+        billingSnapshot: {
+          ...((invoice.billingSnapshot as Record<string, unknown> | null) ?? {}),
+          invoiceStatus: 'VOID',
+          invoiceVoidedAt: voidedAt,
+          invoiceVoidReason: nextPayment.invoiceVoidReason,
+        },
+      },
+    });
+
+    await this.recordAuditAction({
+      action: 'VISIT_INVOICE_VOIDED',
+      entityType: 'PURCHASE',
+      entityId: invoice.id,
+      userId: auditActor?.userId,
+      details: {
+        appointmentId: id.toString(),
+        invoiceNumber: invoice.invoiceNumber,
+        reason: nextPayment.invoiceVoidReason,
+      },
+    });
+    this.publishVisitEvent(
+      appointment,
+      'VISIT_INVOICE_VOIDED',
+      'Invoice voided',
+      nextPayment.invoiceVoidReason ?? 'The invoice was voided for this visit.',
+    );
+
+    return this.buildConsultationWorkspacePayload(
+      await this.getWorkspaceAppointment(id),
+    );
+  }
+
+  private async upsertVisitPrescription(
+    id: bigint,
+    data: {
+      clinicalRemarks?: string;
+      items?: Array<Record<string, unknown>> | PrescriptionMedicineState[];
+    },
+    options: { finalized: boolean; sendToPharmacy: boolean },
+  ) {
+    const appointment = await this.getWorkspaceAppointment(id);
+    const consultation = await this.ensureConsultationRecord(appointment);
+    const currentState = this.parseStructuredConsultationState(consultation.notes);
+    const nextItems = Array.isArray(data.items)
+      ? data.items.map((item) =>
+          this.normalizePrescriptionItem(item as Record<string, unknown>),
+        )
+      : currentState.prescriptionDraft.items;
+    const filteredItems = nextItems.filter(
+      (item) => item.productName.trim().length > 0,
+    );
+
+    if (options.finalized && filteredItems.length === 0) {
+      throw new BadRequestException(
+        'Add at least one medicine before finalizing the prescription.',
+      );
+    }
+
+    const nowIso = new Date().toISOString();
+    const nextPrescriptionDraft: PrescriptionDraftState = {
+      status:
+        filteredItems.length === 0
+          ? 'EMPTY'
+          : options.finalized
+            ? 'FINALIZED'
+            : 'DRAFT',
+      clinicalRemarks: this.normalizeText(
+        data.clinicalRemarks,
+        currentState.prescriptionDraft.clinicalRemarks,
+      ),
+      items: filteredItems,
+      finalizedAt: options.finalized
+        ? nowIso
+        : currentState.prescriptionDraft.finalizedAt,
+      sentToPharmacyAt: options.sendToPharmacy
+        ? nowIso
+        : currentState.prescriptionDraft.sentToPharmacyAt,
+    };
+
+    await this.prisma.consultation.update({
+      where: { id: consultation.id },
+      data: {
+        notes: this.serializeStructuredConsultationState({
+          ...currentState,
+          prescriptionDraft: nextPrescriptionDraft,
+        }),
+      },
+    });
+
+    if (!options.finalized) {
+      return;
+    }
+
+    const existingPrescription = await this.prisma.prescription.findFirst({
+      where: { consultationId: consultation.id },
+      orderBy: { id: 'desc' },
+    });
+
+    if (existingPrescription) {
+      await this.prisma.prescription.update({
+        where: { id: existingPrescription.id },
+        data: { issueDate: new Date(nowIso) },
+      });
+      return;
+    }
+
+    await this.prisma.prescription.create({
+      data: {
+        customerId: appointment.customerId,
+        consultationId: consultation.id,
+        issueDate: new Date(nowIso),
+      },
+    });
   }
 
   private serializeStructuredConsultationState(data: StructuredConsultationState) {
@@ -1260,6 +1681,31 @@ export class AppointmentService {
         pendingAmount: data.billingDraft.pendingAmount,
         refundAmount: data.billingDraft.refundAmount,
         otherServicesLabel: data.billingDraft.otherServicesLabel,
+      },
+      prescriptionDraft: {
+        status: data.prescriptionDraft.status,
+        clinicalRemarks: this.normalizeText(data.prescriptionDraft.clinicalRemarks),
+        finalizedAt: data.prescriptionDraft.finalizedAt,
+        sentToPharmacyAt: data.prescriptionDraft.sentToPharmacyAt,
+        items: data.prescriptionDraft.items.map((item) => ({
+          productId: this.normalizeText(item.productId),
+          productCode: this.normalizeText(item.productCode),
+          productName: this.normalizeText(item.productName),
+          brand: this.normalizeText(item.brand),
+          unit: this.normalizeText(item.unit),
+          strength: this.normalizeText(item.strength),
+          dosage: this.normalizeText(item.dosage),
+          route: this.normalizeText(item.route),
+          frequency: this.normalizeText(item.frequency),
+          duration: this.normalizeText(item.duration),
+          morning: item.morning,
+          afternoon: item.afternoon,
+          night: item.night,
+          beforeFood: item.beforeFood,
+          afterFood: item.afterFood,
+          specialInstructions: this.normalizeText(item.specialInstructions),
+          clinicalRemarks: this.normalizeText(item.clinicalRemarks),
+        })),
       },
     });
   }
@@ -1330,6 +1776,37 @@ export class AppointmentService {
     };
   }
 
+  private mergePrescriptionDraft(
+    existing: PrescriptionDraftState,
+    draft?: Record<string, unknown> | Partial<PrescriptionDraftState>,
+  ): PrescriptionDraftState {
+    const source = (draft ?? {}) as Record<string, unknown>;
+    const hasItems = Object.prototype.hasOwnProperty.call(source, 'items');
+    const rawItems = Array.isArray(source['items']) ? source['items'] : [];
+    const items = rawItems
+      .map((item) => this.normalizePrescriptionItem(item as Record<string, unknown>))
+      .filter((item) => item.productName.trim().length > 0);
+    const status =
+      (hasItems ? items.length : existing.items.length) == 0
+        ? 'EMPTY'
+        : ((source['status']?.toString().toUpperCase() as
+            | 'EMPTY'
+            | 'DRAFT'
+            | 'FINALIZED'
+            | undefined) ?? existing.status ?? 'DRAFT');
+    return {
+      status,
+      clinicalRemarks: this.normalizeText(
+        source['clinicalRemarks'],
+        existing.clinicalRemarks,
+      ),
+      finalizedAt: source['finalizedAt']?.toString() ?? existing.finalizedAt,
+      sentToPharmacyAt:
+        source['sentToPharmacyAt']?.toString() ?? existing.sentToPharmacyAt,
+      items: hasItems ? items : existing.items,
+    };
+  }
+
   private defaultBillingDraft(): VisitBillingDraftState {
     return {
       consultationFee: 0,
@@ -1346,6 +1823,41 @@ export class AppointmentService {
       pendingAmount: 0,
       refundAmount: 0,
       otherServicesLabel: 'Other Services',
+    };
+  }
+
+  private defaultPrescriptionDraft(): PrescriptionDraftState {
+    return {
+      status: 'EMPTY',
+      clinicalRemarks: '',
+      items: [],
+      finalizedAt: null,
+      sentToPharmacyAt: null,
+    };
+  }
+
+  private normalizePrescriptionItem(
+    value?: Record<string, unknown>,
+  ): PrescriptionMedicineState {
+    const source = value ?? {};
+    return {
+      productId: this.normalizeText(source['productId']),
+      productCode: this.normalizeText(source['productCode']),
+      productName: this.normalizeText(source['productName']),
+      brand: this.normalizeText(source['brand']),
+      unit: this.normalizeText(source['unit']),
+      strength: this.normalizeText(source['strength']),
+      dosage: this.normalizeText(source['dosage']),
+      route: this.normalizeText(source['route'], 'Oral'),
+      frequency: this.normalizeText(source['frequency']),
+      duration: this.normalizeText(source['duration']),
+      morning: Boolean(source['morning']),
+      afternoon: Boolean(source['afternoon']),
+      night: Boolean(source['night']),
+      beforeFood: Boolean(source['beforeFood']),
+      afterFood: Boolean(source['afterFood']),
+      specialInstructions: this.normalizeText(source['specialInstructions']),
+      clinicalRemarks: this.normalizeText(source['clinicalRemarks']),
     };
   }
 
@@ -1423,6 +1935,47 @@ export class AppointmentService {
     const pending = Number(
       Math.max(balanceDue, draft.pendingAmount || 0).toFixed(2),
     );
+    const status = this.resolvePaymentStatus({
+      walletUsed,
+      cash,
+      upi,
+      card,
+      pending,
+      refund,
+      paidAmount,
+      balanceDue,
+      recordedAt: null,
+      history: previous?.history ?? [],
+      invoiceVoidedAt: previous?.invoiceVoidedAt ?? null,
+      invoiceVoidReason: previous?.invoiceVoidReason ?? null,
+    });
+    const history = [...(previous?.history ?? [])];
+    const hasChanged =
+      previous == null ||
+      previous.walletUsed !== walletUsed ||
+      previous.cash !== cash ||
+      previous.upi !== upi ||
+      previous.card !== card ||
+      previous.refund !== refund ||
+      previous.balanceDue !== balanceDue;
+    const recordedAt =
+      paidAmount > 0 || refund > 0 || previous?.recordedAt != null
+        ? new Date().toISOString()
+        : null;
+    if (hasChanged && recordedAt != null) {
+      history.push({
+        kind: refund > (previous?.refund ?? 0) ? 'REFUND' : 'PAYMENT',
+        status,
+        recordedAt,
+        walletUsed,
+        cash,
+        upi,
+        card,
+        refund,
+        paidAmount,
+        balanceDue,
+      });
+    }
 
     return {
       walletUsed,
@@ -1433,8 +1986,10 @@ export class AppointmentService {
       refund,
       paidAmount,
       balanceDue,
-      recordedAt:
-        paidAmount > 0 || previous?.recordedAt != null ? new Date().toISOString() : null,
+      recordedAt,
+      history,
+      invoiceVoidedAt: previous?.invoiceVoidedAt ?? null,
+      invoiceVoidReason: previous?.invoiceVoidReason ?? null,
     };
   }
 
@@ -1450,6 +2005,22 @@ export class AppointmentService {
       paidAmount: this.normalizeNumber(summary['paidAmount']),
       balanceDue: this.normalizeNumber(summary['balanceDue']),
       recordedAt: summary['recordedAt']?.toString() ?? null,
+      history: Array.isArray(summary['history'])
+        ? (summary['history'] as Array<Record<string, unknown>>).map((item) => ({
+            kind: item['kind']?.toString() ?? 'PAYMENT',
+            status: item['status']?.toString() ?? 'PENDING',
+            recordedAt: item['recordedAt']?.toString() ?? new Date().toISOString(),
+            walletUsed: this.normalizeNumber(item['walletUsed']),
+            cash: this.normalizeNumber(item['cash']),
+            upi: this.normalizeNumber(item['upi']),
+            card: this.normalizeNumber(item['card']),
+            refund: this.normalizeNumber(item['refund']),
+            paidAmount: this.normalizeNumber(item['paidAmount']),
+            balanceDue: this.normalizeNumber(item['balanceDue']),
+          }))
+        : [],
+      invoiceVoidedAt: summary['invoiceVoidedAt']?.toString() ?? null,
+      invoiceVoidReason: summary['invoiceVoidReason']?.toString() ?? null,
     };
   }
 
