@@ -4,6 +4,7 @@ import { CrmModule } from '../crm/crm.module';
 import { CustomerModule } from '../customer/customer.module';
 import { DocumentModule } from '../document/document.module';
 import { NotificationModule } from '../notification/notification.module';
+import { PlatformCapabilitiesModule } from '../platform-capabilities/platform-capabilities.module';
 import { PrismaModule } from '../prisma/prisma.module';
 import { ReferralModule } from '../referral/referral.module';
 import { WalletModule } from '../wallet/wallet.module';
@@ -20,6 +21,7 @@ import { AgentService } from './agent.service';
     NotificationModule,
     ReferralModule,
     CrmModule,
+    PlatformCapabilitiesModule,
   ],
   controllers: [AgentController],
   providers: [AgentService],

@@ -7287,3 +7287,43 @@ est build, ackend/vercel.json, ackend/src/auth/auth.service.ts, and uth_devic
 ### Remaining External or Schema-Bounded Constraints
 - Agent profile preference persistence is still bounded by the current live schema and backend contracts; theme/language/availability/emergency-contact style fields are not fully persistable without a real server-side model expansion.
 - Agent onboarding branch capture remains workflow-visible but final issued branch ownership is still approval/schema-driven rather than fully self-persisted by the agent flow.
+## 195. Backend serverless auth preflight crash fix: AgentModule DI repair and immediate OPTIONS handling
+**Timestamp:** 2026-07-02 16:27:10 IST
+
+**High-level description**: Fixed the production `OPTIONS /auth/internal/login` failure on Vercel by removing the real bootstrap crash in the backend dependency graph and by adding a shared immediate preflight response path so browser CORS negotiation no longer waits for full Nest route execution.
+- Identified from live Vercel production runtime logs that the 500 was not caused by frontend CORS behavior, JWT guards, body parsing, Sentry trace headers, or validation. The serverless function was crashing during Nest bootstrap with `UnknownDependenciesException` because `AgentService` started depending on `PlatformPrintService` but `AgentModule` did not import `PlatformCapabilitiesModule`.
+- Imported `PlatformCapabilitiesModule` into `AgentModule`, restoring the DI graph and allowing the backend to finish Nest startup instead of dying before request handling.
+- Extracted shared backend CORS policy into `backend/src/bootstrap/cors.ts` so local Nest startup and the Vercel serverless entrypoint use one consistent allowlist, methods list, headers list, credential policy, and preflight cache duration.
+- Added an immediate raw preflight handler that returns `204 No Content` with `Access-Control-Allow-Origin`, `Access-Control-Allow-Methods`, `Access-Control-Allow-Headers`, `Access-Control-Allow-Credentials`, and `Access-Control-Max-Age` before auth guards, validation, or controller logic run.
+- Updated the Vercel serverless entrypoint to short-circuit `OPTIONS` before awaiting Nest bootstrap and to lazily bootstrap the full app only for non-preflight requests, which keeps preflight negotiation cheap and resilient while still preserving the existing Nest architecture for real API traffic.
+- Kept origin validation strict rather than widening it blindly: allowed local configured origins, the configured app URL, and `https://shield-*.vercel.app` preview/production SHIELD hosts.
+
+### Backend Files Modified
+- backend/api/index.ts
+- backend/src/agent/agent.module.ts
+- backend/src/config/app-env.ts
+- backend/src/main.ts
+
+### Backend Files Added
+- backend/src/bootstrap/cors.ts
+
+### APIs Added or Changed
+- No business endpoint contract changed.
+- Existing `OPTIONS` handling for backend routes now returns immediate `204` responses with cached CORS headers.
+- Existing `POST /auth/internal/login` no longer fails during bootstrap once the app graph is compiled successfully.
+
+### Database Changes
+- No schema change.
+- No SQL migration required.
+
+### Verification
+- cd backend && npm run build
+- Verified full `AppModule` compilation through `@nestjs/testing` after build to confirm the `PlatformPrintService` dependency graph is now resolvable.
+- Verified serverless `OPTIONS /auth/internal/login` locally through the built Vercel handler returns `204` with:
+  - `Access-Control-Allow-Origin: https://shield-zabnix.vercel.app`
+  - `Access-Control-Allow-Methods: GET, POST, PUT, PATCH, DELETE, OPTIONS`
+  - `Access-Control-Allow-Headers: Content-Type, Authorization, sentry-trace, baggage, Accept`
+  - `Access-Control-Allow-Credentials: true`
+  - `Access-Control-Max-Age: 86400`
+- Verified serverless `POST /auth/internal/login` locally reaches Nest routing and returns `401 Invalid Firebase ID token` for an intentionally invalid token, proving the request path no longer dies in bootstrap before auth logic runs.
+- Verified live production Vercel runtime logs before the fix showed the real crash as `UnknownDependenciesException` in `AgentService` resolution, not a CORS middleware rejection.

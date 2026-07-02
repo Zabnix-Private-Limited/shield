@@ -1,4 +1,4 @@
-type ShieldAppEnv = {
+export type ShieldAppEnv = {
   nodeEnv: string;
   appName: string;
   appUrl: string;
