@@ -7453,3 +7453,38 @@ est build, ackend/vercel.json, ackend/src/auth/auth.service.ts, and uth_devic
 - Verified Flutter test suite passes after the navigation-copy and screen-layout changes.
 ---
 2026-07-02 17:47:18 IST
+## 199. Agent portal polish phase: tabbed customer workspace, consolidated account settings, denser notifications, and cleaner agent navigation
+**Timestamp:** 2026-07-02 21:01:33 IST
+
+**High-level description**: Continued the Agent Portal product-hardening pass by reducing cognitive load in the biggest day-to-day screens instead of adding new features. This slice focused on converting the customer workspace from a long scrolling admin panel into a tabbed operational view, consolidating profile/settings into a denser account experience, improving notification readability, and shortening repetitive navigation labels.
+- Rebuilt the customer module into a true workspace with a left customer list and a right tabbed detail area so agents can switch between `Overview`, `Profile`, `Documents`, `Visits`, `Follow-Ups`, `Medical`, `Wallet`, and `Timeline` without scrolling through every domain at once.
+- Added a stronger customer hero with status badge, quick actions, compact metrics, and operational chips so the selected customer context is obvious before the user drills into details.
+- Reframed the customer detail content into summary sections and timeline-style lists instead of very tall generic cards, which improves information density on laptop screens and reduces the developer-dashboard feel.
+- Consolidated Agent profile/settings into one account-oriented experience with shared summary stats plus tabbed `Account`, `Preferences`, `Branch`, and `Sessions` areas; the profile-only route now reuses the same account surface instead of duplicating another large form.
+- Reworked settings content into grouped sections for personal details, workflow defaults, notifications/display preferences, working area/emergency contact, branch lifecycle, and session management so the screen no longer wastes large empty areas.
+- Rebuilt notifications into grouped `Today`, `Yesterday`, and `Earlier` sections with explicit unread/read badges and a proper empty state, making the screen feel like an inbox instead of an empty list.
+- Shortened repetitive agent navigation labels from customer-prefixed variants to cleaner operational names such as `Customers`, `Follow-Ups`, `Network`, `Documents`, `Performance`, and `Account`.
+- Kept all changes within the existing Agent Portal business logic, repository/controller structure, and shared backend APIs; this was a pure UI/UX hardening pass.
+
+### Frontend Files Modified
+- frontend/lib/features/agent/customers/presentation/screens/agent_customers_screen.dart
+- frontend/lib/features/agent/notifications/presentation/screens/agent_notifications_screen.dart
+- frontend/lib/features/agent/settings/presentation/screens/agent_settings_screen.dart
+- frontend/lib/features/portal/presentation/portal_role_data.dart
+- log.md
+
+### APIs Added or Changed
+- No backend endpoint or payload contract changed in this polish phase.
+- Existing Agent Portal customer workspace, settings, and notification APIs were reused as-is.
+
+### Database Changes
+- No schema change.
+- No SQL migration required.
+
+### Verification
+- cd frontend && flutter analyze --no-pub
+- cd frontend && flutter test
+- Verified Flutter analyze reports no issues after the customer/account/notification refactor.
+- Verified Flutter test suite passes after the tabbed workspace and account consolidation changes.
+---
+2026-07-02 21:01:33 IST

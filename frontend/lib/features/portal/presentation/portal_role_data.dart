@@ -580,7 +580,7 @@ class _PortalSectionFactory {
   );
   static final PortalSectionData agentCustomers = _section(
     'customers',
-    title: 'My Customers',
+      title: 'Customers',
     summary: 'Assigned customers only, with onboarding, card, wallet, and appointment context.',
   );
   static final PortalSectionData agentRegistration = _section(
@@ -590,7 +590,7 @@ class _PortalSectionFactory {
   );
   static final PortalSectionData agentFollowUps = _section(
     'followups',
-    title: 'Customer Follow-Up',
+      title: 'Follow-Ups',
     summary: 'Customer-first follow-up planning, outcomes, reminders, and next actions.',
   );
   static final PortalSectionData agentAppointments = _section(
@@ -600,12 +600,12 @@ class _PortalSectionFactory {
   );
   static final PortalSectionData agentReferrals = _section(
     'referrals',
-    title: 'Customer Network',
+      title: 'Network',
     summary: 'Customer network growth, relationship tree, and conversion progress in the scoped graph.',
   );
   static final PortalSectionData agentDocuments = _section(
     'documents',
-    title: 'Customer Documents',
+      title: 'Documents',
     summary: 'Required onboarding and customer documents limited to this agent assignment.',
   );
   static final PortalSectionData agentNotifications = _section(
@@ -614,7 +614,7 @@ class _PortalSectionFactory {
   );
   static final PortalSectionData agentPerformance = _section(
     'performance',
-    title: 'My Performance',
+      title: 'Performance',
     summary: 'This month customer growth, retention, follow-up completion, visits, and incentives.',
   );
   static final PortalSectionData agentReports = _section(
@@ -623,7 +623,7 @@ class _PortalSectionFactory {
   );
   static final PortalSectionData agentProfile = _section(
     'profile',
-    title: 'My Profile',
+      title: 'Account',
     summary: 'Agent identity, contact info, branch assignment, and session-ready account details.',
   );
   static final PortalSectionData agentSettings = _section(
