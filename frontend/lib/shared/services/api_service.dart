@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 
@@ -19,12 +21,13 @@ class ApiService {
   _providerPlatformWorkspaceCache = <String, Map<String, dynamic>>{};
   static Future<String?> Function()? _onRefreshToken;
   static Future<void> Function()? _onSessionExpired;
+  static Future<String?>? _refreshInFlight;
   static final Dio _dio =
       Dio(
           BaseOptions(
             baseUrl: _resolveBaseUrl(),
-            connectTimeout: const Duration(seconds: 5),
-            receiveTimeout: const Duration(seconds: 8),
+            connectTimeout: const Duration(seconds: 18),
+            receiveTimeout: const Duration(seconds: 25),
             headers: const {'Content-Type': 'application/json'},
           ),
         )
@@ -50,7 +53,7 @@ class ApiService {
                   !isAuthEndpoint &&
                   !alreadyRetried &&
                   _onRefreshToken != null) {
-                final refreshedToken = await _onRefreshToken!.call();
+                final refreshedToken = await _refreshAccessTokenSingleFlight();
                 if (refreshedToken != null &&
                     refreshedToken.trim().isNotEmpty) {
                   options.extra['retried'] = true;
@@ -152,6 +155,82 @@ class ApiService {
         : (base.scheme.isEmpty ? 'http' : base.scheme);
     final resolvedHost = isLocalHost ? '127.0.0.1' : host;
     return '$scheme://$resolvedHost:3000';
+  }
+
+  static Future<String?> _refreshAccessTokenSingleFlight() {
+    final existingRefresh = _refreshInFlight;
+    if (existingRefresh != null) {
+      return existingRefresh;
+    }
+    if (_onRefreshToken == null) {
+      return Future<String?>.value(null);
+    }
+
+    final completer = Completer<String?>();
+    _refreshInFlight = completer.future;
+    Future<void>(() async {
+      try {
+        completer.complete(await _onRefreshToken!.call());
+      } catch (error, stackTrace) {
+        completer.completeError(error, stackTrace);
+      } finally {
+        if (identical(_refreshInFlight, completer.future)) {
+          _refreshInFlight = null;
+        }
+      }
+    });
+    return completer.future;
+  }
+
+  static bool _isRetryableRequestFailure(DioException error) {
+    if (error.type == DioExceptionType.connectionTimeout ||
+        error.type == DioExceptionType.sendTimeout ||
+        error.type == DioExceptionType.receiveTimeout ||
+        error.type == DioExceptionType.connectionError) {
+      return true;
+    }
+    final statusCode = error.response?.statusCode;
+    return statusCode == 502 || statusCode == 503 || statusCode == 504;
+  }
+
+  static Duration _retryDelayForAttempt(int attempt) {
+    switch (attempt) {
+      case 1:
+        return const Duration(seconds: 1);
+      case 2:
+        return const Duration(seconds: 2);
+      default:
+        return const Duration(seconds: 4);
+    }
+  }
+
+  static Future<Response<dynamic>> _getWithRetry(
+    String path, {
+    Map<String, dynamic>? queryParameters,
+    Options? options,
+    int maxAttempts = 3,
+  }) async {
+    DioException? lastError;
+    for (var attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        return await _dio.get(
+          path,
+          queryParameters: queryParameters,
+          options: options,
+        );
+      } on DioException catch (error) {
+        lastError = error;
+        if (!_isRetryableRequestFailure(error) || attempt >= maxAttempts) {
+          rethrow;
+        }
+        await Future<void>.delayed(_retryDelayForAttempt(attempt));
+      }
+    }
+    throw lastError ??
+        DioException(
+          requestOptions: RequestOptions(path: path),
+          message: 'Request retry exhausted.',
+        );
   }
 
   static Map<String, dynamic> _readEnvelope(Response<dynamic> response) {
@@ -371,12 +450,16 @@ class ApiService {
     return _readEnvelope(response);
   }
 
-  static Future<Appointment> confirmProviderAppointment(String appointmentId) async {
+  static Future<Appointment> confirmProviderAppointment(
+    String appointmentId,
+  ) async {
     final response = await _dio.post('/appointments/$appointmentId/confirm');
     return Appointment.fromJson(_readEnvelope(response));
   }
 
-  static Future<Appointment> cancelProviderAppointment(String appointmentId) async {
+  static Future<Appointment> cancelProviderAppointment(
+    String appointmentId,
+  ) async {
     final response = await _dio.post('/appointments/$appointmentId/cancel');
     return Appointment.fromJson(_readEnvelope(response));
   }
@@ -586,7 +669,7 @@ class ApiService {
   }
 
   static Future<Map<String, dynamic>> getAuthenticatedProfile() async {
-    final response = await _dio.get('/auth/me');
+    final response = await _getWithRetry('/auth/me', maxAttempts: 3);
     return _readEnvelope(response);
   }
 
@@ -625,7 +708,8 @@ class ApiService {
       queryParameters: {
         if (mobile != null && mobile.trim().isNotEmpty) 'mobile': mobile.trim(),
         if (name != null && name.trim().isNotEmpty) 'name': name.trim(),
-        if (aadhaar != null && aadhaar.trim().isNotEmpty) 'aadhaar': aadhaar.trim(),
+        if (aadhaar != null && aadhaar.trim().isNotEmpty)
+          'aadhaar': aadhaar.trim(),
         if (membership != null && membership.trim().isNotEmpty)
           'membership': membership.trim(),
       },
@@ -699,12 +783,16 @@ class ApiService {
     return _readEnvelope(response);
   }
 
-  static Future<Appointment> confirmInternalAppointment(String appointmentId) async {
+  static Future<Appointment> confirmInternalAppointment(
+    String appointmentId,
+  ) async {
     final response = await _dio.post('/appointments/$appointmentId/confirm');
     return Appointment.fromJson(_readEnvelope(response));
   }
 
-  static Future<Appointment> cancelInternalAppointment(String appointmentId) async {
+  static Future<Appointment> cancelInternalAppointment(
+    String appointmentId,
+  ) async {
     final response = await _dio.post('/appointments/$appointmentId/cancel');
     return Appointment.fromJson(_readEnvelope(response));
   }
@@ -718,7 +806,8 @@ class ApiService {
       '/appointments/$appointmentId/reschedule',
       data: {
         'appointment_date': appointmentDate.toIso8601String(),
-        if (remarks != null && remarks.trim().isNotEmpty) 'remarks': remarks.trim(),
+        if (remarks != null && remarks.trim().isNotEmpty)
+          'remarks': remarks.trim(),
       },
     );
     return Appointment.fromJson(_readEnvelope(response));
@@ -750,7 +839,8 @@ class ApiService {
         'provider_id': providerId,
         'appointment_type': appointmentType,
         'appointment_date': appointmentDate.toIso8601String(),
-        if (remarks != null && remarks.trim().isNotEmpty) 'remarks': remarks.trim(),
+        if (remarks != null && remarks.trim().isNotEmpty)
+          'remarks': remarks.trim(),
       },
     );
     return Appointment.fromJson(_readEnvelope(response));
@@ -785,7 +875,10 @@ class ApiService {
   }
 
   static Future<Map<String, dynamic>> getProviderProfile() async {
-    final response = await _dio.get('/service-providers/me/profile');
+    final response = await _getWithRetry(
+      '/service-providers/me/profile',
+      maxAttempts: 3,
+    );
     return _readEnvelope(response);
   }
 
@@ -1265,7 +1358,7 @@ class ApiService {
     String? businessId,
     int? limit,
   }) async {
-    final response = await _dio.get(
+    final response = await _getWithRetry(
       '/operations-queue/provider',
       queryParameters: {
         if (providerId != null) 'provider_id': providerId,
@@ -1294,7 +1387,7 @@ class ApiService {
         _providerPlatformWorkspaceCache[cacheKey]!,
       );
     }
-    final response = await _dio.get(
+    final response = await _getWithRetry(
       '/platform/workspace/provider',
       queryParameters: {
         if (providerId != null) 'provider_id': providerId,
@@ -1313,10 +1406,7 @@ class ApiService {
   }) async {
     final response = await _dio.post(
       '/platform/print/generate',
-      data: {
-        'templateId': templateId,
-        'payload': payload,
-      },
+      data: {'templateId': templateId, 'payload': payload},
     );
     return _readEnvelope(response);
   }

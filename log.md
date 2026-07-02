@@ -7114,3 +7114,44 @@ est build, ackend/vercel.json, ackend/src/auth/auth.service.ts, and uth_devic
 - The document workflow is operational for upload and download-link retrieval, but full in-portal preview/replace/delete lifecycle parity would require either additional file-action contracts or a shared document-management refinement beyond the current scope-safe upload/list/download surface.
 ---
 2026-07-02 15:05:00 IST
+
+## 191. Provider startup hardening: single-flight refresh, cold-start retry resilience, and bootstrap RBAC correction
+**Timestamp:** 2026-07-02 16:10:00 IST
+
+**High-level description**: Hardened the existing Provider Portal startup path so expired access tokens, Vercel cold starts, and non-critical profile bootstrap failures no longer collapse the entire provider workspace into a misleading fatal error state.
+- Added single-flight token refresh in the shared Flutter `ApiService` so concurrent provider bootstrap requests now wait on one refresh cycle instead of racing each other with separate refresh attempts.
+- Increased the shared connect/receive timeouts and added bounded exponential retry handling for retry-safe provider bootstrap GET requests (`/auth/me`, `/operations-queue/provider`, `/platform/workspace/provider`, `/service-providers/me/profile`) to absorb serverless cold starts without forcing an immediate user-visible failure.
+- Changed provider workspace bootstrap sequencing so the controller authenticates first, loads critical workspace payloads next, and treats `/service-providers/me/profile` as a soft dependency instead of an all-or-nothing startup gate.
+- Added provider startup error classification in Flutter so permission issues and slow-start connectivity issues get business-appropriate messaging instead of always showing the generic `Provider screen unavailable` state.
+- Updated the shared portal shell to wait for internal auth initialization before provider section metadata loading and to fall back to the static provider role map if workspace metadata is temporarily unavailable during startup.
+- Corrected backend RBAC for `GET /service-providers/me/profile` from `settings.view` to `providers.view` because provider bootstrap/profile reads should not fail solely due to settings-page permission gaps.
+- This fix intentionally stayed inside the existing Provider Platform architecture: no alternate portal, no duplicate APIs, and no frontend-owned business composition were introduced.
+
+### Backend Files Modified
+- backend/src/service-provider/service-provider.controller.ts
+
+### Frontend Files Modified
+- frontend/lib/features/portal/presentation/screens/portal_shell.dart
+- frontend/lib/features/provider/shared/data/provider_portal_repository.dart
+- frontend/lib/features/provider/shared/presentation/controllers/provider_portal_controller.dart
+- frontend/lib/features/provider/shared/presentation/widgets/provider_workspace_scaffold.dart
+- frontend/lib/shared/services/api_service.dart
+
+### APIs Added or Changed
+- No new endpoints were introduced.
+- Existing GET /service-providers/me/profile now requires `providers.view` instead of `settings.view` for authenticated provider self-profile bootstrap.
+- Existing provider bootstrap GET requests now reuse the shared client-side retry/refresh hardening path.
+
+### Database Changes
+- No schema change in this hardening slice.
+- No SQL migration required.
+
+### Verification
+- cd backend && npm run build
+- cd frontend && flutter analyze --no-pub
+- cd frontend && flutter test
+- Verified backend build completes successfully.
+- Verified Flutter analyze reports no issues.
+- Verified Flutter test suite passes.
+---
+2026-07-02 16:10:00 IST

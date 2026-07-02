@@ -21,6 +21,10 @@ class ProviderPortalRepository {
         <String, dynamic>{};
   }
 
+  Future<Map<String, dynamic>> getPlatformWorkspaceFresh() {
+    return getPlatformWorkspace(forceRefresh: true);
+  }
+
   Future<Map<String, dynamic>> getAuthenticatedProfile() {
     return ApiService.getAuthenticatedProfile();
   }
@@ -49,7 +53,9 @@ class ProviderPortalRepository {
   }) {
     return ApiService.uploadProviderProfilePhoto(
       fileName: fileName,
-      fileBytes: fileBytes is Uint8List ? fileBytes : Uint8List.fromList(fileBytes),
+      fileBytes: fileBytes is Uint8List
+          ? fileBytes
+          : Uint8List.fromList(fileBytes),
       mimeType: mimeType,
       fileSize: fileSize,
     );
@@ -63,7 +69,9 @@ class ProviderPortalRepository {
   }) {
     return ApiService.uploadProviderSignature(
       fileName: fileName,
-      fileBytes: fileBytes is Uint8List ? fileBytes : Uint8List.fromList(fileBytes),
+      fileBytes: fileBytes is Uint8List
+          ? fileBytes
+          : Uint8List.fromList(fileBytes),
       mimeType: mimeType,
       fileSize: fileSize,
     );

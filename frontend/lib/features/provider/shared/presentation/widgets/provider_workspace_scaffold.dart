@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:dio/dio.dart';
 
 import '../../../../../app/theme/app_colors.dart';
 import '../../../../../app/theme/app_typography.dart';
@@ -48,16 +49,21 @@ class _ProviderWorkspaceScaffoldState
     }
 
     if (controller.error != null && !controller.isWorkspaceLoaded) {
+      final errorTitle = _errorTitle(controller.lastError);
+      final errorMessage = _errorMessage(
+        controller.lastError,
+        controller.error,
+      );
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(24),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text('Provider screen unavailable', style: AppTypography.h4),
+              Text(errorTitle, style: AppTypography.h4),
               const SizedBox(height: 8),
               Text(
-                'We could not load this provider screen right now. Check your connection and try again.',
+                errorMessage,
                 style: AppTypography.body.copyWith(color: AppColors.gray),
                 textAlign: TextAlign.center,
               ),
@@ -73,5 +79,42 @@ class _ProviderWorkspaceScaffoldState
     }
 
     return widget.builder(context, ref, controller);
+  }
+
+  String _errorTitle(Object? error) {
+    if (error is DioException) {
+      final statusCode = error.response?.statusCode;
+      if (statusCode == 403) {
+        return 'Access unavailable';
+      }
+      if (error.type == DioExceptionType.connectionTimeout ||
+          error.type == DioExceptionType.receiveTimeout ||
+          error.type == DioExceptionType.connectionError ||
+          statusCode == 502 ||
+          statusCode == 503 ||
+          statusCode == 504) {
+        return 'Still connecting to SHIELD';
+      }
+    }
+    return 'Provider screen unavailable';
+  }
+
+  String _errorMessage(Object? error, String? fallback) {
+    if (error is DioException) {
+      final statusCode = error.response?.statusCode;
+      if (statusCode == 403) {
+        return 'Your account can sign in, but it does not currently have access to this provider feature.';
+      }
+      if (error.type == DioExceptionType.connectionTimeout ||
+          error.type == DioExceptionType.receiveTimeout ||
+          error.type == DioExceptionType.connectionError ||
+          statusCode == 502 ||
+          statusCode == 503 ||
+          statusCode == 504) {
+        return 'The secure provider workspace is taking longer than usual to respond. This can happen during a cold start, and the next retry usually succeeds automatically.';
+      }
+    }
+    return fallback ??
+        'We could not load this provider screen right now. Check your connection and try again.';
   }
 }

@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:dio/dio.dart';
 
 import '../../../../../shared/models/appointment.dart';
 import '../../../../../shared/models/customer.dart';
@@ -42,6 +43,7 @@ class ProviderPortalController extends ChangeNotifier {
   bool _consultationSaving = false;
   bool _providerProfileSaving = false;
   String? _error;
+  Object? _lastError;
   String? _realtimeError;
   String? _selectedCustomerId;
   String? _activeVisitAppointmentId;
@@ -76,6 +78,7 @@ class ProviderPortalController extends ChangeNotifier {
   bool get isConsultationSaving => _consultationSaving;
   bool get isProviderProfileSaving => _providerProfileSaving;
   String? get error => _error;
+  Object? get lastError => _lastError;
   String? get realtimeError => _realtimeError;
   String? get activeVisitAppointmentId => _activeVisitAppointmentId;
   Map<String, dynamic> get workspace => _workspace ?? const <String, dynamic>{};
@@ -484,17 +487,18 @@ class ProviderPortalController extends ChangeNotifier {
       Map<String, dynamic>.from(consultationWorkspace['form'] ?? const {});
 
   Map<String, dynamic> get activeVisitStatusSummary =>
-      Map<String, dynamic>.from(consultationWorkspace['statusSummary'] ?? const {});
+      Map<String, dynamic>.from(
+        consultationWorkspace['statusSummary'] ?? const {},
+      );
 
   Map<String, dynamic> get activeVisitSummary =>
       Map<String, dynamic>.from(consultationWorkspace['visit'] ?? const {});
 
   Map<String, dynamic> get activeVisitBilling =>
       Map<String, dynamic>.from(consultationWorkspace['billing'] ?? const {});
-  Map<String, dynamic> get activeVisitPrescription =>
-      Map<String, dynamic>.from(
-        consultationWorkspace['prescription'] ?? const {},
-      );
+  Map<String, dynamic> get activeVisitPrescription => Map<String, dynamic>.from(
+    consultationWorkspace['prescription'] ?? const {},
+  );
 
   List<Map<String, dynamic>> get activeVisitTimeline =>
       List<Map<String, dynamic>>.from(
@@ -549,17 +553,22 @@ class ProviderPortalController extends ChangeNotifier {
   }
 
   Future<void> refreshWorkspace() async {
+    final authSession = InternalAuthSession.instance;
+    if (!authSession.isInitialized) {
+      await authSession.initialize();
+    }
+
     _loading = true;
     _error = null;
+    _lastError = null;
     _trace('workspace load started');
     notifyListeners();
 
     try {
+      final authenticatedProfile = await _repository.getAuthenticatedProfile();
       final results = await Future.wait([
         _repository.getOperationalWorkspace(),
-        _repository.getPlatformWorkspace(),
-        _repository.getAuthenticatedProfile(),
-        _repository.getProviderProfile(),
+        _repository.getPlatformWorkspace(forceRefresh: true),
       ]);
       final operationalWorkspace = Map<String, dynamic>.from(results[0]);
       final platformWorkspace = Map<String, dynamic>.from(results[1]);
@@ -570,16 +579,31 @@ class ProviderPortalController extends ChangeNotifier {
           const <String, dynamic>{};
       _workspace = mergedWorkspace;
       _platformWorkspace = platformWorkspace;
-      _authProfile = results[2];
-      _providerProfile = results[3];
+      _authProfile = authenticatedProfile;
       _workspaceLoaded = true;
       _trace('workspace loaded successfully');
       _selectedCustomerId ??= customers.isNotEmpty
           ? customers.first['id']?.toString()
           : null;
+      try {
+        _providerProfile = await _repository.getProviderProfile();
+      } catch (error) {
+        _trace('provider profile soft load failed error=$error');
+        if (_providerProfile == null &&
+            error is DioException &&
+            error.response?.statusCode == 403) {
+          _providerProfile =
+              authenticatedProfile['display'] is Map<String, dynamic>
+              ? Map<String, dynamic>.from(
+                  authenticatedProfile['display'] as Map<String, dynamic>,
+                )
+              : const <String, dynamic>{};
+        }
+      }
     } catch (error) {
       _trace('workspace load failed error=$error');
-      _error = error.toString();
+      _lastError = error;
+      _error = _describeWorkspaceLoadFailure(error);
     } finally {
       _loading = false;
       notifyListeners();
@@ -663,6 +687,27 @@ class ProviderPortalController extends ChangeNotifier {
     _realtimeConnected = false;
   }
 
+  String _describeWorkspaceLoadFailure(Object error) {
+    if (error is DioException) {
+      final statusCode = error.response?.statusCode;
+      if (statusCode == 401) {
+        return 'Your session is being restored. Please wait a moment and try again.';
+      }
+      if (statusCode == 403) {
+        return 'Your account does not have access to this provider workspace.';
+      }
+      if (error.type == DioExceptionType.connectionTimeout ||
+          error.type == DioExceptionType.receiveTimeout ||
+          error.type == DioExceptionType.connectionError) {
+        return 'SHIELD is taking longer than usual to respond. This can happen while the secure workspace wakes up.';
+      }
+      if (statusCode == 502 || statusCode == 503 || statusCode == 504) {
+        return 'SHIELD is still connecting to the provider workspace. Please try again shortly.';
+      }
+    }
+    return 'We could not open this provider workspace right now.';
+  }
+
   Future<void> selectCustomer(String customerId) async {
     if (_customerLoading && _selectedCustomerId == customerId) {
       return;
@@ -671,12 +716,14 @@ class ProviderPortalController extends ChangeNotifier {
     _selectedCustomerId = customerId;
     _customerLoading = true;
     _error = null;
+    _lastError = null;
     notifyListeners();
 
     try {
       final workspace = await _repository.getPatientWorkspace(customerId);
       _applySelectedPatientWorkspace(workspace);
     } catch (error) {
+      _lastError = error;
       _error = error.toString();
     } finally {
       _customerLoading = false;
@@ -694,6 +741,7 @@ class ProviderPortalController extends ChangeNotifier {
     }
     _settingsLoading = true;
     _error = null;
+    _lastError = null;
     notifyListeners();
 
     try {
@@ -704,6 +752,7 @@ class ProviderPortalController extends ChangeNotifier {
       _sessions = sessions;
       _loginHistory = loginHistory;
     } catch (error) {
+      _lastError = error;
       _error = error.toString();
     } finally {
       _settingsLoading = false;
@@ -721,6 +770,7 @@ class ProviderPortalController extends ChangeNotifier {
       _providerProfile = await _repository.getProviderProfile();
       _authProfile = await _repository.getAuthenticatedProfile();
     } catch (error) {
+      _lastError = error;
       _error = error.toString();
     } finally {
       notifyListeners();
@@ -730,12 +780,14 @@ class ProviderPortalController extends ChangeNotifier {
   Future<void> saveProviderProfile(Map<String, dynamic> payload) async {
     _providerProfileSaving = true;
     _error = null;
+    _lastError = null;
     notifyListeners();
 
     try {
       _providerProfile = await _repository.updateProviderProfile(payload);
       _authProfile = await _repository.getAuthenticatedProfile();
     } catch (error) {
+      _lastError = error;
       _error = error.toString();
       rethrow;
     } finally {
@@ -747,12 +799,14 @@ class ProviderPortalController extends ChangeNotifier {
   Future<void> saveProviderPreferences(Map<String, dynamic> payload) async {
     _providerProfileSaving = true;
     _error = null;
+    _lastError = null;
     notifyListeners();
 
     try {
       _providerProfile = await _repository.updateProviderPreferences(payload);
       _authProfile = await _repository.getAuthenticatedProfile();
     } catch (error) {
+      _lastError = error;
       _error = error.toString();
       rethrow;
     } finally {
@@ -769,6 +823,7 @@ class ProviderPortalController extends ChangeNotifier {
   }) async {
     _providerProfileSaving = true;
     _error = null;
+    _lastError = null;
     notifyListeners();
 
     try {
@@ -1059,10 +1114,7 @@ class ProviderPortalController extends ChangeNotifier {
     try {
       _consultationWorkspace = await _repository.finalizePrescription(
         appointmentId,
-        {
-          ...payload,
-          'sendToPharmacy': sendToPharmacy,
-        },
+        {...payload, 'sendToPharmacy': sendToPharmacy},
       );
       await _reloadSelectedCustomerData(preferredAppointmentId: appointmentId);
     } catch (error) {
@@ -1146,18 +1198,15 @@ class ProviderPortalController extends ChangeNotifier {
   }
 
   Future<Map<String, dynamic>> generatePatientPrint(String templateId) async {
-    final payloads =
-        selectedPatientWorkspace['printing'] is Map
-            ? Map<String, dynamic>.from(selectedPatientWorkspace['printing'])
-            : const <String, dynamic>{};
-    final rawPayload =
-        payloads['payloads'] is Map
-            ? Map<String, dynamic>.from(payloads['payloads'] as Map)
-            : const <String, dynamic>{};
-    final templatePayload =
-        rawPayload[templateId] is Map
-            ? Map<String, dynamic>.from(rawPayload[templateId] as Map)
-            : const <String, dynamic>{};
+    final payloads = selectedPatientWorkspace['printing'] is Map
+        ? Map<String, dynamic>.from(selectedPatientWorkspace['printing'])
+        : const <String, dynamic>{};
+    final rawPayload = payloads['payloads'] is Map
+        ? Map<String, dynamic>.from(payloads['payloads'] as Map)
+        : const <String, dynamic>{};
+    final templatePayload = rawPayload[templateId] is Map
+        ? Map<String, dynamic>.from(rawPayload[templateId] as Map)
+        : const <String, dynamic>{};
     if (templatePayload.isEmpty) {
       throw StateError('No shared print payload is available for $templateId.');
     }
@@ -1338,7 +1387,9 @@ class ProviderPortalController extends ChangeNotifier {
     if (filter == null) {
       return workflowQueue;
     }
-    final stageCodes = List<String>.from(filter['stageCodes'] ?? const <String>[]);
+    final stageCodes = List<String>.from(
+      filter['stageCodes'] ?? const <String>[],
+    );
     if (stageCodes.isEmpty) {
       return workflowQueue;
     }
@@ -1589,5 +1640,3 @@ class ProviderPortalController extends ChangeNotifier {
     super.dispose();
   }
 }
-
-

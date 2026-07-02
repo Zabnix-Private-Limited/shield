@@ -41,6 +41,7 @@ import '../../../../shared/widgets/app_skeleton.dart';
 import '../../../../shared/widgets/shield_date_input_field.dart';
 import '../../../../shared/services/api_service.dart';
 import '../../../../shared/services/customer_auth_session.dart';
+import '../../../../shared/services/internal_auth_session.dart';
 import '../../../../shared/utils/prescription_file_picker.dart';
 import '../../../../shared/widgets/customer_support_sheet.dart';
 import '../../../../shared/widgets/portal_support.dart';
@@ -94,13 +95,23 @@ class _PortalShellState extends State<PortalShell> {
         portal = portalDataForRole(widget.role);
         data = portal.sectionFor(sectionKey);
       } else if (widget.role == SHIELDRole.provider) {
-        final workspace = await ApiService.getProviderPlatformWorkspace() ??
-            <String, dynamic>{};
-        final workspaceMeta =
-            workspace['workspaceMeta'] as Map<String, dynamic>? ??
-            const <String, dynamic>{};
-        portal = portalDataForProviderWorkspaceMeta(workspaceMeta);
-        data = portal.sectionFor(sectionKey);
+        final authSession = InternalAuthSession.instance;
+        if (!authSession.isInitialized) {
+          await authSession.initialize();
+        }
+        try {
+          final workspace =
+              await ApiService.getProviderPlatformWorkspace() ??
+              <String, dynamic>{};
+          final workspaceMeta =
+              workspace['workspaceMeta'] as Map<String, dynamic>? ??
+              const <String, dynamic>{};
+          portal = portalDataForProviderWorkspaceMeta(workspaceMeta);
+          data = portal.sectionFor(sectionKey);
+        } catch (_) {
+          portal = portalDataForRole(widget.role);
+          data = portal.sectionFor(sectionKey);
+        }
       } else {
         portal = portalDataForRole(widget.role);
         data = await ApiService.getRoleSectionData(widget.role, sectionKey);
@@ -248,7 +259,8 @@ class _PortalShellState extends State<PortalShell> {
             : LayoutBuilder(
                 builder: (context, constraints) {
                   final useCompactAgentShell =
-                      widget.role == SHIELDRole.agent && constraints.maxWidth < 1024;
+                      widget.role == SHIELDRole.agent &&
+                      constraints.maxWidth < 1024;
                   if (useCompactAgentShell) {
                     return Scaffold(
                       backgroundColor: AppColors.lightGray,
@@ -768,9 +780,7 @@ class _RoleRailNav extends StatelessWidget {
               ),
               children: portal.sections.map((section) {
                 final isActive = section.key == activeSectionKey;
-                final icon = _portalSectionIcon(
-                  section.iconKey ?? section.key,
-                );
+                final icon = _portalSectionIcon(section.iconKey ?? section.key);
                 final targetRoute =
                     section.route ??
                     '/portal/${portal.role.routeKey}/${section.key}';
@@ -1635,10 +1645,7 @@ void _handleHeroAction(
     }
   }
 
-  showPortalSnackBar(
-    context,
-    '$action is not supported in this version.',
-  );
+  showPortalSnackBar(context, '$action is not supported in this version.');
 }
 
 void _showMembershipCardDialog(BuildContext context) {
@@ -7720,7 +7727,6 @@ class _CustomerServicesViewState extends State<_CustomerServicesView> {
     );
   }
 }
-
 
 class _AdminOperationsCenterView extends StatelessWidget {
   const _AdminOperationsCenterView();

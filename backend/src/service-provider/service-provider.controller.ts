@@ -106,7 +106,7 @@ export class ServiceProviderController {
     };
   }
 
-  @RequirePermissions('settings.view')
+  @RequirePermissions('providers.view')
   @Get('me/profile')
   async getCurrentProviderProfile(
     @CurrentPrincipal() principal?: ShieldPrincipal,
