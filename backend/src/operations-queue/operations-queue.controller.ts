@@ -2,12 +2,14 @@ import { Controller, Get, Query } from '@nestjs/common';
 import { CurrentPrincipal } from '../auth/current-principal.decorator';
 import { RequirePermissions } from '../auth/permissions.decorator';
 import type { ShieldPrincipal } from '../auth/auth.types';
+import { ProviderScopeService } from '../auth/provider-scope.service';
 import { OperationsQueueService } from './operations-queue.service';
 
 @Controller('operations-queue')
 export class OperationsQueueController {
   constructor(
     private readonly operationsQueueService: OperationsQueueService,
+    private readonly providerScopeService: ProviderScopeService,
   ) {}
 
   @RequirePermissions('providers.view')
@@ -19,7 +21,7 @@ export class OperationsQueueController {
     @Query('limit') limit?: string,
     @CurrentPrincipal() principal?: ShieldPrincipal,
   ) {
-    const scopedQuery = this.resolveProviderScope(principal, {
+    const scopedQuery = this.providerScopeService.resolveWorkspaceScope(principal, {
       providerId,
       providerType,
       businessId,
@@ -73,63 +75,4 @@ export class OperationsQueueController {
     };
   }
 
-  private resolveProviderScope(
-    principal: ShieldPrincipal | undefined,
-    query: {
-      providerId?: string;
-      providerType?: string;
-      businessId?: string;
-    },
-  ) {
-    const providerId = query.providerId?.trim()
-      ? BigInt(query.providerId.trim())
-      : undefined;
-    const explicitProviderType = query.providerType?.trim() || undefined;
-    const explicitBusinessId = query.businessId?.trim()
-      ? BigInt(query.businessId.trim())
-      : undefined;
-
-    if (
-      principal?.principalType !== 'USER' ||
-      principal.userType !== 'SERVICE_PROVIDER'
-    ) {
-      return {
-        providerId,
-        providerType: explicitProviderType,
-        businessId: explicitBusinessId,
-      };
-    }
-
-    return {
-      providerId,
-      providerType:
-        explicitProviderType ?? this.mapRoleCodeToProviderType(principal.roleCode),
-      businessId:
-        explicitBusinessId ??
-        (principal.branchBusinessId?.trim()
-          ? BigInt(principal.branchBusinessId.trim())
-          : undefined),
-    };
-  }
-
-  private mapRoleCodeToProviderType(roleCode?: string) {
-    switch (roleCode?.trim().toUpperCase()) {
-      case 'PHARMACY_PROVIDER':
-        return 'PHARMACY';
-      case 'LAB_PROVIDER':
-        return 'LABORATORY';
-      case 'DOCTOR':
-        return 'CLINIC';
-      case 'HOMECARE_PROVIDER':
-        return 'HOME_VISIT';
-      case 'DENTAL_PROVIDER':
-        return 'DENTAL';
-      case 'COSMETIC_PROVIDER':
-        return 'COSMETIC';
-      case 'DIETITIAN':
-        return 'DIETITIAN';
-      default:
-        return undefined;
-    }
-  }
 }

@@ -20,6 +20,7 @@ import {
   USER_TYPES,
 } from './auth.types';
 import { FirebaseAdminService } from '../notification/firebase-admin.service';
+import { getRolePermissions } from './rbac-catalog';
 
 type SessionRecord = {
   id: bigint;
@@ -272,9 +273,12 @@ export class AuthService {
         user.accessScope ?? user.role.defaultScope,
         'BRANCH',
       ),
-      permissions: user.role.rolePermissions
-        .map((entry) => entry.permission.code)
-        .filter((value): value is string => !!value),
+      permissions: this.mergeRolePermissions(
+        user.role.code,
+        user.role.rolePermissions
+          .map((entry) => entry.permission.code)
+          .filter((value): value is string => !!value),
+      ),
     });
 
     const tokens = await this.issueTokens(principal, {
@@ -1047,11 +1051,16 @@ export class AuthService {
       },
     });
 
-    return (
+    return this.mergeRolePermissions(
+      roleCode,
       role?.rolePermissions
         .map((entry) => entry.permission.code)
-        .filter((value): value is string => !!value) ?? []
+        .filter((value): value is string => !!value) ?? [],
     );
+  }
+
+  private mergeRolePermissions(roleCode: string, runtimePermissions: string[]) {
+    return Array.from(new Set([...runtimePermissions, ...getRolePermissions(roleCode)]));
   }
 
   private parseDurationToSeconds(value: string) {

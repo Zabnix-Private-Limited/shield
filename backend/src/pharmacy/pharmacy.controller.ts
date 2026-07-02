@@ -9,11 +9,15 @@ import {
 import { CurrentPrincipal } from '../auth/current-principal.decorator';
 import { RequirePermissions } from '../auth/permissions.decorator';
 import type { ShieldPrincipal } from '../auth/auth.types';
+import { ProviderScopeService } from '../auth/provider-scope.service';
 import { PharmacyService } from './pharmacy.service';
 
 @Controller()
 export class PharmacyController {
-  constructor(private pharmacyService: PharmacyService) {}
+  constructor(
+    private pharmacyService: PharmacyService,
+    private readonly providerScopeService: ProviderScopeService,
+  ) {}
 
   @RequirePermissions('providers.update')
   @Post('products')
@@ -50,7 +54,14 @@ export class PharmacyController {
 
   @RequirePermissions('providers.create')
   @Post('pharmacy/purchases')
-  async createPurchase(@Body() body: any) {
+  async createPurchase(
+    @Body() body: any,
+    @CurrentPrincipal() principal?: ShieldPrincipal,
+  ) {
+    await this.providerScopeService.assertProviderCanAccessCustomer(
+      BigInt(body.customer_id),
+      principal,
+    );
     const staffId = body.staff_user_id ? BigInt(body.staff_user_id) : undefined;
     const itemsMapped = (body.items || []).map((i: any) => ({
       productId: BigInt(i.product_id),
@@ -85,7 +96,16 @@ export class PharmacyController {
         : customerId
           ? BigInt(customerId)
           : undefined;
-    const purchases = await this.pharmacyService.listPurchases(targetCustomerId);
+    if (targetCustomerId) {
+      await this.providerScopeService.assertProviderCanAccessCustomer(
+        targetCustomerId,
+        principal,
+      );
+    }
+    const purchases = await this.pharmacyService.listPurchases(
+      targetCustomerId,
+      principal,
+    );
     return {
       success: true,
       message: 'Purchase logs retrieved',

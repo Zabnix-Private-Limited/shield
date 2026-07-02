@@ -12,11 +12,15 @@ import {
 import { CurrentPrincipal } from '../auth/current-principal.decorator';
 import { RequirePermissions } from '../auth/permissions.decorator';
 import type { ShieldPrincipal } from '../auth/auth.types';
+import { ProviderScopeService } from '../auth/provider-scope.service';
 import { CustomerService } from './customer.service';
 
 @Controller('customers')
 export class CustomerController {
-  constructor(private customerService: CustomerService) {}
+  constructor(
+    private customerService: CustomerService,
+    private readonly providerScopeService: ProviderScopeService,
+  ) {}
 
   @RequirePermissions('customers.create')
   @Post()
@@ -37,6 +41,7 @@ export class CustomerController {
     @Query('name') name?: string,
     @Query('aadhaar') aadhaar?: string,
     @Query('membership') membership?: string,
+    @CurrentPrincipal() principal?: ShieldPrincipal,
   ) {
     const results = await this.customerService.search({
       mobile,
@@ -44,10 +49,24 @@ export class CustomerController {
       aadhaar,
       membership,
     });
+    const data = this.providerScopeService.isProviderPrincipal(principal)
+      ? await (async () => {
+          const customerIds = results.map((item) => item.id);
+          const allowedIds = new Set(
+            (
+              await this.providerScopeService.listAccessibleCustomerIds(
+                principal,
+                customerIds,
+              )
+            ).map((id) => id.toString()),
+          );
+          return results.filter((item) => allowedIds.has(item.id.toString()));
+        })()
+      : results;
     return {
       success: true,
       message: 'Search completed',
-      data: results,
+      data,
     };
   }
 
@@ -79,6 +98,10 @@ export class CustomerController {
       throw new ForbiddenException('Customers can only view their own profile.');
     }
 
+    await this.providerScopeService.assertProviderCanAccessCustomer(
+      BigInt(id),
+      principal,
+    );
     const customer = await this.customerService.findOne(BigInt(id));
     return {
       success: true,
@@ -101,6 +124,10 @@ export class CustomerController {
       throw new ForbiddenException('Customers can only update their own profile.');
     }
 
+    await this.providerScopeService.assertProviderCanAccessCustomer(
+      BigInt(id),
+      principal,
+    );
     const customer = await this.customerService.update(BigInt(id), body);
     return {
       success: true,

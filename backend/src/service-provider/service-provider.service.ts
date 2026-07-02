@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { randomUUID } from 'crypto';
+import { ProviderScopeService } from '../auth/provider-scope.service';
 import { CustomerService } from '../customer/customer.service';
 import { WalletService } from '../wallet/wallet.service';
 import { AppointmentService } from '../appointment/appointment.service';
@@ -23,6 +24,7 @@ type ProviderProfileAssetType = 'photo' | 'signature';
 export class ServiceProviderService {
   constructor(
     private readonly prisma: PrismaService,
+    private readonly providerScopeService: ProviderScopeService,
     private readonly customerService: CustomerService,
     private readonly walletService: WalletService,
     private readonly appointmentService: AppointmentService,
@@ -365,6 +367,10 @@ export class ServiceProviderService {
   }
 
   async getPatientWorkspace(customerId: bigint, principal?: ShieldPrincipal) {
+    await this.providerScopeService.assertProviderCanAccessCustomer(
+      customerId,
+      principal,
+    );
     const [
       patient,
       membership,
@@ -377,15 +383,18 @@ export class ServiceProviderService {
       this.customerService.findOne(customerId),
       this.customerService.getCustomerPortalMembership(customerId),
       this.walletService.getCustomerWalletBundle(customerId),
-      this.documentService.list(customerId),
-      this.appointmentService.list(customerId),
-      this.notificationService.list(customerId),
-      this.pharmacyService.listPurchases(customerId),
+      this.documentService.list(customerId, principal),
+      this.appointmentService.list(customerId, principal),
+      this.notificationService.list(customerId, principal),
+      this.pharmacyService.listPurchases(customerId, principal),
     ]);
 
     const activeAppointment = this.resolvePrimaryVisitAppointment(appointments);
     const activeVisitWorkspace = activeAppointment
-      ? await this.appointmentService.getConsultationWorkspace(activeAppointment.id)
+      ? await this.appointmentService.getConsultationWorkspace(
+          activeAppointment.id,
+          principal,
+        )
       : null;
     const timeline = await this.timelineService.getPatientTimeline(customerId);
 

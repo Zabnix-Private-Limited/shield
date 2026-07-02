@@ -1,6 +1,8 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { randomUUID } from 'crypto';
+import type { ShieldPrincipal } from '../auth/auth.types';
+import { ProviderScopeService } from '../auth/provider-scope.service';
 import { PricingService } from '../pricing/pricing.service';
 import { ReferralService } from '../referral/referral.service';
 import { WalletService } from '../wallet/wallet.service';
@@ -10,6 +12,7 @@ import { WALLET_LEDGER_TYPES } from '../pricing/pricing.types';
 export class PharmacyService {
   constructor(
     private readonly prisma: PrismaService,
+    private readonly providerScopeService: ProviderScopeService,
     private readonly pricingService: PricingService,
     private readonly referralService: ReferralService,
     private readonly walletService: WalletService,
@@ -151,13 +154,13 @@ export class PharmacyService {
     });
   }
 
-  async listPurchases(customerId?: bigint) {
+  async listPurchases(customerId?: bigint, principal?: ShieldPrincipal) {
     const whereClause: any = {};
     if (customerId) {
       whereClause.customerId = customerId;
     }
     return this.prisma.purchase.findMany({
-      where: whereClause,
+      where: this.providerScopeService.scopePurchaseWhere(whereClause, principal),
       include: {
         customer: true,
         provider: true,

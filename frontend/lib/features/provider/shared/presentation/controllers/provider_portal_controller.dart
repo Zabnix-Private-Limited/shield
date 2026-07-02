@@ -331,6 +331,16 @@ class ProviderPortalController extends ChangeNotifier {
     return principal['branchLabel']?.toString() ?? 'Branch not assigned';
   }
 
+  bool hasPermission(String code) {
+    final principal =
+        authProfile['principal'] as Map<String, dynamic>? ??
+        const <String, dynamic>{};
+    final permissions = List<String>.from(
+      principal['permissions'] ?? const <String>[],
+    );
+    return permissions.contains(code);
+  }
+
   Map<String, List<Map<String, dynamic>>> get queueByStage {
     final buckets = <String, List<Map<String, dynamic>>>{
       for (final stage in queueStagesMetadata)
@@ -1173,9 +1183,6 @@ class ProviderPortalController extends ChangeNotifier {
     String reportId, {
     String format = 'PDF',
   }) {
-    final principal =
-        authProfile['principal'] as Map<String, dynamic>? ??
-        const <String, dynamic>{};
     final display =
         authProfile['display'] as Map<String, dynamic>? ??
         const <String, dynamic>{};
@@ -1184,7 +1191,6 @@ class ProviderPortalController extends ChangeNotifier {
       reportId: reportId,
       workspace: 'provider',
       format: format,
-      providerId: principal['subjectId']?.toString(),
       businessId: branch['id']?.toString(),
     );
   }

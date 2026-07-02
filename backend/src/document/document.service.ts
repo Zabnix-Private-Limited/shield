@@ -1,6 +1,8 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { randomUUID } from 'crypto';
+import type { ShieldPrincipal } from '../auth/auth.types';
+import { ProviderScopeService } from '../auth/provider-scope.service';
 import { PrescriptionIntelligenceService } from './prescription-intelligence.service';
 import { StorageService } from '../storage/storage.service';
 
@@ -22,6 +24,7 @@ type PrescriptionMatchCandidate = {
 export class DocumentService {
   constructor(
     private prisma: PrismaService,
+    private readonly providerScopeService: ProviderScopeService,
     private prescriptionIntelligenceService: PrescriptionIntelligenceService,
     private storageService: StorageService,
   ) {}
@@ -439,12 +442,17 @@ export class DocumentService {
     });
   }
 
-  async list(customerId?: bigint) {
+  async list(customerId?: bigint, principal?: ShieldPrincipal) {
     const whereClause: any = {
       NOT: { status: 'DELETED' },
     };
     if (customerId) {
       whereClause.customerId = customerId;
+    } else if (this.providerScopeService.isProviderPrincipal(principal)) {
+      const accessibleCustomerIds =
+        await this.providerScopeService.listAccessibleCustomerIds(principal);
+      whereClause.customerId =
+        accessibleCustomerIds.length > 0 ? { in: accessibleCustomerIds } : { in: [] };
     }
     return this.prisma.document.findMany({
       where: whereClause,

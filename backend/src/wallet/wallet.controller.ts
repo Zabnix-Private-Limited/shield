@@ -11,12 +11,16 @@ import {
 import { CurrentPrincipal } from '../auth/current-principal.decorator';
 import { RequirePermissions } from '../auth/permissions.decorator';
 import type { ShieldPrincipal } from '../auth/auth.types';
+import { ProviderScopeService } from '../auth/provider-scope.service';
 import { WalletService } from './wallet.service';
 import { WALLET_LEDGER_TYPES } from '../pricing/pricing.types';
 
 @Controller('wallets')
 export class WalletController {
-  constructor(private walletService: WalletService) {}
+  constructor(
+    private walletService: WalletService,
+    private readonly providerScopeService: ProviderScopeService,
+  ) {}
 
   @RequirePermissions('wallet.view')
   @Get(':customerId')
@@ -31,6 +35,10 @@ export class WalletController {
       throw new ForbiddenException('Customers can only view their own wallet.');
     }
 
+    await this.providerScopeService.assertProviderCanAccessWalletByCustomer(
+      BigInt(customerId),
+      principal,
+    );
     const data = await this.walletService.getWalletByCustomerId(BigInt(customerId), {
       includeHiddenBenefit: principal?.roleCode === 'ADMIN',
     });
@@ -109,7 +117,12 @@ export class WalletController {
     @Query('from') from?: string,
     @Query('to') to?: string,
     @Query('type') type?: string,
+    @CurrentPrincipal() principal?: ShieldPrincipal,
   ) {
+    await this.providerScopeService.assertProviderCanAccessWallet(
+      BigInt(id),
+      principal,
+    );
     const txns = await this.walletService.getTransactions(BigInt(id), {
       from,
       to,

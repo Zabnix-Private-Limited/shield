@@ -10,11 +10,15 @@ import {
 import { CurrentPrincipal } from '../auth/current-principal.decorator';
 import { RequirePermissions } from '../auth/permissions.decorator';
 import type { ShieldPrincipal } from '../auth/auth.types';
+import { ProviderScopeService } from '../auth/provider-scope.service';
 import { NotificationService } from './notification.service';
 
 @Controller('notifications')
 export class NotificationController {
-  constructor(private notificationService: NotificationService) {}
+  constructor(
+    private notificationService: NotificationService,
+    private readonly providerScopeService: ProviderScopeService,
+  ) {}
 
   @RequirePermissions('notifications.view')
   @Get()
@@ -28,7 +32,13 @@ export class NotificationController {
         : customerId
           ? BigInt(customerId)
           : undefined;
-    const notifs = await this.notificationService.list(targetCustomerId);
+    if (targetCustomerId) {
+      await this.providerScopeService.assertProviderCanAccessCustomer(
+        targetCustomerId,
+        principal,
+      );
+    }
+    const notifs = await this.notificationService.list(targetCustomerId, principal);
     return {
       success: true,
       message: 'Notifications retrieved successfully',
@@ -38,7 +48,14 @@ export class NotificationController {
 
   @RequirePermissions('notifications.view')
   @Post(':id/read')
-  async markAsRead(@Param('id') id: string) {
+  async markAsRead(
+    @Param('id') id: string,
+    @CurrentPrincipal() principal?: ShieldPrincipal,
+  ) {
+    await this.providerScopeService.assertProviderCanAccessNotification(
+      BigInt(id),
+      principal,
+    );
     const notif = await this.notificationService.markAsRead(BigInt(id));
     return {
       success: true,

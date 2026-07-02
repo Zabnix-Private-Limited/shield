@@ -16,11 +16,15 @@ import * as multer from 'multer';
 import { CurrentPrincipal } from '../auth/current-principal.decorator';
 import { RequirePermissions } from '../auth/permissions.decorator';
 import type { ShieldPrincipal } from '../auth/auth.types';
+import { ProviderScopeService } from '../auth/provider-scope.service';
 import { DocumentService } from './document.service';
 
 @Controller()
 export class DocumentController {
-  constructor(private documentService: DocumentService) {}
+  constructor(
+    private documentService: DocumentService,
+    private readonly providerScopeService: ProviderScopeService,
+  ) {}
 
   @RequirePermissions('documents.create')
   @Post('documents/upload')
@@ -44,6 +48,10 @@ export class DocumentController {
     if (principal?.principalType === 'CUSTOMER') {
       body.customer_id = principal.customerId;
     }
+    await this.providerScopeService.assertProviderCanAccessCustomer(
+      BigInt(body.customer_id),
+      principal,
+    );
     const doc = await this.documentService.upload({
       customerId: BigInt(body.customer_id),
       fileName: file?.originalname || body.file_name || 'prescription.pdf',
@@ -72,7 +80,13 @@ export class DocumentController {
         : customerId
           ? BigInt(customerId)
           : undefined;
-    const docs = await this.documentService.list(targetCustomerId);
+    if (targetCustomerId) {
+      await this.providerScopeService.assertProviderCanAccessCustomer(
+        targetCustomerId,
+        principal,
+      );
+    }
+    const docs = await this.documentService.list(targetCustomerId, principal);
     return {
       success: true,
       message: 'Documents list retrieved',
@@ -82,7 +96,14 @@ export class DocumentController {
 
   @RequirePermissions('documents.view')
   @Get('documents/:id')
-  async findOne(@Param('id') id: string) {
+  async findOne(
+    @Param('id') id: string,
+    @CurrentPrincipal() principal?: ShieldPrincipal,
+  ) {
+    await this.providerScopeService.assertProviderCanAccessDocument(
+      BigInt(id),
+      principal,
+    );
     const doc = await this.documentService.findOne(BigInt(id));
     return {
       success: true,
@@ -93,7 +114,14 @@ export class DocumentController {
 
   @RequirePermissions('documents.view')
   @Get('documents/:id/download')
-  async download(@Param('id') id: string) {
+  async download(
+    @Param('id') id: string,
+    @CurrentPrincipal() principal?: ShieldPrincipal,
+  ) {
+    await this.providerScopeService.assertProviderCanAccessDocument(
+      BigInt(id),
+      principal,
+    );
     const url = await this.documentService.getDownloadUrl(BigInt(id));
     return {
       success: true,
@@ -107,7 +135,14 @@ export class DocumentController {
   @RequirePermissions('documents.delete')
   @Delete('documents/:id')
   @HttpCode(200)
-  async softDelete(@Param('id') id: string) {
+  async softDelete(
+    @Param('id') id: string,
+    @CurrentPrincipal() principal?: ShieldPrincipal,
+  ) {
+    await this.providerScopeService.assertProviderCanAccessDocument(
+      BigInt(id),
+      principal,
+    );
     await this.documentService.softDelete(BigInt(id));
     return {
       success: true,
@@ -117,7 +152,14 @@ export class DocumentController {
 
   @RequirePermissions('documents.approve')
   @Post('document-intelligence/classify')
-  async classify(@Body() body: any) {
+  async classify(
+    @Body() body: any,
+    @CurrentPrincipal() principal?: ShieldPrincipal,
+  ) {
+    await this.providerScopeService.assertProviderCanAccessDocument(
+      BigInt(body.document_id),
+      principal,
+    );
     const doc = await this.documentService.classify(BigInt(body.document_id));
     return {
       success: true,
@@ -128,7 +170,14 @@ export class DocumentController {
 
   @RequirePermissions('documents.view')
   @Post('document-intelligence/extract')
-  async extract(@Body() body: any) {
+  async extract(
+    @Body() body: any,
+    @CurrentPrincipal() principal?: ShieldPrincipal,
+  ) {
+    await this.providerScopeService.assertProviderCanAccessDocument(
+      BigInt(body.document_id),
+      principal,
+    );
     const doc = await this.documentService.extract(BigInt(body.document_id));
     return {
       success: true,
@@ -152,6 +201,10 @@ export class DocumentController {
     if (!staffId) {
       throw new UnauthorizedException('Authentication required');
     }
+    await this.providerScopeService.assertProviderCanAccessDocument(
+      BigInt(body.document_id),
+      principal,
+    );
 
     const doc = await this.documentService.validate(
       BigInt(body.document_id),
@@ -167,7 +220,14 @@ export class DocumentController {
 
   @RequirePermissions('medical_records.view')
   @Get('document-intelligence/prescription-review/:documentId')
-  async getPrescriptionReview(@Param('documentId') documentId: string) {
+  async getPrescriptionReview(
+    @Param('documentId') documentId: string,
+    @CurrentPrincipal() principal?: ShieldPrincipal,
+  ) {
+    await this.providerScopeService.assertProviderCanAccessDocument(
+      BigInt(documentId),
+      principal,
+    );
     const review = await this.documentService.getPrescriptionReview(
       BigInt(documentId),
     );
@@ -194,6 +254,10 @@ export class DocumentController {
     if (!staffId) {
       throw new UnauthorizedException('Authentication required');
     }
+    await this.providerScopeService.assertProviderCanAccessDocument(
+      BigInt(documentId),
+      principal,
+    );
 
     const providerId = body.provider_id ? BigInt(body.provider_id) : undefined;
     const review = await this.documentService.approvePrescriptionReview(
@@ -210,7 +274,14 @@ export class DocumentController {
 
   @RequirePermissions('documents.view')
   @Get('document-intelligence/logs/:documentId')
-  async getLogs(@Param('documentId') documentId: string) {
+  async getLogs(
+    @Param('documentId') documentId: string,
+    @CurrentPrincipal() principal?: ShieldPrincipal,
+  ) {
+    await this.providerScopeService.assertProviderCanAccessDocument(
+      BigInt(documentId),
+      principal,
+    );
     const logs = await this.documentService.getLogs(BigInt(documentId));
     return {
       success: true,

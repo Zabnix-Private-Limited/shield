@@ -6905,3 +6905,70 @@ est build, ackend/vercel.json, ackend/src/auth/auth.service.ts, and uth_devic
 - `cd frontend && flutter test`
 ---
 2026-07-01 20:58:52 IST
+
+## 188. Provider final remediation sprint: centralized provider scope enforcement, billing integrity correction, self-service RBAC, and provider workflow completion
+**Timestamp:** 2026-07-02 10:17:15 IST
+
+**High-level description**: Completed the provider remediation sprint against the existing architecture by closing the freeze-blocking authorization, billing, notification, self-service RBAC, reporting, and provider action-consistency defects without creating parallel modules or bypassing the shared platform layers.
+- Introduced one shared ProviderScopeService in the auth layer and routed provider-facing patient, appointment, document, notification, purchase, report, and workspace access through it so provider access is consistently enforced by provider branch and provider type instead of trusting client-supplied identifiers.
+- Applied provider scope checks to provider patient workspace loading, appointment reads and consultation actions, document open/download/intelligence actions, notification reads, customer search/profile reads, pharmacy purchase reads, wallet transaction access, provider report execution, and provider workspace query scoping.
+- Fixed the visit billing integrity bug by normalizing nested illing_draft request payloads in the controller and correcting invoice/payment sequencing so invoice generation no longer pre-applies payment summary state before the real payment write path runs.
+- Added an explicit no-op payment guard so the payment endpoint now returns a real 400 when nothing changed, while preserving already-recorded payment totals and preventing false notifications.
+- Kept notification emission transaction-safe for billing by ensuring Payment received / Refund processed only happen after successful payment persistence and never on rejected no-op submissions.
+- Split provider self-service from administrative provider management by moving the authenticated provider profile/settings routes to settings.view / settings.update and extending runtime permission resolution so JWT permissions stay aligned with the repo RBAC catalog even when database role-permission rows lag behind code changes.
+- Completed the remaining provider-facing UI consistency work by hiding unauthorized appointment cancel controls, wiring the standalone appointments/documents/prescriptions screens to real patient/workspace actions, and removing the incorrect provider report filter payload that was sending a non-numeric subject identifier.
+- Corrected provider report filtering so provider-scoped reports now enforce provider type + branch scope, respect explicit date filters for PROVIDER_TODAYS_CONSULTATIONS, and ignore provider-supplied attempts to override branch/type scope.
+- Re-verified the original release-blocking QA scenarios through live runtime calls: unrelated patient workspace access, unrelated appointment access, inaccessible document/notification reads, provider profile update, provider preferences update, payment persistence, no-op payment rejection, notification correctness, and provider report filter correctness.
+
+### Backend Files Modified
+- backend/src/appointment/appointment.controller.ts
+- backend/src/appointment/appointment.service.ts
+- backend/src/auth/auth.module.ts
+- backend/src/auth/auth.service.ts
+- backend/src/auth/rbac-catalog.ts
+- backend/src/customer/customer.controller.ts
+- backend/src/document/document.controller.ts
+- backend/src/document/document.service.ts
+- backend/src/notification/notification.controller.ts
+- backend/src/notification/notification.service.ts
+- backend/src/operations-queue/operations-queue.controller.ts
+- backend/src/pharmacy/pharmacy.controller.ts
+- backend/src/pharmacy/pharmacy.service.ts
+- backend/src/platform-capabilities/platform-capabilities.controller.ts
+- backend/src/platform-capabilities/platform-report.service.ts
+- backend/src/service-provider/service-provider.controller.ts
+- backend/src/service-provider/service-provider.service.ts
+- backend/src/wallet/wallet.controller.ts
+
+### Backend Files Added
+- backend/src/auth/provider-scope.service.ts
+
+### Frontend Files Modified
+- frontend/lib/features/provider/appointments/presentation/screens/provider_appointments_screen.dart
+- frontend/lib/features/provider/customers/presentation/screens/provider_customers_screen.dart
+- frontend/lib/features/provider/documents/presentation/screens/provider_documents_screen.dart
+- frontend/lib/features/provider/prescriptions/presentation/screens/provider_prescriptions_screen.dart
+- frontend/lib/features/provider/shared/presentation/controllers/provider_portal_controller.dart
+
+### APIs Added or Changed
+- No new provider portal module was introduced.
+- Existing provider-facing endpoints now enforce centralized provider scope checks before returning patient-linked data.
+- Existing PATCH /service-providers/me/profile, PATCH /service-providers/me/preferences, POST /service-providers/me/profile/photo, and POST /service-providers/me/profile/signature now operate as authenticated self-service settings/profile endpoints through the provider runtime permission model.
+- Existing POST /appointments/:id/visit-billing and POST /appointments/:id/record-payment now correctly honor nested illing_draft payloads from the Flutter provider UI.
+- Existing POST /platform/reports/run now forces provider branch/type scope for provider principals and respects provider report date filters correctly.
+
+### Database Changes
+- No schema change in this remediation slice.
+- No SQL migration required in this remediation slice.
+
+### Verification
+- cd backend && npm run build
+- cd frontend && flutter analyze --no-pub
+- cd frontend && flutter test
+- Runtime checks completed against a local backend booted with explicit QA JWT secrets on port 3100 using an authenticated DOCTOR principal.
+- Verified unrelated patient workspace access now returns 403.
+- Verified unrelated appointment access now returns 403.
+- Verified unrelated document and notification access now return 403.
+- Verified provider self-profile update succeeds with a real authenticated provider session.
+- Verified provider visit payment persistence returns 200 on real changes, updates paid/balance/history values, emits the correct patient notification, and returns 400 without mutation on a repeated no-op submission.
+- Verified provider report execution now respects date filtering and provider branch/type scope.

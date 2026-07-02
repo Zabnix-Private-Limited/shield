@@ -383,7 +383,8 @@ class _ProviderCustomersScreenState extends State<ProviderCustomersScreen> {
                                       ),
                               child: const Text('Accept'),
                             ),
-                          if (appointment.status != AppointmentStatus.completed &&
+                          if (controller.hasPermission('appointments.delete') &&
+                              appointment.status != AppointmentStatus.completed &&
                               appointment.status != AppointmentStatus.cancelled)
                             OutlinedButton(
                               onPressed: controller.isConsultationSaving

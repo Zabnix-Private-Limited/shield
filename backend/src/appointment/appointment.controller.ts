@@ -27,7 +27,7 @@ export class AppointmentController {
         : customerId
           ? BigInt(customerId)
           : undefined;
-    const appts = await this.appointmentService.list(targetCustomerId);
+    const appts = await this.appointmentService.list(targetCustomerId, principal);
     return {
       success: true,
       message: 'Appointments list retrieved',
@@ -51,8 +51,11 @@ export class AppointmentController {
 
   @RequirePermissions('appointments.view')
   @Get(':id')
-  async findOne(@Param('id') id: string) {
-    const appt = await this.appointmentService.findOne(BigInt(id));
+  async findOne(
+    @Param('id') id: string,
+    @CurrentPrincipal() principal?: ShieldPrincipal,
+  ) {
+    const appt = await this.appointmentService.findOne(BigInt(id), principal);
     return {
       success: true,
       message: 'Appointment details retrieved',
@@ -62,8 +65,11 @@ export class AppointmentController {
 
   @RequirePermissions('appointments.delete')
   @Post(':id/cancel')
-  async cancel(@Param('id') id: string) {
-    const appt = await this.appointmentService.cancel(BigInt(id));
+  async cancel(
+    @Param('id') id: string,
+    @CurrentPrincipal() principal?: ShieldPrincipal,
+  ) {
+    const appt = await this.appointmentService.cancel(BigInt(id), principal);
     return {
       success: true,
       message: 'Appointment cancelled successfully',
@@ -73,8 +79,11 @@ export class AppointmentController {
 
   @RequirePermissions('appointments.update')
   @Post(':id/confirm')
-  async confirm(@Param('id') id: string) {
-    const appt = await this.appointmentService.confirm(BigInt(id));
+  async confirm(
+    @Param('id') id: string,
+    @CurrentPrincipal() principal?: ShieldPrincipal,
+  ) {
+    const appt = await this.appointmentService.confirm(BigInt(id), principal);
     return {
       success: true,
       message: 'Appointment confirmed successfully',
@@ -90,6 +99,7 @@ export class AppointmentController {
   ) {
     const workspace = await this.appointmentService.getConsultationWorkspace(
       BigInt(id),
+      principal,
     );
     return {
       success: true,
@@ -104,10 +114,14 @@ export class AppointmentController {
     @Param('id') id: string,
     @CurrentPrincipal() principal?: ShieldPrincipal,
   ) {
-    const workspace = await this.appointmentService.startConsultation(BigInt(id), {
-      userId: principal?.userId ? BigInt(principal.userId) : undefined,
-      roleCode: principal?.roleCode,
-    });
+    const workspace = await this.appointmentService.startConsultation(
+      BigInt(id),
+      principal,
+      {
+        userId: principal?.userId ? BigInt(principal.userId) : undefined,
+        roleCode: principal?.roleCode,
+      },
+    );
     return {
       success: true,
       message: 'Consultation started successfully',
@@ -122,20 +136,25 @@ export class AppointmentController {
     @Body() body: any,
     @CurrentPrincipal() principal?: ShieldPrincipal,
   ) {
-    const workspace = await this.appointmentService.saveConsultation(BigInt(id), {
-      chiefComplaint: body.chief_complaint ?? body.chiefComplaint,
-      symptoms: body.symptoms,
-      clinicalFindings: body.clinical_findings ?? body.clinicalFindings,
-      diagnosis: body.diagnosis,
-      advice: body.advice,
-      procedures: body.procedures,
-      labOrders: body.lab_orders ?? body.labOrders,
-      followUp: body.follow_up ?? body.followUp,
-      providerNotes: body.provider_notes ?? body.providerNotes ?? body.notes,
-    }, {
-      userId: principal?.userId ? BigInt(principal.userId) : undefined,
-      roleCode: principal?.roleCode,
-    });
+    const workspace = await this.appointmentService.saveConsultation(
+      BigInt(id),
+      {
+        chiefComplaint: body.chief_complaint ?? body.chiefComplaint,
+        symptoms: body.symptoms,
+        clinicalFindings: body.clinical_findings ?? body.clinicalFindings,
+        diagnosis: body.diagnosis,
+        advice: body.advice,
+        procedures: body.procedures,
+        labOrders: body.lab_orders ?? body.labOrders,
+        followUp: body.follow_up ?? body.followUp,
+        providerNotes: body.provider_notes ?? body.providerNotes ?? body.notes,
+      },
+      principal,
+      {
+        userId: principal?.userId ? BigInt(principal.userId) : undefined,
+        roleCode: principal?.roleCode,
+      },
+    );
     return {
       success: true,
       message: 'Consultation progress saved successfully',
@@ -150,21 +169,26 @@ export class AppointmentController {
     @Body() body: any,
     @CurrentPrincipal() principal?: ShieldPrincipal,
   ) {
-    const workspace = await this.appointmentService.completeConsultation(BigInt(id), {
-      chiefComplaint: body.chief_complaint ?? body.chiefComplaint,
-      symptoms: body.symptoms,
-      clinicalFindings: body.clinical_findings ?? body.clinicalFindings,
-      diagnosis: body.diagnosis,
-      advice: body.advice,
-      procedures: body.procedures,
-      labOrders: body.lab_orders ?? body.labOrders,
-      followUp: body.follow_up ?? body.followUp,
-      providerNotes: body.provider_notes ?? body.providerNotes ?? body.notes,
-      billingDraft: body.billing_draft ?? body.billingDraft,
-    }, {
-      userId: principal?.userId ? BigInt(principal.userId) : undefined,
-      roleCode: principal?.roleCode,
-    });
+    const workspace = await this.appointmentService.completeConsultation(
+      BigInt(id),
+      {
+        chiefComplaint: body.chief_complaint ?? body.chiefComplaint,
+        symptoms: body.symptoms,
+        clinicalFindings: body.clinical_findings ?? body.clinicalFindings,
+        diagnosis: body.diagnosis,
+        advice: body.advice,
+        procedures: body.procedures,
+        labOrders: body.lab_orders ?? body.labOrders,
+        followUp: body.follow_up ?? body.followUp,
+        providerNotes: body.provider_notes ?? body.providerNotes ?? body.notes,
+        billingDraft: body.billing_draft ?? body.billingDraft,
+      },
+      principal,
+      {
+        userId: principal?.userId ? BigInt(principal.userId) : undefined,
+        roleCode: principal?.roleCode,
+      },
+    );
     return {
       success: true,
       message: 'Consultation completed successfully',
@@ -181,7 +205,8 @@ export class AppointmentController {
   ) {
     const workspace = await this.appointmentService.saveVisitBillingDraft(
       BigInt(id),
-      body,
+      body.billing_draft ?? body.billingDraft ?? body,
+      principal,
       {
         userId: principal?.userId ? BigInt(principal.userId) : undefined,
         roleCode: principal?.roleCode,
@@ -201,23 +226,28 @@ export class AppointmentController {
     @Body() body: any,
     @CurrentPrincipal() principal?: ShieldPrincipal,
   ) {
-    const workspace = await this.appointmentService.generateVisitInvoice(BigInt(id), {
-      formData: {
-        chiefComplaint: body.chief_complaint ?? body.chiefComplaint,
-        symptoms: body.symptoms,
-        clinicalFindings: body.clinical_findings ?? body.clinicalFindings,
-        diagnosis: body.diagnosis,
-        advice: body.advice,
-        procedures: body.procedures,
-        labOrders: body.lab_orders ?? body.labOrders,
-        followUp: body.follow_up ?? body.followUp,
-        providerNotes: body.provider_notes ?? body.providerNotes ?? body.notes,
+    const workspace = await this.appointmentService.generateVisitInvoice(
+      BigInt(id),
+      {
+        formData: {
+          chiefComplaint: body.chief_complaint ?? body.chiefComplaint,
+          symptoms: body.symptoms,
+          clinicalFindings: body.clinical_findings ?? body.clinicalFindings,
+          diagnosis: body.diagnosis,
+          advice: body.advice,
+          procedures: body.procedures,
+          labOrders: body.lab_orders ?? body.labOrders,
+          followUp: body.follow_up ?? body.followUp,
+          providerNotes: body.provider_notes ?? body.providerNotes ?? body.notes,
+        },
+        billingDraft: body.billing_draft ?? body.billingDraft,
       },
-      billingDraft: body.billing_draft ?? body.billingDraft,
-    }, {
-      userId: principal?.userId ? BigInt(principal.userId) : undefined,
-      roleCode: principal?.roleCode,
-    });
+      principal,
+      {
+        userId: principal?.userId ? BigInt(principal.userId) : undefined,
+        roleCode: principal?.roleCode,
+      },
+    );
     return {
       success: true,
       message: 'Visit invoice generated successfully',
@@ -234,7 +264,8 @@ export class AppointmentController {
   ) {
     const workspace = await this.appointmentService.recordVisitPayment(
       BigInt(id),
-      body,
+      body.billing_draft ?? body.billingDraft ?? body,
+      principal,
       {
         userId: principal?.userId ? BigInt(principal.userId) : undefined,
         roleCode: principal?.roleCode,
@@ -261,6 +292,7 @@ export class AppointmentController {
           body.clinical_remarks ?? body.clinicalRemarks ?? body.notes,
         items: body.items,
       },
+      principal,
       {
         userId: principal?.userId ? BigInt(principal.userId) : undefined,
         roleCode: principal?.roleCode,
@@ -281,6 +313,7 @@ export class AppointmentController {
   ) {
     const workspace = await this.appointmentService.copyPrescriptionToOpenVisit(
       BigInt(id),
+      principal,
       {
         userId: principal?.userId ? BigInt(principal.userId) : undefined,
         roleCode: principal?.roleCode,
@@ -308,6 +341,7 @@ export class AppointmentController {
         items: body.items,
         sendToPharmacy: body.send_to_pharmacy ?? body.sendToPharmacy,
       },
+      principal,
       {
         userId: principal?.userId ? BigInt(principal.userId) : undefined,
         roleCode: principal?.roleCode,
@@ -328,6 +362,7 @@ export class AppointmentController {
   ) {
     const workspace = await this.appointmentService.duplicatePreviousPrescription(
       BigInt(id),
+      principal,
       {
         userId: principal?.userId ? BigInt(principal.userId) : undefined,
         roleCode: principal?.roleCode,
@@ -350,6 +385,7 @@ export class AppointmentController {
     const workspace = await this.appointmentService.voidVisitInvoice(
       BigInt(id),
       body.reason,
+      principal,
       {
         userId: principal?.userId ? BigInt(principal.userId) : undefined,
         roleCode: principal?.roleCode,

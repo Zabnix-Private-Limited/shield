@@ -16,11 +16,14 @@ type ReportMetadata = {
 type ReportFilters = {
   workspace?: string;
   providerId?: bigint;
+  providerType?: string;
   businessId?: bigint;
   dateFrom?: string;
   dateTo?: string;
   status?: string;
   search?: string;
+  serviceType?: string;
+  customerId?: bigint;
 };
 
 @Injectable()
@@ -193,15 +196,19 @@ export class PlatformReportService {
 
     switch (metadata.id) {
       case 'PROVIDER_TODAYS_CONSULTATIONS': {
-        const now = new Date();
-        const start = new Date(now);
-        start.setHours(0, 0, 0, 0);
-        const end = new Date(now);
-        end.setHours(23, 59, 59, 999);
+        const reportDateRange =
+          this.buildDateRange(filters.dateFrom, filters.dateTo) ?? (() => {
+            const now = new Date();
+            const start = new Date(now);
+            start.setHours(0, 0, 0, 0);
+            const end = new Date(now);
+            end.setHours(23, 59, 59, 999);
+            return { gte: start, lte: end };
+          })();
         const rows = await this.prisma.appointment.findMany({
           where: {
             ...appointmentWhere,
-            appointmentDate: { gte: start, lte: end },
+            appointmentDate: reportDateRange,
           },
           orderBy: [{ appointmentDate: 'asc' }, { id: 'asc' }],
           include: {
@@ -564,14 +571,22 @@ export class PlatformReportService {
     const dateRange = this.buildDateRange(filters.dateFrom, filters.dateTo);
     return {
       ...(filters.providerId ? { providerId: filters.providerId } : {}),
-      ...(filters.businessId
+      ...((filters.businessId || filters.providerType)
         ? {
             provider: {
-              businessId: filters.businessId,
+              ...(filters.businessId ? { businessId: filters.businessId } : {}),
+              ...(filters.providerType ? { providerType: filters.providerType } : {}),
             },
           }
         : {}),
       ...(dateRange ? { appointmentDate: dateRange } : {}),
+      ...(filters.status?.trim()
+        ? { status: filters.status.trim().toUpperCase() }
+        : {}),
+      ...(filters.serviceType?.trim()
+        ? { appointmentType: filters.serviceType.trim().toUpperCase() }
+        : {}),
+      ...(filters.customerId ? { customerId: filters.customerId } : {}),
       ...(filters.search?.trim()
         ? {
             OR: [
@@ -595,14 +610,19 @@ export class PlatformReportService {
     const dateRange = this.buildDateRange(filters.dateFrom, filters.dateTo);
     return {
       ...(filters.providerId ? { providerId: filters.providerId } : {}),
-      ...(filters.businessId
+      ...((filters.businessId || filters.providerType)
         ? {
             provider: {
-              businessId: filters.businessId,
+              ...(filters.businessId ? { businessId: filters.businessId } : {}),
+              ...(filters.providerType ? { providerType: filters.providerType } : {}),
             },
           }
         : {}),
       ...(dateRange ? { purchaseDate: dateRange } : {}),
+      ...(filters.status?.trim()
+        ? { paymentStatus: filters.status.trim().toUpperCase() }
+        : {}),
+      ...(filters.customerId ? { customerId: filters.customerId } : {}),
     };
   }
 

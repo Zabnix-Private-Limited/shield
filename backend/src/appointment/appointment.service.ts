@@ -5,6 +5,8 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { randomUUID } from 'crypto';
+import type { ShieldPrincipal } from '../auth/auth.types';
+import { ProviderScopeService } from '../auth/provider-scope.service';
 import { PricingService } from '../pricing/pricing.service';
 import { SERVICE_TYPES, type ShieldServiceType } from '../pricing/pricing.types';
 import { NotificationService } from '../notification/notification.service';
@@ -105,19 +107,23 @@ export class AppointmentService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly pricingService: PricingService,
+    private readonly providerScopeService: ProviderScopeService,
     private readonly timelineService: TimelineService,
     private readonly walletService: WalletService,
     private readonly notificationService: NotificationService,
     private readonly platformRealtimeService: PlatformRealtimeService,
   ) {}
 
-  async list(customerId?: bigint) {
+  async list(customerId?: bigint, principal?: ShieldPrincipal) {
     const whereClause: Record<string, unknown> = {};
     if (customerId) {
       whereClause.customerId = customerId;
     }
     return this.prisma.appointment.findMany({
-      where: whereClause,
+      where: this.providerScopeService.scopeAppointmentWhere(
+        whereClause,
+        principal,
+      ),
       include: {
         customer: true,
         provider: true,
@@ -140,7 +146,11 @@ export class AppointmentService {
     });
   }
 
-  async findOne(id: bigint) {
+  async findOne(id: bigint, principal?: ShieldPrincipal) {
+    await this.providerScopeService.assertProviderCanAccessAppointment(
+      id,
+      principal,
+    );
     const appt = await this.prisma.appointment.findUnique({
       where: { id },
       include: {
@@ -155,8 +165,8 @@ export class AppointmentService {
     return appt;
   }
 
-  async cancel(id: bigint) {
-    const appt = await this.findOne(id);
+  async cancel(id: bigint, principal?: ShieldPrincipal) {
+    const appt = await this.findOne(id, principal);
     const updated = await this.prisma.appointment.update({
       where: { id: appt.id },
       data: { status: 'CANCELLED' },
@@ -170,8 +180,8 @@ export class AppointmentService {
     return updated;
   }
 
-  async confirm(id: bigint) {
-    const appt = await this.findOne(id);
+  async confirm(id: bigint, principal?: ShieldPrincipal) {
+    const appt = await this.findOne(id, principal);
     const updated = await this.prisma.appointment.update({
       where: { id: appt.id },
       data: { status: 'CONFIRMED' },
@@ -185,16 +195,17 @@ export class AppointmentService {
     return updated;
   }
 
-  async getConsultationWorkspace(id: bigint) {
-    const appointment = await this.getWorkspaceAppointment(id);
+  async getConsultationWorkspace(id: bigint, principal?: ShieldPrincipal) {
+    const appointment = await this.getWorkspaceAppointment(id, principal);
     return this.buildConsultationWorkspacePayload(appointment);
   }
 
   async startConsultation(
     id: bigint,
+    principal?: ShieldPrincipal,
     auditActor?: { userId?: bigint | null; roleCode?: string | null },
   ) {
-    const appointment = await this.getWorkspaceAppointment(id);
+    const appointment = await this.getWorkspaceAppointment(id, principal);
 
     await this.ensureConsultationRecord(appointment, undefined, undefined);
 
@@ -222,7 +233,7 @@ export class AppointmentService {
       eventType: 'VISIT_STARTED',
     });
 
-    return this.getConsultationWorkspace(id);
+    return this.getConsultationWorkspace(id, principal);
   }
 
   async saveConsultation(
@@ -239,9 +250,10 @@ export class AppointmentService {
       providerNotes?: string;
       notes?: string;
     },
+    principal?: ShieldPrincipal,
     auditActor?: { userId?: bigint | null; roleCode?: string | null },
   ) {
-    const appointment = await this.getWorkspaceAppointment(id);
+    const appointment = await this.getWorkspaceAppointment(id, principal);
 
     await this.ensureConsultationRecord(
       appointment,
@@ -274,15 +286,16 @@ export class AppointmentService {
       'Consultation details were saved.',
     );
 
-    return this.getConsultationWorkspace(id);
+    return this.getConsultationWorkspace(id, principal);
   }
 
   async saveVisitBillingDraft(
     id: bigint,
     data: Partial<VisitBillingDraftState>,
+    principal?: ShieldPrincipal,
     auditActor?: { userId?: bigint | null; roleCode?: string | null },
   ) {
-    const appointment = await this.getWorkspaceAppointment(id);
+    const appointment = await this.getWorkspaceAppointment(id, principal);
     await this.ensureConsultationRecord(appointment, undefined, data);
 
     if (!this.isCompletedAppointmentStatus(appointment.status)) {
@@ -309,7 +322,7 @@ export class AppointmentService {
       'Visit billing draft was saved.',
     );
 
-    return this.getConsultationWorkspace(id);
+    return this.getConsultationWorkspace(id, principal);
   }
 
   async generateVisitInvoice(
@@ -329,9 +342,10 @@ export class AppointmentService {
       };
       billingDraft?: Partial<VisitBillingDraftState>;
     },
+    principal?: ShieldPrincipal,
     auditActor?: { userId?: bigint | null; roleCode?: string | null },
   ) {
-    const appointment = await this.getWorkspaceAppointment(id);
+    const appointment = await this.getWorkspaceAppointment(id, principal);
     await this.ensureConsultationRecord(
       appointment,
       this.normalizeConsultationInput(input?.formData),
@@ -359,15 +373,16 @@ export class AppointmentService {
       message: 'A visit invoice is ready in your SHIELD records.',
       eventType: 'INVOICE_GENERATED',
     });
-    return this.getConsultationWorkspace(id);
+    return this.getConsultationWorkspace(id, principal);
   }
 
   async recordVisitPayment(
     id: bigint,
     data: Partial<VisitBillingDraftState>,
+    principal?: ShieldPrincipal,
     auditActor?: { userId?: bigint | null; roleCode?: string | null },
   ) {
-    const appointment = await this.getWorkspaceAppointment(id);
+    const appointment = await this.getWorkspaceAppointment(id, principal);
     await this.ensureConsultationRecord(appointment, undefined, data);
     await this.upsertVisitInvoice(appointment.id);
     const paymentResult = await this.applyVisitPayment(appointment.id);
@@ -397,7 +412,7 @@ export class AppointmentService {
       eventType:
         paymentResult.refundAmount > 0 ? 'REFUND_PROCESSED' : 'PAYMENT_RECORDED',
     });
-    return this.getConsultationWorkspace(id);
+    return this.getConsultationWorkspace(id, principal);
   }
 
   async completeConsultation(
@@ -415,9 +430,10 @@ export class AppointmentService {
       notes?: string;
       billingDraft?: Partial<VisitBillingDraftState>;
     },
+    principal?: ShieldPrincipal,
     auditActor?: { userId?: bigint | null; roleCode?: string | null },
   ) {
-    const appointment = await this.getWorkspaceAppointment(id);
+    const appointment = await this.getWorkspaceAppointment(id, principal);
 
     await this.ensureConsultationRecord(
       appointment,
@@ -425,7 +441,7 @@ export class AppointmentService {
       data.billingDraft,
     );
 
-    const refreshedAppointment = await this.getWorkspaceAppointment(id);
+    const refreshedAppointment = await this.getWorkspaceAppointment(id, principal);
     const consultation = refreshedAppointment.consultations?.[0];
     const state = this.parseStructuredConsultationState(consultation?.notes);
     if (this.computeVisitChargeItems(state).length > 0) {
@@ -460,10 +476,17 @@ export class AppointmentService {
       eventType: 'VISIT_COMPLETED',
     });
 
-    return this.getConsultationWorkspace(id);
+    return this.getConsultationWorkspace(id, principal);
   }
 
-  private async getWorkspaceAppointment(id: bigint) {
+  private async getWorkspaceAppointment(
+    id: bigint,
+    principal?: ShieldPrincipal,
+  ) {
+    await this.providerScopeService.assertProviderCanAccessAppointment(
+      id,
+      principal,
+    );
     const appointment = await this.prisma.appointment.findUnique({
       where: { id },
       include: {
@@ -590,18 +613,19 @@ export class AppointmentService {
     const grandTotal = Number(
       (evaluation.finalPayableAmount + taxAmount).toFixed(2),
     );
-    const payment = this.computePaymentSummary(
-      grandTotal,
-      state.billingDraft,
-      undefined,
+    const existingInvoice = appointment.purchases?.find((purchase) =>
+      this.isVisitPurchase(purchase.purchaseKind),
     );
-    const paymentStatus = this.resolvePaymentStatus(payment);
+    const payment = existingInvoice
+      ? this.parsePaymentSummary(existingInvoice.paymentSummary)
+      : this.parsePaymentSummary(undefined);
+    const paymentStatus = existingInvoice
+      ? (existingInvoice.paymentStatus ?? this.resolvePaymentStatus(payment))
+      : this.resolvePaymentStatus(payment);
     const now = new Date();
 
     const invoiceNumber =
-      appointment.purchases?.find((purchase) =>
-        this.isVisitPurchase(purchase.purchaseKind),
-      )?.invoiceNumber ?? this.buildVisitInvoiceNumber(appointment.id);
+      existingInvoice?.invoiceNumber ?? this.buildVisitInvoiceNumber(appointment.id);
 
     const billingSnapshot = {
       generatedAt: now.toISOString(),
@@ -636,10 +660,6 @@ export class AppointmentService {
       },
       paymentStatus,
     };
-
-    const existingInvoice = appointment.purchases?.find((purchase) =>
-      this.isVisitPurchase(purchase.purchaseKind),
-    );
 
     if (existingInvoice) {
       await this.prisma.$transaction(async (tx) => {
@@ -759,6 +779,18 @@ export class AppointmentService {
       previousPayment,
     );
     const nextPaymentStatus = this.resolvePaymentStatus(nextPayment);
+    if (
+      previousPayment.walletUsed === nextPayment.walletUsed &&
+      previousPayment.cash === nextPayment.cash &&
+      previousPayment.upi === nextPayment.upi &&
+      previousPayment.card === nextPayment.card &&
+      previousPayment.refund === nextPayment.refund &&
+      previousPayment.balanceDue === nextPayment.balanceDue
+    ) {
+      throw new BadRequestException(
+        'Enter a payment or refund amount before saving.',
+      );
+    }
 
     const walletDelta = Number(
       Math.max(0, nextPayment.walletUsed - previousPayment.walletUsed).toFixed(2),
@@ -1490,6 +1522,7 @@ export class AppointmentService {
       clinicalRemarks?: string;
       items?: Array<Record<string, unknown>>;
     },
+    principal?: ShieldPrincipal,
     auditActor?: { userId?: bigint | null; roleCode?: string | null },
   ) {
     await this.upsertVisitPrescription(id, data, {
@@ -1503,7 +1536,7 @@ export class AppointmentService {
       userId: auditActor?.userId,
       details: { appointmentId: id.toString() },
     });
-    const appointment = await this.getWorkspaceAppointment(id);
+    const appointment = await this.getWorkspaceAppointment(id, principal);
     this.publishVisitEvent(
       appointment,
       'PRESCRIPTION_DRAFT_SAVED',
@@ -1511,7 +1544,7 @@ export class AppointmentService {
       'Prescription changes were saved for this visit.',
     );
     return this.buildConsultationWorkspacePayload(
-      await this.getWorkspaceAppointment(id),
+      await this.getWorkspaceAppointment(id, principal),
     );
   }
 
@@ -1522,6 +1555,7 @@ export class AppointmentService {
       items?: Array<Record<string, unknown>>;
       sendToPharmacy?: boolean;
     },
+    principal?: ShieldPrincipal,
     auditActor?: { userId?: bigint | null; roleCode?: string | null },
   ) {
     await this.upsertVisitPrescription(id, data, {
@@ -1540,7 +1574,7 @@ export class AppointmentService {
         sendToPharmacy: data.sendToPharmacy === true,
       },
     });
-    const appointment = await this.getWorkspaceAppointment(id);
+    const appointment = await this.getWorkspaceAppointment(id, principal);
     this.publishVisitEvent(
       appointment,
       data.sendToPharmacy === true
@@ -1568,15 +1602,16 @@ export class AppointmentService {
           : 'PRESCRIPTION_FINALIZED',
     });
     return this.buildConsultationWorkspacePayload(
-      await this.getWorkspaceAppointment(id),
+      await this.getWorkspaceAppointment(id, principal),
     );
   }
 
   async duplicatePreviousPrescription(
     id: bigint,
+    principal?: ShieldPrincipal,
     auditActor?: { userId?: bigint | null; roleCode?: string | null },
   ) {
-    const appointment = await this.getWorkspaceAppointment(id);
+    const appointment = await this.getWorkspaceAppointment(id, principal);
     if (!appointment.customerId) {
       throw new BadRequestException('Patient is not attached to this visit.');
     }
@@ -1615,7 +1650,7 @@ export class AppointmentService {
       userId: auditActor?.userId,
       details: { appointmentId: id.toString() },
     });
-    const refreshed = await this.getWorkspaceAppointment(id);
+    const refreshed = await this.getWorkspaceAppointment(id, principal);
     this.publishVisitEvent(
       refreshed,
       'PRESCRIPTION_DUPLICATED',
@@ -1627,9 +1662,10 @@ export class AppointmentService {
 
   async copyPrescriptionToOpenVisit(
     id: bigint,
+    principal?: ShieldPrincipal,
     auditActor?: { userId?: bigint | null; roleCode?: string | null },
   ) {
-    const sourceAppointment = await this.getWorkspaceAppointment(id);
+    const sourceAppointment = await this.getWorkspaceAppointment(id, principal);
     if (!sourceAppointment.customerId) {
       throw new BadRequestException('Patient is not attached to this visit.');
     }
@@ -1675,7 +1711,7 @@ export class AppointmentService {
       'A past prescription was copied into the active visit draft.',
     );
     return this.buildConsultationWorkspacePayload(
-      await this.getWorkspaceAppointment(targetAppointment.id),
+      await this.getWorkspaceAppointment(targetAppointment.id, principal),
     );
   }
 
@@ -1699,9 +1735,10 @@ export class AppointmentService {
   async voidVisitInvoice(
     id: bigint,
     reason?: string,
+    principal?: ShieldPrincipal,
     auditActor?: { userId?: bigint | null; roleCode?: string | null },
   ) {
-    const appointment = await this.getWorkspaceAppointment(id);
+    const appointment = await this.getWorkspaceAppointment(id, principal);
     const invoice = appointment.purchases?.find((purchase) =>
       this.isVisitPurchase(purchase.purchaseKind),
     );

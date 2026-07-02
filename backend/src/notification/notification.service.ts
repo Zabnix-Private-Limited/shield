@@ -1,5 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { randomUUID } from 'crypto';
+import type { ShieldPrincipal } from '../auth/auth.types';
+import { ProviderScopeService } from '../auth/provider-scope.service';
 import { PlatformRealtimeService } from '../platform-capabilities/platform-realtime.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { FirebaseAdminService } from './firebase-admin.service';
@@ -26,13 +28,19 @@ export class NotificationService {
   constructor(
     private prisma: PrismaService,
     private firebaseAdminService: FirebaseAdminService,
+    private readonly providerScopeService: ProviderScopeService,
     private readonly platformRealtimeService: PlatformRealtimeService,
   ) {}
 
-  async list(customerId?: bigint) {
+  async list(customerId?: bigint, principal?: ShieldPrincipal) {
     const whereClause: any = {};
     if (customerId) {
       whereClause.customerId = customerId;
+    } else if (this.providerScopeService.isProviderPrincipal(principal)) {
+      const accessibleCustomerIds =
+        await this.providerScopeService.listAccessibleCustomerIds(principal);
+      whereClause.customerId =
+        accessibleCustomerIds.length > 0 ? { in: accessibleCustomerIds } : { in: [] };
     }
     return this.prisma.notification.findMany({
       where: whereClause,

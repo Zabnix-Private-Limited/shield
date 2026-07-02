@@ -18,6 +18,7 @@ import { CurrentPrincipal } from '../auth/current-principal.decorator';
 import type { ShieldPrincipal } from '../auth/auth.types';
 import { OperationsQueueService } from '../operations-queue/operations-queue.service';
 import { RequirePermissions } from '../auth/permissions.decorator';
+import { ProviderScopeService } from '../auth/provider-scope.service';
 import { ServiceProviderService } from './service-provider.service';
 
 @Controller('service-providers')
@@ -25,6 +26,7 @@ export class ServiceProviderController {
   constructor(
     private readonly serviceProviderService: ServiceProviderService,
     private readonly operationsQueueService: OperationsQueueService,
+    private readonly providerScopeService: ProviderScopeService,
   ) {}
 
   @RequirePermissions('providers.create')
@@ -67,11 +69,17 @@ export class ServiceProviderController {
     @Query('provider_type') providerType?: string,
     @Query('business_id') businessId?: string,
     @Query('limit') limit?: string,
+    @CurrentPrincipal() principal?: ShieldPrincipal,
   ) {
+    const scope = this.providerScopeService.resolveWorkspaceScope(principal, {
+      providerId,
+      providerType,
+      businessId,
+    });
     const workspace = await this.operationsQueueService.getProviderWorkspace({
-      providerId: providerId ? BigInt(providerId) : undefined,
-      providerType: providerType?.trim() || undefined,
-      businessId: businessId ? BigInt(businessId) : undefined,
+      providerId: scope.providerId,
+      providerType: scope.providerType,
+      businessId: scope.businessId,
       limit: limit ? Number(limit) : undefined,
     });
     return {
@@ -98,7 +106,7 @@ export class ServiceProviderController {
     };
   }
 
-  @RequirePermissions('providers.view')
+  @RequirePermissions('settings.view')
   @Get('me/profile')
   async getCurrentProviderProfile(
     @CurrentPrincipal() principal?: ShieldPrincipal,
@@ -112,7 +120,7 @@ export class ServiceProviderController {
     };
   }
 
-  @RequirePermissions('providers.update')
+  @RequirePermissions('settings.update')
   @Patch('me/profile')
   async updateCurrentProviderProfile(
     @Body() body: any,
@@ -129,7 +137,7 @@ export class ServiceProviderController {
     };
   }
 
-  @RequirePermissions('providers.update')
+  @RequirePermissions('settings.update')
   @Patch('me/preferences')
   async updateCurrentProviderPreferences(
     @Body() body: any,
@@ -147,7 +155,7 @@ export class ServiceProviderController {
     };
   }
 
-  @RequirePermissions('providers.update')
+  @RequirePermissions('settings.update')
   @Post('me/profile/photo')
   @HttpCode(200)
   @UseInterceptors(
@@ -172,7 +180,7 @@ export class ServiceProviderController {
     };
   }
 
-  @RequirePermissions('providers.update')
+  @RequirePermissions('settings.update')
   @Post('me/profile/signature')
   @HttpCode(200)
   @UseInterceptors(
