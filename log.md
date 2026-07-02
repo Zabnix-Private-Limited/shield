@@ -7043,3 +7043,74 @@ est build, ackend/vercel.json, ackend/src/auth/auth.service.ts, and uth_devic
 - cd backend && npm run build
 - cd frontend && flutter analyze --no-pub
 - cd frontend && flutter test
+
+## 190. Agent workflow completion sprint: operational workspace, secure onboarding flow, mobile-ready agent shell, and workflow completion pass
+**Timestamp:** 2026-07-02 15:05:00 IST
+
+**High-level description**: Advanced the Agent Portal from a scoped architectural foundation into a real field-operations workflow by deepening the backend-composed agent workspace, closing security gaps in customer onboarding, wiring real follow-up/appointment/document/notification flows, and making the agent shell usable on mobile without creating any parallel portal or duplicate service layer.
+- Backend workflow and security completion:
+  - Removed trust in client-supplied `agent_code` during customer creation for SHIELD agents. The server now resolves the authenticated agent code from `users.employee_code` and attaches it automatically before registration logic runs.
+  - Extended customer create/update handling so the reused customer API can support agent draft onboarding states (`INCOMPLETE`, `PENDING`) and membership selection through the existing membership model instead of requiring an alternate registration API.
+  - Added appointment rescheduling through the existing appointment service/controller and kept notifications on confirm/cancel/reschedule inside the shared appointment lifecycle.
+  - Added bulk notification read handling through the existing notification service/controller so the Agent notification center can support real queue cleanup without client-side fake state.
+  - Expanded the agent customer workspace payload to include family contacts, wallet and membership context, referral summary/tree, follow-up history, timeline, notifications, recent purchases, medical-record summaries, and quick-action metadata so Flutter can render a unified operational workspace instead of assembling business data ad hoc.
+- Flutter workflow completion:
+  - Reworked the Agent dashboard so every visible KPI card routes to a useful operational destination instead of acting as a decorative metric.
+  - Rebuilt the customer module into a richer operational workspace with assigned-customer search, detailed profile view, editable limited contact details, family details, membership/wallet summary, referrals, appointments, documents, follow-ups, notifications, medical records, recent purchases, and timeline visibility in one screen.
+  - Completed the onboarding workflow enough for live agent use on the current schema by supporting new registration, draft save, continue draft, submission status progression, membership selection, referral capture, required-document upload after draft creation, and progress tracking while preserving the existing customer API.
+  - Completed follow-up, appointment, document, notification, performance, and profile/settings screens so they perform live actions against shared APIs rather than showing placeholder lists.
+  - Added a compact agent mobile shell mode so the Agent Portal can switch from the desktop rail to a drawer-based navigation pattern on narrower screens instead of forcing a desktop-only layout on field devices.
+- Why this approach was chosen:
+  - The sprint constraint was to finish workflows without redesigning the architecture, so the work focused on deepening the existing agent workspace and reusing shared customer/CRM/appointment/document/notification services rather than introducing new agent-only persistence modules.
+  - The biggest risk in the prior foundation was fragmented workflow state and client-trusted onboarding inputs. Fixing those two areas unlocks the rest of the operational UI without duplicating backend business rules.
+  - Some requested settings and branch-assignment persistence still remain bounded by the current live schema rather than missing UI effort, so those gaps are recorded explicitly instead of being patched with misleading client-only storage.
+
+### Backend Files Modified
+- backend/src/agent/agent.service.ts
+- backend/src/appointment/appointment.controller.ts
+- backend/src/appointment/appointment.service.ts
+- backend/src/customer/customer.controller.ts
+- backend/src/customer/customer.service.ts
+- backend/src/notification/notification.controller.ts
+- backend/src/notification/notification.service.ts
+
+### Frontend Files Modified
+- frontend/lib/features/agent/appointments/presentation/screens/agent_appointments_screen.dart
+- frontend/lib/features/agent/customers/presentation/screens/agent_customers_screen.dart
+- frontend/lib/features/agent/dashboard/presentation/screens/agent_dashboard_screen.dart
+- frontend/lib/features/agent/documents/presentation/screens/agent_documents_screen.dart
+- frontend/lib/features/agent/followups/presentation/screens/agent_followups_screen.dart
+- frontend/lib/features/agent/notifications/presentation/screens/agent_notifications_screen.dart
+- frontend/lib/features/agent/performance/presentation/screens/agent_performance_screen.dart
+- frontend/lib/features/agent/registration/presentation/screens/agent_registration_screen.dart
+- frontend/lib/features/agent/settings/presentation/screens/agent_settings_screen.dart
+- frontend/lib/features/agent/shared/data/agent_portal_repository.dart
+- frontend/lib/features/agent/shared/presentation/controllers/agent_portal_controller.dart
+- frontend/lib/features/portal/presentation/screens/portal_shell.dart
+- frontend/lib/shared/services/api_service.dart
+
+### APIs Added or Changed
+- Added POST /appointments/:id/reschedule
+- Added POST /notifications/mark-all-read
+- Existing POST /customers now auto-attaches the authenticated SHIELD agent code server-side for agent principals instead of trusting Flutter to supply it correctly.
+- Existing GET /agents/customers/:customerId/workspace now returns a deeper backend-composed customer workspace including family details, purchases, medical-record summaries, timeline, richer follow-up context, and operational quick actions.
+- Existing customer create/update flows now accept workflow status and membership-type selection as part of the reused onboarding path.
+
+### Database Changes
+- No schema change in this sprint slice.
+- No SQL migration required in this sprint slice.
+
+### Verification
+- cd backend && npm run build
+- cd frontend && flutter analyze --no-pub
+- cd frontend && flutter test
+- Verified backend build completes successfully.
+- Verified Flutter analyze reports no issues.
+- Verified Flutter test suite passes.
+
+### Remaining Known Issues
+- Preferred branch assignment can now be captured in the agent workflow UI, but the actual issued branch is still approval-owned in the current backend schema/model. There is no dedicated persisted onboarding branch field on the live customer aggregate yet, so full branch-persistence would require an explicit schema-backed contract change rather than a UI-only patch.
+- Agent self-service persistence is still limited by the current `users` schema. Profile identity fields and session cleanup are operational, but emergency contact, working area, availability, theme, language, and granular notification preferences do not yet have a real backend persistence model for SHIELD agents.
+- The document workflow is operational for upload and download-link retrieval, but full in-portal preview/replace/delete lifecycle parity would require either additional file-action contracts or a shared document-management refinement beyond the current scope-safe upload/list/download surface.
+---
+2026-07-02 15:05:00 IST

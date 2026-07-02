@@ -642,6 +642,14 @@ class ApiService {
     return _readEnvelope(response);
   }
 
+  static Future<Map<String, dynamic>> updateCustomer(
+    String customerId,
+    Map<String, dynamic> payload,
+  ) async {
+    final response = await _dio.put('/customers/$customerId', data: payload);
+    return _readEnvelope(response);
+  }
+
   static Future<List<Map<String, dynamic>>> getCrmActivities(
     String customerId,
   ) async {
@@ -689,6 +697,31 @@ class ApiService {
   ) async {
     final response = await _dio.put('/crm/tasks/$taskId', data: payload);
     return _readEnvelope(response);
+  }
+
+  static Future<Appointment> confirmInternalAppointment(String appointmentId) async {
+    final response = await _dio.post('/appointments/$appointmentId/confirm');
+    return Appointment.fromJson(_readEnvelope(response));
+  }
+
+  static Future<Appointment> cancelInternalAppointment(String appointmentId) async {
+    final response = await _dio.post('/appointments/$appointmentId/cancel');
+    return Appointment.fromJson(_readEnvelope(response));
+  }
+
+  static Future<Appointment> rescheduleInternalAppointment({
+    required String appointmentId,
+    required DateTime appointmentDate,
+    String? remarks,
+  }) async {
+    final response = await _dio.post(
+      '/appointments/$appointmentId/reschedule',
+      data: {
+        'appointment_date': appointmentDate.toIso8601String(),
+        if (remarks != null && remarks.trim().isNotEmpty) 'remarks': remarks.trim(),
+      },
+    );
+    return Appointment.fromJson(_readEnvelope(response));
   }
 
   static Future<Map<String, dynamic>> getReferralTree(String customerId) async {
@@ -1066,6 +1099,19 @@ class ApiService {
     await _dio.post('/notifications/$notificationId/read');
   }
 
+  static Future<Map<String, dynamic>> markAllNotificationsRead({
+    String? customerId,
+  }) async {
+    final response = await _dio.post(
+      '/notifications/mark-all-read',
+      data: {
+        if (customerId != null && customerId.trim().isNotEmpty)
+          'customer_id': customerId.trim(),
+      },
+    );
+    return _readEnvelope(response);
+  }
+
   static Future<void> registerPushToken({
     required String token,
     required String platform,
@@ -1347,5 +1393,14 @@ class ApiService {
       debugPrint('Error getting businesses: $e');
       return [];
     }
+  }
+
+  static Future<List<Map<String, dynamic>>> getMasterDataDomain(
+    String domain,
+  ) async {
+    final response = await _dio.get('/master-data/admin/$domain');
+    return _readEnvelopeList(
+      response,
+    ).map((item) => Map<String, dynamic>.from(item as Map)).toList();
   }
 }

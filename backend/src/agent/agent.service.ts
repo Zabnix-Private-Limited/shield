@@ -306,7 +306,24 @@ export class AgentService {
     const tasksAssignedTo =
       principal?.userId != null ? BigInt(principal.userId) : undefined;
 
-    const [customer, membership, wallet, documents, appointments, notifications, summary, tree, activities, tasks] =
+    const [
+      customer,
+      membership,
+      wallet,
+      documents,
+      appointments,
+      notifications,
+      summary,
+      tree,
+      activities,
+      tasks,
+      contacts,
+      purchases,
+      consultations,
+      labReports,
+      dentalRecords,
+      statusHistory,
+    ] =
       await Promise.all([
         this.customerService.findOne(customerId),
         this.customerService.getCustomerPortalMembership(customerId),
@@ -318,6 +335,49 @@ export class AgentService {
         this.referralService.getReferralTree(customerId),
         this.crmService.listActivities(customerId),
         this.crmService.listTasks(customerId, tasksAssignedTo),
+        this.prisma.customerContact.findMany({
+          where: { customerId },
+          orderBy: [{ isPrimary: 'desc' }, { id: 'asc' }],
+        }),
+        this.prisma.purchase.findMany({
+          where: { customerId },
+          include: {
+            provider: true,
+            purchaseItems: {
+              include: {
+                product: true,
+              },
+            },
+          },
+          orderBy: [{ purchaseDate: 'desc' }, { id: 'desc' }],
+          take: 8,
+        }),
+        this.prisma.consultation.findMany({
+          where: { customerId },
+          include: {
+            prescriptions: true,
+          },
+          orderBy: [{ appointmentId: 'desc' }, { id: 'desc' }],
+          take: 8,
+        }),
+        this.prisma.labReport.findMany({
+          where: { customerId },
+          include: {
+            document: true,
+          },
+          orderBy: [{ reportDate: 'desc' }, { id: 'desc' }],
+          take: 8,
+        }),
+        this.prisma.dentalRecord.findMany({
+          where: { customerId },
+          orderBy: [{ id: 'desc' }],
+          take: 8,
+        }),
+        this.prisma.customerStatusHistory.findMany({
+          where: { customerId },
+          orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+          take: 10,
+        }),
       ]);
 
     const timeline = [
@@ -340,9 +400,57 @@ export class AgentService {
       })),
     ].sort((left, right) => right.timestamp.localeCompare(left.timestamp));
 
+    const medicalRecords = [
+      ...consultations.map((consultation: any) => ({
+        id: `consultation:${consultation.id.toString()}`,
+        category: 'Consultation',
+        title: consultation.diagnosis?.trim() || 'Consultation note',
+        date: consultation.appointmentId?.toString() ?? null,
+        status: consultation.prescriptions?.length ? 'Prescription linked' : 'Recorded',
+      })),
+      ...labReports.map((report: any) => ({
+        id: `lab:${report.id.toString()}`,
+        category: 'Lab Report',
+        title: report.document?.fileName ?? 'Laboratory report',
+        date: report.reportDate?.toISOString() ?? null,
+        status: 'Available',
+      })),
+      ...dentalRecords.map((record: any) => ({
+        id: `dental:${record.id.toString()}`,
+        category: 'Dental Record',
+        title: record.treatmentName ?? 'Dental treatment',
+        date: null,
+        status: 'Recorded',
+      })),
+    ];
+
     return {
       generatedAt: new Date().toISOString(),
       customer,
+      profile: {
+        customerId: customer.id.toString(),
+        customerCode: customer.customerCode,
+        fullName:
+          `${customer.firstName ?? ''} ${customer.lastName ?? ''}`.trim() ||
+          'Customer',
+        mobile: customer.mobile,
+        email: customer.email,
+        gender: customer.gender,
+        dob: customer.dob,
+        status: customer.status,
+        address: [customer.addressLine1, customer.addressLine2, customer.city]
+          .filter(Boolean)
+          .join(', '),
+        agentCode: customer.agentCode,
+        referralCode: customer.referralCode,
+      },
+      familyDetails: contacts.map((contact) => ({
+        id: contact.id.toString(),
+        name: contact.name ?? 'Family contact',
+        relation: contact.relation ?? 'Relation not recorded',
+        mobile: contact.mobile ?? '',
+        isPrimary: Boolean(contact.isPrimary),
+      })),
       membership,
       wallet,
       documents,
@@ -352,6 +460,30 @@ export class AgentService {
       referralTree: tree,
       activities,
       tasks,
+      purchases: purchases.map((purchase: any) => ({
+        id: purchase.id.toString(),
+        invoiceNumber: purchase.invoiceNumber,
+        providerName: purchase.provider?.providerName ?? 'Provider',
+        totalAmount: purchase.totalAmount,
+        payableAmount: purchase.payableAmount,
+        purchaseDate: purchase.purchaseDate?.toISOString() ?? null,
+        paymentStatus: purchase.paymentStatus ?? 'PENDING',
+        itemCount: purchase.purchaseItems?.length ?? 0,
+      })),
+      medicalRecords,
+      statusHistory: statusHistory.map((entry) => ({
+        id: entry.id.toString(),
+        oldStatus: entry.oldStatus,
+        newStatus: entry.newStatus,
+        remarks: entry.remarks,
+        createdAt: entry.createdAt.toISOString(),
+      })),
+      quickActions: [
+        { key: 'followup', label: 'Schedule follow-up', enabled: true },
+        { key: 'appointment', label: 'Book appointment', enabled: true },
+        { key: 'document', label: 'Upload document', enabled: true },
+        { key: 'customer', label: 'Update customer details', enabled: true },
+      ],
       timeline,
     };
   }

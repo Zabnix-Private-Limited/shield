@@ -117,6 +117,32 @@ export class AppointmentController {
     };
   }
 
+  @RequirePermissions('appointments.update')
+  @Post(':id/reschedule')
+  async reschedule(
+    @Param('id') id: string,
+    @Body() body: any,
+    @CurrentPrincipal() principal?: ShieldPrincipal,
+  ) {
+    await this.agentScopeService.assertAgentCanAccessAppointment(
+      BigInt(id),
+      principal,
+    );
+    const appt = await this.appointmentService.reschedule(
+      BigInt(id),
+      {
+        appointmentDate: body.appointment_date ?? body.appointmentDate,
+        remarks: body.remarks ?? body.notes,
+      },
+      principal,
+    );
+    return {
+      success: true,
+      message: 'Appointment rescheduled successfully',
+      data: appt,
+    };
+  }
+
   @RequirePermissions('appointments.view')
   @Get(':id/consultation-workspace')
   async getConsultationWorkspace(

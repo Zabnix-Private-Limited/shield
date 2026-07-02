@@ -1,7 +1,6 @@
 import {
   Body,
   Controller,
-  ForbiddenException,
   Get,
   Param,
   Post,
@@ -68,6 +67,37 @@ export class NotificationController {
       success: true,
       message: 'Notification marked as read',
       data: notif,
+    };
+  }
+
+  @RequirePermissions('notifications.update')
+  @Post('mark-all-read')
+  async markAllRead(
+    @Body() body: any,
+    @CurrentPrincipal() principal?: ShieldPrincipal,
+  ) {
+    const customerIds = body.customer_id
+      ? [BigInt(body.customer_id)]
+      : this.agentScopeService.isAgentPrincipal(principal)
+        ? await this.agentScopeService.listAccessibleCustomerIds(principal)
+        : [];
+
+    if (body.customer_id) {
+      await this.agentScopeService.assertAgentCanAccessCustomer(
+        BigInt(body.customer_id),
+        principal,
+      );
+      await this.providerScopeService.assertProviderCanAccessCustomer(
+        BigInt(body.customer_id),
+        principal,
+      );
+    }
+
+    const result = await this.notificationService.markAllAsRead(customerIds);
+    return {
+      success: true,
+      message: 'Notifications marked as read',
+      data: result,
     };
   }
 

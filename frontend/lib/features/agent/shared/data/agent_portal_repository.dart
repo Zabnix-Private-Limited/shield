@@ -33,6 +33,11 @@ class AgentPortalRepository {
   Future<Map<String, dynamic>> createCustomer(Map<String, dynamic> payload) =>
       ApiService.createCustomer(payload);
 
+  Future<Map<String, dynamic>> updateCustomer(
+    String customerId,
+    Map<String, dynamic> payload,
+  ) => ApiService.updateCustomer(customerId, payload);
+
   Future<Map<String, dynamic>> createFollowUpActivity({
     required String customerId,
     required String activityType,
@@ -76,6 +81,22 @@ class AgentPortalRepository {
         remarks: remarks,
       );
 
+  Future<Appointment> confirmAppointment(String appointmentId) =>
+      ApiService.confirmInternalAppointment(appointmentId);
+
+  Future<Appointment> cancelAppointment(String appointmentId) =>
+      ApiService.cancelInternalAppointment(appointmentId);
+
+  Future<Appointment> rescheduleAppointment({
+    required String appointmentId,
+    required DateTime appointmentDate,
+    String? remarks,
+  }) => ApiService.rescheduleInternalAppointment(
+        appointmentId: appointmentId,
+        appointmentDate: appointmentDate,
+        remarks: remarks,
+      );
+
   Future<Document> uploadCustomerDocument({
     required String customerId,
     required String fileName,
@@ -91,4 +112,17 @@ class AgentPortalRepository {
         mimeType: mimeType,
         fileSize: fileSize,
       );
+
+  Future<void> markNotificationRead(String notificationId) =>
+      ApiService.markNotificationRead(notificationId);
+
+  Future<Map<String, dynamic>> markAllNotificationsRead({String? customerId}) =>
+      ApiService.markAllNotificationsRead(customerId: customerId);
+
+  Future<List<Map<String, dynamic>>> getProviders() => ApiService.getProviders();
+
+  Future<List<Map<String, dynamic>>> getBusinesses() => ApiService.getBusinesses();
+
+  Future<List<Map<String, dynamic>>> getMembershipTypes() =>
+      ApiService.getMasterDataDomain('membership-types');
 }

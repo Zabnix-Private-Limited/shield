@@ -26,9 +26,25 @@ export class CustomerController {
 
   @RequirePermissions('customers.create')
   @Post()
-  async create(@Body() body: any) {
-    const staffId = body.created_by ? BigInt(body.created_by) : undefined;
-    const customer = await this.customerService.create(body, staffId);
+  async create(
+    @Body() body: any,
+    @CurrentPrincipal() principal?: ShieldPrincipal,
+  ) {
+    const scopedBody = { ...body };
+    const isAgent = this.agentScopeService.isAgentPrincipal(principal);
+    const agentCode = isAgent
+      ? await this.agentScopeService.resolveAgentCode(principal)
+      : undefined;
+    const staffId =
+      principal?.userId != null
+        ? BigInt(principal.userId)
+        : body.created_by
+          ? BigInt(body.created_by)
+          : undefined;
+    if (agentCode) {
+      scopedBody.agent_code = agentCode;
+    }
+    const customer = await this.customerService.create(scopedBody, staffId);
     return {
       success: true,
       message: 'Customer created successfully',

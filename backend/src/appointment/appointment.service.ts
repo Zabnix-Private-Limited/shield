@@ -203,6 +203,46 @@ export class AppointmentService {
     return updated;
   }
 
+  async reschedule(
+    id: bigint,
+    data: { appointmentDate?: string; remarks?: string },
+    principal?: ShieldPrincipal,
+  ) {
+    const appt = await this.findOne(id, principal);
+    if (!data.appointmentDate) {
+      throw new BadRequestException('A new appointment date is required.');
+    }
+    const appointmentDate = new Date(data.appointmentDate);
+    if (Number.isNaN(appointmentDate.getTime())) {
+      throw new BadRequestException('Appointment date is invalid.');
+    }
+    const updated = await this.prisma.appointment.update({
+      where: { id: appt.id },
+      data: {
+        appointmentDate,
+        status: 'RESCHEDULED',
+        remarks: this.normalizeText(
+          data.remarks,
+          appt.remarks
+            ? `${appt.remarks}\nRescheduled`
+            : 'Rescheduled by SHIELD staff',
+        ),
+      },
+    });
+    this.publishVisitEvent(
+      updated,
+      'APPOINTMENT_RESCHEDULED',
+      'Appointment rescheduled',
+      'The appointment time was changed.',
+    );
+    await this.sendPatientNotification(updated, {
+      title: 'Appointment rescheduled',
+      message: `Your appointment has been moved to ${this.formatDateTime(appointmentDate)}.`,
+      eventType: 'APPOINTMENT_RESCHEDULED',
+    });
+    return updated;
+  }
+
   async getConsultationWorkspace(id: bigint, principal?: ShieldPrincipal) {
     const appointment = await this.getWorkspaceAppointment(id, principal);
     return this.buildConsultationWorkspacePayload(appointment);

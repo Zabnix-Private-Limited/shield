@@ -172,10 +172,12 @@ export class CustomerService {
     return this.prisma.customer.update({
       where: { id: customer.id },
       data: {
+        aadhaarNumber: data.aadhaar_number,
         firstName: data.first_name,
         lastName: data.last_name,
         dob: data.dob ? new Date(data.dob) : undefined,
         gender: data.gender,
+        mobile: data.mobile,
         email: data.email,
         addressLine1: data.address_line1 || data.address,
         addressLine2: data.address_line2,
@@ -184,6 +186,7 @@ export class CustomerService {
         state: data.state,
         pincode: data.pincode,
         bloodGroup: data.blood_group,
+        status: data.status,
       },
     });
   }
@@ -349,6 +352,7 @@ export class CustomerService {
         }
       }
 
+      const desiredStatus = (data.status ?? 'PENDING').toString().trim().toUpperCase();
       const customer = await tx.customer.create({
         data: {
           uuid: customerUuid,
@@ -366,7 +370,7 @@ export class CustomerService {
           district: data.district,
           state: data.state,
           pincode: data.pincode,
-          status: 'PENDING',
+          status: desiredStatus || 'PENDING',
           createdBy: staffUserId,
           bloodGroup: data.blood_group || null,
           agentCode: data.agent_code || 'AGT-SAHAKAR-DEFAULT',
@@ -377,8 +381,19 @@ export class CustomerService {
         },
       });
 
+      const requestedMembershipTypeCode = data.membership_type_code
+        ?.toString()
+        .trim()
+        .toUpperCase();
+      const requestedMembershipTypeId = data.membership_type_id
+        ? BigInt(data.membership_type_id)
+        : undefined;
       const stdType = await tx.membershipType.findFirst({
-        where: { code: 'STANDARD' },
+        where: requestedMembershipTypeId
+          ? { id: requestedMembershipTypeId }
+          : requestedMembershipTypeCode
+            ? { code: requestedMembershipTypeCode }
+            : { code: 'STANDARD' },
       });
 
       if (stdType) {
@@ -389,7 +404,12 @@ export class CustomerService {
             membershipTypeId: stdType.id,
             membershipNumber: `SHLD-${new Date().getFullYear()}-${customerCode.split('-')[1]}`,
             joiningFee: stdType.joiningFee,
-            status: 'INACTIVE',
+            status:
+              desiredStatus === 'ACTIVE'
+                ? 'ACTIVE'
+                : desiredStatus === 'APPROVED'
+                  ? 'ACTIVE'
+                  : 'INACTIVE',
           },
         });
       }

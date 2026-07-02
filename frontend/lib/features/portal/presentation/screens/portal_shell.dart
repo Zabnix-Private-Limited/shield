@@ -245,25 +245,55 @@ class _PortalShellState extends State<PortalShell> {
                   );
                 },
               )
-            : Row(
-                children: [
-                  _InternalPortalSidebar(
-                    portal: portal,
-                    activeSectionKey: activeKey,
-                    collapsed: !_isInternalSidebarExpanded,
-                  ),
-                  Expanded(
-                    child: Scaffold(
+            : LayoutBuilder(
+                builder: (context, constraints) {
+                  final useCompactAgentShell =
+                      widget.role == SHIELDRole.agent && constraints.maxWidth < 1024;
+                  if (useCompactAgentShell) {
+                    return Scaffold(
                       backgroundColor: AppColors.lightGray,
-                      body: _RoleContent(
-                        portal: portal,
-                        section: section,
-                        onSidebarToggle: _toggleInternalSidebar,
-                        isSidebarExpanded: _isInternalSidebarExpanded,
+                      drawer: Drawer(
+                        child: SafeArea(
+                          child: _RoleRailNav(
+                            portal: portal,
+                            activeSectionKey: activeKey,
+                            collapsed: false,
+                          ),
+                        ),
                       ),
-                    ),
-                  ),
-                ],
+                      body: Builder(
+                        builder: (scaffoldContext) => _RoleContent(
+                          portal: portal,
+                          section: section,
+                          onSidebarToggle: () =>
+                              Scaffold.of(scaffoldContext).openDrawer(),
+                          isSidebarExpanded: false,
+                        ),
+                      ),
+                    );
+                  }
+
+                  return Row(
+                    children: [
+                      _InternalPortalSidebar(
+                        portal: portal,
+                        activeSectionKey: activeKey,
+                        collapsed: !_isInternalSidebarExpanded,
+                      ),
+                      Expanded(
+                        child: Scaffold(
+                          backgroundColor: AppColors.lightGray,
+                          body: _RoleContent(
+                            portal: portal,
+                            section: section,
+                            onSidebarToggle: _toggleInternalSidebar,
+                            isSidebarExpanded: _isInternalSidebarExpanded,
+                          ),
+                        ),
+                      ),
+                    ],
+                  );
+                },
               ),
       ),
     );

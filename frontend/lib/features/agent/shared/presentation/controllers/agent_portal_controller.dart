@@ -10,18 +10,26 @@ class AgentPortalController extends ChangeNotifier {
   bool _loading = false;
   bool _customerLoading = false;
   bool _profileSaving = false;
+  bool _saving = false;
   String? _error;
   Map<String, dynamic> _workspace = const <String, dynamic>{};
   Map<String, dynamic> _selectedCustomerWorkspace = const <String, dynamic>{};
   String? _selectedCustomerId;
+  List<Map<String, dynamic>> _providers = const <Map<String, dynamic>>[];
+  List<Map<String, dynamic>> _businesses = const <Map<String, dynamic>>[];
+  List<Map<String, dynamic>> _membershipTypes = const <Map<String, dynamic>>[];
 
   bool get isLoading => _loading;
   bool get isCustomerLoading => _customerLoading;
   bool get isProfileSaving => _profileSaving;
+  bool get isSaving => _saving;
   String? get error => _error;
   Map<String, dynamic> get workspace => _workspace;
   Map<String, dynamic> get selectedCustomerWorkspace => _selectedCustomerWorkspace;
   String? get selectedCustomerId => _selectedCustomerId;
+  List<Map<String, dynamic>> get providers => _providers;
+  List<Map<String, dynamic>> get businesses => _businesses;
+  List<Map<String, dynamic>> get membershipTypes => _membershipTypes;
 
   Map<String, dynamic> get summary =>
       Map<String, dynamic>.from(workspace['summary'] ?? const {});
@@ -90,6 +98,40 @@ class AgentPortalController extends ChangeNotifier {
             .map((item) => Map<String, dynamic>.from(item as Map)),
       );
 
+  List<Map<String, dynamic>> get customerFamilyDetails =>
+      List<Map<String, dynamic>>.from(
+        (selectedCustomerWorkspace['familyDetails'] as List? ?? const <dynamic>[])
+            .map((item) => Map<String, dynamic>.from(item as Map)),
+      );
+
+  List<Map<String, dynamic>> get customerPurchases =>
+      List<Map<String, dynamic>>.from(
+        (selectedCustomerWorkspace['purchases'] as List? ?? const <dynamic>[])
+            .map((item) => Map<String, dynamic>.from(item as Map)),
+      );
+
+  List<Map<String, dynamic>> get customerMedicalRecords =>
+      List<Map<String, dynamic>>.from(
+        (selectedCustomerWorkspace['medicalRecords'] as List? ?? const <dynamic>[])
+            .map((item) => Map<String, dynamic>.from(item as Map)),
+      );
+
+  List<Map<String, dynamic>> get customerTimeline =>
+      List<Map<String, dynamic>>.from(
+        (selectedCustomerWorkspace['timeline'] as List? ?? const <dynamic>[])
+            .map((item) => Map<String, dynamic>.from(item as Map)),
+      );
+
+  Map<String, dynamic> get customerMembership =>
+      Map<String, dynamic>.from(selectedCustomerWorkspace['membership'] ?? const {});
+
+  Map<String, dynamic> get customerWallet =>
+      Map<String, dynamic>.from(selectedCustomerWorkspace['wallet'] ?? const {});
+
+  Map<String, dynamic> get customerReferralSummary => Map<String, dynamic>.from(
+        selectedCustomerWorkspace['referralSummary'] ?? const {},
+      );
+
   Future<void> ensureLoaded() async {
     if (_loading || workspace.isNotEmpty) {
       return;
@@ -103,6 +145,7 @@ class AgentPortalController extends ChangeNotifier {
     notifyListeners();
     try {
       _workspace = await _repository.getWorkspace();
+      await _ensureReferenceData();
       _selectedCustomerId ??=
           customers.isNotEmpty ? customers.first['id']?.toString() : null;
       if (_selectedCustomerId != null && _selectedCustomerWorkspace.isEmpty) {
@@ -113,6 +156,25 @@ class AgentPortalController extends ChangeNotifier {
     } finally {
       _loading = false;
       notifyListeners();
+    }
+  }
+
+  Future<void> _ensureReferenceData() async {
+    if (_providers.isNotEmpty &&
+        _businesses.isNotEmpty &&
+        _membershipTypes.isNotEmpty) {
+      return;
+    }
+
+    try {
+      final providers = await _repository.getProviders();
+      final businesses = await _repository.getBusinesses();
+      final membershipTypes = await _repository.getMembershipTypes();
+      _providers = providers;
+      _businesses = businesses;
+      _membershipTypes = membershipTypes;
+    } catch (_) {
+      // Keep the workspace usable even if optional reference lookups fail.
     }
   }
 
@@ -134,7 +196,7 @@ class AgentPortalController extends ChangeNotifier {
   }
 
   Future<void> createCustomer(Map<String, dynamic> payload) async {
-    _loading = true;
+    _saving = true;
     _error = null;
     notifyListeners();
     try {
@@ -149,7 +211,27 @@ class AgentPortalController extends ChangeNotifier {
       _error = error.toString();
       rethrow;
     } finally {
-      _loading = false;
+      _saving = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> updateCustomer({
+    required String customerId,
+    required Map<String, dynamic> payload,
+  }) async {
+    _saving = true;
+    _error = null;
+    notifyListeners();
+    try {
+      await _repository.updateCustomer(customerId, payload);
+      await refreshWorkspace();
+      await selectCustomer(customerId);
+    } catch (error) {
+      _error = error.toString();
+      rethrow;
+    } finally {
+      _saving = false;
       notifyListeners();
     }
   }
@@ -213,6 +295,86 @@ class AgentPortalController extends ChangeNotifier {
     );
     await refreshWorkspace();
     await selectCustomer(customerId);
+  }
+
+  Future<void> confirmAppointment({
+    required String appointmentId,
+    required String customerId,
+  }) async {
+    await _repository.confirmAppointment(appointmentId);
+    await refreshWorkspace();
+    await selectCustomer(customerId);
+  }
+
+  Future<void> cancelAppointment({
+    required String appointmentId,
+    required String customerId,
+  }) async {
+    await _repository.cancelAppointment(appointmentId);
+    await refreshWorkspace();
+    await selectCustomer(customerId);
+  }
+
+  Future<void> rescheduleAppointment({
+    required String appointmentId,
+    required String customerId,
+    required DateTime appointmentDate,
+    String? remarks,
+  }) async {
+    await _repository.rescheduleAppointment(
+      appointmentId: appointmentId,
+      appointmentDate: appointmentDate,
+      remarks: remarks,
+    );
+    await refreshWorkspace();
+    await selectCustomer(customerId);
+  }
+
+  Future<void> uploadCustomerDocument({
+    required String customerId,
+    required String fileName,
+    required String documentType,
+    required Uint8List fileBytes,
+    required String mimeType,
+    required int fileSize,
+  }) async {
+    _saving = true;
+    _error = null;
+    notifyListeners();
+    try {
+      await _repository.uploadCustomerDocument(
+        customerId: customerId,
+        fileName: fileName,
+        documentType: documentType,
+        fileBytes: fileBytes,
+        mimeType: mimeType,
+        fileSize: fileSize,
+      );
+      await refreshWorkspace();
+      await selectCustomer(customerId);
+    } catch (error) {
+      _error = error.toString();
+      rethrow;
+    } finally {
+      _saving = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> markNotificationRead(String notificationId) async {
+    await _repository.markNotificationRead(notificationId);
+    await refreshWorkspace();
+    if (_selectedCustomerId != null) {
+      await selectCustomer(_selectedCustomerId!);
+    }
+  }
+
+  Future<void> markAllNotificationsRead({String? customerId}) async {
+    await _repository.markAllNotificationsRead(customerId: customerId);
+    await refreshWorkspace();
+    if (_selectedCustomerId != null) {
+      await selectCustomer(_selectedCustomerId!);
+    }
   }
 
   Future<void> updateCurrentProfile(Map<String, dynamic> payload) async {

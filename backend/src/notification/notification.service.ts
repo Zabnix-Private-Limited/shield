@@ -75,6 +75,55 @@ export class NotificationService {
     return notification;
   }
 
+  async markAllAsRead(customerIds: bigint[]) {
+    if (customerIds.length === 0) {
+      return { count: 0 };
+    }
+
+    const unread = await this.prisma.notification.findMany({
+      where: {
+        customerId: { in: customerIds },
+        NOT: { status: 'READ' },
+      },
+      select: {
+        id: true,
+        customerId: true,
+        title: true,
+      },
+    });
+
+    if (unread.length === 0) {
+      return { count: 0 };
+    }
+
+    await this.prisma.notification.updateMany({
+      where: {
+        id: { in: unread.map((item) => item.id) },
+      },
+      data: {
+        status: 'READ',
+      },
+    });
+
+    for (const notification of unread) {
+      this.platformRealtimeService.publish({
+        id: `notification-read:${notification.id.toString()}`,
+        type: 'NOTIFICATION_READ',
+        category: 'notification',
+        title: 'Notification marked as read',
+        description: notification.title ?? 'Notification marked as read',
+        workspace: 'agent',
+        customerId: notification.customerId?.toString(),
+        metadata: {
+          notificationId: notification.id.toString(),
+          bulkAction: true,
+        },
+      });
+    }
+
+    return { count: unread.length };
+  }
+
   async registerDeviceToken(input: RegisterTokenInput) {
     const session = input.sessionId
       ? await this.prisma.authSession.findUnique({
