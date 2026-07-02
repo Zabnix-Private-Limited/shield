@@ -1,5 +1,6 @@
 enum SHIELDRole {
   customer('customer', 'Customer'),
+  agent('agent', 'SHIELD Agent'),
   provider('provider', 'Provider'),
   pharmacyStaff('pharmacy-staff', 'Pharmacy Staff'),
   clinicStaff('clinic-staff', 'Clinic Staff'),
@@ -42,7 +43,7 @@ enum SHIELDRole {
       case 'CRM_EXECUTIVE':
         return SHIELDRole.crmExecutive;
       case 'SHIELD_AGENT':
-        return SHIELDRole.shieldExecutive;
+        return SHIELDRole.agent;
       case 'ADMIN':
         return SHIELDRole.superAdmin;
       case 'CUSTOMER':
@@ -54,6 +55,7 @@ enum SHIELDRole {
 
   static List<SHIELDRole> get switchableRoles => const [
     SHIELDRole.customer,
+    SHIELDRole.agent,
     SHIELDRole.provider,
     SHIELDRole.crmExecutive,
     SHIELDRole.shieldExecutive,

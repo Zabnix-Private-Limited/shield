@@ -6971,4 +6971,75 @@ est build, ackend/vercel.json, ackend/src/auth/auth.service.ts, and uth_devic
 - Verified unrelated document and notification access now return 403.
 - Verified provider self-profile update succeeds with a real authenticated provider session.
 - Verified provider visit payment persistence returns 200 on real changes, updates paid/balance/history values, emits the correct patient notification, and returns 400 without mutation on a repeated no-op submission.
-- Verified provider report execution now respects date filtering and provider branch/type scope.
+- Verified provider report execution now respects date filtering and provider branch/type scope.2026-07-02 11:00:35 IST
+
+## 189. Agent portal foundation: scoped agent workspace, role routing, and frontend module baseline
+**Timestamp:** 2026-07-02 11:00:35 IST
+
+**High-level description**: Built the Phase 1 Agent Portal foundation on top of existing shared customer, CRM, appointment, document, wallet, referral, and auth flows so the new portal can move fast without duplicating business logic or weakening scope enforcement.
+- Added a shared AgentScopeService in the auth layer that resolves the authenticated SHIELD agent through users.employee_code and enforces ownership against customers.agent_code instead of trusting client-supplied customer IDs.
+- Introduced a dedicated backend Agent module with scoped workspace and scoped customer-workspace endpoints so the frontend can load one reusable agent dashboard/customer context instead of stitching together unrelated global endpoints in the UI.
+- Expanded SHIELD_AGENT runtime permissions for the real agent workload, including appointments, CRM follow-ups, notifications, settings, and dedicated agent portal permission codes, while preserving shared resource permissions required for API reuse.
+- Applied agent scope checks across reused shared controllers and services for customer search/profile access, customer membership/wallet bundles, referrals, CRM follow-up/task flows, appointments, documents, and notifications so agent sessions stay limited to their assigned customer graph.
+- Added a new frontend SHIELD agent role mapping and a full features/agent foundation with repository, controller, and section screens for dashboard, customers, registration, follow-ups, appointments, referrals, documents, notifications, performance, profile, and settings.
+- Routed SHIELD_AGENT away from the old shield-executive presentation shell and into the new /portal/agent/... experience while keeping the existing role-based router contract and shared portal shell intact.
+- Kept settings intentionally lightweight for this foundation slice: profile/session visibility is wired, while richer persisted agent preference storage is left for a later sprint rather than inventing ad-hoc storage.
+
+### Backend Files Modified
+- backend/src/app.module.ts
+- backend/src/appointment/appointment.controller.ts
+- backend/src/appointment/appointment.service.ts
+- backend/src/auth/auth.module.ts
+- backend/src/auth/rbac-catalog.ts
+- backend/src/crm/crm.controller.ts
+- backend/src/customer/customer-membership.controller.ts
+- backend/src/customer/customer.controller.ts
+- backend/src/document/document.controller.ts
+- backend/src/document/document.service.ts
+- backend/src/notification/notification.controller.ts
+- backend/src/notification/notification.service.ts
+- backend/src/referral/referral.controller.ts
+- backend/src/wallet/customer-wallet.controller.ts
+
+### Backend Files Added
+- backend/src/agent/agent.controller.ts
+- backend/src/agent/agent.module.ts
+- backend/src/agent/agent.service.ts
+- backend/src/auth/agent-scope.service.ts
+
+### Frontend Files Modified
+- frontend/lib/features/portal/presentation/portal_role_data.dart
+- frontend/lib/features/portal/presentation/screens/portal_shell.dart
+- frontend/lib/shared/models/shield_role.dart
+- frontend/lib/shared/services/api_service.dart
+
+### Frontend Files Added
+- frontend/lib/features/agent/appointments/presentation/screens/agent_appointments_screen.dart
+- frontend/lib/features/agent/customers/presentation/screens/agent_customers_screen.dart
+- frontend/lib/features/agent/dashboard/presentation/screens/agent_dashboard_screen.dart
+- frontend/lib/features/agent/documents/presentation/screens/agent_documents_screen.dart
+- frontend/lib/features/agent/followups/presentation/screens/agent_followups_screen.dart
+- frontend/lib/features/agent/notifications/presentation/screens/agent_notifications_screen.dart
+- frontend/lib/features/agent/performance/presentation/screens/agent_performance_screen.dart
+- frontend/lib/features/agent/referrals/presentation/screens/agent_referrals_screen.dart
+- frontend/lib/features/agent/registration/presentation/screens/agent_registration_screen.dart
+- frontend/lib/features/agent/settings/presentation/screens/agent_settings_screen.dart
+- frontend/lib/features/agent/shared/data/agent_portal_repository.dart
+- frontend/lib/features/agent/shared/presentation/controllers/agent_portal_controller.dart
+- frontend/lib/features/agent/shared/presentation/controllers/agent_portal_provider.dart
+
+### APIs Added or Changed
+- Added GET /agents/workspace.
+- Added GET /agents/customers/:customerId/workspace.
+- Added GET /agents/me/profile.
+- Added PATCH /agents/me/profile.
+- Existing shared customer, CRM, appointment, document, notification, referral, membership, and wallet endpoints now enforce agent scope when the principal role is SHIELD_AGENT.
+
+### Database Changes
+- No schema change in this foundation slice.
+- No SQL migration required in this foundation slice.
+
+### Verification
+- cd backend && npm run build
+- cd frontend && flutter analyze --no-pub
+- cd frontend && flutter test

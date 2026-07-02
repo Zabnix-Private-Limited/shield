@@ -2,6 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import '../../../agent/appointments/presentation/screens/agent_appointments_screen.dart';
+import '../../../agent/customers/presentation/screens/agent_customers_screen.dart';
+import '../../../agent/dashboard/presentation/screens/agent_dashboard_screen.dart';
+import '../../../agent/documents/presentation/screens/agent_documents_screen.dart';
+import '../../../agent/followups/presentation/screens/agent_followups_screen.dart';
+import '../../../agent/notifications/presentation/screens/agent_notifications_screen.dart';
+import '../../../agent/performance/presentation/screens/agent_performance_screen.dart';
+import '../../../agent/referrals/presentation/screens/agent_referrals_screen.dart';
+import '../../../agent/registration/presentation/screens/agent_registration_screen.dart';
+import '../../../agent/settings/presentation/screens/agent_settings_screen.dart';
 import '../../../customer/dashboard/presentation/screens/dashboard_screen.dart';
 import '../../../customer/documents/presentation/screens/customer_documents_screen.dart';
 import '../../../customer/membership/presentation/screens/membership_screen.dart';
@@ -433,6 +443,7 @@ class _RoleContent extends StatelessWidget {
         portal.role == SHIELDRole.customer && section.key == 'wallet';
     final isCustomerSettings =
         portal.role == SHIELDRole.customer && section.key == 'settings';
+    final isAgentRole = portal.role == SHIELDRole.agent;
     final isProviderRole = portal.role == SHIELDRole.provider;
     final isCardUtilization =
         (portal.role == SHIELDRole.pharmacyStaff && section.key == 'qr-scan') ||
@@ -482,6 +493,8 @@ class _RoleContent extends StatelessWidget {
       content = const CustomerWalletScreen();
     } else if (isCustomerSettings) {
       content = const _CustomerSettingsView();
+    } else if (isAgentRole) {
+      content = _buildAgentModuleContent(section);
     } else if (isProviderRole) {
       content = _buildProviderModuleContent(section);
     } else if (isCardUtilization) {
@@ -582,6 +595,35 @@ class _RoleContent extends StatelessWidget {
         return const ProviderProfileScreen();
       case 'settings':
         return const ProviderSettingsScreen();
+      default:
+        return _EnterpriseWorkspaceView(portal: portal, section: section);
+    }
+  }
+
+  Widget _buildAgentModuleContent(PortalSectionData section) {
+    switch (section.rendererKey ?? section.moduleId ?? section.key) {
+      case 'dashboard':
+        return const AgentDashboardScreen();
+      case 'customers':
+        return const AgentCustomersScreen();
+      case 'registration':
+        return const AgentRegistrationScreen();
+      case 'followups':
+        return const AgentFollowUpsScreen();
+      case 'appointments':
+        return const AgentAppointmentsScreen();
+      case 'referrals':
+        return const AgentReferralsScreen();
+      case 'documents':
+        return const AgentDocumentsScreen();
+      case 'notifications':
+        return const AgentNotificationsScreen();
+      case 'performance':
+        return const AgentPerformanceScreen();
+      case 'profile':
+        return const AgentSettingsScreen(profileOnly: true);
+      case 'settings':
+        return const AgentSettingsScreen();
       default:
         return _EnterpriseWorkspaceView(portal: portal, section: section);
     }

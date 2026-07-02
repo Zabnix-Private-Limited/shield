@@ -12,6 +12,7 @@ import {
 import { CurrentPrincipal } from '../auth/current-principal.decorator';
 import { RequirePermissions } from '../auth/permissions.decorator';
 import type { ShieldPrincipal } from '../auth/auth.types';
+import { AgentScopeService } from '../auth/agent-scope.service';
 import { ProviderScopeService } from '../auth/provider-scope.service';
 import { CustomerService } from './customer.service';
 
@@ -19,6 +20,7 @@ import { CustomerService } from './customer.service';
 export class CustomerController {
   constructor(
     private customerService: CustomerService,
+    private readonly agentScopeService: AgentScopeService,
     private readonly providerScopeService: ProviderScopeService,
   ) {}
 
@@ -49,15 +51,22 @@ export class CustomerController {
       aadhaar,
       membership,
     });
-    const data = this.providerScopeService.isProviderPrincipal(principal)
+    const data =
+      this.providerScopeService.isProviderPrincipal(principal) ||
+          this.agentScopeService.isAgentPrincipal(principal)
       ? await (async () => {
           const customerIds = results.map((item) => item.id);
           const allowedIds = new Set(
             (
-              await this.providerScopeService.listAccessibleCustomerIds(
-                principal,
-                customerIds,
-              )
+              this.providerScopeService.isProviderPrincipal(principal)
+                ? await this.providerScopeService.listAccessibleCustomerIds(
+                    principal,
+                    customerIds,
+                  )
+                : await this.agentScopeService.listAccessibleCustomerIds(
+                    principal,
+                    customerIds,
+                  )
             ).map((id) => id.toString()),
           );
           return results.filter((item) => allowedIds.has(item.id.toString()));
@@ -102,6 +111,7 @@ export class CustomerController {
       BigInt(id),
       principal,
     );
+    await this.agentScopeService.assertAgentCanAccessCustomer(BigInt(id), principal);
     const customer = await this.customerService.findOne(BigInt(id));
     return {
       success: true,
@@ -128,6 +138,7 @@ export class CustomerController {
       BigInt(id),
       principal,
     );
+    await this.agentScopeService.assertAgentCanAccessCustomer(BigInt(id), principal);
     const customer = await this.customerService.update(BigInt(id), body);
     return {
       success: true,

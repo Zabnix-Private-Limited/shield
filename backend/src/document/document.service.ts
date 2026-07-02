@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { randomUUID } from 'crypto';
 import type { ShieldPrincipal } from '../auth/auth.types';
+import { AgentScopeService } from '../auth/agent-scope.service';
 import { ProviderScopeService } from '../auth/provider-scope.service';
 import { PrescriptionIntelligenceService } from './prescription-intelligence.service';
 import { StorageService } from '../storage/storage.service';
@@ -24,6 +25,7 @@ type PrescriptionMatchCandidate = {
 export class DocumentService {
   constructor(
     private prisma: PrismaService,
+    private readonly agentScopeService: AgentScopeService,
     private readonly providerScopeService: ProviderScopeService,
     private prescriptionIntelligenceService: PrescriptionIntelligenceService,
     private storageService: StorageService,
@@ -448,6 +450,11 @@ export class DocumentService {
     };
     if (customerId) {
       whereClause.customerId = customerId;
+    } else if (this.agentScopeService.isAgentPrincipal(principal)) {
+      const accessibleCustomerIds =
+        await this.agentScopeService.listAccessibleCustomerIds(principal);
+      whereClause.customerId =
+        accessibleCustomerIds.length > 0 ? { in: accessibleCustomerIds } : { in: [] };
     } else if (this.providerScopeService.isProviderPrincipal(principal)) {
       const accessibleCustomerIds =
         await this.providerScopeService.listAccessibleCustomerIds(principal);

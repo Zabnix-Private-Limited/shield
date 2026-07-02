@@ -6,6 +6,7 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { randomUUID } from 'crypto';
 import type { ShieldPrincipal } from '../auth/auth.types';
+import { AgentScopeService } from '../auth/agent-scope.service';
 import { ProviderScopeService } from '../auth/provider-scope.service';
 import { PricingService } from '../pricing/pricing.service';
 import { SERVICE_TYPES, type ShieldServiceType } from '../pricing/pricing.types';
@@ -107,6 +108,7 @@ export class AppointmentService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly pricingService: PricingService,
+    private readonly agentScopeService: AgentScopeService,
     private readonly providerScopeService: ProviderScopeService,
     private readonly timelineService: TimelineService,
     private readonly walletService: WalletService,
@@ -118,6 +120,11 @@ export class AppointmentService {
     const whereClause: Record<string, unknown> = {};
     if (customerId) {
       whereClause.customerId = customerId;
+    } else if (this.agentScopeService.isAgentPrincipal(principal)) {
+      const accessibleCustomerIds =
+        await this.agentScopeService.listAccessibleCustomerIds(principal);
+      whereClause.customerId =
+        accessibleCustomerIds.length > 0 ? { in: accessibleCustomerIds } : { in: [] };
     }
     return this.prisma.appointment.findMany({
       where: this.providerScopeService.scopeAppointmentWhere(
@@ -147,6 +154,7 @@ export class AppointmentService {
   }
 
   async findOne(id: bigint, principal?: ShieldPrincipal) {
+    await this.agentScopeService.assertAgentCanAccessAppointment(id, principal);
     await this.providerScopeService.assertProviderCanAccessAppointment(
       id,
       principal,

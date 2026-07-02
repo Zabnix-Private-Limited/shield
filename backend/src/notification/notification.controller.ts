@@ -10,6 +10,7 @@ import {
 import { CurrentPrincipal } from '../auth/current-principal.decorator';
 import { RequirePermissions } from '../auth/permissions.decorator';
 import type { ShieldPrincipal } from '../auth/auth.types';
+import { AgentScopeService } from '../auth/agent-scope.service';
 import { ProviderScopeService } from '../auth/provider-scope.service';
 import { NotificationService } from './notification.service';
 
@@ -17,6 +18,7 @@ import { NotificationService } from './notification.service';
 export class NotificationController {
   constructor(
     private notificationService: NotificationService,
+    private readonly agentScopeService: AgentScopeService,
     private readonly providerScopeService: ProviderScopeService,
   ) {}
 
@@ -33,6 +35,10 @@ export class NotificationController {
           ? BigInt(customerId)
           : undefined;
     if (targetCustomerId) {
+      await this.agentScopeService.assertAgentCanAccessCustomer(
+        targetCustomerId,
+        principal,
+      );
       await this.providerScopeService.assertProviderCanAccessCustomer(
         targetCustomerId,
         principal,
@@ -52,6 +58,7 @@ export class NotificationController {
     @Param('id') id: string,
     @CurrentPrincipal() principal?: ShieldPrincipal,
   ) {
+    await this.agentScopeService.assertAgentCanAccessNotification(BigInt(id), principal);
     await this.providerScopeService.assertProviderCanAccessNotification(
       BigInt(id),
       principal,

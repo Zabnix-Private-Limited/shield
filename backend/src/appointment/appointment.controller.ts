@@ -9,11 +9,15 @@ import {
 import { CurrentPrincipal } from '../auth/current-principal.decorator';
 import { RequirePermissions } from '../auth/permissions.decorator';
 import type { ShieldPrincipal } from '../auth/auth.types';
+import { AgentScopeService } from '../auth/agent-scope.service';
 import { AppointmentService } from './appointment.service';
 
 @Controller('appointments')
 export class AppointmentController {
-  constructor(private appointmentService: AppointmentService) {}
+  constructor(
+    private appointmentService: AppointmentService,
+    private readonly agentScopeService: AgentScopeService,
+  ) {}
 
   @RequirePermissions('appointments.view')
   @Get()
@@ -27,6 +31,12 @@ export class AppointmentController {
         : customerId
           ? BigInt(customerId)
           : undefined;
+    if (targetCustomerId) {
+      await this.agentScopeService.assertAgentCanAccessCustomer(
+        targetCustomerId,
+        principal,
+      );
+    }
     const appts = await this.appointmentService.list(targetCustomerId, principal);
     return {
       success: true,
@@ -41,6 +51,10 @@ export class AppointmentController {
     if (principal?.principalType === 'CUSTOMER') {
       body.customer_id = principal.customerId;
     }
+    await this.agentScopeService.assertAgentCanAccessCustomer(
+      BigInt(body.customer_id),
+      principal,
+    );
     const appt = await this.appointmentService.create(body);
     return {
       success: true,
@@ -55,6 +69,10 @@ export class AppointmentController {
     @Param('id') id: string,
     @CurrentPrincipal() principal?: ShieldPrincipal,
   ) {
+    await this.agentScopeService.assertAgentCanAccessAppointment(
+      BigInt(id),
+      principal,
+    );
     const appt = await this.appointmentService.findOne(BigInt(id), principal);
     return {
       success: true,
@@ -69,6 +87,10 @@ export class AppointmentController {
     @Param('id') id: string,
     @CurrentPrincipal() principal?: ShieldPrincipal,
   ) {
+    await this.agentScopeService.assertAgentCanAccessAppointment(
+      BigInt(id),
+      principal,
+    );
     const appt = await this.appointmentService.cancel(BigInt(id), principal);
     return {
       success: true,
@@ -83,6 +105,10 @@ export class AppointmentController {
     @Param('id') id: string,
     @CurrentPrincipal() principal?: ShieldPrincipal,
   ) {
+    await this.agentScopeService.assertAgentCanAccessAppointment(
+      BigInt(id),
+      principal,
+    );
     const appt = await this.appointmentService.confirm(BigInt(id), principal);
     return {
       success: true,

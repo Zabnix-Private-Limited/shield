@@ -8,6 +8,7 @@ import { CustomerModule } from './customer/customer.module';
 import { WalletModule } from './wallet/wallet.module';
 import { CreditModule } from './credit/credit.module';
 import { AppointmentModule } from './appointment/appointment.module';
+import { AgentModule } from './agent/agent.module';
 import { DocumentModule } from './document/document.module';
 import { CrmModule } from './crm/crm.module';
 import { NotificationModule } from './notification/notification.module';
@@ -40,6 +41,7 @@ import { PlatformCapabilitiesModule } from './platform-capabilities/platform-cap
     PrismaModule,
     PricingModule,
     ReferralModule,
+    AgentModule,
     CustomerModule,
     WalletModule,
     CreditModule,

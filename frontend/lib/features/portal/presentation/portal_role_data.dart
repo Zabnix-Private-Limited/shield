@@ -317,6 +317,28 @@ PortalRoleData portalDataForRole(SHIELDRole role) {
           _PortalSectionFactory.providerSettings,
         ],
       );
+    case SHIELDRole.agent:
+      return PortalRoleData(
+        role: role,
+        operatorName: 'Agent Workspace',
+        headline: 'Assigned customers, onboarding, follow-ups, and service coordination',
+        regionLabel: 'Field growth and retention workspace',
+        icon: Icons.badge_outlined,
+        accentColor: AppColors.shieldBlue,
+        sections: [
+          _PortalSectionFactory.agentDashboard,
+          _PortalSectionFactory.agentCustomers,
+          _PortalSectionFactory.agentRegistration,
+          _PortalSectionFactory.agentFollowUps,
+          _PortalSectionFactory.agentAppointments,
+          _PortalSectionFactory.agentReferrals,
+          _PortalSectionFactory.agentDocuments,
+          _PortalSectionFactory.agentNotifications,
+          _PortalSectionFactory.agentPerformance,
+          _PortalSectionFactory.agentProfile,
+          _PortalSectionFactory.agentSettings,
+        ],
+      );
     case SHIELDRole.pharmacyStaff:
       return PortalRoleData(
         role: role,
@@ -549,5 +571,51 @@ class _PortalSectionFactory {
   static final PortalSectionData providerSettings = _section(
     'settings',
     summary: 'Session visibility, device history, and sign-out controls.',
+  );
+  static final PortalSectionData agentDashboard = _section(
+    'dashboard',
+    summary: 'Today follow-ups, registrations, appointments, referrals, and recent activity.',
+    actions: const ['Open customers', 'Add follow-up'],
+  );
+  static final PortalSectionData agentCustomers = _section(
+    'customers',
+    summary: 'Assigned customers only, with onboarding, card, wallet, and appointment context.',
+  );
+  static final PortalSectionData agentRegistration = _section(
+    'registration',
+    summary: 'Register new customers with the current agent code attached by default.',
+  );
+  static final PortalSectionData agentFollowUps = _section(
+    'followups',
+    title: 'Follow-Ups',
+    summary: 'Notes, next actions, visit outcomes, reminders, and scheduled follow-ups.',
+  );
+  static final PortalSectionData agentAppointments = _section(
+    'appointments',
+    summary: 'Book, review, reschedule context, and track customer appointments.',
+  );
+  static final PortalSectionData agentReferrals = _section(
+    'referrals',
+    summary: 'Customer referral network, progress, and qualification status in the scoped graph.',
+  );
+  static final PortalSectionData agentDocuments = _section(
+    'documents',
+    summary: 'Onboarding and customer documents limited to this agent assignment.',
+  );
+  static final PortalSectionData agentNotifications = _section(
+    'notifications',
+    summary: 'Assigned customer notifications and updates with read-state visibility.',
+  );
+  static final PortalSectionData agentPerformance = _section(
+    'performance',
+    summary: 'Customer growth, retention, follow-up completion, and incentive summary.',
+  );
+  static final PortalSectionData agentProfile = _section(
+    'profile',
+    summary: 'Agent identity, contact info, branch assignment, and session-ready account details.',
+  );
+  static final PortalSectionData agentSettings = _section(
+    'settings',
+    summary: 'Profile updates, session controls, and portal preferences foundation.',
   );
 }

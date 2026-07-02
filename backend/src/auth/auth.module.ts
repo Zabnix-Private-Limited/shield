@@ -7,6 +7,7 @@ import { NotificationModule } from '../notification/notification.module';
 import { PrismaModule } from '../prisma/prisma.module';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
+import { AgentScopeService } from './agent-scope.service';
 import { ProviderScopeService } from './provider-scope.service';
 import { ShieldAuthorizationGuard } from './shield-authorization.guard';
 import { ShieldJwtAuthGuard } from './shield-jwt-auth.guard';
@@ -24,6 +25,7 @@ import { ShieldJwtAuthGuard } from './shield-jwt-auth.guard';
   controllers: [AuthController],
   providers: [
     AuthService,
+    AgentScopeService,
     ProviderScopeService,
     {
       provide: APP_GUARD,
@@ -34,6 +36,6 @@ import { ShieldJwtAuthGuard } from './shield-jwt-auth.guard';
       useClass: ShieldAuthorizationGuard,
     },
   ],
-  exports: [AuthService, ProviderScopeService],
+  exports: [AuthService, AgentScopeService, ProviderScopeService],
 })
 export class AuthModule {}

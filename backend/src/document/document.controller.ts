@@ -16,6 +16,7 @@ import * as multer from 'multer';
 import { CurrentPrincipal } from '../auth/current-principal.decorator';
 import { RequirePermissions } from '../auth/permissions.decorator';
 import type { ShieldPrincipal } from '../auth/auth.types';
+import { AgentScopeService } from '../auth/agent-scope.service';
 import { ProviderScopeService } from '../auth/provider-scope.service';
 import { DocumentService } from './document.service';
 
@@ -23,6 +24,7 @@ import { DocumentService } from './document.service';
 export class DocumentController {
   constructor(
     private documentService: DocumentService,
+    private readonly agentScopeService: AgentScopeService,
     private readonly providerScopeService: ProviderScopeService,
   ) {}
 
@@ -48,6 +50,10 @@ export class DocumentController {
     if (principal?.principalType === 'CUSTOMER') {
       body.customer_id = principal.customerId;
     }
+    await this.agentScopeService.assertAgentCanAccessCustomer(
+      BigInt(body.customer_id),
+      principal,
+    );
     await this.providerScopeService.assertProviderCanAccessCustomer(
       BigInt(body.customer_id),
       principal,
@@ -81,6 +87,10 @@ export class DocumentController {
           ? BigInt(customerId)
           : undefined;
     if (targetCustomerId) {
+      await this.agentScopeService.assertAgentCanAccessCustomer(
+        targetCustomerId,
+        principal,
+      );
       await this.providerScopeService.assertProviderCanAccessCustomer(
         targetCustomerId,
         principal,
@@ -100,6 +110,7 @@ export class DocumentController {
     @Param('id') id: string,
     @CurrentPrincipal() principal?: ShieldPrincipal,
   ) {
+    await this.agentScopeService.assertAgentCanAccessDocument(BigInt(id), principal);
     await this.providerScopeService.assertProviderCanAccessDocument(
       BigInt(id),
       principal,
@@ -118,6 +129,7 @@ export class DocumentController {
     @Param('id') id: string,
     @CurrentPrincipal() principal?: ShieldPrincipal,
   ) {
+    await this.agentScopeService.assertAgentCanAccessDocument(BigInt(id), principal);
     await this.providerScopeService.assertProviderCanAccessDocument(
       BigInt(id),
       principal,

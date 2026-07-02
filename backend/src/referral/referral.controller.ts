@@ -1,14 +1,27 @@
 import { Controller, Get, Param, Post, Body } from '@nestjs/common';
+import { AgentScopeService } from '../auth/agent-scope.service';
+import type { ShieldPrincipal } from '../auth/auth.types';
+import { CurrentPrincipal } from '../auth/current-principal.decorator';
 import { RequirePermissions } from '../auth/permissions.decorator';
 import { ReferralService } from './referral.service';
 
 @Controller('referrals')
 export class ReferralController {
-  constructor(private readonly referralService: ReferralService) {}
+  constructor(
+    private readonly referralService: ReferralService,
+    private readonly agentScopeService: AgentScopeService,
+  ) {}
 
   @RequirePermissions('referrals.view')
   @Get('tree/:customerId')
-  async tree(@Param('customerId') customerId: string) {
+  async tree(
+    @Param('customerId') customerId: string,
+    @CurrentPrincipal() principal?: ShieldPrincipal,
+  ) {
+    await this.agentScopeService.assertAgentCanAccessCustomer(
+      BigInt(customerId),
+      principal,
+    );
     return {
       success: true,
       message: 'Referral tree retrieved successfully.',
@@ -18,7 +31,14 @@ export class ReferralController {
 
   @RequirePermissions('referrals.view')
   @Get('summary/:customerId')
-  async summary(@Param('customerId') customerId: string) {
+  async summary(
+    @Param('customerId') customerId: string,
+    @CurrentPrincipal() principal?: ShieldPrincipal,
+  ) {
+    await this.agentScopeService.assertAgentCanAccessCustomer(
+      BigInt(customerId),
+      principal,
+    );
     return {
       success: true,
       message: 'Referral summary retrieved successfully.',

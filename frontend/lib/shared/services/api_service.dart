@@ -590,6 +590,167 @@ class ApiService {
     return _readEnvelope(response);
   }
 
+  static Future<Map<String, dynamic>> getAgentWorkspace() async {
+    final response = await _dio.get('/agents/workspace');
+    return _readEnvelope(response);
+  }
+
+  static Future<Map<String, dynamic>> getAgentCustomerWorkspace(
+    String customerId,
+  ) async {
+    final response = await _dio.get('/agents/customers/$customerId/workspace');
+    return _readEnvelope(response);
+  }
+
+  static Future<Map<String, dynamic>> getAgentCurrentProfile() async {
+    final response = await _dio.get('/agents/me/profile');
+    return _readEnvelope(response);
+  }
+
+  static Future<Map<String, dynamic>> updateAgentCurrentProfile(
+    Map<String, dynamic> payload,
+  ) async {
+    final response = await _dio.patch('/agents/me/profile', data: payload);
+    return _readEnvelope(response);
+  }
+
+  static Future<List<Map<String, dynamic>>> searchCustomers({
+    String? mobile,
+    String? name,
+    String? aadhaar,
+    String? membership,
+  }) async {
+    final response = await _dio.get(
+      '/customers/search',
+      queryParameters: {
+        if (mobile != null && mobile.trim().isNotEmpty) 'mobile': mobile.trim(),
+        if (name != null && name.trim().isNotEmpty) 'name': name.trim(),
+        if (aadhaar != null && aadhaar.trim().isNotEmpty) 'aadhaar': aadhaar.trim(),
+        if (membership != null && membership.trim().isNotEmpty)
+          'membership': membership.trim(),
+      },
+    );
+    return _readEnvelopeList(
+      response,
+    ).map((item) => Map<String, dynamic>.from(item as Map)).toList();
+  }
+
+  static Future<Map<String, dynamic>> createCustomer(
+    Map<String, dynamic> payload,
+  ) async {
+    final response = await _dio.post('/customers', data: payload);
+    return _readEnvelope(response);
+  }
+
+  static Future<List<Map<String, dynamic>>> getCrmActivities(
+    String customerId,
+  ) async {
+    final response = await _dio.get(
+      '/crm/activities',
+      queryParameters: {'customer_id': customerId},
+    );
+    return _readEnvelopeList(
+      response,
+    ).map((item) => Map<String, dynamic>.from(item as Map)).toList();
+  }
+
+  static Future<Map<String, dynamic>> createCrmActivity(
+    Map<String, dynamic> payload,
+  ) async {
+    final response = await _dio.post('/crm/activities', data: payload);
+    return _readEnvelope(response);
+  }
+
+  static Future<List<Map<String, dynamic>>> getCrmTasks({
+    String? customerId,
+  }) async {
+    final response = await _dio.get(
+      '/crm/tasks',
+      queryParameters: {
+        if (customerId != null && customerId.trim().isNotEmpty)
+          'customer_id': customerId.trim(),
+      },
+    );
+    return _readEnvelopeList(
+      response,
+    ).map((item) => Map<String, dynamic>.from(item as Map)).toList();
+  }
+
+  static Future<Map<String, dynamic>> createCrmTask(
+    Map<String, dynamic> payload,
+  ) async {
+    final response = await _dio.post('/crm/tasks', data: payload);
+    return _readEnvelope(response);
+  }
+
+  static Future<Map<String, dynamic>> updateCrmTask(
+    String taskId,
+    Map<String, dynamic> payload,
+  ) async {
+    final response = await _dio.put('/crm/tasks/$taskId', data: payload);
+    return _readEnvelope(response);
+  }
+
+  static Future<Map<String, dynamic>> getReferralTree(String customerId) async {
+    final response = await _dio.get('/referrals/tree/$customerId');
+    return _readEnvelope(response);
+  }
+
+  static Future<Map<String, dynamic>> getReferralSummary(
+    String customerId,
+  ) async {
+    final response = await _dio.get('/referrals/summary/$customerId');
+    return _readEnvelope(response);
+  }
+
+  static Future<Appointment> createInternalAppointment({
+    required String customerId,
+    required String providerId,
+    required String appointmentType,
+    required DateTime appointmentDate,
+    String? remarks,
+  }) async {
+    final response = await _dio.post(
+      '/appointments',
+      data: {
+        'customer_id': customerId,
+        'provider_id': providerId,
+        'appointment_type': appointmentType,
+        'appointment_date': appointmentDate.toIso8601String(),
+        if (remarks != null && remarks.trim().isNotEmpty) 'remarks': remarks.trim(),
+      },
+    );
+    return Appointment.fromJson(_readEnvelope(response));
+  }
+
+  static Future<Document> uploadScopedCustomerDocument({
+    required String customerId,
+    required String fileName,
+    required String documentType,
+    required Uint8List fileBytes,
+    String mimeType = 'application/pdf',
+    int fileSize = 1024,
+  }) async {
+    final formData = FormData.fromMap({
+      'customer_id': customerId,
+      'file_name': fileName,
+      'file_size': fileSize,
+      'mime_type': mimeType,
+      'document_type': documentType,
+      'file': MultipartFile.fromBytes(fileBytes, filename: fileName),
+    });
+    final response = await _dio.post(
+      '/documents/upload',
+      data: formData,
+      options: Options(
+        contentType: 'multipart/form-data',
+        sendTimeout: const Duration(minutes: 3),
+        receiveTimeout: const Duration(minutes: 3),
+      ),
+    );
+    return Document.fromJson(_readEnvelope(response));
+  }
+
   static Future<Map<String, dynamic>> getProviderProfile() async {
     final response = await _dio.get('/service-providers/me/profile');
     return _readEnvelope(response);

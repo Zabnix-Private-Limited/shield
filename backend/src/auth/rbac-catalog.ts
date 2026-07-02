@@ -81,14 +81,80 @@ function allPermissions() {
   return permissionsFor(RESOURCES);
 }
 
-export const RBAC_PERMISSIONS: PermissionDefinition[] = RESOURCES.flatMap(
+const AGENT_PORTAL_PERMISSIONS: PermissionDefinition[] = [
+  {
+    code: 'agent.dashboard.view',
+    name: 'VIEW agent dashboard',
+    description: 'View the agent portal dashboard.',
+  },
+  {
+    code: 'agent.customer.view',
+    name: 'VIEW agent customers',
+    description: 'View customers inside the agent portal.',
+  },
+  {
+    code: 'agent.customer.create',
+    name: 'CREATE agent customers',
+    description: 'Create customers from the agent portal.',
+  },
+  {
+    code: 'agent.customer.update',
+    name: 'UPDATE agent customers',
+    description: 'Update scoped customers from the agent portal.',
+  },
+  {
+    code: 'agent.followup.view',
+    name: 'VIEW agent follow-ups',
+    description: 'View agent follow-ups and scheduled tasks.',
+  },
+  {
+    code: 'agent.followup.create',
+    name: 'CREATE agent follow-ups',
+    description: 'Create agent follow-ups and tasks.',
+  },
+  {
+    code: 'agent.followup.update',
+    name: 'UPDATE agent follow-ups',
+    description: 'Update agent follow-up outcomes and tasks.',
+  },
+  {
+    code: 'agent.referral.view',
+    name: 'VIEW agent referrals',
+    description: 'View the scoped referral network in the agent portal.',
+  },
+  {
+    code: 'agent.document.view',
+    name: 'VIEW agent documents',
+    description: 'View scoped customer documents in the agent portal.',
+  },
+  {
+    code: 'agent.document.upload',
+    name: 'UPLOAD agent documents',
+    description: 'Upload scoped customer documents in the agent portal.',
+  },
+  {
+    code: 'agent.notification.view',
+    name: 'VIEW agent notifications',
+    description: 'View scoped notifications in the agent portal.',
+  },
+  {
+    code: 'agent.performance.view',
+    name: 'VIEW agent performance',
+    description: 'View agent performance and incentive summaries.',
+  },
+];
+
+export const RBAC_PERMISSIONS: PermissionDefinition[] = [
+  ...RESOURCES.flatMap(
   (resource) =>
     RESOURCE_ACTIONS[resource].map((action) => ({
       code: makePermissionCode(resource, action),
       name: `${action.toUpperCase()} ${resource.replace(/_/g, ' ')}`,
       description: `${action} access for ${resource.replace(/_/g, ' ')}.`,
     })),
-);
+  ),
+  ...AGENT_PORTAL_PERMISSIONS,
+];
 
 export const RBAC_ROLES: RoleDefinition[] = [
   {
@@ -108,14 +174,29 @@ export const RBAC_ROLES: RoleDefinition[] = [
     userType: 'EMPLOYEE',
     defaultScope: 'SELF',
     permissions: [
+      'agent.dashboard.view',
+      'agent.customer.view',
+      'agent.customer.create',
+      'agent.customer.update',
+      'agent.followup.view',
+      'agent.followup.create',
+      'agent.followup.update',
+      'agent.referral.view',
+      'agent.document.view',
+      'agent.document.upload',
+      'agent.notification.view',
+      'agent.performance.view',
       ...permissionsFor(['customers'], ['view', 'create', 'update']),
-      ...permissionsFor(['membership'], ['view', 'create', 'update']),
-      ...permissionsFor(['wallet'], ['view', 'create', 'update']),
-      ...permissionsFor(['referrals'], ['view', 'create', 'update', 'export']),
+      ...permissionsFor(['membership'], ['view']),
+      ...permissionsFor(['wallet'], ['view']),
+      ...permissionsFor(['referrals'], ['view', 'export']),
       ...permissionsFor(['agents'], ['view']),
       ...permissionsFor(['analytics'], ['view']),
       ...permissionsFor(['documents'], ['view', 'create']),
-      ...permissionsFor(['appointments'], ['view']),
+      ...permissionsFor(['appointments'], ['view', 'create', 'update']),
+      ...permissionsFor(['crm'], ['view', 'create', 'update']),
+      ...permissionsFor(['notifications'], ['view', 'update']),
+      ...permissionsFor(['settings'], ['view', 'update']),
     ],
   },
   {

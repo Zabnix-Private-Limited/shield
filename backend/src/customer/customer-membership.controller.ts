@@ -1,4 +1,5 @@
 import { BadRequestException, Controller, Get, Query } from '@nestjs/common';
+import { AgentScopeService } from '../auth/agent-scope.service';
 import { CurrentPrincipal } from '../auth/current-principal.decorator';
 import { RequirePermissions } from '../auth/permissions.decorator';
 import type { ShieldPrincipal } from '../auth/auth.types';
@@ -6,7 +7,10 @@ import { CustomerService } from './customer.service';
 
 @Controller('customer')
 export class CustomerMembershipController {
-  constructor(private readonly customerService: CustomerService) {}
+  constructor(
+    private readonly customerService: CustomerService,
+    private readonly agentScopeService: AgentScopeService,
+  ) {}
 
   private resolveCustomerId(
     customerId?: string,
@@ -27,11 +31,16 @@ export class CustomerMembershipController {
     @Query('customer_id') customerId?: string,
     @CurrentPrincipal() principal?: ShieldPrincipal,
   ) {
+    const resolvedCustomerId = this.resolveCustomerId(customerId, principal);
+    await this.agentScopeService.assertAgentCanAccessCustomer(
+      resolvedCustomerId,
+      principal,
+    );
     return {
       success: true,
       message: 'Customer membership retrieved successfully.',
       data: await this.customerService.getCustomerPortalMembership(
-        this.resolveCustomerId(customerId, principal),
+        resolvedCustomerId,
       ),
     };
   }
