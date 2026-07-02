@@ -7406,3 +7406,50 @@ est build, ackend/vercel.json, ackend/src/auth/auth.service.ts, and uth_devic
 - cd frontend && flutter test
 - Verified Flutter analyze reports no issues.
 - Verified Flutter test suite passes.
+
+## 198. Agent portal UX hardening pass: workflow-first registration, customer-network language, responsive headers, and daily-operations layouts
+**Timestamp:** 2026-07-02 17:47:18 IST
+
+**High-level description**: Reworked the Agent Portal presentation layer around field-agent workflows instead of generic admin-style forms so the existing implementation now feels closer to a production daily-operations tool without changing backend business rules or introducing parallel APIs.
+- Added a shared `AgentSectionHeader` so agent pages now use one compact header pattern with title, short description, and right-aligned actions instead of inconsistent whitespace-heavy page starts.
+- Renamed the visible agent navigation and workspace copy from referral-heavy/internal wording to field-appropriate customer language, including `My Customers`, `Register Customer`, `Customer Follow-Up`, `Visits`, `Customer Network`, `Customer Documents`, `My Performance`, and `My Profile`.
+- Rebuilt the dashboard around daily work: greeting, quick actions, today's registrations, follow-ups, appointments, pending documents, retention, monthly target, task summary, recent customers, upcoming visits, activity, and notifications.
+- Reworked customer registration into a step-based card workflow with `Step X of 4`, grouped sections, standardized primary/secondary actions, a read-only generated SHIELD customer ID placeholder, and deferred document upload until a draft/customer exists.
+- Kept government identity capture editable while separating it clearly from the SHIELD-generated customer identifier so agents are not asked to invent membership-style IDs manually.
+- Simplified follow-ups into a customer-first workflow with selected customer context, remarks, status, and next follow-up timing presented in the order an agent naturally thinks about the task.
+- Rebuilt appointments as `Customer -> Provider -> Service -> Slot -> Confirm` so visit creation matches field/hospital scheduling mental models instead of exposing disconnected CRUD inputs.
+- Reworked documents into a customer-first required-document checklist plus searchable history so agents can see what is still missing before uploading.
+- Simplified reports by moving export-format choice to the page header and reducing card actions to `View`, which keeps the reporting engine reuse intact while removing repetitive export noise from every card.
+- Reframed performance and customer-network pages so zero-heavy admin panels are replaced with month-focused operational metrics and customer-growth language that better matches agent retention and relationship work.
+- Kept all changes inside the existing Agent Portal architecture, repository/controller structure, and shared APIs; this pass intentionally avoided backend feature expansion and focused on release hardening, responsiveness, consistency, and day-to-day usability.
+
+### Frontend Files Modified
+- frontend/lib/features/agent/appointments/presentation/screens/agent_appointments_screen.dart
+- frontend/lib/features/agent/dashboard/presentation/screens/agent_dashboard_screen.dart
+- frontend/lib/features/agent/documents/presentation/screens/agent_documents_screen.dart
+- frontend/lib/features/agent/followups/presentation/screens/agent_followups_screen.dart
+- frontend/lib/features/agent/performance/presentation/screens/agent_performance_screen.dart
+- frontend/lib/features/agent/referrals/presentation/screens/agent_referrals_screen.dart
+- frontend/lib/features/agent/registration/presentation/screens/agent_registration_screen.dart
+- frontend/lib/features/agent/reports/presentation/screens/agent_reports_screen.dart
+- frontend/lib/features/portal/presentation/portal_role_data.dart
+- log.md
+
+### Frontend Files Added
+- frontend/lib/features/agent/shared/presentation/widgets/agent_section_header.dart
+
+### APIs Added or Changed
+- No backend endpoint or payload contract changed in this UX hardening pass.
+- Existing Agent Portal workflows continue to use the established shared API layer and repository/controller structure.
+
+### Database Changes
+- No schema change.
+- No SQL migration required.
+
+### Verification
+- cd frontend && flutter analyze --no-pub
+- cd frontend && flutter test
+- Verified Flutter analyze reports no issues after the workflow-first UX refactor.
+- Verified Flutter test suite passes after the navigation-copy and screen-layout changes.
+---
+2026-07-02 17:47:18 IST

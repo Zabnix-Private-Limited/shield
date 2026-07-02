@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../../shared/services/platform_file_actions.dart';
 import '../../../shared/presentation/controllers/agent_portal_provider.dart';
+import '../../../shared/presentation/widgets/agent_section_header.dart';
 
 class AgentReportsScreen extends ConsumerStatefulWidget {
   const AgentReportsScreen({super.key});
@@ -33,14 +34,11 @@ class _AgentReportsScreenState extends ConsumerState<AgentReportsScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    'Reports',
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
-                ),
+            AgentSectionHeader(
+              title: 'Reports',
+              description:
+                  'Choose the export format once, then open the report you need instead of repeating the same export button on every card.',
+              actions: [
                 DropdownButton<String>(
                   value: _format,
                   items: const [
@@ -52,11 +50,6 @@ class _AgentReportsScreenState extends ConsumerState<AgentReportsScreen> {
                       setState(() => _format = value ?? 'PDF'),
                 ),
               ],
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Export acquisition, follow-up, appointment, document, referral, and performance reports from the shared reporting engine.',
-              style: Theme.of(context).textTheme.bodyMedium,
             ),
             const SizedBox(height: 16),
             if (reports.isEmpty)
@@ -81,7 +74,7 @@ class _AgentReportsScreenState extends ConsumerState<AgentReportsScreen> {
                         controller,
                         report['id']?.toString() ?? '',
                       ),
-                      child: Text('Export $_format'),
+                      child: const Text('View'),
                     ),
                   ),
                 ),

@@ -3,12 +3,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../../shared/presentation/controllers/agent_portal_provider.dart';
+import '../../../shared/presentation/widgets/agent_section_header.dart';
 
 class AgentFollowUpsScreen extends ConsumerStatefulWidget {
   const AgentFollowUpsScreen({super.key});
 
   @override
-  ConsumerState<AgentFollowUpsScreen> createState() => _AgentFollowUpsScreenState();
+  ConsumerState<AgentFollowUpsScreen> createState() =>
+      _AgentFollowUpsScreenState();
 }
 
 class _AgentFollowUpsScreenState extends ConsumerState<AgentFollowUpsScreen> {
@@ -34,10 +36,12 @@ class _AgentFollowUpsScreenState extends ConsumerState<AgentFollowUpsScreen> {
   Widget build(BuildContext context) {
     final controller = ref.watch(agentPortalControllerProvider);
     final customerId = controller.selectedCustomerId;
+    final selectedCustomer = controller.selectedCustomer;
     final customerName =
-        controller.selectedCustomer['firstName']?.toString().isNotEmpty == true
-            ? '${controller.selectedCustomer['firstName']} ${controller.selectedCustomer['lastName'] ?? ''}'.trim()
-            : 'Select a customer from Customers';
+        selectedCustomer['firstName']?.toString().isNotEmpty == true
+            ? '${selectedCustomer['firstName']} ${selectedCustomer['lastName'] ?? ''}'
+                .trim()
+            : 'Select a customer from My Customers';
 
     return Card(
       child: Padding(
@@ -45,14 +49,16 @@ class _AgentFollowUpsScreenState extends ConsumerState<AgentFollowUpsScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Follow-up engine', style: Theme.of(context).textTheme.titleLarge),
-            const SizedBox(height: 8),
-            Text('Working customer: $customerName'),
-            const SizedBox(height: 16),
+            AgentSectionHeader(
+              title: 'Customer Follow-Up',
+              description:
+                  'Start with the customer, record the latest outcome, and schedule the next follow-up without hunting through generic task fields.',
+            ),
+            const SizedBox(height: 12),
             LayoutBuilder(
               builder: (context, constraints) {
                 final stack = constraints.maxWidth < 920;
-                final composer = _buildComposer(context, controller, customerId);
+                final composer = _buildComposer(context, controller, customerId, customerName);
                 final taskList = _buildTaskList(controller);
                 if (stack) {
                   return Column(
@@ -81,6 +87,7 @@ class _AgentFollowUpsScreenState extends ConsumerState<AgentFollowUpsScreen> {
     BuildContext context,
     dynamic controller,
     String? customerId,
+    String customerName,
   ) {
     return Card(
       child: Padding(
@@ -88,32 +95,55 @@ class _AgentFollowUpsScreenState extends ConsumerState<AgentFollowUpsScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Create a follow-up', style: Theme.of(context).textTheme.titleMedium),
+            Text('Next follow-up', style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 12),
-            DropdownButtonFormField<String>(
-              key: ValueKey(_selectedStatus),
-              initialValue: _selectedStatus,
-              items: const [
-                DropdownMenuItem(value: 'PENDING', child: Text('Pending')),
-                DropdownMenuItem(value: 'COMPLETED', child: Text('Completed')),
-                DropdownMenuItem(value: 'CANCELLED', child: Text('Cancelled')),
-              ],
-              onChanged: (value) => setState(() => _selectedStatus = value ?? 'PENDING'),
-              decoration: const InputDecoration(labelText: 'Suggested next status'),
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const CircleAvatar(child: Icon(Icons.person_outline)),
+              title: Text(customerName),
+              subtitle: Text(
+                customerId == null
+                    ? 'Choose a customer before creating a follow-up.'
+                    : 'Customer selected for the next action.',
+              ),
             ),
             const SizedBox(height: 12),
             TextField(
               controller: _noteController,
               maxLines: 4,
               decoration: const InputDecoration(
-                labelText: 'Outcome and remarks',
-                hintText: 'Record the call, visit result, priority, and next step',
+                labelText: 'Remarks',
+                hintText: 'What happened, what matters next, and what the agent should remember.',
               ),
             ),
             const SizedBox(height: 12),
-            Row(
+            Wrap(
+              spacing: 12,
+              runSpacing: 12,
               children: [
-                Expanded(
+                SizedBox(
+                  width: 220,
+                  child: DropdownButtonFormField<String>(
+                    key: ValueKey(_selectedStatus),
+                    initialValue: _selectedStatus,
+                    items: const [
+                      DropdownMenuItem(value: 'PENDING', child: Text('Pending')),
+                      DropdownMenuItem(
+                        value: 'COMPLETED',
+                        child: Text('Completed'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'CANCELLED',
+                        child: Text('Cancelled'),
+                      ),
+                    ],
+                    onChanged: (value) =>
+                        setState(() => _selectedStatus = value ?? 'PENDING'),
+                    decoration: const InputDecoration(labelText: 'Status'),
+                  ),
+                ),
+                SizedBox(
+                  width: 220,
                   child: OutlinedButton(
                     onPressed: () async {
                       final picked = await showDatePicker(
@@ -128,37 +158,40 @@ class _AgentFollowUpsScreenState extends ConsumerState<AgentFollowUpsScreen> {
                     },
                     child: Text(
                       _selectedDueDate == null
-                          ? 'Choose next follow-up date'
+                          ? 'Choose next follow-up'
                           : DateFormat('dd MMM yyyy').format(_selectedDueDate!),
                     ),
                   ),
                 ),
-                const SizedBox(width: 12),
-                FilledButton(
-                  onPressed: customerId == null || _selectedDueDate == null
-                      ? null
-                      : () async {
-                          await ref.read(agentPortalControllerProvider).addFollowUpActivity(
-                                customerId: customerId,
-                                activityType: _selectedStatus == 'COMPLETED'
-                                    ? 'FOLLOW_UP_COMPLETED'
-                                    : 'FOLLOW_UP',
-                                notes: _noteController.text.trim(),
-                              );
-                          await ref.read(agentPortalControllerProvider).scheduleFollowUp(
-                                customerId: customerId,
-                                dueDate: _selectedDueDate!,
-                                notes: _noteController.text.trim(),
-                              );
-                          _noteController.clear();
-                          setState(() {
-                            _selectedDueDate = null;
-                            _selectedStatus = 'PENDING';
-                          });
-                        },
-                  child: const Text('Save follow-up'),
-                ),
               ],
+            ),
+            const SizedBox(height: 12),
+            Align(
+              alignment: Alignment.centerRight,
+              child: FilledButton(
+                onPressed: customerId == null || _selectedDueDate == null
+                    ? null
+                    : () async {
+                        await ref.read(agentPortalControllerProvider).addFollowUpActivity(
+                              customerId: customerId,
+                              activityType: _selectedStatus == 'COMPLETED'
+                                  ? 'FOLLOW_UP_COMPLETED'
+                                  : 'FOLLOW_UP',
+                              notes: _noteController.text.trim(),
+                            );
+                        await ref.read(agentPortalControllerProvider).scheduleFollowUp(
+                              customerId: customerId,
+                              dueDate: _selectedDueDate!,
+                              notes: _noteController.text.trim(),
+                            );
+                        _noteController.clear();
+                        setState(() {
+                          _selectedDueDate = null;
+                          _selectedStatus = 'PENDING';
+                        });
+                      },
+                child: const Text('Save Follow-Up'),
+              ),
             ),
           ],
         ),
@@ -174,7 +207,10 @@ class _AgentFollowUpsScreenState extends ConsumerState<AgentFollowUpsScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Scheduled follow-ups', style: Theme.of(context).textTheme.titleMedium),
+            Text(
+              'Scheduled follow-ups',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
             const SizedBox(height: 8),
             if (tasks.isEmpty)
               const Text('No scheduled follow-ups right now.')
@@ -184,9 +220,8 @@ class _AgentFollowUpsScreenState extends ConsumerState<AgentFollowUpsScreen> {
                   contentPadding: EdgeInsets.zero,
                   title: Text('${task['customerName'] ?? 'Customer'}'),
                   subtitle: Text(
-                    '${task['notes'] ?? 'No remarks'}\n${_formatDate(task['dueDate'])}',
+                    '${_formatDate(task['dueDate'])} • ${task['notes'] ?? 'No remarks'}',
                   ),
-                  isThreeLine: true,
                   trailing: PopupMenuButton<String>(
                     onSelected: (value) async {
                       await ref.read(agentPortalControllerProvider).updateFollowUpTask(
@@ -198,8 +233,14 @@ class _AgentFollowUpsScreenState extends ConsumerState<AgentFollowUpsScreen> {
                     },
                     itemBuilder: (context) => const [
                       PopupMenuItem(value: 'PENDING', child: Text('Keep pending')),
-                      PopupMenuItem(value: 'COMPLETED', child: Text('Mark completed')),
-                      PopupMenuItem(value: 'CANCELLED', child: Text('Cancel')),
+                      PopupMenuItem(
+                        value: 'COMPLETED',
+                        child: Text('Mark completed'),
+                      ),
+                      PopupMenuItem(
+                        value: 'CANCELLED',
+                        child: Text('Cancel'),
+                      ),
                     ],
                     child: Chip(label: Text(_humanize(task['status']))),
                   ),

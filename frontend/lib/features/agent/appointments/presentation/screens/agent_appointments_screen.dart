@@ -3,18 +3,22 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../../shared/presentation/controllers/agent_portal_provider.dart';
+import '../../../shared/presentation/widgets/agent_section_header.dart';
 
 class AgentAppointmentsScreen extends ConsumerStatefulWidget {
   const AgentAppointmentsScreen({super.key});
 
   @override
-  ConsumerState<AgentAppointmentsScreen> createState() => _AgentAppointmentsScreenState();
+  ConsumerState<AgentAppointmentsScreen> createState() =>
+      _AgentAppointmentsScreenState();
 }
 
-class _AgentAppointmentsScreenState extends ConsumerState<AgentAppointmentsScreen> {
+class _AgentAppointmentsScreenState
+    extends ConsumerState<AgentAppointmentsScreen> {
   String? _providerId;
   String _appointmentType = 'CONSULTATION';
   DateTime? _appointmentDate;
+  String _slot = 'MORNING';
   final _remarksController = TextEditingController();
 
   @override
@@ -35,6 +39,12 @@ class _AgentAppointmentsScreenState extends ConsumerState<AgentAppointmentsScree
   Widget build(BuildContext context) {
     final controller = ref.watch(agentPortalControllerProvider);
     final selectedCustomerId = controller.selectedCustomerId;
+    final selectedCustomer = controller.selectedCustomer;
+    final customerName =
+        selectedCustomer['firstName']?.toString().isNotEmpty == true
+            ? '${selectedCustomer['firstName']} ${selectedCustomer['lastName'] ?? ''}'
+                .trim()
+            : 'Select a customer from My Customers';
     final providers = controller.providers;
 
     _providerId ??= providers.isNotEmpty ? providers.first['id']?.toString() : null;
@@ -45,8 +55,12 @@ class _AgentAppointmentsScreenState extends ConsumerState<AgentAppointmentsScree
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Appointment workflow', style: Theme.of(context).textTheme.titleLarge),
-            const SizedBox(height: 16),
+            AgentSectionHeader(
+              title: 'Visits',
+              description:
+                  'Book visits in the same order agents think: customer, provider, service, preferred slot, and then confirmation.',
+            ),
+            const SizedBox(height: 12),
             LayoutBuilder(
               builder: (context, constraints) {
                 final stack = constraints.maxWidth < 940;
@@ -54,6 +68,7 @@ class _AgentAppointmentsScreenState extends ConsumerState<AgentAppointmentsScree
                   context,
                   controller,
                   selectedCustomerId,
+                  customerName,
                   providers,
                 );
                 final list = _buildAppointmentList(controller);
@@ -82,6 +97,7 @@ class _AgentAppointmentsScreenState extends ConsumerState<AgentAppointmentsScree
     BuildContext context,
     dynamic controller,
     String? selectedCustomerId,
+    String customerName,
     List<Map<String, dynamic>> providers,
   ) {
     return Card(
@@ -90,57 +106,120 @@ class _AgentAppointmentsScreenState extends ConsumerState<AgentAppointmentsScree
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Book an appointment', style: Theme.of(context).textTheme.titleMedium),
+            Text('Book a visit', style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 12),
-            DropdownButtonFormField<String>(
-              key: ValueKey(_providerId),
-              initialValue: _providerId,
-              items: providers
-                  .map(
-                    (provider) => DropdownMenuItem<String>(
-                      value: provider['id']?.toString(),
-                      child: Text(
-                        provider['providerName']?.toString() ?? 'Provider',
-                      ),
-                    ),
-                  )
-                  .toList(),
-              onChanged: (value) => setState(() => _providerId = value),
-              decoration: const InputDecoration(labelText: 'Provider'),
-            ),
-            const SizedBox(height: 12),
-            DropdownButtonFormField<String>(
-              key: ValueKey(_appointmentType),
-              initialValue: _appointmentType,
-              items: const [
-                DropdownMenuItem(value: 'CONSULTATION', child: Text('Consultation')),
-                DropdownMenuItem(value: 'HOME_VISIT', child: Text('Home visit')),
-                DropdownMenuItem(value: 'CLINIC_VISIT', child: Text('Clinic visit')),
-                DropdownMenuItem(value: 'LAB', child: Text('Lab test')),
-              ],
-              onChanged: (value) => setState(() => _appointmentType = value ?? 'CONSULTATION'),
-              decoration: const InputDecoration(labelText: 'Visit type'),
-            ),
-            const SizedBox(height: 12),
-            OutlinedButton(
-              onPressed: () async {
-                final picked = await showDatePicker(
-                  context: context,
-                  initialDate: DateTime.now().add(const Duration(days: 1)),
-                  firstDate: DateTime.now(),
-                  lastDate: DateTime.now().add(const Duration(days: 365)),
-                );
-                if (picked != null) {
-                  setState(() {
-                    _appointmentDate = picked.add(const Duration(hours: 10));
-                  });
-                }
-              },
-              child: Text(
-                _appointmentDate == null
-                    ? 'Choose appointment date'
-                    : DateFormat('dd MMM yyyy').format(_appointmentDate!),
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const CircleAvatar(child: Icon(Icons.person_outline)),
+              title: Text(customerName),
+              subtitle: Text(
+                selectedCustomerId == null
+                    ? 'Choose a customer before booking a visit.'
+                    : 'Customer selected for visit booking.',
               ),
+            ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 12,
+              runSpacing: 12,
+              children: [
+                SizedBox(
+                  width: 240,
+                  child: DropdownButtonFormField<String>(
+                    key: ValueKey(_providerId),
+                    initialValue: _providerId,
+                    items: providers
+                        .map(
+                          (provider) => DropdownMenuItem<String>(
+                            value: provider['id']?.toString(),
+                            child: Text(
+                              provider['providerName']?.toString() ?? 'Provider',
+                            ),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (value) => setState(() => _providerId = value),
+                    decoration: const InputDecoration(labelText: 'Provider'),
+                  ),
+                ),
+                SizedBox(
+                  width: 240,
+                  child: DropdownButtonFormField<String>(
+                    key: ValueKey(_appointmentType),
+                    initialValue: _appointmentType,
+                    items: const [
+                      DropdownMenuItem(
+                        value: 'CONSULTATION',
+                        child: Text('Consultation'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'HOME_VISIT',
+                        child: Text('Home Visit'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'CLINIC_VISIT',
+                        child: Text('Clinic Visit'),
+                      ),
+                      DropdownMenuItem(value: 'LAB', child: Text('Lab Test')),
+                    ],
+                    onChanged: (value) => setState(
+                      () => _appointmentType = value ?? 'CONSULTATION',
+                    ),
+                    decoration: const InputDecoration(labelText: 'Service'),
+                  ),
+                ),
+                SizedBox(
+                  width: 240,
+                  child: DropdownButtonFormField<String>(
+                    key: ValueKey(_slot),
+                    initialValue: _slot,
+                    items: const [
+                      DropdownMenuItem(
+                        value: 'MORNING',
+                        child: Text('Morning slot'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'AFTERNOON',
+                        child: Text('Afternoon slot'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'EVENING',
+                        child: Text('Evening slot'),
+                      ),
+                    ],
+                    onChanged: (value) =>
+                        setState(() => _slot = value ?? 'MORNING'),
+                    decoration: const InputDecoration(labelText: 'Preferred slot'),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () async {
+                      final picked = await showDatePicker(
+                        context: context,
+                        initialDate: DateTime.now().add(const Duration(days: 1)),
+                        firstDate: DateTime.now(),
+                        lastDate: DateTime.now().add(const Duration(days: 365)),
+                      );
+                      if (picked != null) {
+                        setState(() {
+                          _appointmentDate = _slotDate(picked, _slot);
+                        });
+                      }
+                    },
+                    child: Text(
+                      _appointmentDate == null
+                          ? 'Choose visit date'
+                          : DateFormat('dd MMM yyyy').format(_appointmentDate!),
+                    ),
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 12),
             TextField(
@@ -148,7 +227,7 @@ class _AgentAppointmentsScreenState extends ConsumerState<AgentAppointmentsScree
               maxLines: 3,
               decoration: const InputDecoration(
                 labelText: 'Visit notes',
-                hintText: 'Reason for visit, reminder, or coordination note',
+                hintText: 'Reason for visit, customer expectation, or coordination note',
               ),
             ),
             const SizedBox(height: 12),
@@ -170,7 +249,7 @@ class _AgentAppointmentsScreenState extends ConsumerState<AgentAppointmentsScree
                         _remarksController.clear();
                         setState(() => _appointmentDate = null);
                       },
-                child: const Text('Book appointment'),
+                child: const Text('Confirm Visit'),
               ),
             ),
           ],
@@ -190,15 +269,17 @@ class _AgentAppointmentsScreenState extends ConsumerState<AgentAppointmentsScree
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Appointment history', style: Theme.of(context).textTheme.titleMedium),
+            Text('Visit history', style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 8),
             if (appointments.isEmpty)
-              const Text('No appointments are available.')
+              const Text('No visits are available.')
             else
               ...appointments.take(12).map<Widget>((appointment) {
                 final appointmentId = appointment['id']?.toString() ?? '';
                 final customerId =
-                    appointment['customerId']?.toString() ?? controller.selectedCustomerId ?? '';
+                    appointment['customerId']?.toString() ??
+                    controller.selectedCustomerId ??
+                    '';
                 return ListTile(
                   contentPadding: EdgeInsets.zero,
                   title: Text(
@@ -232,17 +313,20 @@ class _AgentAppointmentsScreenState extends ConsumerState<AgentAppointmentsScree
                           await ref
                               .read(agentPortalControllerProvider)
                               .rescheduleAppointment(
-                            appointmentId: appointmentId,
-                            customerId: customerId,
-                            appointmentDate: picked.add(const Duration(hours: 10)),
-                            remarks: 'Rescheduled from Agent Portal',
-                          );
+                                appointmentId: appointmentId,
+                                customerId: customerId,
+                                appointmentDate: _slotDate(picked, _slot),
+                                remarks: 'Rescheduled from Agent Portal',
+                              );
                         }
                       }
                     },
                     itemBuilder: (context) => const [
                       PopupMenuItem(value: 'CONFIRM', child: Text('Confirm')),
-                      PopupMenuItem(value: 'RESCHEDULE', child: Text('Reschedule')),
+                      PopupMenuItem(
+                        value: 'RESCHEDULE',
+                        child: Text('Reschedule'),
+                      ),
                       PopupMenuItem(value: 'CANCEL', child: Text('Cancel')),
                     ],
                     child: Chip(label: Text(_humanize(appointment['status']))),
@@ -253,6 +337,17 @@ class _AgentAppointmentsScreenState extends ConsumerState<AgentAppointmentsScree
         ),
       ),
     );
+  }
+}
+
+DateTime _slotDate(DateTime date, String slot) {
+  switch (slot) {
+    case 'AFTERNOON':
+      return DateTime(date.year, date.month, date.day, 14);
+    case 'EVENING':
+      return DateTime(date.year, date.month, date.day, 17);
+    default:
+      return DateTime(date.year, date.month, date.day, 10);
   }
 }
 

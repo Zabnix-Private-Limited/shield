@@ -3,12 +3,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../shared/presentation/controllers/agent_portal_provider.dart';
+import '../../../shared/presentation/widgets/agent_section_header.dart';
 
 class AgentPerformanceScreen extends ConsumerStatefulWidget {
   const AgentPerformanceScreen({super.key});
 
   @override
-  ConsumerState<AgentPerformanceScreen> createState() => _AgentPerformanceScreenState();
+  ConsumerState<AgentPerformanceScreen> createState() =>
+      _AgentPerformanceScreenState();
 }
 
 class _AgentPerformanceScreenState extends ConsumerState<AgentPerformanceScreen> {
@@ -25,84 +27,101 @@ class _AgentPerformanceScreenState extends ConsumerState<AgentPerformanceScreen>
     final performance = ref.watch(agentPortalControllerProvider).performance;
     final cards = [
       _PerformanceCardData(
-        label: 'Customers added',
+        label: 'Customers Added',
         value: '${performance['customersAdded'] ?? 0}',
-        progress: _toProgress(performance['customersAdded']),
+        helper: 'New customers registered this month.',
         route: '/portal/agent/customers',
       ),
       _PerformanceCardData(
-        label: 'Active customers',
+        label: 'Active Customers',
         value: '${performance['customersActive'] ?? 0}',
-        progress: _toProgress(performance['customersActive']),
+        helper: 'Customers still actively engaged in your portfolio.',
         route: '/portal/agent/customers',
+      ),
+      _PerformanceCardData(
+        label: 'Pending Follow-Ups',
+        value:
+            '${((performance['customersAdded'] as num?) ?? 0) - ((performance['completedFollowUps'] as num?) ?? 0) < 0 ? 0 : (((performance['customersAdded'] as num?) ?? 0) - ((performance['completedFollowUps'] as num?) ?? 0)).round()}',
+        helper: 'Remaining follow-up load this month.',
+        route: '/portal/agent/followups',
+      ),
+      _PerformanceCardData(
+        label: 'Completed Follow-Ups',
+        value: '${performance['completedFollowUps'] ?? 0}',
+        helper: 'Follow-ups successfully closed this month.',
+        route: '/portal/agent/followups',
+      ),
+      _PerformanceCardData(
+        label: 'Appointments',
+        value: '${performance['appointmentsGenerated'] ?? 0}',
+        helper: 'Visits created from the Agent Portal.',
+        route: '/portal/agent/appointments',
       ),
       _PerformanceCardData(
         label: 'Retention',
         value: '${performance['retentionRate'] ?? 0}%',
-        progress: ((performance['retentionRate'] as num?) ?? 0) / 100,
+        helper: 'Current retention across your customer base.',
         route: '/portal/agent/customers',
-      ),
-      _PerformanceCardData(
-        label: 'Referral conversion',
-        value: '${performance['conversionRate'] ?? 0}%',
-        progress: ((performance['conversionRate'] as num?) ?? 0) / 100,
-        route: '/portal/agent/referrals',
-      ),
-      _PerformanceCardData(
-        label: 'Appointments booked',
-        value: '${performance['appointmentsGenerated'] ?? 0}',
-        progress: _toProgress(performance['appointmentsGenerated']),
-        route: '/portal/agent/appointments',
-      ),
-      _PerformanceCardData(
-        label: 'Completed follow-ups',
-        value: '${performance['completedFollowUps'] ?? 0}',
-        progress: _toProgress(performance['completedFollowUps']),
-        route: '/portal/agent/followups',
-      ),
-      _PerformanceCardData(
-        label: 'Monthly incentives',
-        value: '${performance['monthlyIncentives'] ?? 0}',
-        progress: _toProgress(performance['monthlyIncentives']),
-        route: '/portal/agent/referrals',
       ),
     ];
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Wrap(
-          spacing: 12,
-          runSpacing: 12,
-          children: cards
-              .map(
-                (card) => SizedBox(
-                  width: 260,
-                  child: InkWell(
-                    onTap: () => context.go(card.route),
-                    borderRadius: BorderRadius.circular(16),
-                    child: Card(
-                      child: Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(card.label),
-                            const SizedBox(height: 8),
-                            Text(
-                              card.value,
-                              style: Theme.of(context).textTheme.headlineSmall,
+        AgentSectionHeader(
+          title: 'My Performance',
+          description:
+              'A simple month view of customer growth, follow-through, visits, and retention without empty dashboard-style placeholders.',
+        ),
+        const SizedBox(height: 12),
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('This Month', style: Theme.of(context).textTheme.titleMedium),
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 12,
+                  runSpacing: 12,
+                  children: cards
+                      .map(
+                        (card) => SizedBox(
+                          width: 260,
+                          child: InkWell(
+                            onTap: () => context.go(card.route),
+                            borderRadius: BorderRadius.circular(16),
+                            child: Card(
+                              margin: EdgeInsets.zero,
+                              child: Padding(
+                                padding: const EdgeInsets.all(16),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(card.label),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      card.value,
+                                      style: Theme.of(context).textTheme.headlineSmall,
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      card.helper,
+                                      style: Theme.of(context).textTheme.bodySmall,
+                                    ),
+                                  ],
+                                ),
+                              ),
                             ),
-                            const SizedBox(height: 10),
-                            LinearProgressIndicator(value: card.progress.clamp(0, 1)),
-                          ],
+                          ),
                         ),
-                      ),
-                    ),
-                  ),
+                      )
+                      .toList(),
                 ),
-              )
-              .toList(),
+              ],
+            ),
+          ),
         ),
       ],
     );
@@ -113,17 +132,12 @@ class _PerformanceCardData {
   const _PerformanceCardData({
     required this.label,
     required this.value,
-    required this.progress,
+    required this.helper,
     required this.route,
   });
 
   final String label;
   final String value;
-  final double progress;
+  final String helper;
   final String route;
-}
-
-double _toProgress(dynamic value) {
-  final number = (value as num?)?.toDouble() ?? 0;
-  return number <= 0 ? 0 : number / (number + 10);
 }

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../../shared/presentation/controllers/agent_portal_provider.dart';
+import '../../../shared/presentation/widgets/agent_section_header.dart';
 
 class AgentReferralsScreen extends ConsumerStatefulWidget {
   const AgentReferralsScreen({super.key});
@@ -43,26 +44,30 @@ class _AgentReferralsScreenState extends ConsumerState<AgentReferralsScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Referral network', style: Theme.of(context).textTheme.titleLarge),
+            const AgentSectionHeader(
+              title: 'Customer Network',
+              description:
+                  'Relationship growth should feel like customer-community building, not referral administration.',
+            ),
             const SizedBox(height: 12),
             Wrap(
               spacing: 12,
               runSpacing: 12,
               children: [
                 _ReferralStatCard(
-                  label: 'Direct referrals',
+                  label: 'Direct customers',
                   value: '${referralSummary['directReferrals'] ?? 0}',
                 ),
                 _ReferralStatCard(
-                  label: 'Total referrals',
+                  label: 'Total network',
                   value: '${referralSummary['totalReferrals'] ?? 0}',
                 ),
                 _ReferralStatCard(
-                  label: 'Reward points',
+                  label: 'Network rewards',
                   value: '${referralSummary['availablePoints'] ?? 0}',
                 ),
                 _ReferralStatCard(
-                  label: 'Earned points',
+                  label: 'Earned rewards',
                   value: '${referralSummary['earnedPoints'] ?? 0}',
                 ),
               ],
@@ -75,12 +80,12 @@ class _AgentReferralsScreenState extends ConsumerState<AgentReferralsScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Conversion status',
+                      'Customer growth status',
                       style: Theme.of(context).textTheme.titleMedium,
                     ),
                     const SizedBox(height: 8),
                     if (statuses.isEmpty)
-                      const Text('No referral events have been recorded yet.')
+                      const Text('No customer network events have been recorded yet.')
                     else
                       ...statuses.entries.map(
                         (entry) => ListTile(
@@ -161,10 +166,10 @@ class _ReferralTreeCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Referral hierarchy', style: Theme.of(context).textTheme.titleMedium),
+            Text('Customer tree', style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 8),
             if (tree.isEmpty)
-              const Text('No referral hierarchy is available for this customer yet.')
+              const Text('No customer tree is available for this customer yet.')
             else
               _ReferralTreeNode(node: tree, depth: 0),
           ],
@@ -200,7 +205,7 @@ class _ReferralTreeNode extends StatelessWidget {
                 ? node['name'].toString()
                 : 'Customer'),
             subtitle: Text(
-              'Joined ${_formatDate(node['registrationDate'])} • ${node['active'] == true ? 'Active' : 'Inactive'} • Reward points ${node['rewardPoints'] ?? 0}',
+              'Joined ${_formatDate(node['registrationDate'])} • ${node['active'] == true ? 'Active' : 'Inactive'} • Rewards ${node['rewardPoints'] ?? 0}',
             ),
           ),
         ),
@@ -223,19 +228,19 @@ class _ReferralHistoryCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Referral activity', style: Theme.of(context).textTheme.titleMedium),
+            Text('Customer growth activity', style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 8),
             if (history.isEmpty)
-              const Text('No referral activity has been recorded yet.')
+              const Text('No customer network activity has been recorded yet.')
             else
               ...history.take(12).map(
                 (item) => ListTile(
                   contentPadding: EdgeInsets.zero,
                   title: Text(
-                    '${_humanize(item['status'])} • ${item['rewardPoints'] ?? 0} points',
+                    '${_humanize(item['status'])} • ${item['rewardPoints'] ?? 0} reward points',
                   ),
                   subtitle: Text(
-                    'Referred customer ${item['referredCustomerId'] ?? '-'}',
+                    'Linked customer ${item['referredCustomerId'] ?? '-'}',
                   ),
                   trailing: Text(_formatDate(item['createdAt'])),
                 ),

@@ -6,12 +6,14 @@ import '../../../../../shared/services/api_service.dart';
 import '../../../../../shared/services/platform_file_actions.dart';
 import '../../../../../shared/utils/prescription_file_picker.dart';
 import '../../../shared/presentation/controllers/agent_portal_provider.dart';
+import '../../../shared/presentation/widgets/agent_section_header.dart';
 
 class AgentDocumentsScreen extends ConsumerStatefulWidget {
   const AgentDocumentsScreen({super.key});
 
   @override
-  ConsumerState<AgentDocumentsScreen> createState() => _AgentDocumentsScreenState();
+  ConsumerState<AgentDocumentsScreen> createState() =>
+      _AgentDocumentsScreenState();
 }
 
 class _AgentDocumentsScreenState extends ConsumerState<AgentDocumentsScreen> {
@@ -31,6 +33,12 @@ class _AgentDocumentsScreenState extends ConsumerState<AgentDocumentsScreen> {
   Widget build(BuildContext context) {
     final controller = ref.watch(agentPortalControllerProvider);
     final customerId = controller.selectedCustomerId;
+    final selectedCustomer = controller.selectedCustomer;
+    final customerName =
+        selectedCustomer['firstName']?.toString().isNotEmpty == true
+            ? '${selectedCustomer['firstName']} ${selectedCustomer['lastName'] ?? ''}'
+                .trim()
+            : 'Select a customer from My Customers';
     final docs = controller.customerDocuments.where((doc) {
       final status = (doc['status'] ?? '').toString().toUpperCase();
       final matchesFilter = _filter == 'ALL' || status == _filter;
@@ -40,6 +48,9 @@ class _AgentDocumentsScreenState extends ConsumerState<AgentDocumentsScreen> {
       final matchesQuery = combined.contains(_query.toLowerCase());
       return matchesFilter && matchesQuery;
     }).toList();
+    final uploadedTypes = docs
+        .map((doc) => (doc['documentType'] ?? '').toString().toUpperCase())
+        .toSet();
 
     return Card(
       child: Padding(
@@ -47,7 +58,136 @@ class _AgentDocumentsScreenState extends ConsumerState<AgentDocumentsScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Document workflow', style: Theme.of(context).textTheme.titleLarge),
+            AgentSectionHeader(
+              title: 'Customer Documents',
+              description:
+                  'Select the customer first, then work through required documents instead of mixing search, category, and upload into one disconnected row.',
+            ),
+            const SizedBox(height: 12),
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final stack = constraints.maxWidth < 920;
+                final left = _buildRequiredDocumentsCard(
+                  context,
+                  controller,
+                  customerId,
+                  customerName,
+                  uploadedTypes,
+                );
+                final right = _buildHistoryCard(context, controller, docs);
+                if (stack) {
+                  return Column(children: [left, const SizedBox(height: 16), right]);
+                }
+                return Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(child: left),
+                    const SizedBox(width: 16),
+                    Expanded(child: right),
+                  ],
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRequiredDocumentsCard(
+    BuildContext context,
+    dynamic controller,
+    String? customerId,
+    String customerName,
+    Set<String> uploadedTypes,
+  ) {
+    const requiredDocuments = [
+      _RequiredDoc(type: 'ID_PROOF', label: 'Aadhaar / Government ID'),
+      _RequiredDoc(type: 'ADDRESS_PROOF', label: 'Address Proof'),
+      _RequiredDoc(type: 'PROFILE_PHOTO', label: 'Profile Photo'),
+      _RequiredDoc(type: 'PRESCRIPTION', label: 'Prescription'),
+    ];
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Required documents', style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 12),
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const CircleAvatar(child: Icon(Icons.person_outline)),
+              title: Text(customerName),
+              subtitle: Text(
+                customerId == null
+                    ? 'Choose a customer before uploading documents.'
+                    : 'Customer selected for document upload.',
+              ),
+            ),
+            const SizedBox(height: 12),
+            ...requiredDocuments.map(
+              (doc) => ListTile(
+                contentPadding: EdgeInsets.zero,
+                onTap: () => setState(() => _documentType = doc.type),
+                title: Text(doc.label),
+                subtitle: Text(
+                  uploadedTypes.contains(doc.type)
+                      ? 'Already uploaded'
+                      : 'Still required',
+                ),
+                leading: Icon(
+                  uploadedTypes.contains(doc.type)
+                      ? Icons.check_circle
+                      : Icons.radio_button_unchecked,
+                ),
+                trailing: _documentType == doc.type
+                    ? const Icon(Icons.chevron_right)
+                    : null,
+              ),
+            ),
+            const SizedBox(height: 12),
+            FilledButton.icon(
+              onPressed: customerId == null
+                  ? null
+                  : () async {
+                      final file = await pickPrescriptionFile();
+                      if (file == null) {
+                        return;
+                      }
+                      await ref
+                          .read(agentPortalControllerProvider)
+                          .uploadCustomerDocument(
+                            customerId: customerId,
+                            fileName: file.name,
+                            documentType: _documentType,
+                            fileBytes: file.bytes,
+                            mimeType: file.mimeType ?? 'application/octet-stream',
+                            fileSize: file.size,
+                          );
+                    },
+              icon: const Icon(Icons.upload_file_outlined),
+              label: const Text('Upload Document'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHistoryCard(
+    BuildContext context,
+    dynamic controller,
+    List<Map<String, dynamic>> docs,
+  ) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Document history', style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 12),
             Row(
               children: [
@@ -70,47 +210,6 @@ class _AgentDocumentsScreenState extends ConsumerState<AgentDocumentsScreen> {
                     DropdownMenuItem(value: 'VALIDATED', child: Text('Validated')),
                   ],
                   onChanged: (value) => setState(() => _filter = value ?? 'ALL'),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: DropdownButtonFormField<String>(
-                    key: ValueKey(_documentType),
-                    initialValue: _documentType,
-                    items: const [
-                      DropdownMenuItem(value: 'ID_PROOF', child: Text('ID proof')),
-                      DropdownMenuItem(value: 'PROFILE_PHOTO', child: Text('Profile photo')),
-                      DropdownMenuItem(value: 'ADDRESS_PROOF', child: Text('Address proof')),
-                      DropdownMenuItem(value: 'PRESCRIPTION', child: Text('Prescription')),
-                    ],
-                    onChanged: (value) => setState(() => _documentType = value ?? 'ID_PROOF'),
-                    decoration: const InputDecoration(labelText: 'Document category'),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                FilledButton(
-                  onPressed: customerId == null
-                      ? null
-                      : () async {
-                          final file = await pickPrescriptionFile();
-                          if (file == null) {
-                            return;
-                          }
-                          await ref
-                              .read(agentPortalControllerProvider)
-                              .uploadCustomerDocument(
-                            customerId: customerId,
-                            fileName: file.name,
-                            documentType: _documentType,
-                            fileBytes: file.bytes,
-                            mimeType: file.mimeType ?? 'application/octet-stream',
-                            fileSize: file.size,
-                          );
-                        },
-                  child: const Text('Upload document'),
                 ),
               ],
             ),
@@ -169,7 +268,7 @@ class _AgentDocumentsScreenState extends ConsumerState<AgentDocumentsScreen> {
                             ),
                           );
                         },
-                        child: const Text('Copy link'),
+                        child: const Text('Copy Link'),
                       ),
                     ],
                   ),
@@ -180,6 +279,13 @@ class _AgentDocumentsScreenState extends ConsumerState<AgentDocumentsScreen> {
       ),
     );
   }
+}
+
+class _RequiredDoc {
+  const _RequiredDoc({required this.type, required this.label});
+
+  final String type;
+  final String label;
 }
 
 String _humanize(dynamic value) {
