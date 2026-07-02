@@ -565,13 +565,22 @@ class ProviderPortalController extends ChangeNotifier {
     notifyListeners();
 
     try {
+      _trace('loading authenticated profile');
       final authenticatedProfile = await _repository.getAuthenticatedProfile();
-      final results = await Future.wait([
-        _repository.getOperationalWorkspace(),
-        _repository.getPlatformWorkspace(forceRefresh: true),
-      ]);
-      final operationalWorkspace = Map<String, dynamic>.from(results[0]);
-      final platformWorkspace = Map<String, dynamic>.from(results[1]);
+      _trace('authenticated profile loaded');
+
+      _trace('loading operational workspace');
+      final operationalWorkspace = Map<String, dynamic>.from(
+        await _repository.getOperationalWorkspace(),
+      );
+      _trace('operational workspace loaded');
+
+      _trace('loading platform workspace');
+      final platformWorkspace = Map<String, dynamic>.from(
+        await _repository.getPlatformWorkspace(forceRefresh: true),
+      );
+      _trace('platform workspace loaded');
+
       final mergedWorkspace = Map<String, dynamic>.from(operationalWorkspace);
       mergedWorkspace['workspaceMeta'] =
           platformWorkspace['workspaceMeta'] ??
@@ -581,14 +590,17 @@ class ProviderPortalController extends ChangeNotifier {
       _platformWorkspace = platformWorkspace;
       _authProfile = authenticatedProfile;
       _workspaceLoaded = true;
-      _trace('workspace loaded successfully');
-      _selectedCustomerId ??= customers.isNotEmpty
-          ? customers.first['id']?.toString()
-          : null;
+      _trace(
+        'workspace loaded successfully summaryCustomers=${customers.length}',
+      );
       try {
+        _trace('loading provider profile');
         _providerProfile = await _repository.getProviderProfile();
-      } catch (error) {
-        _trace('provider profile soft load failed error=$error');
+        _trace('provider profile loaded');
+      } catch (error, stackTrace) {
+        _trace(
+          'provider profile soft load failed error=$error stack=$stackTrace',
+        );
         if (_providerProfile == null &&
             error is DioException &&
             error.response?.statusCode == 403) {
@@ -600,17 +612,14 @@ class ProviderPortalController extends ChangeNotifier {
               : const <String, dynamic>{};
         }
       }
-    } catch (error) {
-      _trace('workspace load failed error=$error');
+      _trace('dashboard bootstrap completed');
+    } catch (error, stackTrace) {
+      _trace('workspace load failed error=$error stack=$stackTrace');
       _lastError = error;
       _error = _describeWorkspaceLoadFailure(error);
     } finally {
       _loading = false;
       notifyListeners();
-    }
-
-    if (_selectedCustomerId != null) {
-      await selectCustomer(_selectedCustomerId!);
     }
   }
 
@@ -720,9 +729,14 @@ class ProviderPortalController extends ChangeNotifier {
     notifyListeners();
 
     try {
+      _trace('loading patient workspace customerId=$customerId');
       final workspace = await _repository.getPatientWorkspace(customerId);
       _applySelectedPatientWorkspace(workspace);
-    } catch (error) {
+      _trace('patient workspace loaded customerId=$customerId');
+    } catch (error, stackTrace) {
+      _trace(
+        'patient workspace load failed customerId=$customerId error=$error stack=$stackTrace',
+      );
       _lastError = error;
       _error = error.toString();
     } finally {

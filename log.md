@@ -7155,3 +7155,31 @@ est build, ackend/vercel.json, ackend/src/auth/auth.service.ts, and uth_devic
 - Verified Flutter test suite passes.
 ---
 2026-07-02 16:10:00 IST
+
+## 192. Provider bootstrap over-fetch reduction and controller trace instrumentation
+**Timestamp:** 2026-07-02 16:32:00 IST
+
+**High-level description**: Tightened the provider startup fix after log review showed successful 200 responses could still be followed by a frontend error state due to extra post-bootstrap orchestration inside the controller.
+- Removed eager patient-workspace loading from provider bootstrap so the dashboard no longer fetches a patient record before the user selects one. This reduces startup calls and prevents a non-critical patient workspace failure from poisoning the initial provider screen.
+- Replaced the remaining bootstrap `Future.wait` block with explicit step-by-step loading for auth profile, operational workspace, and platform workspace so controller tracing now shows the exact phase that fails instead of collapsing multiple requests into one opaque async error.
+- Added detailed controller trace messages before and after each provider bootstrap step and patient-workspace load, including stack traces on failure, to make browser/dev-console diagnosis deterministic on the next live reproduction.
+- Kept the existing architecture unchanged: workspace contracts still come from the backend, and patient workspace is still loaded through the shared provider API, just no longer as a hidden startup side effect.
+
+### Frontend Files Modified
+- frontend/lib/features/provider/shared/presentation/controllers/provider_portal_controller.dart
+
+### APIs Added or Changed
+- No endpoint changes in this follow-up hardening slice.
+- Provider patient workspace is now loaded on demand from user interaction instead of eagerly during initial dashboard bootstrap.
+
+### Database Changes
+- No schema change.
+- No SQL migration required.
+
+### Verification
+- cd frontend && flutter analyze --no-pub lib/features/provider/shared/presentation/controllers/provider_portal_controller.dart lib/features/provider/shared/presentation/widgets/provider_workspace_scaffold.dart lib/shared/services/api_service.dart lib/features/portal/presentation/screens/portal_shell.dart
+- cd frontend && flutter test
+- Verified focused Flutter analyze passes.
+- Verified Flutter test suite passes.
+---
+2026-07-02 16:32:00 IST
