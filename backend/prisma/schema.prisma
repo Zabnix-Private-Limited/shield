@@ -28,6 +28,7 @@ model Business {
   serviceProviders ServiceProvider[]
   shieldCards   ShieldCard[]
   branchScopedUsers User[] @relation("BranchScopedUsers")
+  agentBranchAssignments AgentBranchAssignment[]
   providerProfileBranchAssignments ProviderProfileBranchAssignment[]
 
   @@map("businesses")
@@ -129,6 +130,8 @@ model User {
   authSessions AuthSession[]
   loginHistory LoginHistory[]
   documents Document[]
+  agentPreference AgentPreference?
+  agentBranchAssignments AgentBranchAssignment[]
   providerProfile ProviderProfile?
 
   @@index([mobile], map: "idx_user_mobile")
@@ -137,6 +140,55 @@ model User {
   @@index([firebaseUid], map: "idx_user_firebase_uid")
   @@index([branchBusinessId], map: "idx_user_branch_business")
   @@map("users")
+}
+
+model AgentPreference {
+  id                      BigInt     @id @default(autoincrement())
+  uuid                    String     @unique @db.Uuid
+  userId                  BigInt     @unique @map("user_id")
+  themePreference         String?    @db.VarChar(50) @map("theme_preference")
+  languagePreference      String?    @db.VarChar(20) @map("language_preference")
+  timezone                String?    @db.VarChar(100)
+  availability            Json?
+  workingHours            Json?      @map("working_hours")
+  workingArea             Json?      @map("working_area")
+  emergencyContact        Json?      @map("emergency_contact")
+  notificationPreferences Json?      @map("notification_preferences")
+  dashboardLayout         Json?      @map("dashboard_layout")
+  profilePreferences      Json?      @map("profile_preferences")
+  devicePreferences       Json?      @map("device_preferences")
+  createdAt               DateTime   @default(now()) @db.Timestamptz(6) @map("created_at")
+  updatedAt               DateTime   @default(now()) @updatedAt @db.Timestamptz(6) @map("updated_at")
+  deletedAt               DateTime?  @db.Timestamptz(6) @map("deleted_at")
+
+  user                    User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("agent_preferences")
+}
+
+model AgentBranchAssignment {
+  id            BigInt     @id @default(autoincrement())
+  uuid          String     @unique @db.Uuid
+  userId        BigInt     @map("user_id")
+  businessId    BigInt     @map("business_id")
+  status        String     @default("PENDING") @db.VarChar(50)
+  isPrimary     Boolean    @default(false) @map("is_primary")
+  requestedAt   DateTime   @default(now()) @db.Timestamptz(6) @map("requested_at")
+  approvedAt    DateTime?  @db.Timestamptz(6) @map("approved_at")
+  transferredAt DateTime?  @db.Timestamptz(6) @map("transferred_at")
+  inactiveAt    DateTime?  @db.Timestamptz(6) @map("inactive_at")
+  notes         String?    @db.Text
+  createdAt     DateTime   @default(now()) @db.Timestamptz(6) @map("created_at")
+  updatedAt     DateTime   @default(now()) @updatedAt @db.Timestamptz(6) @map("updated_at")
+
+  user          User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  business      Business   @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, businessId], map: "agent_branch_assignments_user_business_key")
+  @@index([userId], map: "idx_agent_branch_assignment_user")
+  @@index([businessId], map: "idx_agent_branch_assignment_business")
+  @@index([status], map: "idx_agent_branch_assignment_status")
+  @@map("agent_branch_assignments")
 }
 
 // ------------------------------

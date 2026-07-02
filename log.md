@@ -7327,3 +7327,52 @@ est build, ackend/vercel.json, ackend/src/auth/auth.service.ts, and uth_devic
   - `Access-Control-Max-Age: 86400`
 - Verified serverless `POST /auth/internal/login` locally reaches Nest routing and returns `401 Invalid Firebase ID token` for an intentionally invalid token, proving the request path no longer dies in bootstrap before auth logic runs.
 - Verified live production Vercel runtime logs before the fix showed the real crash as `UnknownDependenciesException` in `AgentService` resolution, not a CORS middleware rejection.
+## 196. Agent settings persistence and branch lifecycle completion: schema-backed preferences, requestable branch assignments, and persisted Agent settings UI
+**Timestamp:** 2026-07-02 16:51:29 IST
+
+**High-level description**: Replaced the remaining Agent settings placeholder state with a real server-backed settings contract by adding dedicated agent preference persistence, a branch assignment lifecycle model, new `GET/PUT /agents/me/preferences` endpoints, and a fully wired Agent settings UI that now saves operational preferences, branch requests, and session controls through the shared platform API layer.
+- Added `AgentPreference` and `AgentBranchAssignment` to the backend schema plus a new SQL migration so SHIELD agents now have a first-class persistence model for theme, language, timezone, availability, working hours, working area, emergency contact, notification preferences, dashboard defaults, profile preferences, device preferences, and branch transfer/request lifecycle.
+- Extended `AgentService` and `AgentController` with `GET /agents/me/preferences` and `PUT /agents/me/preferences`, keeping the implementation inside the existing Agent module and shared Prisma service instead of introducing a parallel settings subsystem.
+- Reused the provider-profile persistence shape as the architectural template, but kept the agent contract scoped to actual Agent needs: branch request status is modeled as `PENDING`, `REGIONAL_APPROVAL`, `ASSIGNED`, `TRANSFERRED`, and `INACTIVE`, and the response includes active branch lookups plus current/requested branch lifecycle visibility for the Agent Portal.
+- Kept `GET /agents/me/profile` backward-compatible for existing Agent UI consumers while enriching it with the new persisted settings payload so the shared auth/profile flow remains stable during bootstrap and settings refresh.
+- Updated the shared frontend Agent repository, controller, and API layer so settings now load from the backend contract and save through the centralized API service rather than staying as UI-only copy.
+- Rebuilt the Agent settings screen from a profile/session placeholder into a persisted operations settings workspace with editable theme, language, timezone, default dashboard, availability mode, working hours, working area, emergency contact, notification toggles, profile display preferences, device preferences, and branch request notes/selection.
+- Preserved the shared auth session controls already present in the portal and kept them inside the same persisted settings experience so Agents can manage both profile/settings and active sessions from one operational screen.
+
+### Backend Files Modified
+- backend/prisma/schema.prisma
+- backend/src/agent/agent.controller.ts
+- backend/src/agent/agent.service.ts
+
+### Backend Files Added
+- backend/prisma/migrations/20260702_agent_preferences_branch_lifecycle/migration.sql
+
+### Frontend Files Modified
+- frontend/lib/features/agent/settings/presentation/screens/agent_settings_screen.dart
+- frontend/lib/features/agent/shared/data/agent_portal_repository.dart
+- frontend/lib/features/agent/shared/presentation/controllers/agent_portal_controller.dart
+- frontend/lib/shared/services/api_service.dart
+
+### Shared Documentation Modified
+- current_schema.md
+
+### APIs Added or Changed
+- Added `GET /agents/me/preferences` for persisted Agent settings, branch lifecycle visibility, and lookup metadata.
+- Added `PUT /agents/me/preferences` for persisted Agent settings updates and branch request lifecycle creation/upsert.
+- Existing `GET /agents/me/profile` remains in place and now carries the enriched settings payload for compatibility with existing Agent UI consumers.
+
+### Database Changes
+- Added `agent_preferences` table.
+- Added `agent_branch_assignments` table.
+- Added indexes and foreign keys for persisted Agent settings and branch lifecycle access paths.
+
+### SQL Migrations
+- Added `backend/prisma/migrations/20260702_agent_preferences_branch_lifecycle/migration.sql`.
+
+### Verification
+- cd backend && npm run build
+- cd frontend && flutter analyze --no-pub
+- cd frontend && flutter test
+- Verified backend Prisma client generation and Nest build succeed with the new Agent preference and branch lifecycle models.
+- Verified Flutter analyze reports no issues after wiring the persisted settings contract into the Agent Portal.
+- Verified Flutter test suite passes after the Agent settings UI replacement.

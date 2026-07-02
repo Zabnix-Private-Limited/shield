@@ -45,6 +45,8 @@ class AgentPortalController extends ChangeNotifier {
       Map<String, dynamic>.from(workspace['performance'] ?? const {});
   Map<String, dynamic> get authProfile =>
       Map<String, dynamic>.from(workspace['authProfile'] ?? const {});
+  Map<String, dynamic> get agentSettings =>
+      Map<String, dynamic>.from(workspace['agentSettings'] ?? const {});
   Map<String, dynamic> get selectedCustomer =>
       Map<String, dynamic>.from(selectedCustomerWorkspace['customer'] ?? const {});
 
@@ -405,7 +407,12 @@ class AgentPortalController extends ChangeNotifier {
     try {
       await _repository.updateCurrentProfile(payload);
       final profile = await _repository.getCurrentProfile();
-      _workspace = <String, dynamic>{..._workspace, 'authProfile': profile};
+      final settings = await _repository.getCurrentPreferences();
+      _workspace = <String, dynamic>{
+        ..._workspace,
+        'authProfile': profile,
+        'agentSettings': settings,
+      };
     } catch (error) {
       _error = error.toString();
       rethrow;
@@ -424,9 +431,14 @@ class AgentPortalController extends ChangeNotifier {
     notifyListeners();
     try {
       final profile = await _repository.getCurrentProfile();
+      final preferences = await _repository.getCurrentPreferences();
       final sessions = await _repository.getSessions();
       final loginHistory = await _repository.getLoginHistory();
-      _workspace = <String, dynamic>{..._workspace, 'authProfile': profile};
+      _workspace = <String, dynamic>{
+        ..._workspace,
+        'authProfile': profile,
+        'agentSettings': preferences,
+      };
       _sessions = sessions;
       _loginHistory = loginHistory;
     } catch (error) {
@@ -440,6 +452,27 @@ class AgentPortalController extends ChangeNotifier {
   Future<void> revokeOwnedSession(String sessionId) async {
     await _repository.revokeSession(sessionId);
     await loadSettingsData();
+  }
+
+  Future<void> saveCurrentPreferences(Map<String, dynamic> payload) async {
+    _profileSaving = true;
+    _error = null;
+    notifyListeners();
+    try {
+      final preferences = await _repository.updateCurrentPreferences(payload);
+      final profile = await _repository.getCurrentProfile();
+      _workspace = <String, dynamic>{
+        ..._workspace,
+        'authProfile': profile,
+        'agentSettings': preferences,
+      };
+    } catch (error) {
+      _error = error.toString();
+      rethrow;
+    } finally {
+      _profileSaving = false;
+      notifyListeners();
+    }
   }
 
   Future<void> revokeOtherOwnedSessions() async {

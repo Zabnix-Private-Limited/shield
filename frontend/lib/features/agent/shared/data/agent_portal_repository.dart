@@ -13,10 +13,18 @@ class AgentPortalRepository {
   Future<Map<String, dynamic>> getCurrentProfile() =>
       ApiService.getAgentCurrentProfile();
 
+  Future<Map<String, dynamic>> getCurrentPreferences() =>
+      ApiService.getAgentPreferences();
+
   Future<Map<String, dynamic>> updateCurrentProfile(
     Map<String, dynamic> payload,
   ) =>
       ApiService.updateAgentCurrentProfile(payload);
+
+  Future<Map<String, dynamic>> updateCurrentPreferences(
+    Map<String, dynamic> payload,
+  ) =>
+      ApiService.updateAgentPreferences(payload);
 
   Future<Map<String, dynamic>> getReportRegistry() =>
       ApiService.getPlatformReports(workspace: 'agent');

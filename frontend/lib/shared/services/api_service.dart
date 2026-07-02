@@ -698,10 +698,22 @@ class ApiService {
     return _readEnvelope(response);
   }
 
+  static Future<Map<String, dynamic>> getAgentPreferences() async {
+    final response = await _getWithRetry('/agents/me/preferences', maxAttempts: 3);
+    return _readEnvelope(response);
+  }
+
   static Future<Map<String, dynamic>> updateAgentCurrentProfile(
     Map<String, dynamic> payload,
   ) async {
     final response = await _dio.patch('/agents/me/profile', data: payload);
+    return _readEnvelope(response);
+  }
+
+  static Future<Map<String, dynamic>> updateAgentPreferences(
+    Map<String, dynamic> payload,
+  ) async {
+    final response = await _dio.put('/agents/me/preferences', data: payload);
     return _readEnvelope(response);
   }
 

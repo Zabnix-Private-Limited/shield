@@ -1,4 +1,11 @@
-import { ForbiddenException, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+  UnauthorizedException,
+} from '@nestjs/common';
+import { randomUUID } from 'node:crypto';
 import type { ShieldPrincipal } from '../auth/auth.types';
 import { AuthService } from '../auth/auth.service';
 import { AgentScopeService } from '../auth/agent-scope.service';
@@ -504,12 +511,16 @@ export class AgentService {
   }
 
   async getCurrentProfile(principal?: ShieldPrincipal) {
-    await this.requireAgentContext(principal);
-    return this.authService.getProfile(principal!);
+    const context = await this.resolveCurrentAgentUserContext(principal);
+    const profile = await this.authService.getProfile(principal!);
+    return {
+      ...profile,
+      settings: await this.buildCurrentAgentPreferenceResponse(context.user),
+    };
   }
 
   async updateCurrentProfile(principal: ShieldPrincipal | undefined, data: any) {
-    const context = await this.requireAgentContext(principal);
+    const context = await this.resolveCurrentAgentUserContext(principal);
     const updated = await this.prisma.user.update({
       where: { id: context.userId },
       data: {
@@ -531,12 +542,445 @@ export class AgentService {
     };
   }
 
+  async getCurrentPreferences(principal?: ShieldPrincipal) {
+    const context = await this.resolveCurrentAgentUserContext(principal);
+    return this.buildCurrentAgentPreferenceResponse(context.user);
+  }
+
+  async updateCurrentPreferences(
+    principal: ShieldPrincipal | undefined,
+    data: any,
+  ) {
+    const context = await this.resolveCurrentAgentUserContext(principal);
+    const normalized = await this.normalizeAgentPreferenceInput(data, context.user);
+
+    const user = await this.prisma.$transaction(async (tx) => {
+      await tx.agentPreference.upsert({
+        where: { userId: context.user.id },
+        update: {
+          themePreference: normalized.themePreference,
+          languagePreference: normalized.languagePreference,
+          timezone: normalized.timezone,
+          availability: normalized.availability,
+          workingHours: normalized.workingHours,
+          workingArea: normalized.workingArea,
+          emergencyContact: normalized.emergencyContact,
+          notificationPreferences: normalized.notificationPreferences,
+          dashboardLayout: normalized.dashboardLayout,
+          profilePreferences: normalized.profilePreferences,
+          devicePreferences: normalized.devicePreferences,
+        },
+        create: {
+          uuid: randomUUID(),
+          userId: context.user.id,
+          themePreference: normalized.themePreference,
+          languagePreference: normalized.languagePreference,
+          timezone: normalized.timezone,
+          availability: normalized.availability,
+          workingHours: normalized.workingHours,
+          workingArea: normalized.workingArea,
+          emergencyContact: normalized.emergencyContact,
+          notificationPreferences: normalized.notificationPreferences,
+          dashboardLayout: normalized.dashboardLayout,
+          profilePreferences: normalized.profilePreferences,
+          devicePreferences: normalized.devicePreferences,
+        },
+      });
+
+      if (normalized.requestedBranchId != null) {
+        const existing = await tx.agentBranchAssignment.findUnique({
+          where: {
+            userId_businessId: {
+              userId: context.user.id,
+              businessId: normalized.requestedBranchId,
+            },
+          },
+        });
+
+        const sameAsCurrentPrimary =
+          context.user.branchBusinessId != null &&
+          context.user.branchBusinessId === normalized.requestedBranchId;
+        const nextStatus = sameAsCurrentPrimary ? 'ASSIGNED' : 'REGIONAL_APPROVAL';
+
+        await tx.agentBranchAssignment.upsert({
+          where: {
+            userId_businessId: {
+              userId: context.user.id,
+              businessId: normalized.requestedBranchId,
+            },
+          },
+          update: {
+            status: nextStatus,
+            isPrimary: sameAsCurrentPrimary,
+            approvedAt:
+              nextStatus === 'ASSIGNED'
+                ? existing?.approvedAt ?? new Date()
+                : existing?.approvedAt ?? null,
+            requestedAt: existing?.requestedAt ?? new Date(),
+            transferredAt:
+              nextStatus === 'REGIONAL_APPROVAL' ? new Date() : existing?.transferredAt ?? null,
+            inactiveAt: null,
+            notes: normalized.branchNotes,
+          },
+          create: {
+            uuid: randomUUID(),
+            userId: context.user.id,
+            businessId: normalized.requestedBranchId,
+            status: nextStatus,
+            isPrimary: sameAsCurrentPrimary,
+            approvedAt: nextStatus === 'ASSIGNED' ? new Date() : null,
+            transferredAt: nextStatus === 'REGIONAL_APPROVAL' ? new Date() : null,
+            notes: normalized.branchNotes,
+          },
+        });
+
+        if (sameAsCurrentPrimary) {
+          await tx.agentBranchAssignment.updateMany({
+            where: {
+              userId: context.user.id,
+              businessId: { not: normalized.requestedBranchId },
+              isPrimary: true,
+            },
+            data: {
+              isPrimary: false,
+              status: 'TRANSFERRED',
+              transferredAt: new Date(),
+            },
+          });
+        }
+      }
+
+      return tx.user.findUnique({
+        where: { id: context.user.id },
+        include: this.agentProfileInclude(),
+      });
+    });
+
+    return this.buildCurrentAgentPreferenceResponse(user);
+  }
+
   private async requireAgentContext(principal?: ShieldPrincipal) {
     const context = await this.agentScopeService.resolveAgentContext(principal);
     if (!context) {
       throw new ForbiddenException('Only SHIELD agents can access this workspace.');
     }
     return context;
+  }
+
+  private agentProfileInclude() {
+    return {
+      role: true,
+      department: true,
+      branchBusiness: true,
+      agentPreference: true,
+      agentBranchAssignments: {
+        include: {
+          business: true,
+        },
+        orderBy: [{ requestedAt: 'desc' as const }, { id: 'desc' as const }],
+      },
+    };
+  }
+
+  private async resolveCurrentAgentUserContext(principal?: ShieldPrincipal) {
+    const context = await this.requireAgentContext(principal);
+    if (!principal?.userId) {
+      throw new UnauthorizedException('Authenticated agent context is required.');
+    }
+    const user = await this.prisma.user.findUnique({
+      where: { id: BigInt(principal.userId) },
+      include: this.agentProfileInclude(),
+    });
+    if (!user) {
+      throw new NotFoundException('Agent account not found.');
+    }
+    return {
+      ...context,
+      user,
+    };
+  }
+
+  private async buildCurrentAgentPreferenceResponse(user: any) {
+    if (!user) {
+      throw new NotFoundException('Agent account not found.');
+    }
+
+    const preference = user.agentPreference;
+    const activeBusinesses = await this.prisma.business.findMany({
+      where: { status: 'ACTIVE' },
+      orderBy: [{ name: 'asc' }],
+      select: {
+        id: true,
+        uuid: true,
+        code: true,
+        name: true,
+        businessType: true,
+        status: true,
+      },
+    });
+
+    const assignments = (user.agentBranchAssignments ?? []).map((assignment: any) => ({
+      id: assignment.id.toString(),
+      businessId: assignment.businessId.toString(),
+      status: assignment.status ?? 'PENDING',
+      isPrimary: assignment.isPrimary === true,
+      requestedAt: assignment.requestedAt?.toISOString() ?? null,
+      approvedAt: assignment.approvedAt?.toISOString() ?? null,
+      transferredAt: assignment.transferredAt?.toISOString() ?? null,
+      inactiveAt: assignment.inactiveAt?.toISOString() ?? null,
+      notes: assignment.notes ?? null,
+      business: assignment.business
+        ? {
+            id: assignment.business.id.toString(),
+            uuid: assignment.business.uuid,
+            code: assignment.business.code,
+            name: assignment.business.name,
+            businessType: assignment.business.businessType,
+            status: assignment.business.status,
+          }
+        : null,
+    }));
+
+    const currentPrimary =
+      assignments.find(
+        (assignment: any) =>
+          assignment.isPrimary === true && assignment.status === 'ASSIGNED',
+      ) ?? null;
+    const requestedBranch =
+      assignments.find(
+        (assignment: any) =>
+          assignment.status === 'REGIONAL_APPROVAL' || assignment.status === 'PENDING',
+      ) ?? null;
+    const fullName = `${user.firstName ?? ''} ${user.lastName ?? ''}`.trim();
+
+    return {
+      preferenceId: preference?.id?.toString(),
+      userId: user.id.toString(),
+      profile: {
+        id: user.id.toString(),
+        firstName: user.firstName,
+        lastName: user.lastName,
+        mobile: user.mobile,
+        email: user.email,
+        employeeCode: user.employeeCode,
+        status: user.status,
+      },
+      display: {
+        fullName: fullName.length > 0 ? fullName : user.email ?? 'SHIELD Agent',
+        designation: user.role?.name ?? 'SHIELD Agent',
+        employeeCode: user.employeeCode,
+        branch:
+          user.branchBusiness == null
+            ? null
+            : {
+                id: user.branchBusiness.id.toString(),
+                code: user.branchBusiness.code,
+                name: user.branchBusiness.name,
+                status: user.branchBusiness.status,
+                businessType: user.branchBusiness.businessType,
+              },
+      },
+      preferences: {
+        theme: preference?.themePreference ?? 'system',
+        language: preference?.languagePreference ?? 'en',
+        timezone: preference?.timezone ?? 'Asia/Calcutta',
+        availability: this.normalizeStoredObject(preference?.availability, {
+          mode: 'FIELD',
+          availableForAssignments: true,
+          status: 'ACTIVE',
+        }),
+        workingHours: this.normalizeStoredObject(preference?.workingHours, {
+          startTime: '09:00',
+          endTime: '18:00',
+          workingDays: ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'],
+        }),
+        workingArea: this.normalizeStoredObject(preference?.workingArea, {
+          label: user.branchBusiness?.name ?? '',
+          district: '',
+          travelRadiusKm: 15,
+        }),
+        emergencyContact: this.normalizeStoredObject(preference?.emergencyContact, {
+          name: '',
+          phone: '',
+          relation: '',
+        }),
+        notifications: this.normalizeStoredObject(preference?.notificationPreferences, {
+          followUpReminders: true,
+          appointmentChanges: true,
+          referralUpdates: true,
+          membershipReminders: true,
+        }),
+        dashboardLayout: this.normalizeStoredObject(preference?.dashboardLayout, {
+          defaultView: 'overview',
+        }),
+        profilePreferences: this.normalizeStoredObject(preference?.profilePreferences, {
+          showCustomerCodes: true,
+          showMembershipBadges: true,
+        }),
+        devicePreferences: this.normalizeStoredObject(preference?.devicePreferences, {
+          preferredDeviceLabel: '',
+          allowPushNotifications: true,
+        }),
+      },
+      branchLifecycle: {
+        currentBranch:
+          currentPrimary ??
+          (user.branchBusiness == null
+            ? null
+            : {
+                businessId: user.branchBusiness.id.toString(),
+                status: 'ASSIGNED',
+                isPrimary: true,
+                business: {
+                  id: user.branchBusiness.id.toString(),
+                  uuid: user.branchBusiness.uuid,
+                  code: user.branchBusiness.code,
+                  name: user.branchBusiness.name,
+                  businessType: user.branchBusiness.businessType,
+                  status: user.branchBusiness.status,
+                },
+              }),
+        requestedBranch,
+        assignments,
+      },
+      lookups: {
+        branches: activeBusinesses.map((business) => ({
+          id: business.id.toString(),
+          uuid: business.uuid,
+          code: business.code,
+          name: business.name,
+          businessType: business.businessType,
+          status: business.status,
+        })),
+        branchStatuses: [
+          'PENDING',
+          'REGIONAL_APPROVAL',
+          'ASSIGNED',
+          'TRANSFERRED',
+          'INACTIVE',
+        ],
+      },
+      updatedAt: preference?.updatedAt?.toISOString() ?? null,
+    };
+  }
+
+  private async normalizeAgentPreferenceInput(data: any, user: any) {
+    const preferences = this.normalizeObject(data?.preferences);
+    const requestedBranchId = this.normalizeOptionalBigInt(
+      data?.requestedBranchId ??
+          data?.branchLifecycle?.requestedBranch?.businessId ??
+          data?.branchRequest?.businessId ??
+          data?.primaryBranchId,
+    );
+    if (requestedBranchId != null) {
+      const branch = await this.prisma.business.findUnique({
+        where: { id: requestedBranchId },
+        select: { id: true, status: true },
+      });
+      if (!branch || (branch.status ?? 'ACTIVE') !== 'ACTIVE') {
+        throw new BadRequestException('Selected branch is invalid.');
+      }
+    }
+
+    return {
+      themePreference: this.normalizeOptionalText(
+        preferences['theme'] ?? data?.themePreference ?? user.agentPreference?.themePreference,
+      ),
+      languagePreference: this.normalizeOptionalText(
+        preferences['language'] ??
+          data?.languagePreference ??
+          user.agentPreference?.languagePreference,
+      ),
+      timezone: this.normalizeOptionalText(
+        preferences['timezone'] ?? data?.timezone ?? user.agentPreference?.timezone,
+      ),
+      availability: this.normalizeObject(
+        preferences['availability'] ??
+          data?.availability ??
+          user.agentPreference?.availability,
+      ),
+      workingHours: this.normalizeObject(
+        preferences['workingHours'] ??
+          data?.workingHours ??
+          user.agentPreference?.workingHours,
+      ),
+      workingArea: this.normalizeObject(
+        preferences['workingArea'] ??
+          data?.workingArea ??
+          user.agentPreference?.workingArea,
+      ),
+      emergencyContact: this.normalizeObject(
+        preferences['emergencyContact'] ??
+          data?.emergencyContact ??
+          user.agentPreference?.emergencyContact,
+      ),
+      notificationPreferences: this.normalizeObject(
+        preferences['notifications'] ??
+          data?.notificationPreferences ??
+          user.agentPreference?.notificationPreferences,
+      ),
+      dashboardLayout: this.normalizeObject(
+        preferences['dashboardLayout'] ??
+          data?.dashboardLayout ??
+          user.agentPreference?.dashboardLayout,
+      ),
+      profilePreferences: this.normalizeObject(
+        preferences['profilePreferences'] ??
+          data?.profilePreferences ??
+          user.agentPreference?.profilePreferences,
+      ),
+      devicePreferences: this.normalizeObject(
+        preferences['devicePreferences'] ??
+          data?.devicePreferences ??
+          user.agentPreference?.devicePreferences,
+      ),
+      requestedBranchId,
+      branchNotes: this.normalizeOptionalText(
+        data?.branchNotes ??
+          data?.branchLifecycle?.requestedBranch?.notes ??
+          data?.branchRequest?.notes,
+      ),
+    };
+  }
+
+  private normalizeOptionalText(value: unknown) {
+    if (value == null) {
+      return null;
+    }
+    const normalized = value.toString().trim();
+    return normalized.length === 0 ? null : normalized;
+  }
+
+  private normalizeOptionalBigInt(value: unknown) {
+    if (value == null || value.toString().trim().length === 0) {
+      return null;
+    }
+    try {
+      return BigInt(value.toString());
+    } catch (_) {
+      throw new BadRequestException('Invalid identifier received.');
+    }
+  }
+
+  private normalizeObject(
+    value: unknown,
+    fallback: Record<string, any> = {},
+  ): Record<string, any> {
+    if (
+      value == null ||
+      typeof value !== 'object' ||
+      Array.isArray(value)
+    ) {
+      return { ...fallback };
+    }
+    return { ...fallback, ...(value as Record<string, any>) };
+  }
+
+  private normalizeStoredObject(
+    value: unknown,
+    fallback: Record<string, any> = {},
+  ): Record<string, any> {
+    return this.normalizeObject(value, fallback);
   }
 
   private buildAgentCustomerPrintContext(input: {

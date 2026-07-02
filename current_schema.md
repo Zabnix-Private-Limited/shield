@@ -388,6 +388,40 @@ CREATE TABLE "products" (
 	"category_id" bigint,
 	"unit" varchar(50)
 );
+CREATE TABLE "agent_preferences" (
+	"id" bigserial PRIMARY KEY,
+	"uuid" uuid NOT NULL,
+	"user_id" bigint NOT NULL,
+	"theme_preference" varchar(50),
+	"language_preference" varchar(20),
+	"timezone" varchar(100),
+	"availability" jsonb,
+	"working_hours" jsonb,
+	"working_area" jsonb,
+	"emergency_contact" jsonb,
+	"notification_preferences" jsonb,
+	"dashboard_layout" jsonb,
+	"profile_preferences" jsonb,
+	"device_preferences" jsonb,
+	"created_at" timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+	"updated_at" timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+	"deleted_at" timestamp with time zone
+);
+CREATE TABLE "agent_branch_assignments" (
+	"id" bigserial PRIMARY KEY,
+	"uuid" uuid NOT NULL,
+	"user_id" bigint NOT NULL,
+	"business_id" bigint NOT NULL,
+	"status" varchar(50) DEFAULT 'PENDING' NOT NULL,
+	"is_primary" boolean DEFAULT false NOT NULL,
+	"requested_at" timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+	"approved_at" timestamp with time zone,
+	"transferred_at" timestamp with time zone,
+	"inactive_at" timestamp with time zone,
+	"notes" text,
+	"created_at" timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+	"updated_at" timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
 CREATE TABLE "provider_profile_branch_assignments" (
 	"provider_profile_id" bigint,
 	"business_id" bigint,
@@ -606,6 +640,15 @@ CREATE TABLE "wallets" (
 );
 CREATE UNIQUE INDEX "appointments_pkey" ON "appointments" ("id");
 CREATE UNIQUE INDEX "appointments_uuid_key" ON "appointments" ("uuid");
+CREATE INDEX "idx_agent_branch_assignment_business" ON "agent_branch_assignments" ("business_id");
+CREATE INDEX "idx_agent_branch_assignment_status" ON "agent_branch_assignments" ("status");
+CREATE INDEX "idx_agent_branch_assignment_user" ON "agent_branch_assignments" ("user_id");
+CREATE UNIQUE INDEX "agent_branch_assignments_pkey" ON "agent_branch_assignments" ("id");
+CREATE UNIQUE INDEX "agent_branch_assignments_user_business_key" ON "agent_branch_assignments" ("user_id","business_id");
+CREATE UNIQUE INDEX "agent_branch_assignments_uuid_key" ON "agent_branch_assignments" ("uuid");
+CREATE UNIQUE INDEX "agent_preferences_pkey" ON "agent_preferences" ("id");
+CREATE UNIQUE INDEX "agent_preferences_user_id_key" ON "agent_preferences" ("user_id");
+CREATE UNIQUE INDEX "agent_preferences_uuid_key" ON "agent_preferences" ("uuid");
 CREATE INDEX "idx_appointment_customer" ON "appointments" ("customer_id");
 CREATE INDEX "idx_appointment_date" ON "appointments" ("appointment_date");
 CREATE INDEX "idx_appointment_provider" ON "appointments" ("provider_id");
@@ -768,6 +811,9 @@ CREATE UNIQUE INDEX "wallets_pkey" ON "wallets" ("id");
 CREATE UNIQUE INDEX "wallets_uuid_key" ON "wallets" ("uuid");
 ALTER TABLE "appointments" ADD CONSTRAINT "appointments_customer_id_fkey" FOREIGN KEY ("customer_id") REFERENCES "customers"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 ALTER TABLE "appointments" ADD CONSTRAINT "appointments_provider_id_fkey" FOREIGN KEY ("provider_id") REFERENCES "service_providers"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "agent_branch_assignments" ADD CONSTRAINT "agent_branch_assignments_business_id_fkey" FOREIGN KEY ("business_id") REFERENCES "businesses"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "agent_branch_assignments" ADD CONSTRAINT "agent_branch_assignments_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "agent_preferences" ADD CONSTRAINT "agent_preferences_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 ALTER TABLE "audit_logs" ADD CONSTRAINT "audit_logs_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 ALTER TABLE "benefit_ledger_transactions" ADD CONSTRAINT "benefit_ledger_transactions_created_by_fkey" FOREIGN KEY ("created_by") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 ALTER TABLE "benefit_ledger_transactions" ADD CONSTRAINT "benefit_ledger_transactions_wallet_id_fkey" FOREIGN KEY ("wallet_id") REFERENCES "wallets"("id") ON DELETE CASCADE ON UPDATE CASCADE;
