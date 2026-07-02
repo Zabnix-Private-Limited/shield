@@ -170,7 +170,8 @@ class AgentPortalRepository {
   Future<Map<String, dynamic>> markAllNotificationsRead({String? customerId}) =>
       ApiService.markAllNotificationsRead(customerId: customerId);
 
-  Future<List<Map<String, dynamic>>> getProviders() => ApiService.getProviders();
+  Future<List<Map<String, dynamic>>> getProviders() =>
+      ApiService.getMasterDataDomain('service-providers');
 
   Future<List<Map<String, dynamic>>> getBusinesses() => ApiService.getBusinesses();
 

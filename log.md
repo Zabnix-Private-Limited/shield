@@ -7376,3 +7376,33 @@ est build, ackend/vercel.json, ackend/src/auth/auth.service.ts, and uth_devic
 - Verified backend Prisma client generation and Nest build succeed with the new Agent preference and branch lifecycle models.
 - Verified Flutter analyze reports no issues after wiring the persisted settings contract into the Agent Portal.
 - Verified Flutter test suite passes after the Agent settings UI replacement.
+
+## 197. Release hardening audit: removed Agent Portal provider-management API leakage from reference-data bootstrap
+**Timestamp:** 2026-07-02 17:11:32 IST
+
+**High-level description**: Audited the Agent Portal for cross-portal API leakage after the observed Agent-side `403 GET /service-providers` and removed the actual release blocker by switching Agent provider lookup bootstrap away from the provider-management endpoint and onto the shared read-only master-data provider catalog.
+- Confirmed the Agent Portal was not importing Provider Portal repositories, controllers, or screens directly.
+- Identified the real leakage path in Agent reference-data bootstrap: `AgentPortalController._ensureReferenceData()` called `AgentPortalRepository.getProviders()`, which in turn called `ApiService.getProviders()` and hit `GET /service-providers`.
+- This call was incorrect for Agent bootstrap because it depended on provider-management RBAC (`providers.view`) when the Agent only needed provider lookup data for appointment booking.
+- Rewired the Agent lookup source to `GET /master-data/admin/service-providers` through the existing shared master-data API helper by changing `AgentPortalRepository.getProviders()` to use `ApiService.getMasterDataDomain('service-providers')`.
+- Kept the Agent appointment workflow intact because the master-data provider dataset already exposes the fields the Agent screen consumes (`id`, `providerName`, `providerType`, `status`, and linked business metadata).
+- Verified the other raw `ApiService.getProviders()` usages in `portal_shell.dart` are scoped to customer-service selection and admin provider-network management rather than Agent bootstrap.
+- This keeps Agent role startup inside allowed RBAC boundaries and removes a misleading unauthorized request from the release path without changing business logic.
+
+### Frontend Files Modified
+- frontend/lib/features/agent/shared/data/agent_portal_repository.dart
+- log.md
+
+### APIs Added or Changed
+- No new endpoint added.
+- Agent provider lookup bootstrap now uses existing `GET /master-data/admin/service-providers` instead of `GET /service-providers`.
+
+### Database Changes
+- No schema change.
+- No SQL migration required.
+
+### Verification
+- cd frontend && flutter analyze --no-pub
+- cd frontend && flutter test
+- Verified Flutter analyze reports no issues.
+- Verified Flutter test suite passes.
