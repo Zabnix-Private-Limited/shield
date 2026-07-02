@@ -18,6 +18,7 @@ type ReportFilters = {
   providerId?: bigint;
   providerType?: string;
   businessId?: bigint;
+  agentCode?: string;
   dateFrom?: string;
   dateTo?: string;
   status?: string;
@@ -29,6 +30,60 @@ type ReportFilters = {
 @Injectable()
 export class PlatformReportService {
   private readonly registry: ReportMetadata[] = [
+    {
+      id: 'AGENT_CUSTOMER_REGISTRATIONS',
+      title: 'Customer Registrations',
+      workspace: 'agent',
+      description: 'Customers registered and owned by the active SHIELD agent.',
+      supportedPortals: ['agent', 'manager', 'executive', 'super-admin'],
+      availableFormats: ['PDF', 'EXCEL', 'CSV'],
+      filters: ['dateRange', 'status', 'search'],
+    },
+    {
+      id: 'AGENT_FOLLOW_UP_STATUS',
+      title: 'Follow-Up Status',
+      workspace: 'agent',
+      description: 'Open, completed, and cancelled follow-ups for the active agent scope.',
+      supportedPortals: ['agent', 'manager', 'executive', 'super-admin'],
+      availableFormats: ['PDF', 'EXCEL', 'CSV'],
+      filters: ['dateRange', 'status', 'search'],
+    },
+    {
+      id: 'AGENT_APPOINTMENTS',
+      title: 'Agent Appointments',
+      workspace: 'agent',
+      description: 'Appointments generated for the active agent customer graph.',
+      supportedPortals: ['agent', 'manager', 'executive', 'super-admin'],
+      availableFormats: ['PDF', 'EXCEL', 'CSV'],
+      filters: ['dateRange', 'status', 'search'],
+    },
+    {
+      id: 'AGENT_DOCUMENT_STATUS',
+      title: 'Document Status',
+      workspace: 'agent',
+      description: 'Customer documents and verification status for the active agent scope.',
+      supportedPortals: ['agent', 'manager', 'executive', 'super-admin'],
+      availableFormats: ['PDF', 'EXCEL', 'CSV'],
+      filters: ['dateRange', 'status', 'search'],
+    },
+    {
+      id: 'AGENT_REFERRAL_PERFORMANCE',
+      title: 'Referral Performance',
+      workspace: 'agent',
+      description: 'Referral conversion and reward events for the active agent network.',
+      supportedPortals: ['agent', 'manager', 'executive', 'super-admin'],
+      availableFormats: ['PDF', 'EXCEL', 'CSV'],
+      filters: ['dateRange', 'status', 'search'],
+    },
+    {
+      id: 'AGENT_PERFORMANCE_SUMMARY',
+      title: 'Performance Summary',
+      workspace: 'agent',
+      description: 'Top-level acquisition, retention, follow-up, and appointment performance.',
+      supportedPortals: ['agent', 'manager', 'executive', 'super-admin'],
+      availableFormats: ['PDF', 'EXCEL', 'CSV'],
+      filters: ['dateRange', 'status', 'search'],
+    },
     {
       id: 'PROVIDER_TODAYS_CONSULTATIONS',
       title: "Today's Consultations",
@@ -177,7 +232,10 @@ export class PlatformReportService {
       throw new Error(`Unknown report: ${reportId}`);
     }
 
-    const result = await this.buildProviderReport(metadata, filters);
+    const result =
+      metadata.workspace === 'agent'
+        ? await this.buildAgentReport(metadata, filters)
+        : await this.buildProviderReport(metadata, filters);
     const exportFile = this.exportReport(metadata, result, format);
 
     return {
@@ -187,6 +245,316 @@ export class PlatformReportService {
       ...result,
       exportFile,
     };
+  }
+
+  private async buildAgentReport(metadata: ReportMetadata, filters: ReportFilters) {
+    const customerWhere = this.buildAgentCustomerWhere(filters);
+    const dateRange = this.buildDateRange(filters.dateFrom, filters.dateTo);
+
+    switch (metadata.id) {
+      case 'AGENT_CUSTOMER_REGISTRATIONS': {
+        const rows = await this.prisma.customer.findMany({
+          where: {
+            ...customerWhere,
+            ...(dateRange ? { createdAt: dateRange } : {}),
+          },
+          orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+          include: {
+            membership: {
+              include: {
+                membershipType: true,
+              },
+            },
+            shieldCard: true,
+          },
+        });
+
+        return {
+          columns: [
+            'Customer',
+            'Customer Code',
+            'Status',
+            'Membership',
+            'Card Status',
+            'Registered At',
+          ],
+          rows: rows.map((customer) => ({
+            Customer: this.toPersonLabel(customer.firstName, customer.lastName),
+            'Customer Code': customer.customerCode ?? '',
+            Status: customer.status ?? 'PENDING',
+            Membership:
+              customer.membership?.membershipType?.name ??
+              customer.membership?.membershipNumber ??
+              'Pending',
+            'Card Status': customer.shieldCard?.status ?? 'PENDING',
+            'Registered At': customer.createdAt?.toISOString() ?? '',
+          })),
+          summary: {
+            totalCustomers: rows.length,
+            activeCustomers: rows.filter(
+              (customer) => (customer.status ?? '').toUpperCase() === 'ACTIVE',
+            ).length,
+            pendingCustomers: rows.filter((customer) =>
+              ['PENDING', 'INCOMPLETE', 'REJECTED'].includes(
+                (customer.status ?? '').toUpperCase(),
+              ),
+            ).length,
+          },
+        };
+      }
+      case 'AGENT_FOLLOW_UP_STATUS': {
+        const rows = await this.prisma.crmTask.findMany({
+          where: {
+            customer: customerWhere,
+            ...(dateRange ? { dueDate: dateRange } : {}),
+            ...(filters.status?.trim()
+              ? { status: filters.status.trim().toUpperCase() }
+              : {}),
+          },
+          include: {
+            customer: true,
+            assignedToUser: true,
+          },
+          orderBy: [{ dueDate: 'asc' }, { id: 'desc' }],
+        });
+
+        return {
+          columns: ['Customer', 'Status', 'Due Date', 'Assigned To', 'Notes'],
+          rows: rows.map((task) => ({
+            Customer: this.toPersonLabel(
+              task.customer?.firstName,
+              task.customer?.lastName,
+            ),
+            Status: task.status ?? 'PENDING',
+            'Due Date': task.dueDate?.toISOString() ?? '',
+            'Assigned To': this.toPersonLabel(
+              task.assignedToUser?.firstName,
+              task.assignedToUser?.lastName,
+            ),
+            Notes: task.notes ?? '',
+          })),
+          summary: {
+            totalFollowUps: rows.length,
+            completedFollowUps: rows.filter(
+              (task) => (task.status ?? '').toUpperCase() === 'COMPLETED',
+            ).length,
+            pendingFollowUps: rows.filter((task) =>
+              ['PENDING', 'SCHEDULED'].includes(
+                (task.status ?? '').toUpperCase(),
+              ),
+            ).length,
+          },
+        };
+      }
+      case 'AGENT_APPOINTMENTS': {
+        const rows = await this.prisma.appointment.findMany({
+          where: {
+            customer: customerWhere,
+            ...(dateRange ? { appointmentDate: dateRange } : {}),
+            ...(filters.status?.trim()
+              ? { status: filters.status.trim().toUpperCase() }
+              : {}),
+          },
+          include: {
+            customer: true,
+            provider: true,
+          },
+          orderBy: [{ appointmentDate: 'desc' }, { id: 'desc' }],
+        });
+
+        return {
+          columns: ['Customer', 'Provider', 'Appointment Type', 'Status', 'Date'],
+          rows: rows.map((appointment) => ({
+            Customer: this.toPersonLabel(
+              appointment.customer?.firstName,
+              appointment.customer?.lastName,
+            ),
+            Provider: appointment.provider?.providerName ?? 'Provider',
+            'Appointment Type': appointment.appointmentType ?? 'VISIT',
+            Status: appointment.status ?? 'PENDING',
+            Date: appointment.appointmentDate?.toISOString() ?? '',
+          })),
+          summary: {
+            totalAppointments: rows.length,
+            confirmedAppointments: rows.filter((appointment) =>
+              ['CONFIRMED', 'COMPLETED'].includes(
+                (appointment.status ?? '').toUpperCase(),
+              ),
+            ).length,
+            pendingAppointments: rows.filter((appointment) =>
+              ['PENDING', 'SCHEDULED'].includes(
+                (appointment.status ?? '').toUpperCase(),
+              ),
+            ).length,
+          },
+        };
+      }
+      case 'AGENT_DOCUMENT_STATUS': {
+        const rows = await this.prisma.document.findMany({
+          where: {
+            customer: customerWhere,
+            ...(dateRange ? { createdAt: dateRange } : {}),
+            ...(filters.status?.trim()
+              ? { status: filters.status.trim().toUpperCase() }
+              : {}),
+          },
+          include: {
+            customer: true,
+          },
+          orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+        });
+
+        return {
+          columns: ['Customer', 'File Name', 'Category', 'Status', 'Uploaded At'],
+          rows: rows.map((document) => ({
+            Customer: this.toPersonLabel(
+              document.customer?.firstName,
+              document.customer?.lastName,
+            ),
+            'File Name': document.fileName ?? 'Document',
+            Category: document.documentType ?? 'UNKNOWN',
+            Status: document.status ?? 'PENDING',
+            'Uploaded At': document.createdAt?.toISOString() ?? '',
+          })),
+          summary: {
+            totalDocuments: rows.length,
+            approvedDocuments: rows.filter((document) =>
+              ['APPROVED', 'VALIDATED'].includes(
+                (document.status ?? '').toUpperCase(),
+              ),
+            ).length,
+            pendingDocuments: rows.filter((document) =>
+              !['APPROVED', 'VALIDATED'].includes(
+                (document.status ?? '').toUpperCase(),
+              ),
+            ).length,
+          },
+        };
+      }
+      case 'AGENT_REFERRAL_PERFORMANCE': {
+        const rows = await this.prisma.referralRewardEvent.findMany({
+          where: {
+            referrerCustomer: customerWhere,
+            ...(dateRange ? { createdAt: dateRange } : {}),
+            ...(filters.status?.trim()
+              ? { status: filters.status.trim().toUpperCase() }
+              : {}),
+          },
+          include: {
+            referrerCustomer: true,
+            referredCustomer: true,
+          },
+          orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+        });
+
+        return {
+          columns: [
+            'Referrer',
+            'Referred Customer',
+            'Status',
+            'Reward Points',
+            'Created At',
+          ],
+          rows: rows.map((event) => ({
+            Referrer: this.toPersonLabel(
+              event.referrerCustomer?.firstName,
+              event.referrerCustomer?.lastName,
+            ),
+            'Referred Customer': this.toPersonLabel(
+              event.referredCustomer?.firstName,
+              event.referredCustomer?.lastName,
+            ),
+            Status: event.status ?? 'PENDING',
+            'Reward Points': Number(event.rewardPoints ?? 0),
+            'Created At': event.createdAt?.toISOString() ?? '',
+          })),
+          summary: {
+            totalReferrals: rows.length,
+            rewardedReferrals: rows.filter(
+              (event) => (event.status ?? '').toUpperCase() === 'REWARDED',
+            ).length,
+            qualifiedReferrals: rows.filter((event) =>
+              ['QUALIFIED', 'REWARDED'].includes(
+                (event.status ?? '').toUpperCase(),
+              ),
+            ).length,
+          },
+        };
+      }
+      case 'AGENT_PERFORMANCE_SUMMARY': {
+        const [customers, followUps, appointments, referrals] = await Promise.all([
+          this.prisma.customer.findMany({
+            where: {
+              ...customerWhere,
+              ...(dateRange ? { createdAt: dateRange } : {}),
+            },
+          }),
+          this.prisma.crmTask.findMany({
+            where: {
+              customer: customerWhere,
+              ...(dateRange ? { dueDate: dateRange } : {}),
+            },
+          }),
+          this.prisma.appointment.findMany({
+            where: {
+              customer: customerWhere,
+              ...(dateRange ? { appointmentDate: dateRange } : {}),
+            },
+          }),
+          this.prisma.referralRewardEvent.findMany({
+            where: {
+              referrerCustomer: customerWhere,
+              ...(dateRange ? { createdAt: dateRange } : {}),
+            },
+          }),
+        ]);
+
+        const activeCustomers = customers.filter(
+          (customer) => (customer.status ?? '').toUpperCase() === 'ACTIVE',
+        ).length;
+        const completedFollowUps = followUps.filter(
+          (task) => (task.status ?? '').toUpperCase() === 'COMPLETED',
+        ).length;
+        const completedAppointments = appointments.filter(
+          (appointment) => (appointment.status ?? '').toUpperCase() === 'COMPLETED',
+        ).length;
+        const rewardedReferrals = referrals.filter(
+          (event) => (event.status ?? '').toUpperCase() === 'REWARDED',
+        ).length;
+
+        return {
+          columns: ['Metric', 'Value'],
+          rows: [
+            { Metric: 'Customers Added', Value: customers.length },
+            { Metric: 'Active Customers', Value: activeCustomers },
+            { Metric: 'Completed Follow-Ups', Value: completedFollowUps },
+            { Metric: 'Appointments Generated', Value: appointments.length },
+            { Metric: 'Completed Appointments', Value: completedAppointments },
+            { Metric: 'Total Referrals', Value: referrals.length },
+            { Metric: 'Rewarded Referrals', Value: rewardedReferrals },
+          ],
+          summary: {
+            totalCustomers: customers.length,
+            retentionRate:
+              customers.length == 0
+                ? 0
+                : Number(((activeCustomers / customers.length) * 100).toFixed(1)),
+            followUpCompletionRate:
+              followUps.length == 0
+                ? 0
+                : Number(
+                    ((completedFollowUps / followUps.length) * 100).toFixed(1),
+                  ),
+          },
+        };
+      }
+      default:
+        return {
+          columns: ['Status'],
+          rows: [{ Status: 'Report builder not implemented' }],
+          summary: {},
+        };
+    }
   }
 
   private async buildProviderReport(metadata: ReportMetadata, filters: ReportFilters) {
@@ -623,6 +991,48 @@ export class PlatformReportService {
         ? { paymentStatus: filters.status.trim().toUpperCase() }
         : {}),
       ...(filters.customerId ? { customerId: filters.customerId } : {}),
+    };
+  }
+
+  private buildAgentCustomerWhere(filters: ReportFilters): Prisma.CustomerWhereInput {
+    return {
+      ...(filters.agentCode?.trim()
+        ? { agentCode: filters.agentCode.trim() }
+        : {}),
+      deletedAt: null,
+      ...(filters.customerId ? { id: filters.customerId } : {}),
+      ...(filters.status?.trim()
+        ? { status: filters.status.trim().toUpperCase() }
+        : {}),
+      ...(filters.search?.trim()
+        ? {
+            OR: [
+              {
+                firstName: {
+                  contains: filters.search.trim(),
+                  mode: 'insensitive',
+                },
+              },
+              {
+                lastName: {
+                  contains: filters.search.trim(),
+                  mode: 'insensitive',
+                },
+              },
+              {
+                mobile: {
+                  contains: filters.search.trim(),
+                },
+              },
+              {
+                customerCode: {
+                  contains: filters.search.trim(),
+                  mode: 'insensitive',
+                },
+              },
+            ],
+          }
+        : {}),
     };
   }
 

@@ -12,6 +12,7 @@ import {
 import { Observable } from 'rxjs';
 import { AuthService } from '../auth/auth.service';
 import type { ShieldPrincipal } from '../auth/auth.types';
+import { AgentScopeService } from '../auth/agent-scope.service';
 import { CurrentPrincipal } from '../auth/current-principal.decorator';
 import { ProviderScopeService } from '../auth/provider-scope.service';
 import { Public } from '../auth/public.decorator';
@@ -23,6 +24,7 @@ import { PlatformReportService } from './platform-report.service';
 export class PlatformCapabilitiesController {
   constructor(
     private readonly authService: AuthService,
+    private readonly agentScopeService: AgentScopeService,
     private readonly providerScopeService: ProviderScopeService,
     private readonly platformPrintService: PlatformPrintService,
     private readonly platformRealtimeService: PlatformRealtimeService,
@@ -69,27 +71,44 @@ export class PlatformCapabilitiesController {
     @Body() body: any,
     @CurrentPrincipal() principal?: ShieldPrincipal,
   ) {
-    const filters = this.providerScopeService.normalizeReportFilters(principal, {
-      workspace: body.workspace?.toString(),
-      providerId:
-        body.providerId && /^\d+$/.test(`${body.providerId}`.trim())
-          ? BigInt(body.providerId)
-          : undefined,
-      providerType: body.providerType?.toString(),
-      businessId:
-        body.businessId && /^\d+$/.test(`${body.businessId}`.trim())
-          ? BigInt(body.businessId)
-          : undefined,
-      dateFrom: body.dateFrom?.toString(),
-      dateTo: body.dateTo?.toString(),
-      status: body.status?.toString(),
-      search: body.search?.toString(),
-      serviceType: body.serviceType?.toString(),
-      customerId:
-        body.customerId && /^\d+$/.test(`${body.customerId}`.trim())
-          ? BigInt(body.customerId)
-          : undefined,
-    });
+    let filters: Record<string, any> =
+      this.providerScopeService.normalizeReportFilters(principal, {
+        workspace: body.workspace?.toString(),
+        providerId:
+          body.providerId && /^\d+$/.test(`${body.providerId}`.trim())
+            ? BigInt(body.providerId)
+            : undefined,
+        providerType: body.providerType?.toString(),
+        businessId:
+          body.businessId && /^\d+$/.test(`${body.businessId}`.trim())
+            ? BigInt(body.businessId)
+            : undefined,
+        dateFrom: body.dateFrom?.toString(),
+        dateTo: body.dateTo?.toString(),
+        status: body.status?.toString(),
+        search: body.search?.toString(),
+        serviceType: body.serviceType?.toString(),
+        customerId:
+          body.customerId && /^\d+$/.test(`${body.customerId}`.trim())
+            ? BigInt(body.customerId)
+            : undefined,
+      });
+
+    if (this.agentScopeService.isAgentPrincipal(principal)) {
+      const context = await this.agentScopeService.resolveAgentContext(principal);
+      if (filters.customerId) {
+        await this.agentScopeService.assertAgentCanAccessCustomer(
+          filters.customerId,
+          principal,
+        );
+      }
+      filters = {
+        ...filters,
+        workspace: body.workspace?.toString()?.trim()?.toLowerCase() || 'agent',
+        agentCode: context?.agentCode,
+      };
+    }
+
     const data = await this.platformReportService.runReport(
       `${body.reportId ?? ''}`,
       filters,
@@ -128,6 +147,30 @@ export class PlatformCapabilitiesController {
     payload: any,
     principal?: ShieldPrincipal,
   ) {
+    if (this.agentScopeService.isAgentPrincipal(principal)) {
+      const activeVisitAppointmentId =
+        payload?.activeVisit?.appointmentId ?? payload?.appointmentId;
+      if (
+        activeVisitAppointmentId != null &&
+        /^\d+$/.test(`${activeVisitAppointmentId}`.trim())
+      ) {
+        await this.agentScopeService.assertAgentCanAccessAppointment(
+          BigInt(`${activeVisitAppointmentId}`.trim()),
+          principal,
+        );
+        return;
+      }
+
+      const customerId = payload?.patient?.id ?? payload?.customerId;
+      if (customerId != null && /^\d+$/.test(`${customerId}`.trim())) {
+        await this.agentScopeService.assertAgentCanAccessCustomer(
+          BigInt(`${customerId}`.trim()),
+          principal,
+        );
+      }
+      return;
+    }
+
     if (!this.providerScopeService.isProviderPrincipal(principal)) {
       return;
     }

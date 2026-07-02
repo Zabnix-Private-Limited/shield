@@ -18,6 +18,46 @@ class AgentPortalRepository {
   ) =>
       ApiService.updateAgentCurrentProfile(payload);
 
+  Future<Map<String, dynamic>> getReportRegistry() =>
+      ApiService.getPlatformReports(workspace: 'agent');
+
+  Future<Map<String, dynamic>> generatePlatformPrint(
+    String templateId,
+    Map<String, dynamic> payload,
+  ) => ApiService.generatePlatformPrint(
+        templateId: templateId,
+        payload: payload,
+      );
+
+  Future<Map<String, dynamic>> runPlatformReport({
+    required String reportId,
+    String format = 'PDF',
+    String? dateFrom,
+    String? dateTo,
+    String? status,
+    String? search,
+  }) => ApiService.runPlatformReport(
+        reportId: reportId,
+        workspace: 'agent',
+        format: format,
+        dateFrom: dateFrom,
+        dateTo: dateTo,
+        status: status,
+        search: search,
+      );
+
+  Future<List<Map<String, dynamic>>> getSessions() =>
+      ApiService.getAuthenticatedSessions();
+
+  Future<List<Map<String, dynamic>>> getLoginHistory() =>
+      ApiService.getLoginHistory();
+
+  Future<void> revokeSession(String sessionId) =>
+      ApiService.revokeSession(sessionId);
+
+  Future<Map<String, dynamic>> revokeOtherSessions() =>
+      ApiService.revokeOtherSessions();
+
   Future<List<Map<String, dynamic>>> searchCustomers({
     String? mobile,
     String? name,
@@ -112,6 +152,9 @@ class AgentPortalRepository {
         mimeType: mimeType,
         fileSize: fileSize,
       );
+
+  Future<String> getDocumentDownloadUrl(String documentId) =>
+      ApiService.getDocumentDownloadUrl(documentId);
 
   Future<void> markNotificationRead(String notificationId) =>
       ApiService.markNotificationRead(notificationId);

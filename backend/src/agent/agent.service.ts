@@ -7,6 +7,7 @@ import { CrmService } from '../crm/crm.service';
 import { CustomerService } from '../customer/customer.service';
 import { DocumentService } from '../document/document.service';
 import { NotificationService } from '../notification/notification.service';
+import { PlatformPrintService } from '../platform-capabilities/platform-print.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { ReferralService } from '../referral/referral.service';
 import { WalletService } from '../wallet/wallet.service';
@@ -24,6 +25,7 @@ export class AgentService {
     private readonly notificationService: NotificationService,
     private readonly referralService: ReferralService,
     private readonly crmService: CrmService,
+    private readonly platformPrintService: PlatformPrintService,
   ) {}
 
   async getWorkspace(principal?: ShieldPrincipal) {
@@ -424,6 +426,17 @@ export class AgentService {
       })),
     ];
 
+    const printing = this.buildAgentCustomerPrintContext({
+      customer,
+      membership,
+      wallet,
+      summary,
+      tree,
+      appointments,
+      purchases,
+      documents,
+    });
+
     return {
       generatedAt: new Date().toISOString(),
       customer,
@@ -483,7 +496,9 @@ export class AgentService {
         { key: 'appointment', label: 'Book appointment', enabled: true },
         { key: 'document', label: 'Upload document', enabled: true },
         { key: 'customer', label: 'Update customer details', enabled: true },
+        { key: 'print', label: 'Print customer summary', enabled: true },
       ],
+      printing,
       timeline,
     };
   }
@@ -522,5 +537,244 @@ export class AgentService {
       throw new ForbiddenException('Only SHIELD agents can access this workspace.');
     }
     return context;
+  }
+
+  private buildAgentCustomerPrintContext(input: {
+    customer: any;
+    membership: any;
+    wallet: any;
+    summary: any;
+    tree: any;
+    appointments: any[];
+    purchases: any[];
+    documents: any[];
+  }) {
+    const customer = input.customer ?? {};
+    const membership = input.membership ?? {};
+    const membershipSummary = membership['membership'] ?? {};
+    const shieldCard = membership['shieldCard'] ?? {};
+    const wallet = input.wallet ?? {};
+    const referralSummary = input.summary ?? {};
+    const latestAppointment = (input.appointments ?? [])
+      .map((appointment: any) => ({
+        ...appointment,
+        appointmentDate: appointment?.appointmentDate
+          ? new Date(appointment.appointmentDate)
+          : null,
+      }))
+      .filter((appointment: any) => appointment.appointmentDate != null)
+      .sort(
+        (left: any, right: any) =>
+          (right.appointmentDate as Date).getTime() -
+          (left.appointmentDate as Date).getTime(),
+      )[0];
+    const latestPurchase = (input.purchases ?? [])[0] ?? null;
+    const latestDocument = (input.documents ?? [])[0] ?? null;
+
+    const templates = [
+      'PATIENT_SUMMARY',
+      'MEMBERSHIP_CERTIFICATE',
+      'MEMBERSHIP_CARD',
+      'REGISTRATION_RECEIPT',
+      'REFERRAL_FORM',
+      'APPOINTMENT_SLIP',
+      'PAYMENT_RECEIPT',
+    ]
+      .map((id) => this.platformPrintService.getTemplate(id))
+      .filter((template) => template != null);
+
+    return {
+      title: 'Shared print engine',
+      description:
+        'Reusable patient, membership, referral, appointment, and receipt print payloads.',
+      templates,
+      payloads: {
+        PATIENT_SUMMARY: {
+          customerId: customer.id?.toString(),
+          documentTitle: 'Customer Summary',
+          fileName: `customer-summary-${customer.customerCode ?? customer.id ?? 'record'}.pdf`,
+          patient: {
+            id: customer.id?.toString(),
+            name:
+              `${customer.firstName ?? ''} ${customer.lastName ?? ''}`.trim() ||
+              'SHIELD Member',
+            patientId: customer.customerCode ?? customer.id?.toString() ?? '',
+            mobile: customer.mobile ?? '',
+            membershipNumber: membershipSummary.membershipNumber ?? '',
+            shieldCardNumber: shieldCard.cardNumber ?? '',
+          },
+          summary: {
+            status: customer.status ?? 'PENDING',
+            membershipStatus: membershipSummary.status ?? 'PENDING',
+            cardStatus: shieldCard.status ?? 'PENDING',
+            walletBalance: wallet['cashWallet']?.['available'] ?? 0,
+            rewardPoints: wallet['rewardPoints']?.['available'] ?? 0,
+          },
+          sections: [
+            {
+              title: 'Customer Snapshot',
+              rows: [
+                {
+                  label: 'Membership',
+                  value:
+                    membershipSummary['membershipType']?.['name'] ??
+                    membershipSummary['membershipNumber'] ??
+                    'Pending',
+                },
+                {
+                  label: 'Referral Code',
+                  value: customer.referralCode ?? 'Not issued',
+                },
+                {
+                  label: 'Direct Referrals',
+                  value: `${referralSummary['directReferrals'] ?? 0}`,
+                },
+              ],
+            },
+          ],
+        },
+        MEMBERSHIP_CERTIFICATE: {
+          customerId: customer.id?.toString(),
+          documentTitle: 'Membership Certificate',
+          fileName:
+            `membership-certificate-${membershipSummary['membershipNumber'] ?? customer.customerCode ?? 'member'}.pdf`,
+          patient: {
+            id: customer.id?.toString(),
+            name:
+              `${customer.firstName ?? ''} ${customer.lastName ?? ''}`.trim() ||
+              'SHIELD Member',
+            patientId: customer.customerCode ?? '',
+            mobile: customer.mobile ?? '',
+            membershipNumber: membershipSummary.membershipNumber ?? '',
+          },
+          summary: {
+            membershipType:
+              membershipSummary['membershipType']?.['name'] ?? 'Standard',
+            membershipStatus: membershipSummary.status ?? 'PENDING',
+            activationDate: membershipSummary.activationDate?.toString() ?? '',
+            expiryDate: membershipSummary.expiryDate?.toString() ?? '',
+          },
+        },
+        MEMBERSHIP_CARD: {
+          customerId: customer.id?.toString(),
+          documentTitle: 'Membership Card',
+          fileName: `membership-card-${shieldCard.cardNumber ?? customer.customerCode ?? 'card'}.pdf`,
+          patient: {
+            id: customer.id?.toString(),
+            name:
+              `${customer.firstName ?? ''} ${customer.lastName ?? ''}`.trim() ||
+              'SHIELD Member',
+            patientId: customer.customerCode ?? '',
+            membershipNumber: membershipSummary.membershipNumber ?? '',
+            shieldCardNumber: shieldCard.cardNumber ?? '',
+          },
+          summary: {
+            cardStatus: shieldCard.status ?? 'PENDING',
+            qrCode: shieldCard.qrCode ?? '',
+          },
+        },
+        REGISTRATION_RECEIPT: {
+          customerId: customer.id?.toString(),
+          documentTitle: 'Registration Receipt',
+          fileName:
+            `registration-receipt-${customer.customerCode ?? customer.id ?? 'registration'}.pdf`,
+          patient: {
+            id: customer.id?.toString(),
+            name:
+              `${customer.firstName ?? ''} ${customer.lastName ?? ''}`.trim() ||
+              'SHIELD Member',
+            patientId: customer.customerCode ?? '',
+            mobile: customer.mobile ?? '',
+          },
+          summary: {
+            registrationStatus: customer.status ?? 'PENDING',
+            createdAt: customer.createdAt?.toString() ?? '',
+            latestDocument: latestDocument?.fileName ?? 'No uploads yet',
+          },
+        },
+        REFERRAL_FORM: {
+          customerId: customer.id?.toString(),
+          documentTitle: 'Referral Summary',
+          fileName:
+            `referral-summary-${customer.customerCode ?? customer.id ?? 'referral'}.pdf`,
+          patient: {
+            id: customer.id?.toString(),
+            name:
+              `${customer.firstName ?? ''} ${customer.lastName ?? ''}`.trim() ||
+              'SHIELD Member',
+            patientId: customer.customerCode ?? '',
+            mobile: customer.mobile ?? '',
+            membershipNumber: membershipSummary.membershipNumber ?? '',
+          },
+          summary: {
+            referralCode: customer.referralCode ?? '',
+            directReferrals: referralSummary['directReferrals'] ?? 0,
+            totalReferrals: referralSummary['totalReferrals'] ?? 0,
+            availablePoints: referralSummary['availablePoints'] ?? 0,
+          },
+          sections: [
+            {
+              title: 'Referral Status',
+              rows: [
+                {
+                  label: 'Qualified Network',
+                  value: `${referralSummary['statuses']?.['QUALIFIED'] ?? 0}`,
+                },
+                {
+                  label: 'Rewarded Referrals',
+                  value: `${referralSummary['statuses']?.['REWARDED'] ?? 0}`,
+                },
+                {
+                  label: 'Pending Referrals',
+                  value: `${referralSummary['statuses']?.['PENDING'] ?? 0}`,
+                },
+              ],
+            },
+          ],
+        },
+        APPOINTMENT_SLIP: {
+          customerId: customer.id?.toString(),
+          appointmentId: latestAppointment?.id?.toString(),
+          documentTitle: 'Appointment Slip',
+          fileName:
+            `appointment-slip-${latestAppointment?.id ?? customer.customerCode ?? 'appointment'}.pdf`,
+          patient: {
+            id: customer.id?.toString(),
+            name:
+              `${customer.firstName ?? ''} ${customer.lastName ?? ''}`.trim() ||
+              'SHIELD Member',
+            patientId: customer.customerCode ?? '',
+            mobile: customer.mobile ?? '',
+          },
+          summary: {
+            appointmentType:
+              latestAppointment?.appointmentType ?? 'No appointment booked',
+            appointmentDate:
+              latestAppointment?.appointmentDate?.toISOString() ?? '',
+            appointmentStatus: latestAppointment?.status ?? 'PENDING',
+          },
+        },
+        PAYMENT_RECEIPT: {
+          customerId: customer.id?.toString(),
+          documentTitle: 'Payment Receipt',
+          fileName:
+            `payment-receipt-${latestPurchase?.invoiceNumber ?? customer.customerCode ?? 'receipt'}.pdf`,
+          patient: {
+            id: customer.id?.toString(),
+            name:
+              `${customer.firstName ?? ''} ${customer.lastName ?? ''}`.trim() ||
+              'SHIELD Member',
+            patientId: customer.customerCode ?? '',
+            mobile: customer.mobile ?? '',
+          },
+          summary: {
+            invoiceNumber: latestPurchase?.invoiceNumber ?? 'Not issued',
+            payableAmount: latestPurchase?.payableAmount ?? 0,
+            paymentStatus: latestPurchase?.paymentStatus ?? 'PENDING',
+            providerName: latestPurchase?.provider?.providerName ?? 'Provider',
+          },
+        },
+      },
+    };
   }
 }

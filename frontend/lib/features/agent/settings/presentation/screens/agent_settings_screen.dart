@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../../shared/services/api_service.dart';
+import '../../../../../shared/services/internal_auth_session.dart';
 import '../../../shared/presentation/controllers/agent_portal_provider.dart';
 
 class AgentSettingsScreen extends ConsumerStatefulWidget {
@@ -47,6 +47,15 @@ class _AgentSettingsScreenState extends ConsumerState<AgentSettingsScreen> {
     _lastNameController.text = profile['lastName']?.toString() ?? '';
     _mobileController.text = profile['mobile']?.toString() ?? '';
     _emailController.text = profile['email']?.toString() ?? '';
+
+    if (!widget.profileOnly &&
+        !controller.isSettingsLoading &&
+        controller.sessions.isEmpty &&
+        controller.loginHistory.isEmpty) {
+      Future.microtask(
+        () => ref.read(agentPortalControllerProvider).loadSettingsData(),
+      );
+    }
 
     return Card(
       child: Padding(
@@ -98,23 +107,63 @@ class _AgentSettingsScreenState extends ConsumerState<AgentSettingsScreen> {
               Text('Session management', style: Theme.of(context).textTheme.titleMedium),
               const SizedBox(height: 8),
               const Text(
-                'Theme, language, emergency contact, availability, and working-area persistence are still blocked by the current live schema. Session controls and editable identity details are operational now.',
+                'Theme, language, emergency contact, availability, and working-area persistence still need schema-backed profile fields. Session controls, login visibility, and editable identity details are operational now.',
               ),
               const SizedBox(height: 12),
+              FilledButton(
+                onPressed: InternalAuthSession.instance.signOut,
+                child: const Text('Sign out'),
+              ),
+              const SizedBox(height: 8),
               OutlinedButton(
-                onPressed: () async {
-                  await ApiService.revokeOtherSessions();
-                  if (!context.mounted) {
-                    return;
-                  }
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Other signed-in devices have been signed out.'),
-                    ),
-                  );
-                },
+                onPressed: controller.isSettingsLoading
+                    ? null
+                    : () => ref
+                        .read(agentPortalControllerProvider)
+                        .revokeOtherOwnedSessions(),
                 child: const Text('Sign out other devices'),
               ),
+              const SizedBox(height: 16),
+              Text('Active sessions', style: Theme.of(context).textTheme.titleMedium),
+              const SizedBox(height: 8),
+              if (controller.sessions.isEmpty)
+                const Text('No active session history is available yet.')
+              else
+                ...controller.sessions.map(
+                  (session) => ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(
+                      session['device']?['deviceName']?.toString() ?? 'Session',
+                    ),
+                    subtitle: Text(
+                      session['loginMethod']?.toString() ?? 'Internal login',
+                    ),
+                    trailing: session['isCurrent'] == true
+                        ? const Text('Current')
+                        : TextButton(
+                            onPressed: () => ref
+                                .read(agentPortalControllerProvider)
+                                .revokeOwnedSession(
+                                  session['sessionId']?.toString() ?? '',
+                                ),
+                            child: const Text('Revoke'),
+                          ),
+                  ),
+                ),
+              const SizedBox(height: 16),
+              Text('Login history', style: Theme.of(context).textTheme.titleMedium),
+              const SizedBox(height: 8),
+              if (controller.loginHistory.isEmpty)
+                const Text('No login history is available yet.')
+              else
+                ...controller.loginHistory.take(10).map(
+                  (row) => ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(row['status']?.toString() ?? 'Status unavailable'),
+                    subtitle: Text(row['createdAt']?.toString() ?? ''),
+                    trailing: Text(row['loginMethod']?.toString() ?? ''),
+                  ),
+                ),
             ],
           ],
         ),

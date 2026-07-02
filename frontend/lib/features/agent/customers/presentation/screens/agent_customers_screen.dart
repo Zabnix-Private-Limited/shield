@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../../../../shared/services/platform_file_actions.dart';
 import '../../../shared/presentation/controllers/agent_portal_provider.dart';
 
 class AgentCustomersScreen extends ConsumerStatefulWidget {
@@ -293,6 +294,10 @@ class _CustomerWorkspaceDetail extends ConsumerWidget {
                       child: const Text('Documents'),
                     ),
                     OutlinedButton(
+                      onPressed: () => _downloadPrint(context, ref, 'PATIENT_SUMMARY'),
+                      child: const Text('Print summary'),
+                    ),
+                    OutlinedButton(
                       onPressed: editingProfile ? onCancelEdit : onStartEdit,
                       child: Text(editingProfile ? 'Cancel edit' : 'Edit details'),
                     ),
@@ -510,6 +515,39 @@ class _CustomerWorkspaceDetail extends ConsumerWidget {
           ),
         ],
       ],
+    );
+  }
+}
+
+Future<void> _downloadPrint(
+  BuildContext context,
+  WidgetRef ref,
+  String templateId,
+) async {
+  final messenger = ScaffoldMessenger.of(context);
+  try {
+    final result = await ref
+        .read(agentPortalControllerProvider)
+        .generateCustomerPrint(templateId);
+    final downloaded = await downloadPlatformFile(
+      fileName: result['fileName']?.toString() ?? '$templateId.pdf',
+      mimeType: result['mimeType']?.toString() ?? 'application/pdf',
+      contentBase64: result['contentBase64']?.toString() ?? '',
+    );
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(
+          downloaded
+              ? 'Document ready: ${result['fileName'] ?? templateId}'
+              : 'The document is ready, but automatic download is not available on this device.',
+        ),
+      ),
+    );
+  } catch (_) {
+    messenger.showSnackBar(
+      const SnackBar(
+        content: Text('We could not generate that document right now.'),
+      ),
     );
   }
 }

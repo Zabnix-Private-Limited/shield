@@ -86,6 +86,30 @@ class _AgentNotificationsScreenState extends ConsumerState<AgentNotificationsScr
                     children: [
                       Text(_formatDate(notification['sentAt'])),
                       TextButton(
+                        onPressed: () async {
+                          final messenger = ScaffoldMessenger.of(context);
+                          final customerId =
+                              notification['customerId']?.toString() ?? '';
+                          if (customerId.isEmpty) {
+                            return;
+                          }
+                          await ref
+                              .read(agentPortalControllerProvider)
+                              .selectCustomer(customerId);
+                          if (!mounted) {
+                            return;
+                          }
+                          messenger.showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                'Customer workspace is ready in the Customers section.',
+                              ),
+                            ),
+                          );
+                        },
+                        child: const Text('Open customer'),
+                      ),
+                      TextButton(
                         onPressed: () => ref
                             .read(agentPortalControllerProvider)
                             .markNotificationRead(

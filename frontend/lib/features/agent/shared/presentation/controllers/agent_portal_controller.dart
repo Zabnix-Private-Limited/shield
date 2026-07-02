@@ -10,26 +10,34 @@ class AgentPortalController extends ChangeNotifier {
   bool _loading = false;
   bool _customerLoading = false;
   bool _profileSaving = false;
+  bool _settingsLoading = false;
   bool _saving = false;
   String? _error;
   Map<String, dynamic> _workspace = const <String, dynamic>{};
   Map<String, dynamic> _selectedCustomerWorkspace = const <String, dynamic>{};
+  Map<String, dynamic> _reportRegistry = const <String, dynamic>{};
   String? _selectedCustomerId;
   List<Map<String, dynamic>> _providers = const <Map<String, dynamic>>[];
   List<Map<String, dynamic>> _businesses = const <Map<String, dynamic>>[];
   List<Map<String, dynamic>> _membershipTypes = const <Map<String, dynamic>>[];
+  List<Map<String, dynamic>> _sessions = const <Map<String, dynamic>>[];
+  List<Map<String, dynamic>> _loginHistory = const <Map<String, dynamic>>[];
 
   bool get isLoading => _loading;
   bool get isCustomerLoading => _customerLoading;
   bool get isProfileSaving => _profileSaving;
+  bool get isSettingsLoading => _settingsLoading;
   bool get isSaving => _saving;
   String? get error => _error;
   Map<String, dynamic> get workspace => _workspace;
   Map<String, dynamic> get selectedCustomerWorkspace => _selectedCustomerWorkspace;
+  Map<String, dynamic> get reportRegistry => _reportRegistry;
   String? get selectedCustomerId => _selectedCustomerId;
   List<Map<String, dynamic>> get providers => _providers;
   List<Map<String, dynamic>> get businesses => _businesses;
   List<Map<String, dynamic>> get membershipTypes => _membershipTypes;
+  List<Map<String, dynamic>> get sessions => _sessions;
+  List<Map<String, dynamic>> get loginHistory => _loginHistory;
 
   Map<String, dynamic> get summary =>
       Map<String, dynamic>.from(workspace['summary'] ?? const {});
@@ -132,6 +140,16 @@ class AgentPortalController extends ChangeNotifier {
         selectedCustomerWorkspace['referralSummary'] ?? const {},
       );
 
+  Map<String, dynamic> get customerPrinting => Map<String, dynamic>.from(
+        selectedCustomerWorkspace['printing'] ?? const {},
+      );
+
+  List<Map<String, dynamic>> get availableReports => List<Map<String, dynamic>>.from(
+        (reportRegistry['reports'] as List? ?? const <dynamic>[]).map(
+          (item) => Map<String, dynamic>.from(item as Map),
+        ),
+      );
+
   Future<void> ensureLoaded() async {
     if (_loading || workspace.isNotEmpty) {
       return;
@@ -162,7 +180,8 @@ class AgentPortalController extends ChangeNotifier {
   Future<void> _ensureReferenceData() async {
     if (_providers.isNotEmpty &&
         _businesses.isNotEmpty &&
-        _membershipTypes.isNotEmpty) {
+        _membershipTypes.isNotEmpty &&
+        _reportRegistry.isNotEmpty) {
       return;
     }
 
@@ -170,9 +189,11 @@ class AgentPortalController extends ChangeNotifier {
       final providers = await _repository.getProviders();
       final businesses = await _repository.getBusinesses();
       final membershipTypes = await _repository.getMembershipTypes();
+      final reports = await _repository.getReportRegistry();
       _providers = providers;
       _businesses = businesses;
       _membershipTypes = membershipTypes;
+      _reportRegistry = reports;
     } catch (_) {
       // Keep the workspace usable even if optional reference lookups fail.
     }
@@ -392,5 +413,81 @@ class AgentPortalController extends ChangeNotifier {
       _profileSaving = false;
       notifyListeners();
     }
+  }
+
+  Future<void> loadSettingsData() async {
+    if (_settingsLoading) {
+      return;
+    }
+    _settingsLoading = true;
+    _error = null;
+    notifyListeners();
+    try {
+      final profile = await _repository.getCurrentProfile();
+      final sessions = await _repository.getSessions();
+      final loginHistory = await _repository.getLoginHistory();
+      _workspace = <String, dynamic>{..._workspace, 'authProfile': profile};
+      _sessions = sessions;
+      _loginHistory = loginHistory;
+    } catch (error) {
+      _error = error.toString();
+    } finally {
+      _settingsLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> revokeOwnedSession(String sessionId) async {
+    await _repository.revokeSession(sessionId);
+    await loadSettingsData();
+  }
+
+  Future<void> revokeOtherOwnedSessions() async {
+    _settingsLoading = true;
+    _error = null;
+    notifyListeners();
+    try {
+      await _repository.revokeOtherSessions();
+      await loadSettingsData();
+    } catch (error) {
+      _error = error.toString();
+      _settingsLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<Map<String, dynamic>> generateCustomerPrint(String templateId) async {
+    final rawPayload = customerPrinting['payloads'] is Map
+        ? Map<String, dynamic>.from(customerPrinting['payloads'] as Map)
+        : const <String, dynamic>{};
+    final templatePayload = rawPayload[templateId] is Map
+        ? Map<String, dynamic>.from(rawPayload[templateId] as Map)
+        : const <String, dynamic>{};
+    if (templatePayload.isEmpty) {
+      throw StateError('No shared print payload is available for $templateId.');
+    }
+    return _repository.generatePlatformPrint(templateId, templatePayload);
+  }
+
+  Future<Map<String, dynamic>> runAgentReport(
+    String reportId, {
+    String format = 'PDF',
+    String? dateFrom,
+    String? dateTo,
+    String? status,
+    String? search,
+  }) {
+    return _repository.runPlatformReport(
+      reportId: reportId,
+      format: format,
+      dateFrom: dateFrom,
+      dateTo: dateTo,
+      status: status,
+      search: search,
+    );
+  }
+
+  Future<String> getCustomerDocumentDownloadUrl(String documentId) {
+    return _repository.getDocumentDownloadUrl(documentId);
   }
 }

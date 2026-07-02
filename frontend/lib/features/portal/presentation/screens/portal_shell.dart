@@ -11,6 +11,7 @@ import '../../../agent/notifications/presentation/screens/agent_notifications_sc
 import '../../../agent/performance/presentation/screens/agent_performance_screen.dart';
 import '../../../agent/referrals/presentation/screens/agent_referrals_screen.dart';
 import '../../../agent/registration/presentation/screens/agent_registration_screen.dart';
+import '../../../agent/reports/presentation/screens/agent_reports_screen.dart';
 import '../../../agent/settings/presentation/screens/agent_settings_screen.dart';
 import '../../../customer/dashboard/presentation/screens/dashboard_screen.dart';
 import '../../../customer/documents/presentation/screens/customer_documents_screen.dart';
@@ -662,6 +663,8 @@ class _RoleContent extends StatelessWidget {
         return const AgentNotificationsScreen();
       case 'performance':
         return const AgentPerformanceScreen();
+      case 'reports':
+        return const AgentReportsScreen();
       case 'profile':
         return const AgentSettingsScreen(profileOnly: true);
       case 'settings':

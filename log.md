@@ -7183,3 +7183,63 @@ est build, ackend/vercel.json, ackend/src/auth/auth.service.ts, and uth_devic
 - Verified Flutter test suite passes.
 ---
 2026-07-02 16:32:00 IST
+
+## 193. Agent portal implementation completion pass: shared reports, printable customer artifacts, session visibility, richer referral workspace, and document actions
+**Timestamp:** 2026-07-02 13:10:30 IST
+
+**High-level description**: Closed another set of implementation gaps in the Agent Portal by wiring the existing shared reporting, printing, and auth-session infrastructure into the agent experience instead of leaving those capabilities provider-only or hidden behind raw APIs.
+- Backend reuse and scope-safe expansion:
+  - Extended the shared reporting engine with agent-scoped report definitions for customer registrations, follow-up status, appointments, document status, referral performance, and top-level agent performance so the Agent Portal can export operational reports without inventing a separate report service.
+  - Updated shared platform report execution to resolve authenticated agent scope through `AgentScopeService`, attach the current `agentCode` automatically, and validate any customer filter before the report runs.
+  - Expanded platform print payload access checks so agent-generated print jobs are scope-validated the same way provider print jobs are when customer or appointment identifiers are present in the payload.
+  - Enriched the agent customer workspace with backend-owned print payloads for customer summary, membership certificate/card, registration receipt, referral summary, appointment slip, and payment receipt using the existing shared print engine.
+- Flutter workflow completion:
+  - Added a dedicated Agent Reports section that exports shared backend reports in PDF, Excel, or CSV from the existing report engine.
+  - Upgraded the customer workspace with a working print-summary action that downloads a shared print artifact instead of leaving printing implicit or unavailable.
+  - Expanded the document screen with search/filter support plus live preview/open actions through the existing shared document download URL contract.
+  - Rebuilt the referral screen into a fuller operational view with KPI cards, conversion status, referral hierarchy, and referral activity history from the existing scoped referral graph.
+  - Finished session visibility in agent settings by exposing active sessions, login history, revoke-session controls, and sign-out-other-devices on top of the shared auth/session APIs.
+  - Added notification deep-link behavior that prepares the related customer workspace directly from the notification center instead of trapping the user in a read-only alert list.
+- Why this approach was chosen:
+  - The missing workflows were already conceptually supported by shared platform services, so the safest completion path was to expose those existing engines inside the Agent Portal rather than create agent-specific print/report/session modules.
+  - This keeps business logic backend-owned, preserves the established scope/RBAC architecture, and reduces the amount of portal-specific code that would need separate QA later.
+
+### Backend Files Modified
+- backend/src/agent/agent.service.ts
+- backend/src/platform-capabilities/platform-capabilities.controller.ts
+- backend/src/platform-capabilities/platform-report.service.ts
+
+### Frontend Files Modified
+- frontend/lib/features/agent/customers/presentation/screens/agent_customers_screen.dart
+- frontend/lib/features/agent/documents/presentation/screens/agent_documents_screen.dart
+- frontend/lib/features/agent/notifications/presentation/screens/agent_notifications_screen.dart
+- frontend/lib/features/agent/referrals/presentation/screens/agent_referrals_screen.dart
+- frontend/lib/features/agent/settings/presentation/screens/agent_settings_screen.dart
+- frontend/lib/features/agent/shared/data/agent_portal_repository.dart
+- frontend/lib/features/agent/shared/presentation/controllers/agent_portal_controller.dart
+- frontend/lib/features/portal/presentation/portal_role_data.dart
+- frontend/lib/features/portal/presentation/screens/portal_shell.dart
+- frontend/lib/shared/services/api_service.dart
+
+### Frontend Files Added
+- frontend/lib/features/agent/reports/presentation/screens/agent_reports_screen.dart
+
+### APIs Added or Changed
+- Existing GET /platform/reports now serves agent workspace metadata through the shared report registry.
+- Existing POST /platform/reports/run now normalizes and enforces authenticated agent scope before executing shared agent reports.
+- Existing GET /agents/customers/:customerId/workspace now includes a backend-owned `printing` payload bundle for agent-allowed print artifacts.
+- Existing POST /platform/print/generate now validates agent print payload access when the caller is a SHIELD agent.
+
+### Database Changes
+- No schema change in this implementation pass.
+- No SQL migration required.
+
+### Verification
+- cd backend && npm run build
+- cd frontend && flutter analyze --no-pub
+- cd frontend && flutter test
+- Verified backend build completes successfully.
+- Verified Flutter analyze reports no issues.
+- Verified Flutter test suite passes.
+---
+2026-07-02 13:10:30 IST

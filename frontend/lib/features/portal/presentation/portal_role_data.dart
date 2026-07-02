@@ -335,6 +335,7 @@ PortalRoleData portalDataForRole(SHIELDRole role) {
           _PortalSectionFactory.agentDocuments,
           _PortalSectionFactory.agentNotifications,
           _PortalSectionFactory.agentPerformance,
+          _PortalSectionFactory.agentReports,
           _PortalSectionFactory.agentProfile,
           _PortalSectionFactory.agentSettings,
         ],
@@ -609,6 +610,10 @@ class _PortalSectionFactory {
   static final PortalSectionData agentPerformance = _section(
     'performance',
     summary: 'Customer growth, retention, follow-up completion, and incentive summary.',
+  );
+  static final PortalSectionData agentReports = _section(
+    'reports',
+    summary: 'Export customer, follow-up, referral, document, and performance reports.',
   );
   static final PortalSectionData agentProfile = _section(
     'profile',

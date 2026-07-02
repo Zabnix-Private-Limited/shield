@@ -1411,6 +1411,19 @@ class ApiService {
     return _readEnvelope(response);
   }
 
+  static Future<Map<String, dynamic>> getPlatformReports({
+    String? workspace,
+  }) async {
+    final response = await _dio.get(
+      '/platform/reports',
+      queryParameters: {
+        if (workspace != null && workspace.trim().isNotEmpty)
+          'workspace': workspace.trim(),
+      },
+    );
+    return _readEnvelope(response);
+  }
+
   static Future<Map<String, dynamic>> runPlatformReport({
     required String reportId,
     String workspace = 'provider',
