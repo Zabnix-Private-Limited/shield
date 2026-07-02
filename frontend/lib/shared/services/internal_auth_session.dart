@@ -80,6 +80,8 @@ class InternalAuthSession extends ChangeNotifier {
       _trace('auth bootstrap completed; validated=$validated');
       if (!validated) {
         await _clearSessionStorage(notify: false);
+      } else if (activeKind == null) {
+        await ActiveAuthSession.setActiveKind(ShieldSessionKind.internal);
       }
     }
 

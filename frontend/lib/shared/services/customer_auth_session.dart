@@ -57,6 +57,8 @@ class CustomerAuthSession extends ChangeNotifier {
       final validated = await _validateOrRefreshSession();
       if (!validated) {
         await _clearSessionStorage(notify: false);
+      } else if (activeKind == null) {
+        await ActiveAuthSession.setActiveKind(ShieldSessionKind.customer);
       }
     }
 

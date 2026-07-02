@@ -43,6 +43,7 @@ import '../../../../shared/widgets/shield_date_input_field.dart';
 import '../../../../shared/services/api_service.dart';
 import '../../../../shared/services/customer_auth_session.dart';
 import '../../../../shared/services/internal_auth_session.dart';
+import '../../../../shared/services/portal_resolver.dart';
 import '../../../../shared/utils/prescription_file_picker.dart';
 import '../../../../shared/widgets/customer_support_sheet.dart';
 import '../../../../shared/widgets/portal_support.dart';
@@ -1415,6 +1416,12 @@ class _RoleSwitcher extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final resolvedPortal = PortalResolver.current;
+    final availableRoles =
+        resolvedPortal == null
+            ? SHIELDRole.switchableRoles
+            : <SHIELDRole>[resolvedPortal.role];
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
@@ -1424,18 +1431,22 @@ class _RoleSwitcher extends StatelessWidget {
       ),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<SHIELDRole>(
-          value: portal.role,
-          items: SHIELDRole.switchableRoles.map((role) {
+          value: availableRoles.contains(portal.role)
+              ? portal.role
+              : availableRoles.first,
+          items: availableRoles.map((role) {
             return DropdownMenuItem(
               value: role,
               child: Text(role.label, style: AppTypography.small),
             );
           }).toList(),
-          onChanged: (value) {
-            if (value != null) {
-              context.go('/portal/${value.routeKey}/dashboard');
-            }
-          },
+          onChanged: resolvedPortal == null
+              ? (value) {
+                  if (value != null) {
+                    context.go('/portal/${value.routeKey}/dashboard');
+                  }
+                }
+              : null,
         ),
       ),
     );

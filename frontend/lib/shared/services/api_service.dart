@@ -190,7 +190,12 @@ class ApiService {
       return true;
     }
     final statusCode = error.response?.statusCode;
-    return statusCode == 502 || statusCode == 503 || statusCode == 504;
+    return statusCode == 408 ||
+        statusCode == 429 ||
+        statusCode == 500 ||
+        statusCode == 502 ||
+        statusCode == 503 ||
+        statusCode == 504;
   }
 
   static Duration _retryDelayForAttempt(int attempt) {
@@ -674,19 +679,22 @@ class ApiService {
   }
 
   static Future<Map<String, dynamic>> getAgentWorkspace() async {
-    final response = await _dio.get('/agents/workspace');
+    final response = await _getWithRetry('/agents/workspace', maxAttempts: 3);
     return _readEnvelope(response);
   }
 
   static Future<Map<String, dynamic>> getAgentCustomerWorkspace(
     String customerId,
   ) async {
-    final response = await _dio.get('/agents/customers/$customerId/workspace');
+    final response = await _getWithRetry(
+      '/agents/customers/$customerId/workspace',
+      maxAttempts: 3,
+    );
     return _readEnvelope(response);
   }
 
   static Future<Map<String, dynamic>> getAgentCurrentProfile() async {
-    final response = await _dio.get('/agents/me/profile');
+    final response = await _getWithRetry('/agents/me/profile', maxAttempts: 3);
     return _readEnvelope(response);
   }
 
@@ -943,7 +951,7 @@ class ApiService {
   }
 
   static Future<List<Map<String, dynamic>>> getAuthenticatedSessions() async {
-    final response = await _dio.get('/auth/sessions');
+    final response = await _getWithRetry('/auth/sessions', maxAttempts: 3);
     return _readEnvelopeList(
       response,
     ).map((item) => Map<String, dynamic>.from(item as Map)).toList();
@@ -952,9 +960,10 @@ class ApiService {
   static Future<List<Map<String, dynamic>>> getLoginHistory({
     int limit = 20,
   }) async {
-    final response = await _dio.get(
+    final response = await _getWithRetry(
       '/auth/login-history',
       queryParameters: {'limit': limit},
+      maxAttempts: 3,
     );
     return _readEnvelopeList(
       response,
@@ -1311,7 +1320,10 @@ class ApiService {
 
   static Future<List<Map<String, dynamic>>> getProviders() async {
     try {
-      final response = await _dio.get('/service-providers');
+      final response = await _getWithRetry(
+        '/service-providers',
+        maxAttempts: 3,
+      );
       final data = _readEnvelopeList(response);
       return List<Map<String, dynamic>>.from(
         data.map((item) => Map<String, dynamic>.from(item as Map)),
@@ -1414,12 +1426,13 @@ class ApiService {
   static Future<Map<String, dynamic>> getPlatformReports({
     String? workspace,
   }) async {
-    final response = await _dio.get(
+    final response = await _getWithRetry(
       '/platform/reports',
       queryParameters: {
         if (workspace != null && workspace.trim().isNotEmpty)
           'workspace': workspace.trim(),
       },
+      maxAttempts: 3,
     );
     return _readEnvelope(response);
   }
@@ -1487,7 +1500,10 @@ class ApiService {
 
   static Future<List<Map<String, dynamic>>> getBusinesses() async {
     try {
-      final response = await _dio.get('/master-data/admin/businesses');
+      final response = await _getWithRetry(
+        '/master-data/admin/businesses',
+        maxAttempts: 3,
+      );
       final data = _readEnvelopeList(response);
       return List<Map<String, dynamic>>.from(
         data.map((item) => Map<String, dynamic>.from(item as Map)),
@@ -1501,7 +1517,10 @@ class ApiService {
   static Future<List<Map<String, dynamic>>> getMasterDataDomain(
     String domain,
   ) async {
-    final response = await _dio.get('/master-data/admin/$domain');
+    final response = await _getWithRetry(
+      '/master-data/admin/$domain',
+      maxAttempts: 3,
+    );
     return _readEnvelopeList(
       response,
     ).map((item) => Map<String, dynamic>.from(item as Map)).toList();

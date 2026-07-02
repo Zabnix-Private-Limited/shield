@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../../app/theme/app_colors.dart';
 import '../../../../../app/theme/app_typography.dart';
 import '../../../../../shared/services/customer_auth_session.dart';
+import '../../../../../shared/services/portal_resolver.dart';
 
 class CustomerSplashScreen extends StatefulWidget {
   const CustomerSplashScreen({super.key});
@@ -22,6 +23,10 @@ class _CustomerSplashScreenState extends State<CustomerSplashScreen> {
   Future<void> _routeNext() async {
     await Future<void>.delayed(const Duration(milliseconds: 480));
     if (!mounted) {
+      return;
+    }
+    if (PortalResolver.current != null) {
+      context.go(PortalResolver.resolvedHomeRoute());
       return;
     }
     if (CustomerAuthSession.instance.isAuthenticated) {

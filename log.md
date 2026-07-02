@@ -7243,3 +7243,47 @@ est build, ackend/vercel.json, ackend/src/auth/auth.service.ts, and uth_devic
 - Verified Flutter test suite passes.
 ---
 2026-07-02 13:10:30 IST
+
+## 194. Auth-driven portal bootstrap hardening: centralized portal resolution, route guarding, and shared retry expansion
+**Timestamp:** 2026-07-02 16:00:27 IST
+
+**High-level description**: Replaced the remaining URL-driven portal selection behavior with an auth-driven portal resolver so startup, refresh, and wrong-portal deep links now resolve to the authenticated principal before the incorrect shell can render.
+- Added a shared `PortalResolver` that derives the live portal from the restored authenticated session instead of trusting the requested `:role` URL segment.
+- Changed the root app bootstrap route from the old customer-first splash entry to `/`, with router redirects now sending authenticated users directly to their resolved portal home and unauthenticated users to the correct login flow.
+- Hardened `/portal/:role` and `/portal/:role/:section` so an authenticated agent, provider, CRM user, or customer is redirected to their own portal section when the URL targets the wrong role, eliminating the provider-shell-for-agent race on refresh.
+- Updated the portal shell role switcher to stop offering cross-role shell switching during authenticated use, preventing manual navigation into unauthorized shells while keeping the shared presentation shell intact.
+- Extended the shared API retry classifier to include 408, 429, and 500-series retry-safe bootstrap failures, and moved agent/session/reference-data GET calls onto the centralized retry path so startup flows absorb transient backend and cold-start failures consistently.
+- Made session restoration slightly more deterministic by persisting the active session kind during successful restore when older storage does not already have one, reducing split-session ambiguity during bootstrap.
+- Updated the route smoke test to assert the new auth-driven root bootstrap contract instead of the obsolete customer-first splash assumption.
+
+### Frontend Files Modified
+- frontend/lib/app/routes/app_router.dart
+- frontend/lib/features/customer/auth/presentation/screens/customer_splash_screen.dart
+- frontend/lib/features/portal/presentation/screens/portal_shell.dart
+- frontend/lib/shared/services/api_service.dart
+- frontend/lib/shared/services/customer_auth_session.dart
+- frontend/lib/shared/services/internal_auth_session.dart
+- frontend/test/widget_test.dart
+
+### Frontend Files Added
+- frontend/lib/shared/services/portal_resolver.dart
+
+### APIs Added or Changed
+- No backend endpoint shape changed in this hardening pass.
+- Existing frontend bootstrap calls now use the shared retry layer more consistently for agent workspace, session visibility, report registry, and reference-data reads.
+
+### Database Changes
+- No schema change.
+- No SQL migration required.
+
+### Verification
+- cd backend && npm run build
+- cd frontend && flutter analyze --no-pub
+- cd frontend && flutter test
+- Verified backend build completes successfully.
+- Verified Flutter analyze reports no issues.
+- Verified Flutter test suite passes.
+
+### Remaining External or Schema-Bounded Constraints
+- Agent profile preference persistence is still bounded by the current live schema and backend contracts; theme/language/availability/emergency-contact style fields are not fully persistable without a real server-side model expansion.
+- Agent onboarding branch capture remains workflow-visible but final issued branch ownership is still approval/schema-driven rather than fully self-persisted by the agent flow.

@@ -13,12 +13,13 @@ import 'route_recovery_screen.dart';
 import '../../shared/models/shield_role.dart';
 import '../../shared/services/customer_auth_session.dart';
 import '../../shared/services/internal_auth_session.dart';
+import '../../shared/services/portal_resolver.dart';
 
 final GlobalKey<NavigatorState> rootNavigatorKey = GlobalKey<NavigatorState>();
 
 final GoRouter router = GoRouter(
   navigatorKey: rootNavigatorKey,
-  initialLocation: '/customer/splash',
+  initialLocation: '/',
   observers: [SentryNavigatorObserver()],
   refreshListenable: Listenable.merge([
     CustomerAuthSession.instance,
@@ -30,6 +31,7 @@ final GoRouter router = GoRouter(
     final isInternalAuthenticated = InternalAuthSession.instance.isAuthenticated;
     final isAuthenticated =
         isCustomerAuthenticated || isInternalAuthenticated;
+    final resolvedPortal = PortalResolver.current;
     final authNotice = AuthRedirectNotice.instance;
     final location = state.matchedLocation;
     final isCustomerPortal =
@@ -55,6 +57,11 @@ final GoRouter router = GoRouter(
       return '/session-expired?kind=$kind';
     }
 
+    if (isAuthenticated &&
+        (location == '/' || location == '/customer/splash')) {
+      return PortalResolver.resolvedHomeRoute();
+    }
+
     if (!isAuthenticated && !isPublicLocation) {
       final next = Uri.encodeComponent(state.uri.toString());
       return isCustomerPortal
@@ -70,7 +77,7 @@ final GoRouter router = GoRouter(
       if (next != null && next.startsWith('/')) {
         return next;
       }
-      return '/portal/customer/dashboard';
+      return PortalResolver.resolvedHomeRoute();
     }
 
     if (isInternalAuthenticated && location == '/internal/login') {
@@ -78,29 +85,55 @@ final GoRouter router = GoRouter(
       if (next != null && next.startsWith('/')) {
         return next;
       }
-      return '/portal/${InternalAuthSession.instance.homeRole.routeKey}/dashboard';
+      return PortalResolver.resolvedHomeRoute();
     }
 
     if (isCustomerAuthenticated && location == '/internal/login') {
-      return '/portal/customer/dashboard';
+      return PortalResolver.resolvedHomeRoute();
     }
 
     if (isCustomerAuthenticated &&
         location.startsWith('/portal/') &&
         !location.startsWith('/portal/customer')) {
-      return '/portal/customer/dashboard';
+      final segments = state.uri.pathSegments;
+      final sectionKey = segments.length >= 3 ? segments[2] : 'dashboard';
+      return PortalResolver.routeForResolvedSection(sectionKey);
     }
 
     if (isInternalAuthenticated &&
         (location.startsWith('/customer/') ||
             location.startsWith('/portal/customer'))) {
-      return '/portal/${InternalAuthSession.instance.homeRole.routeKey}/dashboard';
+      return PortalResolver.resolvedHomeRoute();
+    }
+
+    if (isAuthenticated && location.startsWith('/portal/')) {
+      final segments = state.uri.pathSegments;
+      if (segments.length >= 2) {
+        final requestedRoleKey = segments[1];
+        final sectionKey = segments.length >= 3 ? segments[2] : 'dashboard';
+        final guardedRoute = PortalResolver.guardPortalRoute(
+          requestedRoleKey: requestedRoleKey,
+          sectionKey: sectionKey,
+        );
+        if (guardedRoute != null) {
+          return guardedRoute;
+        }
+      }
+    }
+
+    if (isInternalAuthenticated &&
+        resolvedPortal != null &&
+        !resolvedPortal.isInternal) {
+      return PortalResolver.resolvedHomeRoute();
     }
 
     return null;
   },
   routes: [
-    GoRoute(path: '/', redirect: (context, state) => '/customer/splash'),
+    GoRoute(
+      path: '/',
+      redirect: (context, state) => PortalResolver.resolvedHomeRoute(),
+    ),
     GoRoute(
       path: '/customer/splash',
       name: 'customer-splash',
@@ -151,72 +184,94 @@ final GoRouter router = GoRouter(
       redirect: (context, state) {
         final roleKey =
             state.pathParameters['role'] ?? SHIELDRole.customer.routeKey;
-        return '/portal/$roleKey/dashboard';
+        return PortalResolver.guardPortalRoute(
+              requestedRoleKey: roleKey,
+              sectionKey: 'dashboard',
+            ) ??
+            '/portal/$roleKey/dashboard';
       },
+    ),
+    GoRoute(
+      path: '/portal',
+      redirect: (context, state) => PortalResolver.resolvedHomeRoute(),
     ),
     GoRoute(
       path: '/portal/:role/:section',
       name: 'role-portal',
       builder: (context, state) {
-        final role = SHIELDRole.fromRouteKey(state.pathParameters['role']);
+        final requestedRole = SHIELDRole.fromRouteKey(
+          state.pathParameters['role'],
+        );
+        final resolvedRole = PortalResolver.current?.role ?? requestedRole;
         final section = state.pathParameters['section'];
-        return PortalShell(role: role, sectionKey: section);
+        return PortalShell(role: resolvedRole, sectionKey: section);
       },
     ),
     GoRoute(
       path: '/documents',
       name: 'documents',
-      redirect: (context, state) => '/portal/customer/documents',
+      redirect: (context, state) =>
+          PortalResolver.routeForResolvedSection('documents'),
     ),
     GoRoute(
       path: '/appointments',
       name: 'appointments',
-      redirect: (context, state) => '/portal/customer/appointments',
+      redirect: (context, state) =>
+          PortalResolver.routeForResolvedSection('appointments'),
     ),
     GoRoute(
       path: '/notifications',
       name: 'notifications',
-      redirect: (context, state) => '/portal/customer/notifications',
+      redirect: (context, state) =>
+          PortalResolver.routeForResolvedSection('notifications'),
     ),
     GoRoute(
       path: '/prescriptions',
       name: 'prescriptions',
-      redirect: (context, state) => '/portal/customer/prescriptions',
+      redirect: (context, state) =>
+          PortalResolver.routeForResolvedSection('prescriptions'),
     ),
     GoRoute(
       path: '/membership',
       name: 'membership',
-      redirect: (context, state) => '/portal/customer/membership',
+      redirect: (context, state) =>
+          PortalResolver.routeForResolvedSection('membership'),
     ),
     GoRoute(
       path: '/transactions',
       name: 'transactions',
-      redirect: (context, state) => '/portal/customer/wallet',
+      redirect: (context, state) =>
+          PortalResolver.routeForResolvedSection('wallet'),
     ),
     GoRoute(
       path: '/settings',
       name: 'settings',
-      redirect: (context, state) => '/portal/customer/settings',
+      redirect: (context, state) =>
+          PortalResolver.routeForResolvedSection('settings'),
     ),
     GoRoute(
       path: '/services',
       name: 'services',
-      redirect: (context, state) => '/portal/customer/services',
+      redirect: (context, state) =>
+          PortalResolver.routeForResolvedSection('services'),
     ),
     GoRoute(
       path: '/wallet',
       name: 'wallet',
-      redirect: (context, state) => '/portal/customer/wallet',
+      redirect: (context, state) =>
+          PortalResolver.routeForResolvedSection('wallet'),
     ),
     GoRoute(
       path: '/profile',
       name: 'profile',
-      redirect: (context, state) => '/portal/customer/profile',
+      redirect: (context, state) =>
+          PortalResolver.routeForResolvedSection('profile'),
     ),
     GoRoute(
       path: '/more',
       name: 'more',
-      redirect: (context, state) => '/portal/customer/dashboard',
+      redirect: (context, state) =>
+          PortalResolver.routeForResolvedSection('dashboard'),
     ),
   ],
   errorBuilder: (context, state) {
@@ -225,14 +280,14 @@ final GoRouter router = GoRouter(
     final hasCustomerSession = CustomerAuthSession.instance.isAuthenticated;
     final hasInternalSession = InternalAuthSession.instance.isAuthenticated;
     final targetRoute = hasInternalSession
-        ? '/portal/${InternalAuthSession.instance.homeRole.routeKey}/dashboard'
+        ? PortalResolver.resolvedHomeRoute()
         : hasCustomerSession
-        ? '/portal/customer/dashboard'
+        ? PortalResolver.resolvedHomeRoute()
         : isInternalPath
         ? '/internal/login'
         : '/customer/splash';
     final targetLabel = hasInternalSession
-        ? 'Open Provider Home'
+        ? 'Open Portal Home'
         : hasCustomerSession
         ? 'Open Member Home'
         : isInternalPath
