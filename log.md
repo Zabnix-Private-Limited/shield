@@ -7488,3 +7488,62 @@ est build, ackend/vercel.json, ackend/src/auth/auth.service.ts, and uth_devic
 - Verified Flutter test suite passes after the tabbed workspace and account consolidation changes.
 ---
 2026-07-02 21:01:33 IST
+## 200. Agent portal refinement pass: task-first dashboard, true registration wizard, richer document flow, task-oriented follow-ups, guided visits, analytical performance, and shared UI primitives
+**Timestamp:** 2026-07-02 22:19:02 IST
+
+**High-level description**: Continued the production-refinement phase without restarting or duplicating previous work. This pass focused on the next unfinished workflow-heavy screens and on extracting shared presentation primitives so the Agent Portal feels more like one cohesive enterprise product instead of a collection of form pages.
+- Added shared `agent_experience_widgets.dart` primitives for reusable panel cards, metric cards, status badges, empty states, and action tiles. This reduces duplicate one-off card/status implementations across the Agent Portal and improves maintainability for future polish passes.
+- Reworked the dashboard into a work dashboard instead of a stats dashboard. `Today’s Tasks` now dominates the screen with pending registrations, pending document uploads, today’s follow-ups, overdue follow-ups, upcoming visits, and high-priority alerts. Quick actions are larger and more actionable, and the monthly metrics were intentionally demoted to a supporting section.
+- Rebuilt registration into a true multi-step onboarding wizard with progress visualization, previous/next flow, automatic draft save when moving between steps, resume-draft support, inline validation, a document step, and a final review/submission screen. This sharply reduces scrolling and makes the flow more mobile-friendly.
+- Upgraded document management into a more DMS-like experience with required-document status rows, upload vs replace actions, search, filter, sort, richer document cards, file-type icons, verification/rejection note visibility when provided by the backend, and stronger preview/copy-link actions.
+- Redesigned follow-ups into a task-oriented workspace with separate `Overdue`, `Today`, `Upcoming`, and `History` sections, clearer status emphasis, and a simpler add-new-follow-up composer that starts with the selected customer.
+- Redesigned appointments into a guided booking flow (`Customer -> Provider -> Service -> Date -> Slot -> Confirmation`) plus status-based visit history sections (`Upcoming`, `Completed`, `Cancelled`) and clearer visit action hierarchy.
+- Improved reports so they feel like report generation instead of settings rows: shared format/status/date/search filters, generation progress, session-local recent export history, and cleaner report cards.
+- Reworked the performance page into a more analytical summary with daily/monthly measures, progress bars, and operational breakdowns instead of sparse placeholder-style cards.
+- Applied global design-consistency improvements through the reused primitives: tighter visual grouping, stronger badge hierarchy, clearer empty states, more consistent spacing, and better information density across the touched screens.
+
+### Frontend Files Modified
+- frontend/lib/features/agent/appointments/presentation/screens/agent_appointments_screen.dart
+- frontend/lib/features/agent/dashboard/presentation/screens/agent_dashboard_screen.dart
+- frontend/lib/features/agent/documents/presentation/screens/agent_documents_screen.dart
+- frontend/lib/features/agent/followups/presentation/screens/agent_followups_screen.dart
+- frontend/lib/features/agent/performance/presentation/screens/agent_performance_screen.dart
+- frontend/lib/features/agent/registration/presentation/screens/agent_registration_screen.dart
+- frontend/lib/features/agent/reports/presentation/screens/agent_reports_screen.dart
+- log.md
+
+### Frontend Files Added
+- frontend/lib/features/agent/shared/presentation/widgets/agent_experience_widgets.dart
+
+### APIs Added or Changed
+- No backend endpoint or payload contract changed in this pass.
+- Existing agent dashboard, customer, document, follow-up, appointment, report, and settings APIs were reused without business-logic changes.
+
+### Architecture Improvements
+- Reduced repeated card/status/empty-state patterns by moving them into shared Agent presentation primitives.
+- Kept all workflow changes inside the existing Riverpod controller/repository architecture.
+- Avoided new backend coupling by improving workflow presentation and client-side grouping rather than introducing parallel APIs.
+
+### Performance Improvements
+- Reduced visual and interaction overhead by grouping dashboard priorities and step-based registration flow instead of rendering every form section at once.
+- Simplified repeated UI structures through shared widgets to lower future widget churn and reduce presentation duplication.
+
+### Responsive Improvements
+- Dashboard, registration, documents, follow-ups, appointments, reports, and performance now collapse more predictably between two-column desktop layouts and stacked tablet/mobile layouts.
+- The registration wizard in particular now avoids the previous very long mobile scroll pattern.
+
+### Verification
+- cd frontend && flutter analyze --no-pub
+- cd frontend && flutter test
+- Verified Flutter analyze reports no issues after the workflow-screen refactor and shared-widget extraction.
+- Verified Flutter test suite passes after the new dashboard, registration, document, follow-up, appointment, report, and performance changes.
+
+### Known Remaining Work
+- Provider/customer/admin-facing polish remains outside this Agent-only pass.
+- Agent documents still rely on the currently exposed backend document metadata; true thumbnail generation and richer verification note density depend on backend payload availability.
+- Additional accessibility passes and broader cross-screen responsive QA should continue in future refinement slices.
+
+### Suggested Next Phase
+- Continue with remaining production refinement on shared dialogs/snackbars/bottom sheets, deeper responsive QA across all agent screens, and a focused accessibility/micro-interaction pass.
+---
+2026-07-02 22:19:02 IST
