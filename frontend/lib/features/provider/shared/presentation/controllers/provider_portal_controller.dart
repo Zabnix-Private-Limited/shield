@@ -11,7 +11,9 @@ import '../../../../../shared/services/platform_realtime_channel.dart';
 import '../../data/provider_portal_repository.dart';
 
 class ProviderPortalController extends ChangeNotifier {
-  ProviderPortalController(this._repository);
+  ProviderPortalController(this._repository) {
+    InternalAuthSession.instance.addListener(_handleAuthSessionChanged);
+  }
 
   final ProviderPortalRepository _repository;
 
@@ -513,6 +515,20 @@ class ProviderPortalController extends ChangeNotifier {
     }
   }
 
+  void _handleAuthSessionChanged() {
+    final authSession = InternalAuthSession.instance;
+    _trace(
+      'auth session changed initialized=${authSession.isInitialized} authenticated=${authSession.isAuthenticated} workspaceLoaded=$_workspaceLoaded realtimeSubscribed=$_realtimeSubscribed',
+    );
+    if (!_workspaceLoaded ||
+        _realtimeSubscribed ||
+        !authSession.isInitialized ||
+        !authSession.isAuthenticated) {
+      return;
+    }
+    Future<void>.microtask(attachRealtimeStream);
+  }
+
   Future<void> retryStartup() async {
     _trace('startup retry requested');
     _resetRealtimeSubscription();
@@ -567,17 +583,19 @@ class ProviderPortalController extends ChangeNotifier {
   Future<void> attachRealtimeStream() async {
     if (_realtimeSubscribed) {
       _trace(
-        'realtime attach skipped subscribed=4_realtimeSubscribed connected=4_realtimeConnected',
+        'realtime attach skipped subscribed=$_realtimeSubscribed connected=$_realtimeConnected',
       );
       return;
     }
+
     final authSession = InternalAuthSession.instance;
     if (!authSession.isInitialized || !authSession.isAuthenticated) {
       _trace(
-        'realtime attach skipped authInitialized=4{authSession.isInitialized} authAuthenticated=4{authSession.isAuthenticated}',
+        'realtime attach skipped authInitialized=${authSession.isInitialized} authAuthenticated=${authSession.isAuthenticated}',
       );
       return;
     }
+
     final accessToken = ApiService.currentAccessToken;
     if (accessToken == null || accessToken.isEmpty) {
       _trace('realtime attach skipped token missing');
@@ -588,7 +606,7 @@ class ProviderPortalController extends ChangeNotifier {
         realtimeRegistry['workspace']?.toString().trim().toLowerCase() ??
         'provider';
     _trace(
-      'realtime connect requested workspace=4workspaceKey token=4{_tokenPreview(accessToken)}',
+      'realtime connect requested workspace=$workspaceKey token=${_tokenPreview(accessToken)}',
     );
     _realtimeError = null;
     _realtimeSubscription = connectPlatformRealtimeStream(
@@ -599,7 +617,7 @@ class ProviderPortalController extends ChangeNotifier {
         _realtimeConnected = true;
         _realtimeError = null;
         _lastPlatformEventType = event['type']?.toString();
-        _trace('realtime event received type=4_lastPlatformEventType');
+        _trace('realtime event received type=$_lastPlatformEventType');
         notifyListeners();
         if (_lastPlatformEventType == 'STREAM_CONNECTED') {
           return;
@@ -617,12 +635,9 @@ class ProviderPortalController extends ChangeNotifier {
         });
       },
       onError: (error) {
-        _trace('realtime failed error=4error');
-        _realtimeConnected = false;
         _realtimeError = error.toString();
-        _realtimeSubscribed = false;
-        _realtimeSubscription?.dispose();
-        _realtimeSubscription = null;
+        _trace('realtime failed error=$error');
+        _resetRealtimeSubscription();
         notifyListeners();
       },
     );
@@ -1563,6 +1578,7 @@ class ProviderPortalController extends ChangeNotifier {
 
   @override
   void dispose() {
+    InternalAuthSession.instance.removeListener(_handleAuthSessionChanged);
     _resetRealtimeSubscription();
     super.dispose();
   }
