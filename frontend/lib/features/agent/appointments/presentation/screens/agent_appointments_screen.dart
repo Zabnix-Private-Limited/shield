@@ -72,79 +72,72 @@ class _AgentAppointmentsScreenState
       (item) => (item['status'] ?? '').toString().toUpperCase() == 'CANCELLED',
     );
 
-    return Card(
-      child: Padding(
-        padding: AgentUi.panelPadding,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const AgentSectionHeader(
-              title: 'Visits',
-              description:
-                  'Booking now follows a clearer customer → provider → service → date → time → confirmation flow, with visit history split by status instead of one flat list.',
-            ),
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 12,
-              runSpacing: 12,
-              children: [
-                AgentMetricCard(
-                  value: '${upcoming.length}',
-                  label: 'Upcoming',
-                  helper: 'Visits still waiting to happen.',
-                  icon: Icons.upcoming_outlined,
-                  color: Colors.blue.shade700,
-                ),
-                AgentMetricCard(
-                  value: '${completed.length}',
-                  label: 'Completed',
-                  helper: 'Visits already delivered.',
-                  icon: Icons.task_alt_outlined,
-                  color: Colors.green.shade700,
-                ),
-                AgentMetricCard(
-                  value: '${cancelled.length}',
-                  label: 'Cancelled',
-                  helper: 'Visits cancelled or dropped.',
-                  icon: Icons.event_busy_outlined,
-                  color: Colors.red.shade700,
-                ),
-              ],
-            ),
-            AgentUi.gapH(AgentUi.space12),
-            LayoutBuilder(
-              builder: (context, constraints) {
-                final stack = constraints.maxWidth < 980;
-                final composer = _buildComposer(
-                  context,
-                  selectedCustomerId,
-                  customerName,
-                  providers,
-                  providerLookupError: providerLookupError,
-                  isProviderLookupLoading: isProviderLookupLoading,
+    return AgentWorkspaceSurface(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const AgentSectionHeader(
+            title: 'Visits',
+            description:
+                'Booking now follows a clearer customer → provider → service → date → time → confirmation flow, with visit history split by status instead of one flat list.',
+          ),
+          AgentUi.gapH(AgentSpacing.sectionGap),
+          Wrap(
+            spacing: AgentSpacing.metricGap,
+            runSpacing: AgentSpacing.metricGap,
+            children: [
+              AgentMetricCard(
+                value: '${upcoming.length}',
+                label: 'Upcoming',
+                helper: 'Visits still waiting to happen.',
+                icon: Icons.upcoming_outlined,
+                color: AgentColors.accentBlue,
+              ),
+              AgentMetricCard(
+                value: '${completed.length}',
+                label: 'Completed',
+                helper: 'Visits already delivered.',
+                icon: Icons.task_alt_outlined,
+                color: AgentColors.success,
+              ),
+              AgentMetricCard(
+                value: '${cancelled.length}',
+                label: 'Cancelled',
+                helper: 'Visits cancelled or dropped.',
+                icon: Icons.event_busy_outlined,
+                color: AgentColors.danger,
+              ),
+            ],
+          ),
+          AgentUi.gapH(AgentSpacing.sectionGap),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final stack = constraints.maxWidth < 980;
+              final composer = _buildComposer(
+                context,
+                selectedCustomerId,
+                customerName,
+                providers,
+                providerLookupError: providerLookupError,
+                isProviderLookupLoading: isProviderLookupLoading,
+              );
+              final history = _buildHistory(visitHistory.toList());
+              if (stack) {
+                return Column(
+                  children: [composer, AgentUi.gapH(AgentSpacing.md), history],
                 );
-                final history = _buildHistory(visitHistory.toList());
-                if (stack) {
-                  return Column(
-                    children: [
-                      composer,
-                      AgentUi.gapH(AgentUi.space16),
-                      history,
-                    ],
-                  );
-                }
-                return Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(child: composer),
-                    AgentUi.gapW(AgentUi.space16),
-                    Expanded(child: history),
-                  ],
-                );
-              },
-            ),
-          ],
-        ),
+              }
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(child: composer),
+                  AgentUi.gapW(AgentSpacing.md),
+                  Expanded(child: history),
+                ],
+              );
+            },
+          ),
+        ],
       ),
     );
   }
@@ -569,14 +562,16 @@ class _AgentAppointmentsScreenState
     }
 
     if (providerLookupError != null && providers.isEmpty) {
-      return Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          color: Theme.of(
-            context,
-          ).colorScheme.errorContainer.withValues(alpha: 0.32),
+      return AgentInsetSurface(
+        padding: AgentSpacing.contentInsets.copyWith(
+          left: 14,
+          top: 14,
+          right: 14,
+          bottom: 14,
         ),
+        backgroundColor: Theme.of(
+          context,
+        ).colorScheme.errorContainer.withValues(alpha: 0.32),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -599,12 +594,8 @@ class _AgentAppointmentsScreenState
     }
 
     if (providers.isEmpty) {
-      return Container(
+      return AgentInsetSurface(
         padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          color: Theme.of(context).colorScheme.surfaceContainerLowest,
-        ),
         child: const Text(
           'No active providers are available for booking right now. Try again later or ask an administrator to verify provider access.',
         ),
@@ -705,11 +696,11 @@ Color _statusColor(String? rawStatus) {
   switch ((rawStatus ?? '').toUpperCase()) {
     case 'COMPLETED':
     case 'CONFIRMED':
-      return Colors.green.shade700;
+      return AgentColors.success;
     case 'CANCELLED':
-      return Colors.red.shade700;
+      return AgentColors.danger;
     default:
-      return Colors.blue.shade700;
+      return AgentColors.accentBlue;
   }
 }
 

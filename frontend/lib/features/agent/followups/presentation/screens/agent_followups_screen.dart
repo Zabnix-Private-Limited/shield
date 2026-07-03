@@ -69,19 +69,19 @@ class _AgentFollowUpsScreenState extends ConsumerState<AgentFollowUpsScreen> {
         _TaskSectionConfig(
           title: 'Overdue',
           tasks: overdueTasks.toList(),
-          badgeColor: Colors.red.shade700,
+          badgeColor: AgentColors.danger,
         ),
       if (todayTasks.isNotEmpty)
         _TaskSectionConfig(
           title: 'Today',
           tasks: todayTasks.toList(),
-          badgeColor: Colors.blue.shade700,
+          badgeColor: AgentColors.accentBlue,
         ),
       if (upcomingTasks.isNotEmpty)
         _TaskSectionConfig(
           title: 'Upcoming',
           tasks: upcomingTasks.toList(),
-          badgeColor: Colors.green.shade700,
+          badgeColor: AgentColors.success,
         ),
     ];
     final hasHistory = controller.customerActivities.isNotEmpty;
@@ -105,96 +105,95 @@ class _AgentFollowUpsScreenState extends ConsumerState<AgentFollowUpsScreen> {
       320.0,
       1200.0,
     );
+    final prefersLargeText = MediaQuery.textScalerOf(context).scale(1) > 1.3;
 
-    return Card(
-      child: Padding(
-        padding: AgentUi.compactPanelPadding,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            AgentSectionHeader(
-              title: 'Follow-Ups',
-              description:
-                  'Today, overdue, and upcoming follow-ups are separated clearly so agents can act first and log details second.',
-            ),
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 12,
-              runSpacing: 12,
-              children: [
-                AgentMetricCard(
-                  value: '${todayTasks.length}',
-                  label: 'Today',
-                  helper: 'Follow-ups scheduled for today.',
-                  icon: Icons.today_outlined,
-                  color: Colors.blue.shade700,
-                ),
-                AgentMetricCard(
-                  value: '${overdueTasks.length}',
-                  label: 'Overdue',
-                  helper: 'Items needing immediate attention.',
-                  icon: Icons.warning_amber_rounded,
-                  color: Colors.red.shade700,
-                ),
-                AgentMetricCard(
-                  value: '${upcomingTasks.length}',
-                  label: 'Upcoming',
-                  helper: 'Future follow-up commitments.',
-                  icon: Icons.upcoming_outlined,
-                  color: Colors.green.shade700,
-                ),
-                AgentMetricCard(
-                  value: '${completedHistory.length}',
-                  label: 'Completed',
-                  helper: 'Logged completion outcomes for this customer.',
-                  icon: Icons.task_alt_outlined,
-                  color: Colors.teal.shade700,
-                ),
-              ],
-            ),
-            AgentUi.gapH(AgentUi.space12),
-            SizedBox(
-              height: bodyHeight,
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  final stack = constraints.maxWidth < 980;
-                  final composer = _buildComposer(
-                    context,
-                    controller,
-                    customerId,
-                    customerName,
-                  );
-                  final detailPane = _buildDetailPane(
-                    context,
-                    controller: controller,
-                    customerId: customerId,
-                    hasFollowUpContent: hasFollowUpContent,
-                    taskSections: taskSections,
-                  );
+    return AgentWorkspaceSurface(
+      padding: AgentUi.compactPanelPadding,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          AgentSectionHeader(
+            title: 'Follow-Ups',
+            description:
+                'Today, overdue, and upcoming follow-ups are separated clearly so agents can act first and log details second.',
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 12,
+            runSpacing: 12,
+            children: [
+              AgentMetricCard(
+                value: '${todayTasks.length}',
+                label: 'Today',
+                helper: 'Follow-ups scheduled for today.',
+                icon: Icons.today_outlined,
+                color: AgentColors.accentBlue,
+              ),
+              AgentMetricCard(
+                value: '${overdueTasks.length}',
+                label: 'Overdue',
+                helper: 'Items needing immediate attention.',
+                icon: Icons.warning_amber_rounded,
+                color: AgentColors.danger,
+              ),
+              AgentMetricCard(
+                value: '${upcomingTasks.length}',
+                label: 'Upcoming',
+                helper: 'Future follow-up commitments.',
+                icon: Icons.upcoming_outlined,
+                color: AgentColors.success,
+              ),
+              AgentMetricCard(
+                value: '${completedHistory.length}',
+                label: 'Completed',
+                helper: 'Logged completion outcomes for this customer.',
+                icon: Icons.task_alt_outlined,
+                color: AgentColors.accentTeal,
+              ),
+            ],
+          ),
+          AgentUi.gapH(AgentUi.space12),
+          SizedBox(
+            height: bodyHeight,
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final stack = prefersLargeText || constraints.maxWidth < 980;
+                final composer = _buildComposer(
+                  context,
+                  controller,
+                  customerId,
+                  customerName,
+                );
+                final detailPane = _buildDetailPane(
+                  context,
+                  controller: controller,
+                  customerId: customerId,
+                  hasFollowUpContent: hasFollowUpContent,
+                  taskSections: taskSections,
+                );
 
-                  if (stack) {
-                    return ListView(
-                      children: [
-                        composer,
-                        const SizedBox(height: 16),
-                        detailPane,
-                      ],
-                    );
-                  }
-
-                  return Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                if (stack) {
+                  return ListView(
                     children: [
-                      Expanded(child: SingleChildScrollView(child: composer)),
-                      AgentUi.gapW(AgentUi.space16),
-                      Expanded(child: SingleChildScrollView(child: detailPane)),
+                      composer,
+                      const SizedBox(height: 16),
+                      detailPane,
                     ],
                   );
-                },
-              ),
+                }
+
+                return Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(child: SingleChildScrollView(child: composer)),
+                    AgentUi.gapW(AgentUi.space16),
+                    Expanded(child: SingleChildScrollView(child: detailPane)),
+                  ],
+                );
+              },
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -231,7 +230,7 @@ class _AgentFollowUpsScreenState extends ConsumerState<AgentFollowUpsScreen> {
             AgentStatusBadge(
               label:
                   'Last follow-up: ${_formatDate(lastActivity['createdAt'])}',
-              color: Colors.indigo.shade700,
+              color: AgentColors.accentIndigo,
               icon: Icons.history_outlined,
             ),
             const SizedBox(height: 12),
@@ -421,41 +420,39 @@ class _AgentFollowUpsScreenState extends ConsumerState<AgentFollowUpsScreen> {
   }
 
   Widget _buildLoadingState(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const AgentSectionHeader(
-              title: 'Follow-Ups',
-              description:
-                  'Loading the follow-up workspace so today, overdue, and historical activity render in one production state.',
-            ),
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 12,
-              runSpacing: 12,
-              children: List.generate(
-                4,
-                (index) => SizedBox(
-                  width: 220,
-                  child: AgentPanelCard(
-                    title: 'Loading',
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: const [
-                        LinearProgressIndicator(),
-                        SizedBox(height: 12),
-                        Text('Loading follow-up metrics...'),
-                      ],
-                    ),
+    return AgentWorkspaceSurface(
+      padding: AgentSpacing.contentInsets,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const AgentSectionHeader(
+            title: 'Follow-Ups',
+            description:
+                'Loading the follow-up workspace so today, overdue, and historical activity render in one production state.',
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 12,
+            runSpacing: 12,
+            children: List.generate(
+              4,
+              (index) => SizedBox(
+                width: 220,
+                child: AgentPanelCard(
+                  title: 'Loading',
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: const [
+                      LinearProgressIndicator(),
+                      SizedBox(height: 12),
+                      Text('Loading follow-up metrics...'),
+                    ],
                   ),
                 ),
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -540,7 +537,7 @@ class _AgentFollowUpsScreenState extends ConsumerState<AgentFollowUpsScreen> {
                       children: [
                         AgentStatusBadge(
                           label: _formatDate(task['dueDate']),
-                          color: Colors.indigo.shade700,
+                          color: AgentColors.accentIndigo,
                           icon: Icons.schedule_outlined,
                         ),
                         AgentGhostButton(

@@ -81,52 +81,49 @@ class _AgentDocumentsScreenState extends ConsumerState<AgentDocumentsScreen> {
       1200.0,
     );
 
-    return Card(
-      child: Padding(
-        padding: AgentUi.panelPadding,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const AgentSectionHeader(
-              title: 'Documents',
-              description:
-                  'This customer-first document flow now behaves more like a lightweight DMS: required files, status badges, verification states, sorting, and quick preview actions.',
-            ),
-            AgentUi.gapH(AgentUi.space16),
-            SizedBox(
-              height: bodyHeight,
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  final stack = constraints.maxWidth < 980;
-                  final left = _buildRequiredDocumentsCard(
-                    context,
-                    customerId,
-                    customerName,
-                    uploadedTypes,
-                    controller,
+    return AgentWorkspaceSurface(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const AgentSectionHeader(
+            title: 'Documents',
+            description:
+                'This customer-first document flow now behaves more like a lightweight DMS: required files, status badges, verification states, sorting, and quick preview actions.',
+          ),
+          AgentUi.gapH(AgentSpacing.md),
+          SizedBox(
+            height: bodyHeight,
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final stack = constraints.maxWidth < 980;
+                final left = _buildRequiredDocumentsCard(
+                  context,
+                  customerId,
+                  customerName,
+                  uploadedTypes,
+                  controller,
+                );
+                final right = _buildHistoryCard(context, controller, docs);
+                if (stack) {
+                  return ListView(
+                    children: [left, AgentUi.gapH(AgentSpacing.md), right],
                   );
-                  final right = _buildHistoryCard(context, controller, docs);
-                  if (stack) {
-                    return ListView(
-                      children: [left, AgentUi.gapH(AgentUi.space16), right],
-                    );
-                  }
-                  return Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      SizedBox(
-                        width: 320,
-                        child: SingleChildScrollView(child: left),
-                      ),
-                      AgentUi.gapW(AgentUi.space16),
-                      Expanded(child: SingleChildScrollView(child: right)),
-                    ],
-                  );
-                },
-              ),
+                }
+                return Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SizedBox(
+                      width: 320,
+                      child: SingleChildScrollView(child: left),
+                    ),
+                    AgentUi.gapW(AgentSpacing.md),
+                    Expanded(child: SingleChildScrollView(child: right)),
+                  ],
+                );
+              },
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -179,8 +176,8 @@ class _AgentDocumentsScreenState extends ConsumerState<AgentDocumentsScreen> {
                         ? 'Uploaded'
                         : 'Missing',
                     color: uploadedTypes.contains(doc.type)
-                        ? Colors.green.shade700
-                        : Colors.orange.shade700,
+                        ? AgentColors.success
+                        : AgentColors.warning,
                     icon: uploadedTypes.contains(doc.type)
                         ? Icons.check_circle
                         : Icons.radio_button_unchecked,
@@ -404,7 +401,7 @@ class _AgentDocumentsScreenState extends ConsumerState<AgentDocumentsScreen> {
                               ),
                               AgentStatusBadge(
                                 label: _humanize(doc['documentType']),
-                                color: Colors.indigo.shade700,
+                                color: AgentColors.accentIndigo,
                               ),
                             ],
                           ),
@@ -605,13 +602,9 @@ class _AgentDocumentsScreenState extends ConsumerState<AgentDocumentsScreen> {
       title: 'Documents',
       subtitle:
           'Loading the document workspace so uploads, verification states, and customer history stay synchronized.',
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          LinearProgressIndicator(),
-          SizedBox(height: 12),
-          Text('Loading document workspace...'),
-        ],
+      child: AgentLoadingState(
+        title: 'Loading document workspace',
+        message: 'Loading document workspace...',
       ),
     );
   }
@@ -752,12 +745,12 @@ Color _statusColor(String? rawStatus) {
     case 'APPROVED':
     case 'VALIDATED':
     case 'VERIFIED':
-      return Colors.green.shade700;
+      return AgentColors.success;
     case 'REJECTED':
-      return Colors.red.shade700;
+      return AgentColors.danger;
     case 'PENDING':
     default:
-      return Colors.orange.shade700;
+      return AgentColors.warning;
   }
 }
 

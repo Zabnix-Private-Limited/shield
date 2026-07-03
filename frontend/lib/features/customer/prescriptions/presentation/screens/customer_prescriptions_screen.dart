@@ -126,7 +126,7 @@ class _CustomerPrescriptionsScreenState
             const SizedBox(height: 18),
             if (prescriptions.isEmpty)
               AppCard(
-                child: Column(
+                child: const Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text('No prescriptions yet', style: AppTypography.h4),

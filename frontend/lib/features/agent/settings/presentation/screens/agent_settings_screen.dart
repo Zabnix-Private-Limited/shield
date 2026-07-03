@@ -472,24 +472,21 @@ class _AgentSettingsScreenState extends ConsumerState<AgentSettingsScreen> {
       ),
     ];
 
-    return Card(
-      child: Padding(
-        padding: AgentUi.panelPadding,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const AgentSectionHeader(
-              title: 'My Account',
-              description:
-                  'Manage identity and employee information here. Application preferences, devices, notifications, and session controls stay in Settings so the account screen remains focused on who the agent is.',
-            ),
-            AgentUi.gapH(AgentUi.space16),
-            SizedBox(
-              height: bodyHeight,
-              child: ListView(children: sections),
-            ),
-          ],
-        ),
+    return AgentWorkspaceSurface(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const AgentSectionHeader(
+            title: 'My Account',
+            description:
+                'Manage identity and employee information here. Application preferences, devices, notifications, and session controls stay in Settings so the account screen remains focused on who the agent is.',
+          ),
+          AgentUi.gapH(AgentUi.space16),
+          SizedBox(
+            height: bodyHeight,
+            child: ListView(children: sections),
+          ),
+        ],
       ),
     );
   }
@@ -508,635 +505,623 @@ class _AgentSettingsScreenState extends ConsumerState<AgentSettingsScreen> {
     );
     return DefaultTabController(
       length: 3,
-      child: Card(
-        child: Padding(
-          padding: AgentUi.panelPadding,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const AgentSectionHeader(
-                title: 'Settings',
-                description:
-                    'Manage application behavior here: workflow defaults, notifications, workspace operations, devices, and session security. Identity and employee details stay in My Account.',
-              ),
-              AgentUi.gapH(AgentUi.space16),
-              const TabBar(
-                isScrollable: true,
-                tabAlignment: TabAlignment.start,
-                tabs: [
-                  Tab(text: 'Preferences'),
-                  Tab(text: 'Workspace'),
-                  Tab(text: 'Security'),
-                ],
-              ),
-              AgentUi.gapH(AgentUi.space16),
-              SizedBox(
-                height: bodyHeight,
-                child: TabBarView(
-                  children: [
-                    ListView(
-                      children: [
-                        AgentPanelCard(
-                          title: 'Appearance and Workflow',
-                          subtitle:
-                              'Shared defaults that shape how the portal opens and behaves.',
-                          child: Wrap(
-                            spacing: AgentUi.space12,
-                            runSpacing: AgentUi.space12,
-                            children: [
-                              AgentFormFieldWidth(
-                                child: DropdownButtonFormField<String>(
-                                  isExpanded: true,
-                                  initialValue: _theme,
-                                  decoration: const InputDecoration(
-                                    labelText: 'Theme',
+      child: AgentWorkspaceSurface(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const AgentSectionHeader(
+              title: 'Settings',
+              description:
+                  'Manage application behavior here: workflow defaults, notifications, workspace operations, devices, and session security. Identity and employee details stay in My Account.',
+            ),
+            AgentUi.gapH(AgentUi.space16),
+            const TabBar(
+              isScrollable: true,
+              tabAlignment: TabAlignment.start,
+              tabs: [
+                Tab(text: 'Preferences'),
+                Tab(text: 'Workspace'),
+                Tab(text: 'Security'),
+              ],
+            ),
+            AgentUi.gapH(AgentUi.space16),
+            SizedBox(
+              height: bodyHeight,
+              child: TabBarView(
+                children: [
+                  ListView(
+                    children: [
+                      AgentPanelCard(
+                        title: 'Appearance and Workflow',
+                        subtitle:
+                            'Shared defaults that shape how the portal opens and behaves.',
+                        child: Wrap(
+                          spacing: AgentUi.space12,
+                          runSpacing: AgentUi.space12,
+                          children: [
+                            AgentFormFieldWidth(
+                              child: DropdownButtonFormField<String>(
+                                isExpanded: true,
+                                initialValue: _theme,
+                                decoration: const InputDecoration(
+                                  labelText: 'Theme',
+                                ),
+                                items: const [
+                                  DropdownMenuItem(
+                                    value: 'system',
+                                    child: Text('Use device setting'),
                                   ),
-                                  items: const [
-                                    DropdownMenuItem(
-                                      value: 'system',
-                                      child: Text('Use device setting'),
-                                    ),
-                                    DropdownMenuItem(
-                                      value: 'light',
-                                      child: Text('Light'),
-                                    ),
-                                    DropdownMenuItem(
-                                      value: 'dark',
-                                      child: Text('Dark'),
-                                    ),
-                                  ],
-                                  onChanged: controller.isProfileSaving
-                                      ? null
-                                      : (value) => setState(
-                                          () => _theme = value ?? 'system',
-                                        ),
-                                ),
-                              ),
-                              AgentFormFieldWidth(
-                                child: DropdownButtonFormField<String>(
-                                  isExpanded: true,
-                                  initialValue: _language,
-                                  decoration: const InputDecoration(
-                                    labelText: 'Language',
+                                  DropdownMenuItem(
+                                    value: 'light',
+                                    child: Text('Light'),
                                   ),
-                                  items: const [
-                                    DropdownMenuItem(
-                                      value: 'en',
-                                      child: Text('English'),
-                                    ),
-                                    DropdownMenuItem(
-                                      value: 'ml',
-                                      child: Text('Malayalam'),
-                                    ),
-                                    DropdownMenuItem(
-                                      value: 'hi',
-                                      child: Text('Hindi'),
-                                    ),
-                                  ],
-                                  onChanged: controller.isProfileSaving
-                                      ? null
-                                      : (value) => setState(
-                                          () => _language = value ?? 'en',
-                                        ),
-                                ),
-                              ),
-                              AgentFormFieldWidth(
-                                child: DropdownButtonFormField<String>(
-                                  isExpanded: true,
-                                  initialValue: _timezone,
-                                  decoration: const InputDecoration(
-                                    labelText: 'Timezone',
-                                  ),
-                                  items: const [
-                                    DropdownMenuItem(
-                                      value: 'Asia/Calcutta',
-                                      child: Text('India Standard Time'),
-                                    ),
-                                    DropdownMenuItem(
-                                      value: 'Asia/Dubai',
-                                      child: Text('Gulf Standard Time'),
-                                    ),
-                                    DropdownMenuItem(
-                                      value: 'UTC',
-                                      child: Text('UTC'),
-                                    ),
-                                  ],
-                                  onChanged: controller.isProfileSaving
-                                      ? null
-                                      : (value) => setState(
-                                          () => _timezone =
-                                              value ?? 'Asia/Calcutta',
-                                        ),
-                                ),
-                              ),
-                              AgentFormFieldWidth(
-                                child: DropdownButtonFormField<String>(
-                                  isExpanded: true,
-                                  initialValue: _defaultDashboard,
-                                  decoration: const InputDecoration(
-                                    labelText: 'Default Dashboard',
-                                  ),
-                                  items: const [
-                                    DropdownMenuItem(
-                                      value: 'overview',
-                                      child: Text('Overview'),
-                                    ),
-                                    DropdownMenuItem(
-                                      value: 'customers',
-                                      child: Text('Customers'),
-                                    ),
-                                    DropdownMenuItem(
-                                      value: 'followups',
-                                      child: Text('Follow-ups'),
-                                    ),
-                                  ],
-                                  onChanged: controller.isProfileSaving
-                                      ? null
-                                      : (value) => setState(
-                                          () => _defaultDashboard =
-                                              value ?? 'overview',
-                                        ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        AgentUi.gapH(AgentUi.space12),
-                        AgentPanelCard(
-                          title: 'Notifications and Display',
-                          subtitle:
-                              'Controls for reminders, push delivery, and portal defaults.',
-                          child: Column(
-                            children: [
-                              _SettingsToggleTile(
-                                label: 'Allow push notifications',
-                                icon: Icons.notifications_outlined,
-                                value: _allowPushNotifications,
-                                enabled: !controller.isProfileSaving,
-                                onChanged: (value) => setState(
-                                  () => _allowPushNotifications = value,
-                                ),
-                              ),
-                              _SettingsToggleTile(
-                                label: 'Follow-up reminders',
-                                icon: Icons.assignment_turned_in_outlined,
-                                value: _followUpReminders,
-                                enabled: !controller.isProfileSaving,
-                                onChanged: (value) =>
-                                    setState(() => _followUpReminders = value),
-                              ),
-                              _SettingsToggleTile(
-                                label: 'Appointment change alerts',
-                                icon: Icons.event_available_outlined,
-                                value: _appointmentChanges,
-                                enabled: !controller.isProfileSaving,
-                                onChanged: (value) =>
-                                    setState(() => _appointmentChanges = value),
-                              ),
-                              _SettingsToggleTile(
-                                label: 'Network update alerts',
-                                icon: Icons.account_tree_outlined,
-                                value: _referralUpdates,
-                                enabled: !controller.isProfileSaving,
-                                onChanged: (value) =>
-                                    setState(() => _referralUpdates = value),
-                              ),
-                              _SettingsToggleTile(
-                                label: 'Membership reminder alerts',
-                                icon: Icons.card_membership_outlined,
-                                value: _membershipReminders,
-                                enabled: !controller.isProfileSaving,
-                                onChanged: (value) => setState(
-                                  () => _membershipReminders = value,
-                                ),
-                              ),
-                              _SettingsToggleTile(
-                                label: 'Show customer codes by default',
-                                icon: Icons.badge_outlined,
-                                value: _showCustomerCodes,
-                                enabled: !controller.isProfileSaving,
-                                onChanged: (value) =>
-                                    setState(() => _showCustomerCodes = value),
-                              ),
-                              _SettingsToggleTile(
-                                label: 'Show membership badges',
-                                icon: Icons.sell_outlined,
-                                value: _showMembershipBadges,
-                                enabled: !controller.isProfileSaving,
-                                onChanged: (value) => setState(
-                                  () => _showMembershipBadges = value,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        AgentUi.gapH(AgentUi.space12),
-                        Align(
-                          alignment: Alignment.centerRight,
-                          child: AgentPrimaryButton(
-                            onPressed: controller.isProfileSaving
-                                ? null
-                                : () => _saveSettings(controller),
-                            icon: const Icon(Icons.save_outlined),
-                            label: controller.isProfileSaving
-                                ? 'Saving...'
-                                : 'Save Preferences',
-                            isLoading: controller.isProfileSaving,
-                          ),
-                        ),
-                      ],
-                    ),
-                    ListView(
-                      children: [
-                        AgentPanelCard(
-                          title: 'Availability and Working Hours',
-                          subtitle:
-                              'Operational status, schedule, and routing behavior for agent assignments.',
-                          child: Column(
-                            children: [
-                              _SettingsToggleTile(
-                                label: 'Available for new assignments',
-                                icon: Icons.fact_check_outlined,
-                                value: _availableForAssignments,
-                                enabled: !controller.isProfileSaving,
-                                onChanged: (value) => setState(
-                                  () => _availableForAssignments = value,
-                                ),
-                              ),
-                              AgentUi.gapH(AgentUi.space12),
-                              Wrap(
-                                spacing: AgentUi.space12,
-                                runSpacing: AgentUi.space12,
-                                children: [
-                                  AgentFormFieldWidth(
-                                    child: DropdownButtonFormField<String>(
-                                      isExpanded: true,
-                                      initialValue: _availabilityMode,
-                                      decoration: const InputDecoration(
-                                        labelText: 'Availability Mode',
-                                      ),
-                                      items: const [
-                                        DropdownMenuItem(
-                                          value: 'FIELD',
-                                          child: Text('Field'),
-                                        ),
-                                        DropdownMenuItem(
-                                          value: 'REMOTE',
-                                          child: Text('Remote'),
-                                        ),
-                                        DropdownMenuItem(
-                                          value: 'HYBRID',
-                                          child: Text('Hybrid'),
-                                        ),
-                                      ],
-                                      onChanged: controller.isProfileSaving
-                                          ? null
-                                          : (value) => setState(
-                                              () => _availabilityMode =
-                                                  value ?? 'FIELD',
-                                            ),
-                                    ),
-                                  ),
-                                  AgentFormFieldWidth(
-                                    child: TextField(
-                                      controller: _workingStartController,
-                                      decoration: const InputDecoration(
-                                        labelText: 'Working Hours Start',
-                                      ),
-                                    ),
-                                  ),
-                                  AgentFormFieldWidth(
-                                    child: TextField(
-                                      controller: _workingEndController,
-                                      decoration: const InputDecoration(
-                                        labelText: 'Working Hours End',
-                                      ),
-                                    ),
+                                  DropdownMenuItem(
+                                    value: 'dark',
+                                    child: Text('Dark'),
                                   ),
                                 ],
+                                onChanged: controller.isProfileSaving
+                                    ? null
+                                    : (value) => setState(
+                                        () => _theme = value ?? 'system',
+                                      ),
                               ),
-                            ],
-                          ),
-                        ),
-                        AgentUi.gapH(AgentUi.space12),
-                        AgentPanelCard(
-                          title: 'Field Coverage and Emergency Contact',
-                          subtitle:
-                              'Workspace routing data and support contacts used during field operations.',
-                          child: Wrap(
-                            spacing: AgentUi.space12,
-                            runSpacing: AgentUi.space12,
-                            children: [
-                              AgentFormFieldWidth(
-                                child: TextField(
-                                  controller: _workingAreaController,
-                                  decoration: const InputDecoration(
-                                    labelText: 'Working Area Label',
-                                  ),
-                                ),
-                              ),
-                              AgentFormFieldWidth(
-                                child: TextField(
-                                  controller: _workingDistrictController,
-                                  decoration: const InputDecoration(
-                                    labelText: 'District',
-                                  ),
-                                ),
-                              ),
-                              AgentFormFieldWidth(
-                                child: TextField(
-                                  controller: _travelRadiusController,
-                                  keyboardType: TextInputType.number,
-                                  decoration: const InputDecoration(
-                                    labelText: 'Travel Radius (km)',
-                                  ),
-                                ),
-                              ),
-                              AgentFormFieldWidth(
-                                child: TextField(
-                                  controller: _emergencyNameController,
-                                  decoration: const InputDecoration(
-                                    labelText: 'Emergency Contact Name',
-                                  ),
-                                ),
-                              ),
-                              AgentFormFieldWidth(
-                                child: TextField(
-                                  controller: _emergencyPhoneController,
-                                  keyboardType: TextInputType.phone,
-                                  decoration: const InputDecoration(
-                                    labelText: 'Emergency Contact Phone',
-                                  ),
-                                ),
-                              ),
-                              AgentFormFieldWidth(
-                                child: TextField(
-                                  controller: _emergencyRelationController,
-                                  decoration: const InputDecoration(
-                                    labelText: 'Relationship',
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        AgentUi.gapH(AgentUi.space12),
-                        AgentPanelCard(
-                          title: 'Branch Request',
-                          subtitle:
-                              'Operational branch requests stay here so the account screen is not overloaded with workflow controls.',
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              DropdownButtonFormField<String>(
+                            ),
+                            AgentFormFieldWidth(
+                              child: DropdownButtonFormField<String>(
                                 isExpanded: true,
-                                initialValue: safeRequestedBranchId,
+                                initialValue: _language,
                                 decoration: const InputDecoration(
-                                  labelText:
-                                      'Request Transfer or Assign Branch',
+                                  labelText: 'Language',
                                 ),
-                                items: branches
-                                    .map(
-                                      (branch) => DropdownMenuItem<String>(
-                                        value: branch['id']?.toString() ?? '',
-                                        child: Text(
-                                          '${branch['name'] ?? 'Branch'} (${branch['code'] ?? '-'})',
+                                items: const [
+                                  DropdownMenuItem(
+                                    value: 'en',
+                                    child: Text('English'),
+                                  ),
+                                  DropdownMenuItem(
+                                    value: 'ml',
+                                    child: Text('Malayalam'),
+                                  ),
+                                  DropdownMenuItem(
+                                    value: 'hi',
+                                    child: Text('Hindi'),
+                                  ),
+                                ],
+                                onChanged: controller.isProfileSaving
+                                    ? null
+                                    : (value) => setState(
+                                        () => _language = value ?? 'en',
+                                      ),
+                              ),
+                            ),
+                            AgentFormFieldWidth(
+                              child: DropdownButtonFormField<String>(
+                                isExpanded: true,
+                                initialValue: _timezone,
+                                decoration: const InputDecoration(
+                                  labelText: 'Timezone',
+                                ),
+                                items: const [
+                                  DropdownMenuItem(
+                                    value: 'Asia/Calcutta',
+                                    child: Text('India Standard Time'),
+                                  ),
+                                  DropdownMenuItem(
+                                    value: 'Asia/Dubai',
+                                    child: Text('Gulf Standard Time'),
+                                  ),
+                                  DropdownMenuItem(
+                                    value: 'UTC',
+                                    child: Text('UTC'),
+                                  ),
+                                ],
+                                onChanged: controller.isProfileSaving
+                                    ? null
+                                    : (value) => setState(
+                                        () => _timezone =
+                                            value ?? 'Asia/Calcutta',
+                                      ),
+                              ),
+                            ),
+                            AgentFormFieldWidth(
+                              child: DropdownButtonFormField<String>(
+                                isExpanded: true,
+                                initialValue: _defaultDashboard,
+                                decoration: const InputDecoration(
+                                  labelText: 'Default Dashboard',
+                                ),
+                                items: const [
+                                  DropdownMenuItem(
+                                    value: 'overview',
+                                    child: Text('Overview'),
+                                  ),
+                                  DropdownMenuItem(
+                                    value: 'customers',
+                                    child: Text('Customers'),
+                                  ),
+                                  DropdownMenuItem(
+                                    value: 'followups',
+                                    child: Text('Follow-ups'),
+                                  ),
+                                ],
+                                onChanged: controller.isProfileSaving
+                                    ? null
+                                    : (value) => setState(
+                                        () => _defaultDashboard =
+                                            value ?? 'overview',
+                                      ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      AgentUi.gapH(AgentUi.space12),
+                      AgentPanelCard(
+                        title: 'Notifications and Display',
+                        subtitle:
+                            'Controls for reminders, push delivery, and portal defaults.',
+                        child: Column(
+                          children: [
+                            _SettingsToggleTile(
+                              label: 'Allow push notifications',
+                              icon: Icons.notifications_outlined,
+                              value: _allowPushNotifications,
+                              enabled: !controller.isProfileSaving,
+                              onChanged: (value) => setState(
+                                () => _allowPushNotifications = value,
+                              ),
+                            ),
+                            _SettingsToggleTile(
+                              label: 'Follow-up reminders',
+                              icon: Icons.assignment_turned_in_outlined,
+                              value: _followUpReminders,
+                              enabled: !controller.isProfileSaving,
+                              onChanged: (value) =>
+                                  setState(() => _followUpReminders = value),
+                            ),
+                            _SettingsToggleTile(
+                              label: 'Appointment change alerts',
+                              icon: Icons.event_available_outlined,
+                              value: _appointmentChanges,
+                              enabled: !controller.isProfileSaving,
+                              onChanged: (value) =>
+                                  setState(() => _appointmentChanges = value),
+                            ),
+                            _SettingsToggleTile(
+                              label: 'Network update alerts',
+                              icon: Icons.account_tree_outlined,
+                              value: _referralUpdates,
+                              enabled: !controller.isProfileSaving,
+                              onChanged: (value) =>
+                                  setState(() => _referralUpdates = value),
+                            ),
+                            _SettingsToggleTile(
+                              label: 'Membership reminder alerts',
+                              icon: Icons.card_membership_outlined,
+                              value: _membershipReminders,
+                              enabled: !controller.isProfileSaving,
+                              onChanged: (value) =>
+                                  setState(() => _membershipReminders = value),
+                            ),
+                            _SettingsToggleTile(
+                              label: 'Show customer codes by default',
+                              icon: Icons.badge_outlined,
+                              value: _showCustomerCodes,
+                              enabled: !controller.isProfileSaving,
+                              onChanged: (value) =>
+                                  setState(() => _showCustomerCodes = value),
+                            ),
+                            _SettingsToggleTile(
+                              label: 'Show membership badges',
+                              icon: Icons.sell_outlined,
+                              value: _showMembershipBadges,
+                              enabled: !controller.isProfileSaving,
+                              onChanged: (value) =>
+                                  setState(() => _showMembershipBadges = value),
+                            ),
+                          ],
+                        ),
+                      ),
+                      AgentUi.gapH(AgentUi.space12),
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: AgentPrimaryButton(
+                          onPressed: controller.isProfileSaving
+                              ? null
+                              : () => _saveSettings(controller),
+                          icon: const Icon(Icons.save_outlined),
+                          label: controller.isProfileSaving
+                              ? 'Saving...'
+                              : 'Save Preferences',
+                          isLoading: controller.isProfileSaving,
+                        ),
+                      ),
+                    ],
+                  ),
+                  ListView(
+                    children: [
+                      AgentPanelCard(
+                        title: 'Availability and Working Hours',
+                        subtitle:
+                            'Operational status, schedule, and routing behavior for agent assignments.',
+                        child: Column(
+                          children: [
+                            _SettingsToggleTile(
+                              label: 'Available for new assignments',
+                              icon: Icons.fact_check_outlined,
+                              value: _availableForAssignments,
+                              enabled: !controller.isProfileSaving,
+                              onChanged: (value) => setState(
+                                () => _availableForAssignments = value,
+                              ),
+                            ),
+                            AgentUi.gapH(AgentUi.space12),
+                            Wrap(
+                              spacing: AgentUi.space12,
+                              runSpacing: AgentUi.space12,
+                              children: [
+                                AgentFormFieldWidth(
+                                  child: DropdownButtonFormField<String>(
+                                    isExpanded: true,
+                                    initialValue: _availabilityMode,
+                                    decoration: const InputDecoration(
+                                      labelText: 'Availability Mode',
+                                    ),
+                                    items: const [
+                                      DropdownMenuItem(
+                                        value: 'FIELD',
+                                        child: Text('Field'),
+                                      ),
+                                      DropdownMenuItem(
+                                        value: 'REMOTE',
+                                        child: Text('Remote'),
+                                      ),
+                                      DropdownMenuItem(
+                                        value: 'HYBRID',
+                                        child: Text('Hybrid'),
+                                      ),
+                                    ],
+                                    onChanged: controller.isProfileSaving
+                                        ? null
+                                        : (value) => setState(
+                                            () => _availabilityMode =
+                                                value ?? 'FIELD',
+                                          ),
+                                  ),
+                                ),
+                                AgentFormFieldWidth(
+                                  child: TextField(
+                                    controller: _workingStartController,
+                                    decoration: const InputDecoration(
+                                      labelText: 'Working Hours Start',
+                                    ),
+                                  ),
+                                ),
+                                AgentFormFieldWidth(
+                                  child: TextField(
+                                    controller: _workingEndController,
+                                    decoration: const InputDecoration(
+                                      labelText: 'Working Hours End',
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                      AgentUi.gapH(AgentUi.space12),
+                      AgentPanelCard(
+                        title: 'Field Coverage and Emergency Contact',
+                        subtitle:
+                            'Workspace routing data and support contacts used during field operations.',
+                        child: Wrap(
+                          spacing: AgentUi.space12,
+                          runSpacing: AgentUi.space12,
+                          children: [
+                            AgentFormFieldWidth(
+                              child: TextField(
+                                controller: _workingAreaController,
+                                decoration: const InputDecoration(
+                                  labelText: 'Working Area Label',
+                                ),
+                              ),
+                            ),
+                            AgentFormFieldWidth(
+                              child: TextField(
+                                controller: _workingDistrictController,
+                                decoration: const InputDecoration(
+                                  labelText: 'District',
+                                ),
+                              ),
+                            ),
+                            AgentFormFieldWidth(
+                              child: TextField(
+                                controller: _travelRadiusController,
+                                keyboardType: TextInputType.number,
+                                decoration: const InputDecoration(
+                                  labelText: 'Travel Radius (km)',
+                                ),
+                              ),
+                            ),
+                            AgentFormFieldWidth(
+                              child: TextField(
+                                controller: _emergencyNameController,
+                                decoration: const InputDecoration(
+                                  labelText: 'Emergency Contact Name',
+                                ),
+                              ),
+                            ),
+                            AgentFormFieldWidth(
+                              child: TextField(
+                                controller: _emergencyPhoneController,
+                                keyboardType: TextInputType.phone,
+                                decoration: const InputDecoration(
+                                  labelText: 'Emergency Contact Phone',
+                                ),
+                              ),
+                            ),
+                            AgentFormFieldWidth(
+                              child: TextField(
+                                controller: _emergencyRelationController,
+                                decoration: const InputDecoration(
+                                  labelText: 'Relationship',
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      AgentUi.gapH(AgentUi.space12),
+                      AgentPanelCard(
+                        title: 'Branch Request',
+                        subtitle:
+                            'Operational branch requests stay here so the account screen is not overloaded with workflow controls.',
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            DropdownButtonFormField<String>(
+                              isExpanded: true,
+                              initialValue: safeRequestedBranchId,
+                              decoration: const InputDecoration(
+                                labelText: 'Request Transfer or Assign Branch',
+                              ),
+                              items: branches
+                                  .map(
+                                    (branch) => DropdownMenuItem<String>(
+                                      value: branch['id']?.toString() ?? '',
+                                      child: Text(
+                                        '${branch['name'] ?? 'Branch'} (${branch['code'] ?? '-'})',
+                                      ),
+                                    ),
+                                  )
+                                  .toList(),
+                              onChanged: controller.isProfileSaving
+                                  ? null
+                                  : (value) => setState(
+                                      () => _requestedBranchId = value,
+                                    ),
+                            ),
+                            AgentUi.gapH(AgentUi.space12),
+                            TextField(
+                              controller: _branchNotesController,
+                              maxLines: 2,
+                              decoration: const InputDecoration(
+                                labelText: 'Branch Request Note',
+                              ),
+                            ),
+                            AgentUi.gapH(AgentUi.space16),
+                            if (assignments.isEmpty)
+                              const Text(
+                                'No branch lifecycle history is available yet.',
+                              )
+                            else
+                              ...assignments.map<Widget>(
+                                (assignment) => ListTile(
+                                  contentPadding: EdgeInsets.zero,
+                                  leading: const Icon(Icons.business_outlined),
+                                  title: Text(
+                                    assignment['business'] is Map
+                                        ? (assignment['business']
+                                                      as Map)['name']
+                                                  ?.toString() ??
+                                              'Branch'
+                                        : 'Branch',
+                                  ),
+                                  subtitle: Text(
+                                    'Status: ${assignment['status'] ?? 'PENDING'}${assignment['notes']?.toString().isNotEmpty == true ? ' • ${assignment['notes']}' : ''}',
+                                  ),
+                                  trailing: assignment['isPrimary'] == true
+                                      ? AgentStatusBadge(
+                                          label: 'Primary',
+                                          color: AgentUi.statusColor(
+                                            context,
+                                            'ACTIVE',
+                                          ),
+                                          icon: Icons.check_circle_outline,
+                                        )
+                                      : null,
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                      AgentUi.gapH(AgentUi.space12),
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: AgentPrimaryButton(
+                          onPressed: controller.isProfileSaving
+                              ? null
+                              : () => _saveSettings(controller),
+                          icon: const Icon(Icons.save_outlined),
+                          label: controller.isProfileSaving
+                              ? 'Saving...'
+                              : 'Save Workspace Settings',
+                          isLoading: controller.isProfileSaving,
+                        ),
+                      ),
+                    ],
+                  ),
+                  ListView(
+                    children: [
+                      AgentPanelCard(
+                        title: 'Device Preferences',
+                        subtitle:
+                            'Control device labeling and push behavior for this agent account.',
+                        child: Wrap(
+                          spacing: AgentUi.space12,
+                          runSpacing: AgentUi.space12,
+                          children: [
+                            AgentFormFieldWidth(
+                              child: TextField(
+                                controller: _deviceLabelController,
+                                decoration: const InputDecoration(
+                                  labelText: 'Preferred Device Label',
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      AgentUi.gapH(AgentUi.space12),
+                      AgentPanelCard(
+                        title: 'Session Controls',
+                        subtitle:
+                            'Security actions and device management for the current SHIELD account.',
+                        child: Wrap(
+                          spacing: AgentUi.space8,
+                          runSpacing: AgentUi.space8,
+                          children: [
+                            AgentPrimaryButton(
+                              onPressed: InternalAuthSession.instance.signOut,
+                              icon: const Icon(Icons.logout_outlined),
+                              label: 'Sign Out',
+                            ),
+                            AgentSecondaryButton(
+                              onPressed: controller.isSettingsLoading
+                                  ? null
+                                  : () => ref
+                                        .read(agentPortalControllerProvider)
+                                        .revokeOtherOwnedSessions(),
+                              icon: const Icon(Icons.phonelink_erase_outlined),
+                              label: 'Sign Out Other Devices',
+                            ),
+                          ],
+                        ),
+                      ),
+                      AgentUi.gapH(AgentUi.space12),
+                      AgentPanelCard(
+                        title: 'Active Sessions',
+                        subtitle:
+                            'Visible devices currently signed in with this account.',
+                        child: controller.sessions.isEmpty
+                            ? const AgentEmptyState(
+                                icon: Icons.devices_outlined,
+                                title: 'No active sessions',
+                                message:
+                                    'Session information will appear here once SHIELD records device activity for this account.',
+                              )
+                            : Column(
+                                children: controller.sessions
+                                    .map<Widget>(
+                                      (session) => ListTile(
+                                        contentPadding: EdgeInsets.zero,
+                                        leading: const Icon(
+                                          Icons.devices_outlined,
+                                        ),
+                                        title: Text(
+                                          session['device']?['deviceName']
+                                                  ?.toString() ??
+                                              'Session',
+                                        ),
+                                        subtitle: Text(
+                                          session['loginMethod']?.toString() ??
+                                              'Internal login',
+                                        ),
+                                        trailing: session['isCurrent'] == true
+                                            ? AgentStatusBadge(
+                                                label: 'Current',
+                                                color: AgentUi.statusColor(
+                                                  context,
+                                                  'ACTIVE',
+                                                ),
+                                                icon:
+                                                    Icons.check_circle_outline,
+                                              )
+                                            : AgentGhostButton(
+                                                onPressed: () => ref
+                                                    .read(
+                                                      agentPortalControllerProvider,
+                                                    )
+                                                    .revokeOwnedSession(
+                                                      session['sessionId']
+                                                              ?.toString() ??
+                                                          '',
+                                                    ),
+                                                label: 'Revoke',
+                                              ),
+                                      ),
+                                    )
+                                    .toList(),
+                              ),
+                      ),
+                      AgentUi.gapH(AgentUi.space12),
+                      AgentPanelCard(
+                        title: 'Login History',
+                        subtitle:
+                            'Recent access activity for quick security review.',
+                        child: controller.loginHistory.isEmpty
+                            ? const AgentEmptyState(
+                                icon: Icons.history_outlined,
+                                title: 'No login history',
+                                message:
+                                    'Recent login activity will appear here after the first recorded sessions.',
+                              )
+                            : Column(
+                                children: controller.loginHistory
+                                    .take(10)
+                                    .map<Widget>(
+                                      (row) => ListTile(
+                                        contentPadding: EdgeInsets.zero,
+                                        leading: const Icon(
+                                          Icons.history_outlined,
+                                        ),
+                                        title: Text(
+                                          row['status']?.toString() ??
+                                              'Status unavailable',
+                                        ),
+                                        subtitle: Text(
+                                          row['createdAt']?.toString() ?? '',
+                                        ),
+                                        trailing: Text(
+                                          row['loginMethod']?.toString() ?? '',
                                         ),
                                       ),
                                     )
                                     .toList(),
-                                onChanged: controller.isProfileSaving
-                                    ? null
-                                    : (value) => setState(
-                                        () => _requestedBranchId = value,
-                                      ),
                               ),
-                              AgentUi.gapH(AgentUi.space12),
-                              TextField(
-                                controller: _branchNotesController,
-                                maxLines: 2,
-                                decoration: const InputDecoration(
-                                  labelText: 'Branch Request Note',
-                                ),
-                              ),
-                              AgentUi.gapH(AgentUi.space16),
-                              if (assignments.isEmpty)
-                                const Text(
-                                  'No branch lifecycle history is available yet.',
-                                )
-                              else
-                                ...assignments.map<Widget>(
-                                  (assignment) => ListTile(
-                                    contentPadding: EdgeInsets.zero,
-                                    leading: const Icon(
-                                      Icons.business_outlined,
-                                    ),
-                                    title: Text(
-                                      assignment['business'] is Map
-                                          ? (assignment['business']
-                                                        as Map)['name']
-                                                    ?.toString() ??
-                                                'Branch'
-                                          : 'Branch',
-                                    ),
-                                    subtitle: Text(
-                                      'Status: ${assignment['status'] ?? 'PENDING'}${assignment['notes']?.toString().isNotEmpty == true ? ' • ${assignment['notes']}' : ''}',
-                                    ),
-                                    trailing: assignment['isPrimary'] == true
-                                        ? AgentStatusBadge(
-                                            label: 'Primary',
-                                            color: AgentUi.statusColor(
-                                              context,
-                                              'ACTIVE',
-                                            ),
-                                            icon: Icons.check_circle_outline,
-                                          )
-                                        : null,
-                                  ),
-                                ),
-                            ],
-                          ),
+                      ),
+                      AgentUi.gapH(AgentUi.space12),
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: AgentPrimaryButton(
+                          onPressed: controller.isProfileSaving
+                              ? null
+                              : () => _saveSettings(controller),
+                          icon: const Icon(Icons.save_outlined),
+                          label: controller.isProfileSaving
+                              ? 'Saving...'
+                              : 'Save Device Settings',
+                          isLoading: controller.isProfileSaving,
                         ),
-                        AgentUi.gapH(AgentUi.space12),
-                        Align(
-                          alignment: Alignment.centerRight,
-                          child: AgentPrimaryButton(
-                            onPressed: controller.isProfileSaving
-                                ? null
-                                : () => _saveSettings(controller),
-                            icon: const Icon(Icons.save_outlined),
-                            label: controller.isProfileSaving
-                                ? 'Saving...'
-                                : 'Save Workspace Settings',
-                            isLoading: controller.isProfileSaving,
-                          ),
-                        ),
-                      ],
-                    ),
-                    ListView(
-                      children: [
-                        AgentPanelCard(
-                          title: 'Device Preferences',
-                          subtitle:
-                              'Control device labeling and push behavior for this agent account.',
-                          child: Wrap(
-                            spacing: AgentUi.space12,
-                            runSpacing: AgentUi.space12,
-                            children: [
-                              AgentFormFieldWidth(
-                                child: TextField(
-                                  controller: _deviceLabelController,
-                                  decoration: const InputDecoration(
-                                    labelText: 'Preferred Device Label',
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        AgentUi.gapH(AgentUi.space12),
-                        AgentPanelCard(
-                          title: 'Session Controls',
-                          subtitle:
-                              'Security actions and device management for the current SHIELD account.',
-                          child: Wrap(
-                            spacing: AgentUi.space8,
-                            runSpacing: AgentUi.space8,
-                            children: [
-                              AgentPrimaryButton(
-                                onPressed: InternalAuthSession.instance.signOut,
-                                icon: const Icon(Icons.logout_outlined),
-                                label: 'Sign Out',
-                              ),
-                              AgentSecondaryButton(
-                                onPressed: controller.isSettingsLoading
-                                    ? null
-                                    : () => ref
-                                          .read(agentPortalControllerProvider)
-                                          .revokeOtherOwnedSessions(),
-                                icon: const Icon(
-                                  Icons.phonelink_erase_outlined,
-                                ),
-                                label: 'Sign Out Other Devices',
-                              ),
-                            ],
-                          ),
-                        ),
-                        AgentUi.gapH(AgentUi.space12),
-                        AgentPanelCard(
-                          title: 'Active Sessions',
-                          subtitle:
-                              'Visible devices currently signed in with this account.',
-                          child: controller.sessions.isEmpty
-                              ? const AgentEmptyState(
-                                  icon: Icons.devices_outlined,
-                                  title: 'No active sessions',
-                                  message:
-                                      'Session information will appear here once SHIELD records device activity for this account.',
-                                )
-                              : Column(
-                                  children: controller.sessions
-                                      .map<Widget>(
-                                        (session) => ListTile(
-                                          contentPadding: EdgeInsets.zero,
-                                          leading: const Icon(
-                                            Icons.devices_outlined,
-                                          ),
-                                          title: Text(
-                                            session['device']?['deviceName']
-                                                    ?.toString() ??
-                                                'Session',
-                                          ),
-                                          subtitle: Text(
-                                            session['loginMethod']
-                                                    ?.toString() ??
-                                                'Internal login',
-                                          ),
-                                          trailing: session['isCurrent'] == true
-                                              ? AgentStatusBadge(
-                                                  label: 'Current',
-                                                  color: AgentUi.statusColor(
-                                                    context,
-                                                    'ACTIVE',
-                                                  ),
-                                                  icon: Icons
-                                                      .check_circle_outline,
-                                                )
-                                              : AgentGhostButton(
-                                                  onPressed: () => ref
-                                                      .read(
-                                                        agentPortalControllerProvider,
-                                                      )
-                                                      .revokeOwnedSession(
-                                                        session['sessionId']
-                                                                ?.toString() ??
-                                                            '',
-                                                      ),
-                                                  label: 'Revoke',
-                                                ),
-                                        ),
-                                      )
-                                      .toList(),
-                                ),
-                        ),
-                        AgentUi.gapH(AgentUi.space12),
-                        AgentPanelCard(
-                          title: 'Login History',
-                          subtitle:
-                              'Recent access activity for quick security review.',
-                          child: controller.loginHistory.isEmpty
-                              ? const AgentEmptyState(
-                                  icon: Icons.history_outlined,
-                                  title: 'No login history',
-                                  message:
-                                      'Recent login activity will appear here after the first recorded sessions.',
-                                )
-                              : Column(
-                                  children: controller.loginHistory
-                                      .take(10)
-                                      .map<Widget>(
-                                        (row) => ListTile(
-                                          contentPadding: EdgeInsets.zero,
-                                          leading: const Icon(
-                                            Icons.history_outlined,
-                                          ),
-                                          title: Text(
-                                            row['status']?.toString() ??
-                                                'Status unavailable',
-                                          ),
-                                          subtitle: Text(
-                                            row['createdAt']?.toString() ?? '',
-                                          ),
-                                          trailing: Text(
-                                            row['loginMethod']?.toString() ??
-                                                '',
-                                          ),
-                                        ),
-                                      )
-                                      .toList(),
-                                ),
-                        ),
-                        AgentUi.gapH(AgentUi.space12),
-                        Align(
-                          alignment: Alignment.centerRight,
-                          child: AgentPrimaryButton(
-                            onPressed: controller.isProfileSaving
-                                ? null
-                                : () => _saveSettings(controller),
-                            icon: const Icon(Icons.save_outlined),
-                            label: controller.isProfileSaving
-                                ? 'Saving...'
-                                : 'Save Device Settings',
-                            isLoading: controller.isProfileSaving,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );

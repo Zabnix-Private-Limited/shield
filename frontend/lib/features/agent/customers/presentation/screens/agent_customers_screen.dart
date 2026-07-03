@@ -64,116 +64,125 @@ class _AgentCustomersScreenState extends ConsumerState<AgentCustomersScreen> {
               .toLowerCase();
       return combined.contains(_query.toLowerCase());
     }).toList();
+    final workspaceHeight = (MediaQuery.sizeOf(context).height - 280).clamp(
+      360.0,
+      1200.0,
+    );
+    final stackedWorkspaceHeight = (workspaceHeight + 520).clamp(
+      920.0,
+      1600.0,
+    );
 
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            AgentSectionHeader(
-              title: 'Customers',
-              description:
-                  'Search your assigned customers, open one operational workspace at a time, and keep follow-ups, visits, documents, wallet, and timeline inside tabs instead of one long scrolling page.',
-              actions: [
-                AgentPrimaryButton(
-                  onPressed: () => context.go('/portal/agent/registration'),
-                  icon: const Icon(Icons.person_add_alt_1_outlined),
-                  label: 'Register Customer',
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              decoration: const InputDecoration(
-                labelText: 'Search by name, phone, SHIELD ID, or status',
-                prefixIcon: Icon(Icons.search),
+    return AgentWorkspaceSurface(
+      padding: AgentSpacing.contentInsets,
+      child: Column(
+        children: [
+          AgentSectionHeader(
+            title: 'Customers',
+            description:
+                'Search your assigned customers, open one operational workspace at a time, and keep follow-ups, visits, documents, wallet, and timeline inside tabs instead of one long scrolling page.',
+            actions: [
+              AgentPrimaryButton(
+                onPressed: () => context.go('/portal/agent/registration'),
+                icon: const Icon(Icons.person_add_alt_1_outlined),
+                label: 'Register Customer',
               ),
-              onChanged: (value) => setState(() => _query = value),
+            ],
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            decoration: const InputDecoration(
+              labelText: 'Search by name, phone, SHIELD ID, or status',
+              prefixIcon: Icon(Icons.search),
             ),
-            const SizedBox(height: 12),
-            SizedBox(
-              height: 920,
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  final stack = constraints.maxWidth < 1080;
-                  final listPane = _CustomerListPane(
-                    customers: filteredCustomers,
-                    selectedCustomerId: controller.selectedCustomerId,
-                    onTap: (customerId) {
-                      setState(() => _editingProfile = false);
-                      ref
-                          .read(agentPortalControllerProvider)
-                          .selectCustomer(customerId);
-                    },
-                  );
-                  final detailPane = controller.isCustomerLoading
-                      ? const Center(child: CircularProgressIndicator())
-                      : _CustomerWorkspaceDetail(
-                          controller: controller,
-                          editingProfile: _editingProfile,
-                          firstNameController: _firstNameController,
-                          lastNameController: _lastNameController,
-                          mobileController: _mobileController,
-                          emailController: _emailController,
-                          cityController: _cityController,
-                          addressController: _addressController,
-                          onStartEdit: () {
-                            _loadProfileDraft(controller.selectedCustomer);
-                            setState(() => _editingProfile = true);
-                          },
-                          onCancelEdit: () =>
-                              setState(() => _editingProfile = false),
-                          onSaveProfile: () async {
-                            final customerId =
-                                controller.selectedCustomer['id']?.toString() ??
-                                '';
-                            if (customerId.isEmpty) {
-                              return;
-                            }
-                            await ref
-                                .read(agentPortalControllerProvider)
-                                .updateCustomer(
-                                  customerId: customerId,
-                                  payload: {
-                                    'first_name': _firstNameController.text
-                                        .trim(),
-                                    'last_name': _lastNameController.text
-                                        .trim(),
-                                    'mobile': _mobileController.text.trim(),
-                                    'email': _emailController.text.trim(),
-                                    'city': _cityController.text.trim(),
-                                    'address_line1': _addressController.text
-                                        .trim(),
-                                  },
-                                );
-                            if (mounted) {
-                              setState(() => _editingProfile = false);
-                            }
-                          },
-                        );
+            onChanged: (value) => setState(() => _query = value),
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            height: workspaceHeight,
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final stack = constraints.maxWidth < 1080;
+                final listPane = _CustomerListPane(
+                  customers: filteredCustomers,
+                  selectedCustomerId: controller.selectedCustomerId,
+                  onTap: (customerId) {
+                    setState(() => _editingProfile = false);
+                    ref
+                        .read(agentPortalControllerProvider)
+                        .selectCustomer(customerId);
+                  },
+                );
+                final detailPane = controller.isCustomerLoading
+                    ? const Center(child: CircularProgressIndicator())
+                    : _CustomerWorkspaceDetail(
+                        controller: controller,
+                        editingProfile: _editingProfile,
+                        firstNameController: _firstNameController,
+                        lastNameController: _lastNameController,
+                        mobileController: _mobileController,
+                        emailController: _emailController,
+                        cityController: _cityController,
+                        addressController: _addressController,
+                        onStartEdit: () {
+                          _loadProfileDraft(controller.selectedCustomer);
+                          setState(() => _editingProfile = true);
+                        },
+                        onCancelEdit: () =>
+                            setState(() => _editingProfile = false),
+                        onSaveProfile: () async {
+                          final customerId =
+                              controller.selectedCustomer['id']?.toString() ??
+                              '';
+                          if (customerId.isEmpty) {
+                            return;
+                          }
+                          await ref
+                              .read(agentPortalControllerProvider)
+                              .updateCustomer(
+                                customerId: customerId,
+                                payload: {
+                                  'first_name': _firstNameController.text
+                                      .trim(),
+                                  'last_name': _lastNameController.text.trim(),
+                                  'mobile': _mobileController.text.trim(),
+                                  'email': _emailController.text.trim(),
+                                  'city': _cityController.text.trim(),
+                                  'address_line1': _addressController.text
+                                      .trim(),
+                                },
+                              );
+                          if (mounted) {
+                            setState(() => _editingProfile = false);
+                          }
+                        },
+                      );
 
-                  if (stack) {
-                    return Column(
-                      children: [
-                        SizedBox(height: 280, child: listPane),
-                        const SizedBox(height: 12),
-                        Expanded(child: detailPane),
-                      ],
-                    );
-                  }
-
-                  return Row(
+                if (stack) {
+                  return ListView(
+                    padding: EdgeInsets.zero,
                     children: [
-                      SizedBox(width: 320, child: listPane),
-                      const SizedBox(width: 16),
-                      Expanded(child: detailPane),
+                      SizedBox(height: 280, child: listPane),
+                      const SizedBox(height: 12),
+                      SizedBox(
+                        height: stackedWorkspaceHeight,
+                        child: detailPane,
+                      ),
                     ],
                   );
-                },
-              ),
+                }
+
+                return Row(
+                  children: [
+                    SizedBox(width: 320, child: listPane),
+                    const SizedBox(width: 16),
+                    Expanded(child: detailPane),
+                  ],
+                );
+              },
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -193,20 +202,19 @@ class _CustomerListPane extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (customers.isEmpty) {
-      return const Card(
-        child: Center(
-          child: Padding(
-            padding: EdgeInsets.all(24),
-            child: Text('No assigned customers match this search.'),
-          ),
+      return const AgentPanelCard(
+        title: 'Customer List',
+        child: AgentEmptyState(
+          icon: Icons.groups_outlined,
+          title: 'No assigned customers',
+          message: 'No assigned customers match this search.',
         ),
       );
     }
 
-    return Card(
-      margin: EdgeInsets.zero,
+    return AgentWorkspaceSurface(
+      padding: const EdgeInsets.all(8),
       child: ListView.separated(
-        padding: const EdgeInsets.all(8),
         itemCount: customers.length,
         separatorBuilder: (_, _) => const SizedBox(height: 8),
         itemBuilder: (context, index) {
@@ -220,20 +228,15 @@ class _CustomerListPane extends StatelessWidget {
                     .trim();
           return InkWell(
             onTap: customerId.isEmpty ? null : () => onTap(customerId),
-            borderRadius: BorderRadius.circular(16),
-            child: Container(
+            borderRadius: AgentUi.radius(AgentRadius.panel),
+            child: AgentInsetSurface(
               padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(16),
-                color: selected
-                    ? Theme.of(context).colorScheme.primaryContainer
-                    : Theme.of(context).colorScheme.surfaceContainerLowest,
-                border: Border.all(
-                  color: selected
-                      ? Theme.of(context).colorScheme.primary
-                      : Theme.of(context).colorScheme.outlineVariant,
-                ),
-              ),
+              backgroundColor: selected
+                  ? Theme.of(context).colorScheme.primaryContainer
+                  : Theme.of(context).colorScheme.surfaceContainerLowest,
+              borderColor: selected
+                  ? Theme.of(context).colorScheme.primary
+                  : Theme.of(context).colorScheme.outlineVariant,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -325,12 +328,12 @@ class _CustomerWorkspaceDetail extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final customer = controller.selectedCustomer;
     if (customer.isEmpty) {
-      return const Card(
-        child: Center(
-          child: Padding(
-            padding: EdgeInsets.all(24),
-            child: Text('Select a customer to open the workspace.'),
-          ),
+      return const AgentPanelCard(
+        title: 'Customer Workspace',
+        child: AgentEmptyState(
+          icon: Icons.person_search_outlined,
+          title: 'Select a customer',
+          message: 'Select a customer to open the workspace.',
         ),
       );
     }
@@ -365,101 +368,274 @@ class _CustomerWorkspaceDetail extends ConsumerWidget {
 
     return DefaultTabController(
       length: 8,
-      child: Card(
-        margin: EdgeInsets.zero,
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            children: [
-              _CustomerHero(
-                customer: customer,
-                appointments: appointments,
-                documents: documents,
-                tasks: tasks,
-                onEdit: editingProfile ? onCancelEdit : onStartEdit,
-                onFollowUp: () => context.go('/portal/agent/followups'),
-                onVisit: () => context.go('/portal/agent/appointments'),
-                onDocuments: () => context.go('/portal/agent/documents'),
-                onMenuAction: (action) async {
-                  if (action == 'print') {
-                    await _downloadPrint(context, ref, 'PATIENT_SUMMARY');
-                    return;
-                  }
-                  if (action == 'onboarding') {
-                    context.go('/portal/agent/registration');
-                    return;
-                  }
-                  if (action == 'network') {
-                    context.go('/portal/agent/referrals');
-                  }
-                },
-              ),
-              const SizedBox(height: 12),
-              Wrap(
-                spacing: 12,
-                runSpacing: 12,
+      child: AgentWorkspaceSurface(
+        child: Column(
+          children: [
+            _CustomerHero(
+              customer: customer,
+              appointments: appointments,
+              documents: documents,
+              tasks: tasks,
+              onEdit: editingProfile ? onCancelEdit : onStartEdit,
+              onFollowUp: () => context.go('/portal/agent/followups'),
+              onVisit: () => context.go('/portal/agent/appointments'),
+              onDocuments: () => context.go('/portal/agent/documents'),
+              onMenuAction: (action) async {
+                if (action == 'print') {
+                  await _downloadPrint(context, ref, 'PATIENT_SUMMARY');
+                  return;
+                }
+                if (action == 'onboarding') {
+                  context.go('/portal/agent/registration');
+                  return;
+                }
+                if (action == 'network') {
+                  context.go('/portal/agent/referrals');
+                }
+              },
+            ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 12,
+              runSpacing: 12,
+              children: [
+                _CompactMetricCard(
+                  value: '${tasks.length}',
+                  label: 'Pending follow-ups',
+                  helper: 'Tasks still open for this customer.',
+                  icon: Icons.assignment_late_outlined,
+                ),
+                _CompactMetricCard(
+                  value: '${documents.length}',
+                  label: 'Uploaded documents',
+                  helper: 'Files currently linked to the customer.',
+                  icon: Icons.folder_open_outlined,
+                ),
+                _CompactMetricCard(
+                  value: '${appointments.length}',
+                  label: 'Visits',
+                  helper: 'Upcoming and historical appointments.',
+                  icon: Icons.event_available_outlined,
+                ),
+                _CompactMetricCard(
+                  value: '${rewardPoints ?? 0}',
+                  label: 'Reward points',
+                  helper: 'Visible rewards in the wallet.',
+                  icon: Icons.stars_outlined,
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            const TabBar(
+              isScrollable: true,
+              tabAlignment: TabAlignment.start,
+              tabs: [
+                Tab(text: 'Overview'),
+                Tab(text: 'Profile'),
+                Tab(text: 'Documents'),
+                Tab(text: 'Visits'),
+                Tab(text: 'Follow-ups'),
+                Tab(text: 'Medical'),
+                Tab(text: 'Wallet'),
+                Tab(text: 'Timeline'),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Expanded(
+              child: TabBarView(
                 children: [
-                  _CompactMetricCard(
-                    value: '${tasks.length}',
-                    label: 'Pending follow-ups',
-                    helper: 'Tasks still open for this customer.',
-                    icon: Icons.assignment_late_outlined,
+                  SingleChildScrollView(
+                    child: Column(
+                      children: [
+                        _TwoColumnOverview(
+                          leftChildren: [
+                            _SummarySection(
+                              title: 'Customer overview',
+                              items: [
+                                _SummaryItem(
+                                  label: 'SHIELD ID',
+                                  value:
+                                      customer['customerCode']
+                                          ?.toString()
+                                          .ifBlank('Pending generation') ??
+                                      'Pending generation',
+                                ),
+                                _SummaryItem(
+                                  label: 'Phone',
+                                  value:
+                                      customer['mobile']?.toString().ifBlank(
+                                        'Not recorded',
+                                      ) ??
+                                      'Not recorded',
+                                ),
+                                _SummaryItem(
+                                  label: 'Membership',
+                                  value: membershipName,
+                                ),
+                                _SummaryItem(
+                                  label: 'Status',
+                                  value: _humanize(customer['status']),
+                                ),
+                              ],
+                            ),
+                            _SummarySection(
+                              title: 'Documents and onboarding',
+                              items: [
+                                _SummaryItem(
+                                  label: 'Documents uploaded',
+                                  value: '${documents.length}',
+                                ),
+                                _SummaryItem(
+                                  label: 'Membership number',
+                                  value:
+                                      membership['membershipNumber']
+                                          ?.toString()
+                                          .ifBlank('Pending') ??
+                                      'Pending',
+                                ),
+                                _SummaryItem(
+                                  label: 'Card status',
+                                  value: _humanize(
+                                    controller
+                                        .customerMembership['shieldCard']?['status'],
+                                  ),
+                                ),
+                                _SummaryItem(
+                                  label: 'Notifications',
+                                  value: '${notifications.length}',
+                                ),
+                              ],
+                            ),
+                          ],
+                          rightChildren: [
+                            _SummarySection(
+                              title: 'Recent activity',
+                              items: [
+                                _SummaryItem(
+                                  label: 'Next visit',
+                                  value: appointments.isEmpty
+                                      ? 'Not scheduled'
+                                      : _formatDateTime(
+                                          appointments.first['appointmentDate'],
+                                        ),
+                                ),
+                                _SummaryItem(
+                                  label: 'Latest follow-up',
+                                  value: activities.isEmpty
+                                      ? 'No notes yet'
+                                      : activities.first['notes']
+                                                ?.toString()
+                                                .ifBlank('No remarks') ??
+                                            'No remarks',
+                                ),
+                                _SummaryItem(
+                                  label: 'Network rewards',
+                                  value:
+                                      '${referralSummary['rewardPoints'] ?? 0}',
+                                ),
+                                _SummaryItem(
+                                  label: 'Recent purchase',
+                                  value: purchases.isEmpty
+                                      ? 'No purchases'
+                                      : purchases.first['providerName']
+                                                ?.toString()
+                                                .ifBlank('Provider') ??
+                                            'Provider',
+                                ),
+                              ],
+                            ),
+                            _TimelineCard(
+                              title: 'Today and next',
+                              emptyLabel:
+                                  'No visits, follow-ups, or alerts are queued right now.',
+                              entries: [
+                                ...tasks
+                                    .take(3)
+                                    .map(
+                                      (item) => _TimelineEntry(
+                                        title: _humanize(item['status']),
+                                        subtitle:
+                                            item['notes']?.toString().ifBlank(
+                                              'Follow-up scheduled',
+                                            ) ??
+                                            'Follow-up scheduled',
+                                        timeLabel: _formatDateTime(
+                                          item['dueDate'],
+                                        ),
+                                        icon: Icons.assignment_outlined,
+                                      ),
+                                    ),
+                                ...appointments
+                                    .take(2)
+                                    .map(
+                                      (item) => _TimelineEntry(
+                                        title:
+                                            item['provider']?['providerName']
+                                                ?.toString()
+                                                .ifBlank('Visit scheduled') ??
+                                            'Visit scheduled',
+                                        subtitle: _humanize(
+                                          item['appointmentType'],
+                                        ),
+                                        timeLabel: _formatDateTime(
+                                          item['appointmentDate'],
+                                        ),
+                                        icon: Icons.event_available_outlined,
+                                      ),
+                                    ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
-                  _CompactMetricCard(
-                    value: '${documents.length}',
-                    label: 'Uploaded documents',
-                    helper: 'Files currently linked to the customer.',
-                    icon: Icons.folder_open_outlined,
-                  ),
-                  _CompactMetricCard(
-                    value: '${appointments.length}',
-                    label: 'Visits',
-                    helper: 'Upcoming and historical appointments.',
-                    icon: Icons.event_available_outlined,
-                  ),
-                  _CompactMetricCard(
-                    value: '${rewardPoints ?? 0}',
-                    label: 'Reward points',
-                    helper: 'Visible rewards in the wallet.',
-                    icon: Icons.stars_outlined,
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              const TabBar(
-                isScrollable: true,
-                tabAlignment: TabAlignment.start,
-                tabs: [
-                  Tab(text: 'Overview'),
-                  Tab(text: 'Profile'),
-                  Tab(text: 'Documents'),
-                  Tab(text: 'Visits'),
-                  Tab(text: 'Follow-ups'),
-                  Tab(text: 'Medical'),
-                  Tab(text: 'Wallet'),
-                  Tab(text: 'Timeline'),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Expanded(
-                child: TabBarView(
-                  children: [
-                    SingleChildScrollView(
-                      child: Column(
-                        children: [
+                  SingleChildScrollView(
+                    child: Column(
+                      children: [
+                        if (editingProfile)
+                          _EditableProfileCard(
+                            firstNameController: firstNameController,
+                            lastNameController: lastNameController,
+                            mobileController: mobileController,
+                            emailController: emailController,
+                            cityController: cityController,
+                            addressController: addressController,
+                            isSaving: controller.isSaving,
+                            onCancel: onCancelEdit,
+                            onSave: onSaveProfile,
+                          )
+                        else
                           _TwoColumnOverview(
                             leftChildren: [
                               _SummarySection(
-                                title: 'Customer overview',
+                                title: 'Profile',
                                 items: [
                                   _SummaryItem(
-                                    label: 'SHIELD ID',
-                                    value:
-                                        customer['customerCode']
-                                            ?.toString()
-                                            .ifBlank('Pending generation') ??
-                                        'Pending generation',
+                                    label: 'Name',
+                                    value: fullName.ifBlank('Not recorded'),
                                   ),
+                                  _SummaryItem(
+                                    label: 'Email',
+                                    value:
+                                        customer['email']?.toString().ifBlank(
+                                          'Not recorded',
+                                        ) ??
+                                        'Not recorded',
+                                  ),
+                                  _SummaryItem(
+                                    label: 'Gender',
+                                    value: _humanize(customer['gender']),
+                                  ),
+                                  _SummaryItem(
+                                    label: 'Date of birth',
+                                    value: _formatDate(customer['dob']),
+                                  ),
+                                ],
+                              ),
+                              _SummarySection(
+                                title: 'Contact and address',
+                                items: [
                                   _SummaryItem(
                                     label: 'Phone',
                                     value:
@@ -469,418 +645,231 @@ class _CustomerWorkspaceDetail extends ConsumerWidget {
                                         'Not recorded',
                                   ),
                                   _SummaryItem(
-                                    label: 'Membership',
-                                    value: membershipName,
-                                  ),
-                                  _SummaryItem(
-                                    label: 'Status',
-                                    value: _humanize(customer['status']),
-                                  ),
-                                ],
-                              ),
-                              _SummarySection(
-                                title: 'Documents and onboarding',
-                                items: [
-                                  _SummaryItem(
-                                    label: 'Documents uploaded',
-                                    value: '${documents.length}',
-                                  ),
-                                  _SummaryItem(
-                                    label: 'Membership number',
+                                    label: 'City',
                                     value:
-                                        membership['membershipNumber']
-                                            ?.toString()
-                                            .ifBlank('Pending') ??
-                                        'Pending',
+                                        customer['city']?.toString().ifBlank(
+                                          'Not recorded',
+                                        ) ??
+                                        'Not recorded',
                                   ),
                                   _SummaryItem(
-                                    label: 'Card status',
-                                    value: _humanize(
-                                      controller
-                                          .customerMembership['shieldCard']?['status'],
-                                    ),
-                                  ),
-                                  _SummaryItem(
-                                    label: 'Notifications',
-                                    value: '${notifications.length}',
+                                    label: 'Address',
+                                    value:
+                                        [
+                                              customer['addressLine1'],
+                                              customer['addressLine2'],
+                                              customer['city'],
+                                              customer['district'],
+                                              customer['state'],
+                                            ]
+                                            .where(
+                                              (item) => (item ?? '')
+                                                  .toString()
+                                                  .trim()
+                                                  .isNotEmpty,
+                                            )
+                                            .join(', ')
+                                            .ifBlank('Not recorded'),
                                   ),
                                 ],
                               ),
                             ],
                             rightChildren: [
-                              _SummarySection(
-                                title: 'Recent activity',
-                                items: [
-                                  _SummaryItem(
-                                    label: 'Next visit',
-                                    value: appointments.isEmpty
-                                        ? 'Not scheduled'
-                                        : _formatDateTime(
-                                            appointments
-                                                .first['appointmentDate'],
-                                          ),
-                                  ),
-                                  _SummaryItem(
-                                    label: 'Latest follow-up',
-                                    value: activities.isEmpty
-                                        ? 'No notes yet'
-                                        : activities.first['notes']
-                                                  ?.toString()
-                                                  .ifBlank('No remarks') ??
-                                              'No remarks',
-                                  ),
-                                  _SummaryItem(
-                                    label: 'Network rewards',
-                                    value:
-                                        '${referralSummary['rewardPoints'] ?? 0}',
-                                  ),
-                                  _SummaryItem(
-                                    label: 'Recent purchase',
-                                    value: purchases.isEmpty
-                                        ? 'No purchases'
-                                        : purchases.first['providerName']
-                                                  ?.toString()
-                                                  .ifBlank('Provider') ??
-                                              'Provider',
-                                  ),
-                                ],
-                              ),
                               _TimelineCard(
-                                title: 'Today and next',
+                                title: 'Family and contacts',
                                 emptyLabel:
-                                    'No visits, follow-ups, or alerts are queued right now.',
-                                entries: [
-                                  ...tasks
-                                      .take(3)
-                                      .map(
-                                        (item) => _TimelineEntry(
-                                          title: _humanize(item['status']),
-                                          subtitle:
-                                              item['notes']?.toString().ifBlank(
-                                                'Follow-up scheduled',
-                                              ) ??
-                                              'Follow-up scheduled',
-                                          timeLabel: _formatDateTime(
-                                            item['dueDate'],
-                                          ),
-                                          icon: Icons.assignment_outlined,
-                                        ),
+                                    'No family contacts are recorded yet.',
+                                entries: family
+                                    .map(
+                                      (item) => _TimelineEntry(
+                                        title:
+                                            item['name']?.toString().ifBlank(
+                                              'Contact',
+                                            ) ??
+                                            'Contact',
+                                        subtitle:
+                                            item['relation']?.toString() ??
+                                            'Relation',
+                                        timeLabel:
+                                            item['mobile']?.toString() ?? '',
+                                        icon: Icons.family_restroom_outlined,
                                       ),
-                                  ...appointments
-                                      .take(2)
-                                      .map(
-                                        (item) => _TimelineEntry(
-                                          title:
-                                              item['provider']?['providerName']
-                                                  ?.toString()
-                                                  .ifBlank('Visit scheduled') ??
-                                              'Visit scheduled',
-                                          subtitle: _humanize(
-                                            item['appointmentType'],
-                                          ),
-                                          timeLabel: _formatDateTime(
-                                            item['appointmentDate'],
-                                          ),
-                                          icon: Icons.event_available_outlined,
-                                        ),
-                                      ),
-                                ],
+                                    )
+                                    .toList(),
                               ),
                             ],
                           ),
-                        ],
-                      ),
+                      ],
                     ),
-                    SingleChildScrollView(
-                      child: Column(
-                        children: [
-                          if (editingProfile)
-                            _EditableProfileCard(
-                              firstNameController: firstNameController,
-                              lastNameController: lastNameController,
-                              mobileController: mobileController,
-                              emailController: emailController,
-                              cityController: cityController,
-                              addressController: addressController,
-                              isSaving: controller.isSaving,
-                              onCancel: onCancelEdit,
-                              onSave: onSaveProfile,
-                            )
-                          else
-                            _TwoColumnOverview(
-                              leftChildren: [
-                                _SummarySection(
-                                  title: 'Profile',
-                                  items: [
-                                    _SummaryItem(
-                                      label: 'Name',
-                                      value: fullName.ifBlank('Not recorded'),
-                                    ),
-                                    _SummaryItem(
-                                      label: 'Email',
-                                      value:
-                                          customer['email']?.toString().ifBlank(
-                                            'Not recorded',
-                                          ) ??
-                                          'Not recorded',
-                                    ),
-                                    _SummaryItem(
-                                      label: 'Gender',
-                                      value: _humanize(customer['gender']),
-                                    ),
-                                    _SummaryItem(
-                                      label: 'Date of birth',
-                                      value: _formatDate(customer['dob']),
-                                    ),
-                                  ],
-                                ),
-                                _SummarySection(
-                                  title: 'Contact and address',
-                                  items: [
-                                    _SummaryItem(
-                                      label: 'Phone',
-                                      value:
-                                          customer['mobile']
-                                              ?.toString()
-                                              .ifBlank('Not recorded') ??
-                                          'Not recorded',
-                                    ),
-                                    _SummaryItem(
-                                      label: 'City',
-                                      value:
-                                          customer['city']?.toString().ifBlank(
-                                            'Not recorded',
-                                          ) ??
-                                          'Not recorded',
-                                    ),
-                                    _SummaryItem(
-                                      label: 'Address',
-                                      value:
-                                          [
-                                                customer['addressLine1'],
-                                                customer['addressLine2'],
-                                                customer['city'],
-                                                customer['district'],
-                                                customer['state'],
-                                              ]
-                                              .where(
-                                                (item) => (item ?? '')
-                                                    .toString()
-                                                    .trim()
-                                                    .isNotEmpty,
-                                              )
-                                              .join(', ')
-                                              .ifBlank('Not recorded'),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                              rightChildren: [
-                                _TimelineCard(
-                                  title: 'Family and contacts',
-                                  emptyLabel:
-                                      'No family contacts are recorded yet.',
-                                  entries: family
-                                      .map(
-                                        (item) => _TimelineEntry(
-                                          title:
-                                              item['name']?.toString().ifBlank(
-                                                'Contact',
-                                              ) ??
-                                              'Contact',
-                                          subtitle:
-                                              item['relation']?.toString() ??
-                                              'Relation',
-                                          timeLabel:
-                                              item['mobile']?.toString() ?? '',
-                                          icon: Icons.family_restroom_outlined,
-                                        ),
-                                      )
-                                      .toList(),
-                                ),
-                              ],
-                            ),
-                        ],
-                      ),
-                    ),
-                    _SimpleListView(
-                      title: 'Uploaded Documents',
-                      emptyLabel:
-                          'No documents are linked yet. Upload the required files from the Customer Documents flow.',
-                      items: documents
-                          .map(
-                            (item) => _TimelineEntry(
-                              title:
-                                  item['fileName']?.toString().ifBlank(
-                                    'Document',
-                                  ) ??
+                  ),
+                  _SimpleListView(
+                    title: 'Uploaded Documents',
+                    emptyLabel:
+                        'No documents are linked yet. Upload the required files from the Customer Documents flow.',
+                    items: documents
+                        .map(
+                          (item) => _TimelineEntry(
+                            title:
+                                item['fileName']?.toString().ifBlank(
                                   'Document',
-                              subtitle:
-                                  '${_humanize(item['documentType'])} • ${_humanize(item['status'])}',
-                              timeLabel: _formatDateTime(item['createdAt']),
-                              icon: Icons.description_outlined,
-                            ),
-                          )
-                          .toList(),
-                    ),
-                    _SimpleListView(
-                      title: 'Visits',
-                      emptyLabel: 'No visits scheduled or completed yet.',
-                      items: appointments
-                          .map(
-                            (item) => _TimelineEntry(
-                              title:
-                                  item['provider']?['providerName']
-                                      ?.toString()
-                                      .ifBlank('Provider') ??
-                                  'Provider',
-                              subtitle:
-                                  '${_humanize(item['appointmentType'])} • ${_humanize(item['status'])}',
-                              timeLabel: _formatDateTime(
-                                item['appointmentDate'],
-                              ),
-                              icon: Icons.event_note_outlined,
-                            ),
-                          )
-                          .toList(),
-                    ),
-                    _SimpleListView(
-                      title: 'Follow-ups',
-                      emptyLabel: 'No follow-up activity is recorded yet.',
-                      items: [
-                        ...tasks.map(
-                          (item) => _TimelineEntry(
-                            title: _humanize(item['status']),
-                            subtitle:
-                                item['notes']?.toString().ifBlank(
-                                  'No remarks',
                                 ) ??
-                                'No remarks',
-                            timeLabel: _formatDateTime(item['dueDate']),
-                            icon: Icons.assignment_outlined,
-                          ),
-                        ),
-                        ...activities.map(
-                          (item) => _TimelineEntry(
-                            title: _humanize(item['activityType']),
+                                'Document',
                             subtitle:
-                                item['notes']?.toString().ifBlank(
-                                  'No remarks',
-                                ) ??
-                                'No remarks',
+                                '${_humanize(item['documentType'])} • ${_humanize(item['status'])}',
                             timeLabel: _formatDateTime(item['createdAt']),
-                            icon: Icons.sticky_note_2_outlined,
+                            icon: Icons.description_outlined,
                           ),
+                        )
+                        .toList(),
+                  ),
+                  _SimpleListView(
+                    title: 'Visits',
+                    emptyLabel: 'No visits scheduled or completed yet.',
+                    items: appointments
+                        .map(
+                          (item) => _TimelineEntry(
+                            title:
+                                item['provider']?['providerName']
+                                    ?.toString()
+                                    .ifBlank('Provider') ??
+                                'Provider',
+                            subtitle:
+                                '${_humanize(item['appointmentType'])} • ${_humanize(item['status'])}',
+                            timeLabel: _formatDateTime(item['appointmentDate']),
+                            icon: Icons.event_note_outlined,
+                          ),
+                        )
+                        .toList(),
+                  ),
+                  _SimpleListView(
+                    title: 'Follow-ups',
+                    emptyLabel: 'No follow-up activity is recorded yet.',
+                    items: [
+                      ...tasks.map(
+                        (item) => _TimelineEntry(
+                          title: _humanize(item['status']),
+                          subtitle:
+                              item['notes']?.toString().ifBlank('No remarks') ??
+                              'No remarks',
+                          timeLabel: _formatDateTime(item['dueDate']),
+                          icon: Icons.assignment_outlined,
+                        ),
+                      ),
+                      ...activities.map(
+                        (item) => _TimelineEntry(
+                          title: _humanize(item['activityType']),
+                          subtitle:
+                              item['notes']?.toString().ifBlank('No remarks') ??
+                              'No remarks',
+                          timeLabel: _formatDateTime(item['createdAt']),
+                          icon: Icons.sticky_note_2_outlined,
+                        ),
+                      ),
+                    ],
+                  ),
+                  _SimpleListView(
+                    title: 'Medical Records',
+                    emptyLabel: 'No medical records are linked yet.',
+                    items: records
+                        .map(
+                          (item) => _TimelineEntry(
+                            title:
+                                item['title']?.toString().ifBlank('Record') ??
+                                'Record',
+                            subtitle:
+                                '${item['category'] ?? 'Record'} • ${item['status'] ?? 'Pending'}',
+                            timeLabel: _formatDateTime(item['createdAt']),
+                            icon: Icons.medical_information_outlined,
+                          ),
+                        )
+                        .toList(),
+                  ),
+                  SingleChildScrollView(
+                    child: _TwoColumnOverview(
+                      leftChildren: [
+                        _SummarySection(
+                          title: 'Wallet',
+                          items: [
+                            _SummaryItem(
+                              label: 'Cash available',
+                              value: '${activeWallet ?? 0}',
+                            ),
+                            _SummaryItem(
+                              label: 'Reward points',
+                              value: '${rewardPoints ?? 0}',
+                            ),
+                            _SummaryItem(
+                              label: 'Membership status',
+                              value: _humanize(membership['status']),
+                            ),
+                          ],
+                        ),
+                      ],
+                      rightChildren: [
+                        _SummarySection(
+                          title: 'Customer network',
+                          items: [
+                            _SummaryItem(
+                              label: 'Direct customers',
+                              value:
+                                  '${referralSummary['directReferrals'] ?? 0}',
+                            ),
+                            _SummaryItem(
+                              label: 'Total network',
+                              value:
+                                  '${referralSummary['totalReferrals'] ?? 0}',
+                            ),
+                            _SummaryItem(
+                              label: 'Network rewards',
+                              value: '${referralSummary['rewardPoints'] ?? 0}',
+                            ),
+                          ],
                         ),
                       ],
                     ),
-                    _SimpleListView(
-                      title: 'Medical Records',
-                      emptyLabel: 'No medical records are linked yet.',
-                      items: records
-                          .map(
-                            (item) => _TimelineEntry(
-                              title:
-                                  item['title']?.toString().ifBlank('Record') ??
-                                  'Record',
-                              subtitle:
-                                  '${item['category'] ?? 'Record'} • ${item['status'] ?? 'Pending'}',
-                              timeLabel: _formatDateTime(item['createdAt']),
-                              icon: Icons.medical_information_outlined,
-                            ),
-                          )
-                          .toList(),
-                    ),
-                    SingleChildScrollView(
-                      child: _TwoColumnOverview(
-                        leftChildren: [
-                          _SummarySection(
-                            title: 'Wallet',
-                            items: [
-                              _SummaryItem(
-                                label: 'Cash available',
-                                value: '${activeWallet ?? 0}',
-                              ),
-                              _SummaryItem(
-                                label: 'Reward points',
-                                value: '${rewardPoints ?? 0}',
-                              ),
-                              _SummaryItem(
-                                label: 'Membership status',
-                                value: _humanize(membership['status']),
-                              ),
-                            ],
+                  ),
+                  _SimpleListView(
+                    title: 'Timeline',
+                    emptyLabel: 'No activity is recorded in the timeline yet.',
+                    items: timeline
+                        .map(
+                          (item) => _TimelineEntry(
+                            title: _humanize(item['type']),
+                            subtitle:
+                                item['description']?.toString().ifBlank(
+                                  item['title']?.toString() ?? '',
+                                ) ??
+                                '',
+                            timeLabel: _formatDateTime(item['timestamp']),
+                            icon: Icons.timeline_outlined,
                           ),
-                        ],
-                        rightChildren: [
-                          _SummarySection(
-                            title: 'Customer network',
-                            items: [
-                              _SummaryItem(
-                                label: 'Direct customers',
-                                value:
-                                    '${referralSummary['directReferrals'] ?? 0}',
-                              ),
-                              _SummaryItem(
-                                label: 'Total network',
-                                value:
-                                    '${referralSummary['totalReferrals'] ?? 0}',
-                              ),
-                              _SummaryItem(
-                                label: 'Network rewards',
-                                value:
-                                    '${referralSummary['rewardPoints'] ?? 0}',
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
+                        )
+                        .toList(),
+                  ),
+                ],
+              ),
+            ),
+            if (customerId.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Align(
+                alignment: Alignment.centerRight,
+                child: Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    AgentSecondaryButton(
+                      onPressed: () => context.go('/portal/agent/registration'),
+                      label: 'Continue Onboarding',
                     ),
-                    _SimpleListView(
-                      title: 'Timeline',
-                      emptyLabel:
-                          'No activity is recorded in the timeline yet.',
-                      items: timeline
-                          .map(
-                            (item) => _TimelineEntry(
-                              title: _humanize(item['type']),
-                              subtitle:
-                                  item['description']?.toString().ifBlank(
-                                    item['title']?.toString() ?? '',
-                                  ) ??
-                                  '',
-                              timeLabel: _formatDateTime(item['timestamp']),
-                              icon: Icons.timeline_outlined,
-                            ),
-                          )
-                          .toList(),
+                    AgentSecondaryButton(
+                      onPressed: () => context.go('/portal/agent/referrals'),
+                      label: 'Open Network',
                     ),
                   ],
                 ),
               ),
-              if (customerId.isNotEmpty) ...[
-                const SizedBox(height: 12),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      AgentSecondaryButton(
-                        onPressed: () =>
-                            context.go('/portal/agent/registration'),
-                        label: 'Continue Onboarding',
-                      ),
-                      AgentSecondaryButton(
-                        onPressed: () => context.go('/portal/agent/referrals'),
-                        label: 'Open Network',
-                      ),
-                    ],
-                  ),
-                ),
-              ],
             ],
-          ),
+          ],
         ),
       ),
     );
@@ -914,13 +903,8 @@ class _CustomerHero extends StatelessWidget {
   Widget build(BuildContext context) {
     final fullName =
         '${customer['firstName'] ?? ''} ${customer['lastName'] ?? ''}'.trim();
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
-        color: Theme.of(context).colorScheme.surfaceContainerHighest,
-      ),
+    return AgentInsetSurface(
+      backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1055,82 +1039,77 @@ class _EditableProfileCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Edit profile',
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 12,
-              runSpacing: 12,
+    return AgentWorkspaceSurface(
+      padding: AgentSpacing.contentInsets,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Edit profile', style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 12,
+            runSpacing: 12,
+            children: [
+              _AdaptiveField(
+                child: TextField(
+                  controller: firstNameController,
+                  decoration: const InputDecoration(labelText: 'First name'),
+                ),
+              ),
+              _AdaptiveField(
+                child: TextField(
+                  controller: lastNameController,
+                  decoration: const InputDecoration(labelText: 'Last name'),
+                ),
+              ),
+              _AdaptiveField(
+                child: TextField(
+                  controller: mobileController,
+                  decoration: const InputDecoration(labelText: 'Phone'),
+                ),
+              ),
+              _AdaptiveField(
+                child: TextField(
+                  controller: emailController,
+                  decoration: const InputDecoration(labelText: 'Email'),
+                ),
+              ),
+              _AdaptiveField(
+                child: TextField(
+                  controller: cityController,
+                  decoration: const InputDecoration(labelText: 'City'),
+                ),
+              ),
+              _AdaptiveField(
+                wide: true,
+                child: TextField(
+                  controller: addressController,
+                  decoration: const InputDecoration(labelText: 'Address'),
+                  maxLines: 2,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Align(
+            alignment: Alignment.centerRight,
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 8,
               children: [
-                _AdaptiveField(
-                  child: TextField(
-                    controller: firstNameController,
-                    decoration: const InputDecoration(labelText: 'First name'),
-                  ),
+                AgentSecondaryButton(
+                  onPressed: isSaving ? null : onCancel,
+                  label: 'Cancel',
                 ),
-                _AdaptiveField(
-                  child: TextField(
-                    controller: lastNameController,
-                    decoration: const InputDecoration(labelText: 'Last name'),
-                  ),
-                ),
-                _AdaptiveField(
-                  child: TextField(
-                    controller: mobileController,
-                    decoration: const InputDecoration(labelText: 'Phone'),
-                  ),
-                ),
-                _AdaptiveField(
-                  child: TextField(
-                    controller: emailController,
-                    decoration: const InputDecoration(labelText: 'Email'),
-                  ),
-                ),
-                _AdaptiveField(
-                  child: TextField(
-                    controller: cityController,
-                    decoration: const InputDecoration(labelText: 'City'),
-                  ),
-                ),
-                _AdaptiveField(
-                  wide: true,
-                  child: TextField(
-                    controller: addressController,
-                    decoration: const InputDecoration(labelText: 'Address'),
-                    maxLines: 2,
-                  ),
+                AgentPrimaryButton(
+                  onPressed: isSaving ? null : onSave,
+                  label: isSaving ? 'Saving...' : 'Save Details',
+                  isLoading: isSaving,
                 ),
               ],
             ),
-            const SizedBox(height: 12),
-            Align(
-              alignment: Alignment.centerRight,
-              child: Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  AgentSecondaryButton(
-                    onPressed: isSaving ? null : onCancel,
-                    label: 'Cancel',
-                  ),
-                  AgentPrimaryButton(
-                    onPressed: isSaving ? null : onSave,
-                    label: isSaving ? 'Saving...' : 'Save Details',
-                    isLoading: isSaving,
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -1424,11 +1403,11 @@ Color _statusColor(BuildContext context, String? rawStatus) {
     case 'COMPLETED':
     case 'APPROVED':
     case 'VERIFIED':
-      return Colors.green.shade700;
+      return AgentColors.success;
     case 'PENDING':
     case 'INCOMPLETE':
     case 'DRAFT':
-      return Colors.orange.shade700;
+      return AgentColors.warning;
     case 'REJECTED':
     case 'CANCELLED':
     case 'SUSPENDED':

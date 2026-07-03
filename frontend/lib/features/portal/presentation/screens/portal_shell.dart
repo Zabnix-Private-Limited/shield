@@ -9063,29 +9063,29 @@ class _AdminProviderNetworkViewState extends State<_AdminProviderNetworkView> {
                   padding: const EdgeInsets.all(20),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
+                    children: const [
                       Text('Management Modules', style: AppTypography.h4),
-                      const SizedBox(height: 14),
-                      const _AdminMiniModuleTile(
+                      SizedBox(height: 14),
+                      _AdminMiniModuleTile(
                         title: 'Provider Directory',
                         subtitle: 'Identity, branch, category, and ownership',
                         icon: Icons.apartment_outlined,
                       ),
-                      const SizedBox(height: 10),
-                      const _AdminMiniModuleTile(
+                      SizedBox(height: 10),
+                      _AdminMiniModuleTile(
                         title: 'Provider Services',
                         subtitle:
                             'Capabilities, pricing, and enabled workflows',
                         icon: Icons.medical_services_outlined,
                       ),
-                      const SizedBox(height: 10),
-                      const _AdminMiniModuleTile(
+                      SizedBox(height: 10),
+                      _AdminMiniModuleTile(
                         title: 'Users & Licenses',
                         subtitle: 'Staff accounts, credentials, and renewals',
                         icon: Icons.badge_outlined,
                       ),
-                      const SizedBox(height: 10),
-                      const _AdminMiniModuleTile(
+                      SizedBox(height: 10),
+                      _AdminMiniModuleTile(
                         title: 'Timings & Holidays',
                         subtitle:
                             'Availability windows and operational closures',
@@ -9429,37 +9429,37 @@ class _AdminMasterDataViewState extends State<_AdminMasterDataView> {
               ),
             );
 
-            final side = Column(
+            const side = Column(
               children: [
                 AppCard(
-                  padding: const EdgeInsets.all(20),
+                  padding: EdgeInsets.all(20),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text('Control Modules', style: AppTypography.h4),
-                      const SizedBox(height: 14),
-                      const _AdminMiniModuleTile(
+                      SizedBox(height: 14),
+                      _AdminMiniModuleTile(
                         title: 'Organization',
                         subtitle:
                             'Branches, departments, territories, and ownership',
                         icon: Icons.apartment_outlined,
                       ),
-                      const SizedBox(height: 10),
-                      const _AdminMiniModuleTile(
+                      SizedBox(height: 10),
+                      _AdminMiniModuleTile(
                         title: 'Catalog',
                         subtitle:
                             'Service categories, services, and provider types',
                         icon: Icons.widgets_outlined,
                       ),
-                      const SizedBox(height: 10),
-                      const _AdminMiniModuleTile(
+                      SizedBox(height: 10),
+                      _AdminMiniModuleTile(
                         title: 'Commercial Rules',
                         subtitle:
                             'Membership, benefits, referral, and wallet controls',
                         icon: Icons.request_quote_outlined,
                       ),
-                      const SizedBox(height: 10),
-                      const _AdminMiniModuleTile(
+                      SizedBox(height: 10),
+                      _AdminMiniModuleTile(
                         title: 'Operational Calendar',
                         subtitle: 'Holidays, shifts, and working-hour defaults',
                         icon: Icons.event_available_outlined,
@@ -9467,29 +9467,29 @@ class _AdminMasterDataViewState extends State<_AdminMasterDataView> {
                     ],
                   ),
                 ),
-                const SizedBox(height: 18),
+                SizedBox(height: 18),
                 AppCard(
-                  padding: const EdgeInsets.all(20),
+                  padding: EdgeInsets.all(20),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text('Readiness Watchlist', style: AppTypography.h4),
-                      const SizedBox(height: 14),
-                      const _AdminHealthRow(
+                      SizedBox(height: 14),
+                      _AdminHealthRow(
                         title: 'Provider type taxonomy',
                         status: 'Open',
                         note:
                             'A single capability map is still needed before provider portal expansion.',
                       ),
-                      const SizedBox(height: 12),
-                      const _AdminHealthRow(
+                      SizedBox(height: 12),
+                      _AdminHealthRow(
                         title: 'Working-hour standards',
                         status: 'Pending',
                         note:
                             'Appointment and provider timing defaults should be unified in one source.',
                       ),
-                      const SizedBox(height: 12),
-                      const _AdminHealthRow(
+                      SizedBox(height: 12),
+                      _AdminHealthRow(
                         title: 'Commercial rule ownership',
                         status: 'Review',
                         note:

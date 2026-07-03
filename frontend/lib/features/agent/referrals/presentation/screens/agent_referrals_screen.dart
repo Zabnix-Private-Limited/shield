@@ -44,107 +44,104 @@ class _AgentReferralsScreenState extends ConsumerState<AgentReferralsScreen> {
       referralSummary['statuses'] ?? const {},
     );
 
-    return Card(
-      child: Padding(
-        padding: AgentUi.panelPadding,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const AgentSectionHeader(
-              title: 'Customer Network',
-              description:
-                  'Track customer growth, reward status, and referral activity through one shared network workspace instead of a collection of unrelated cards.',
-            ),
-            AgentUi.gapH(AgentUi.space16),
-            AgentMetricGrid(
-              children: [
-                AgentMetricCard(
-                  value: '${referralSummary['directReferrals'] ?? 0}',
-                  label: 'Direct Customers',
-                  helper: 'Customers directly linked to this member.',
-                  icon: Icons.people_alt_outlined,
-                ),
-                AgentMetricCard(
-                  value: '${referralSummary['totalReferrals'] ?? 0}',
-                  label: 'Total Network',
-                  helper:
-                      'All connected customers in the visible referral graph.',
-                  icon: Icons.account_tree_outlined,
-                ),
-                AgentMetricCard(
-                  value: '${referralSummary['availablePoints'] ?? 0}',
-                  label: 'Network Rewards',
-                  helper: 'Reward points still available in the network.',
-                  icon: Icons.card_giftcard_outlined,
-                ),
-                AgentMetricCard(
-                  value: '${referralSummary['earnedPoints'] ?? 0}',
-                  label: 'Earned Rewards',
-                  helper: 'Reward points already claimed or earned.',
-                  icon: Icons.emoji_events_outlined,
-                ),
-              ],
-            ),
-            AgentUi.gapH(AgentUi.space16),
-            Column(
-              children: [
-                AgentPanelCard(
-                  title: 'Customer Growth Status',
-                  subtitle:
-                      'A normalized view of the status counts currently driving the network.',
-                  child: statuses.isEmpty
-                      ? const AgentEmptyState(
-                          icon: Icons.insights_outlined,
-                          title: 'No network status data',
-                          message:
-                              'Status totals will appear here once referral activity is recorded for this customer.',
-                        )
-                      : Wrap(
-                          spacing: AgentUi.space12,
-                          runSpacing: AgentUi.space12,
-                          children: statuses.entries
-                              .map(
-                                (entry) => SizedBox(
-                                  width: 220,
-                                  child: AgentKeyValueItem(
-                                    label: _humanize(entry.key),
-                                    value: '${entry.value}',
-                                    icon: Icons.flag_outlined,
-                                  ),
+    return AgentWorkspaceSurface(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const AgentSectionHeader(
+            title: 'Customer Network',
+            description:
+                'Track customer growth, reward status, and referral activity through one shared network workspace instead of a collection of unrelated cards.',
+          ),
+          AgentUi.gapH(AgentUi.space16),
+          AgentMetricGrid(
+            children: [
+              AgentMetricCard(
+                value: '${referralSummary['directReferrals'] ?? 0}',
+                label: 'Direct Customers',
+                helper: 'Customers directly linked to this member.',
+                icon: Icons.people_alt_outlined,
+              ),
+              AgentMetricCard(
+                value: '${referralSummary['totalReferrals'] ?? 0}',
+                label: 'Total Network',
+                helper:
+                    'All connected customers in the visible referral graph.',
+                icon: Icons.account_tree_outlined,
+              ),
+              AgentMetricCard(
+                value: '${referralSummary['availablePoints'] ?? 0}',
+                label: 'Network Rewards',
+                helper: 'Reward points still available in the network.',
+                icon: Icons.card_giftcard_outlined,
+              ),
+              AgentMetricCard(
+                value: '${referralSummary['earnedPoints'] ?? 0}',
+                label: 'Earned Rewards',
+                helper: 'Reward points already claimed or earned.',
+                icon: Icons.emoji_events_outlined,
+              ),
+            ],
+          ),
+          AgentUi.gapH(AgentUi.space16),
+          Column(
+            children: [
+              AgentPanelCard(
+                title: 'Customer Growth Status',
+                subtitle:
+                    'A normalized view of the status counts currently driving the network.',
+                child: statuses.isEmpty
+                    ? const AgentEmptyState(
+                        icon: Icons.insights_outlined,
+                        title: 'No network status data',
+                        message:
+                            'Status totals will appear here once referral activity is recorded for this customer.',
+                      )
+                    : Wrap(
+                        spacing: AgentUi.space12,
+                        runSpacing: AgentUi.space12,
+                        children: statuses.entries
+                            .map(
+                              (entry) => SizedBox(
+                                width: 220,
+                                child: AgentKeyValueItem(
+                                  label: _humanize(entry.key),
+                                  value: '${entry.value}',
+                                  icon: Icons.flag_outlined,
                                 ),
-                              )
-                              .toList(),
-                        ),
-                ),
-                AgentUi.gapH(AgentUi.space12),
-                LayoutBuilder(
-                  builder: (context, constraints) {
-                    final stack = constraints.maxWidth < 900;
-                    final treeCard = _ReferralTreeCard(tree: referralTree);
-                    final historyCard = _ReferralHistoryCard(history: history);
-                    if (stack) {
-                      return Column(
-                        children: [
-                          treeCard,
-                          AgentUi.gapH(AgentUi.space12),
-                          historyCard,
-                        ],
-                      );
-                    }
-                    return Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                              ),
+                            )
+                            .toList(),
+                      ),
+              ),
+              AgentUi.gapH(AgentUi.space12),
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final stack = constraints.maxWidth < 900;
+                  final treeCard = _ReferralTreeCard(tree: referralTree);
+                  final historyCard = _ReferralHistoryCard(history: history);
+                  if (stack) {
+                    return Column(
                       children: [
-                        Expanded(child: treeCard),
-                        AgentUi.gapW(AgentUi.space12),
-                        Expanded(child: historyCard),
+                        treeCard,
+                        AgentUi.gapH(AgentUi.space12),
+                        historyCard,
                       ],
                     );
-                  },
-                ),
-              ],
-            ),
-          ],
-        ),
+                  }
+                  return Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(child: treeCard),
+                      AgentUi.gapW(AgentUi.space12),
+                      Expanded(child: historyCard),
+                    ],
+                  );
+                },
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }

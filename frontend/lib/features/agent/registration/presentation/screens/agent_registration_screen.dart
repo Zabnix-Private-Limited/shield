@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../../shared/utils/prescription_file_picker.dart';
 import '../../../shared/presentation/controllers/agent_portal_provider.dart';
+import '../../../shared/presentation/widgets/agent_design_system.dart';
 import '../../../shared/presentation/widgets/agent_experience_widgets.dart';
 import '../../../shared/presentation/widgets/agent_section_header.dart';
 
@@ -95,157 +96,152 @@ class _AgentRegistrationScreenState
       1200.0,
     );
 
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            AgentSectionHeader(
-              title: 'Register Customer',
-              description:
-                  'This onboarding flow now moves one responsibility at a time: personal details, identity, membership, documents, and then review before submission.',
-              actions: [
-                AgentSecondaryButton(
-                  onPressed: employeeCode.isEmpty
-                      ? null
-                      : () => _saveRegistration(
-                          controller,
-                          submit: false,
-                          showFeedback: true,
-                        ),
-                  label: _autoSaving ? 'Saving...' : 'Save Draft',
-                ),
-                AgentPrimaryButton(
-                  onPressed: employeeCode.isEmpty
-                      ? null
-                      : () async {
-                          if (_currentStep < 4) {
-                            final moved = await _goToNextStep(controller);
-                            if (!moved || !mounted) {
-                              return;
-                            }
+    return AgentWorkspaceSurface(
+      padding: AgentSpacing.contentInsets,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          AgentSectionHeader(
+            title: 'Register Customer',
+            description:
+                'This onboarding flow now moves one responsibility at a time: personal details, identity, membership, documents, and then review before submission.',
+            actions: [
+              AgentSecondaryButton(
+                onPressed: employeeCode.isEmpty
+                    ? null
+                    : () => _saveRegistration(
+                        controller,
+                        submit: false,
+                        showFeedback: true,
+                      ),
+                label: _autoSaving ? 'Saving...' : 'Save Draft',
+              ),
+              AgentPrimaryButton(
+                onPressed: employeeCode.isEmpty
+                    ? null
+                    : () async {
+                        if (_currentStep < 4) {
+                          final moved = await _goToNextStep(controller);
+                          if (!moved || !mounted) {
+                            return;
                           }
-                          await _submitRegistration(controller);
-                        },
-                  label: 'Register Customer',
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            if (drafts.isNotEmpty) ...[
-              DropdownButtonFormField<String>(
-                key: ValueKey(_draftCustomerId),
-                initialValue: _draftCustomerId,
-                decoration: const InputDecoration(
-                  labelText: 'Resume saved draft',
-                ),
-                items: [
-                  const DropdownMenuItem<String>(
-                    value: null,
-                    child: Text('Start a new registration'),
-                  ),
-                  ...drafts.map(
-                    (draft) => DropdownMenuItem<String>(
-                      value: draft['id']?.toString(),
-                      child: Text(
-                        '${draft['fullName'] ?? 'Customer'} • ${draft['mobile'] ?? ''} • ${_humanize(draft['status'])}',
-                      ),
-                    ),
-                  ),
-                ],
-                onChanged: (value) {
-                  setState(() => _draftCustomerId = value);
-                  if (value == null) {
-                    _resetForNewDraft();
-                    return;
-                  }
-                  final selected = drafts.firstWhere(
-                    (item) => item['id']?.toString() == value,
-                    orElse: () => <String, dynamic>{},
-                  );
-                  _hydrateDraft(selected);
-                },
+                        }
+                        await _submitRegistration(controller);
+                      },
+                label: 'Register Customer',
               ),
-              const SizedBox(height: 16),
             ],
-            AgentPanelCard(
-              title: 'Onboarding Progress',
-              subtitle: _autoSaveMessage,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(999),
-                    child: LinearProgressIndicator(
-                      value: progress,
-                      minHeight: 8,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Wrap(
-                    spacing: 10,
-                    runSpacing: 10,
-                    children: List.generate(
-                      _steps.length,
-                      (index) => _StepChip(
-                        label: _steps[index],
-                        state: index < _currentStep
-                            ? _StepChipState.complete
-                            : index == _currentStep
-                            ? _StepChipState.active
-                            : _StepChipState.inactive,
-                      ),
-                    ),
-                  ),
-                ],
+          ),
+          const SizedBox(height: 12),
+          if (drafts.isNotEmpty) ...[
+            DropdownButtonFormField<String>(
+              key: ValueKey(_draftCustomerId),
+              initialValue: _draftCustomerId,
+              decoration: const InputDecoration(
+                labelText: 'Resume saved draft',
               ),
-            ),
-            const SizedBox(height: 16),
-            SizedBox(
-              height: bodyHeight,
-              child: AnimatedSwitcher(
-                duration: const Duration(milliseconds: 220),
-                child: SingleChildScrollView(
-                  key: ValueKey(_currentStep),
-                  child: _RegistrationStepScaffold(
-                    title: _steps[_currentStep],
-                    subtitle: _stepSubtitle(_currentStep),
-                    body: _buildCurrentStep(
-                      context,
-                      controller,
-                      employeeCode,
-                      membershipTypes,
-                      businesses,
+              items: [
+                const DropdownMenuItem<String>(
+                  value: null,
+                  child: Text('Start a new registration'),
+                ),
+                ...drafts.map(
+                  (draft) => DropdownMenuItem<String>(
+                    value: draft['id']?.toString(),
+                    child: Text(
+                      '${draft['fullName'] ?? 'Customer'} • ${draft['mobile'] ?? ''} • ${_humanize(draft['status'])}',
                     ),
                   ),
                 ),
-              ),
+              ],
+              onChanged: (value) {
+                setState(() => _draftCustomerId = value);
+                if (value == null) {
+                  _resetForNewDraft();
+                  return;
+                }
+                final selected = drafts.firstWhere(
+                  (item) => item['id']?.toString() == value,
+                  orElse: () => <String, dynamic>{},
+                );
+                _hydrateDraft(selected);
+              },
             ),
             const SizedBox(height: 16),
-            Row(
+          ],
+          AgentPanelCard(
+            title: 'Onboarding Progress',
+            subtitle: _autoSaveMessage,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                AgentSecondaryButton(
-                  onPressed: _currentStep == 0
-                      ? null
-                      : () => setState(() => _currentStep -= 1),
-                  label: 'Previous',
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(999),
+                  child: LinearProgressIndicator(value: progress, minHeight: 8),
                 ),
-                const Spacer(),
-                if (_currentStep < 4)
-                  AgentPrimaryButton(
-                    onPressed: () => _goToNextStep(controller),
-                    label: 'Next',
-                  )
-                else
-                  AgentPrimaryButton(
-                    onPressed: () => _submitRegistration(controller),
-                    label: 'Submit Registration',
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 10,
+                  runSpacing: 10,
+                  children: List.generate(
+                    _steps.length,
+                    (index) => _StepChip(
+                      label: _steps[index],
+                      state: index < _currentStep
+                          ? _StepChipState.complete
+                          : index == _currentStep
+                          ? _StepChipState.active
+                          : _StepChipState.inactive,
+                    ),
                   ),
+                ),
               ],
             ),
-          ],
-        ),
+          ),
+          const SizedBox(height: 16),
+          SizedBox(
+            height: bodyHeight,
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 220),
+              child: SingleChildScrollView(
+                key: ValueKey(_currentStep),
+                child: _RegistrationStepScaffold(
+                  title: _steps[_currentStep],
+                  subtitle: _stepSubtitle(_currentStep),
+                  body: _buildCurrentStep(
+                    context,
+                    controller,
+                    employeeCode,
+                    membershipTypes,
+                    businesses,
+                  ),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              AgentSecondaryButton(
+                onPressed: _currentStep == 0
+                    ? null
+                    : () => setState(() => _currentStep -= 1),
+                label: 'Previous',
+              ),
+              const Spacer(),
+              if (_currentStep < 4)
+                AgentPrimaryButton(
+                  onPressed: () => _goToNextStep(controller),
+                  label: 'Next',
+                )
+              else
+                AgentPrimaryButton(
+                  onPressed: () => _submitRegistration(controller),
+                  label: 'Submit Registration',
+                ),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -643,8 +639,8 @@ class _AgentRegistrationScreenState
                     ? 'New registration'
                     : 'Saved draft ready to submit',
                 color: _draftCustomerId == null
-                    ? Colors.orange.shade700
-                    : Colors.green.shade700,
+                    ? AgentColors.warning
+                    : AgentColors.success,
                 icon: _draftCustomerId == null
                     ? Icons.edit_note_outlined
                     : Icons.check_circle_outline,
@@ -910,7 +906,7 @@ class _StepChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = switch (state) {
-      _StepChipState.complete => Colors.green.shade700,
+      _StepChipState.complete => AgentColors.success,
       _StepChipState.active => Theme.of(context).colorScheme.primary,
       _StepChipState.inactive => Theme.of(context).colorScheme.outline,
     };
@@ -944,7 +940,7 @@ class _RequiredDocumentRow extends StatelessWidget {
         children: [
           Icon(
             done ? Icons.check_circle : Icons.radio_button_unchecked,
-            color: done ? Colors.green.shade700 : Colors.orange.shade700,
+            color: done ? AgentColors.success : AgentColors.warning,
           ),
           const SizedBox(width: 8),
           Expanded(child: Text(label)),

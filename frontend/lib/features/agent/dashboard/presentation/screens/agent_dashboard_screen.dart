@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../../shared/presentation/controllers/agent_portal_provider.dart';
+import '../../../shared/presentation/widgets/agent_design_system.dart';
 import '../../../shared/presentation/widgets/agent_experience_widgets.dart';
 import '../../../shared/presentation/widgets/agent_section_header.dart';
 
@@ -70,7 +71,7 @@ class _AgentDashboardScreenState extends ConsumerState<AgentDashboardScreen> {
         helper: 'Drafts or incomplete customer onboarding records.',
         icon: Icons.assignment_ind_outlined,
         route: '/portal/agent/registration',
-        color: Colors.orange.shade700,
+        color: AgentColors.warning,
       ),
       _TaskMetric(
         value: '${summary['pendingDocuments'] ?? 0}',
@@ -78,7 +79,7 @@ class _AgentDashboardScreenState extends ConsumerState<AgentDashboardScreen> {
         helper: 'Customers still waiting for required files.',
         icon: Icons.upload_file_outlined,
         route: '/portal/agent/documents',
-        color: Colors.deepOrange.shade700,
+        color: AgentColors.accentOrange,
       ),
       _TaskMetric(
         value: '${summary['todaysFollowUps'] ?? tasksToday.length}',
@@ -86,7 +87,7 @@ class _AgentDashboardScreenState extends ConsumerState<AgentDashboardScreen> {
         helper: 'Scheduled customer calls and field follow-through.',
         icon: Icons.event_note_outlined,
         route: '/portal/agent/followups',
-        color: Colors.blue.shade700,
+        color: AgentColors.accentBlue,
       ),
       _TaskMetric(
         value: '${tasksOverdue.length}',
@@ -94,7 +95,7 @@ class _AgentDashboardScreenState extends ConsumerState<AgentDashboardScreen> {
         helper: 'Items that need attention before anything else.',
         icon: Icons.warning_amber_rounded,
         route: '/portal/agent/followups',
-        color: Colors.red.shade700,
+        color: AgentColors.danger,
       ),
       _TaskMetric(
         value: '${summary['appointmentsToday'] ?? 0}',
@@ -102,7 +103,7 @@ class _AgentDashboardScreenState extends ConsumerState<AgentDashboardScreen> {
         helper: 'Customer visits already in the calendar.',
         icon: Icons.calendar_month_outlined,
         route: '/portal/agent/appointments',
-        color: Colors.green.shade700,
+        color: AgentColors.success,
       ),
       _TaskMetric(
         value: '${urgentAlerts.length}',
@@ -110,7 +111,7 @@ class _AgentDashboardScreenState extends ConsumerState<AgentDashboardScreen> {
         helper: 'Unread or urgent alerts waiting for action.',
         icon: Icons.notification_important_outlined,
         route: '/portal/agent/notifications',
-        color: Colors.purple.shade700,
+        color: AgentColors.accentPurple,
       ),
     ];
 
@@ -129,7 +130,7 @@ class _AgentDashboardScreenState extends ConsumerState<AgentDashboardScreen> {
         helper: 'Visits that need coordination today.',
         icon: Icons.route_outlined,
         route: '/portal/agent/appointments',
-        color: Colors.teal.shade700,
+        color: AgentColors.accentTeal,
       ),
       _TaskMetric(
         value: '${performance['retentionRate'] ?? 0}%',
@@ -137,7 +138,7 @@ class _AgentDashboardScreenState extends ConsumerState<AgentDashboardScreen> {
         helper: 'Customer retention across the current portfolio.',
         icon: Icons.favorite_outline,
         route: '/portal/agent/performance',
-        color: Colors.green.shade700,
+        color: AgentColors.success,
       ),
       _TaskMetric(
         value: '${performance['conversionRate'] ?? 0}%',
@@ -145,7 +146,7 @@ class _AgentDashboardScreenState extends ConsumerState<AgentDashboardScreen> {
         helper: 'Current conversion momentum for the month.',
         icon: Icons.track_changes_outlined,
         route: '/portal/agent/performance',
-        color: Colors.indigo.shade700,
+        color: AgentColors.accentIndigo,
       ),
     ];
 
@@ -448,13 +449,9 @@ class _DashboardLoadingState extends StatelessWidget {
           title: 'Loading Dashboard',
           subtitle:
               'Fetching today’s task list, recent customer activity, and workspace metrics.',
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: const [
-              LinearProgressIndicator(),
-              SizedBox(height: 12),
-              Text('Loading today’s tasks and workspace activity...'),
-            ],
+          child: const AgentLoadingState(
+            title: 'Loading workspace',
+            message: 'Loading today’s tasks and workspace activity...',
           ),
         ),
       ],

@@ -29,8 +29,10 @@ class AgentUi {
   static const EdgeInsets panelPadding = EdgeInsets.all(space20);
   static const EdgeInsets compactPanelPadding = EdgeInsets.all(space16);
   static const EdgeInsets cardBodyPadding = EdgeInsets.all(space16);
-  static const EdgeInsets chipPadding =
-      EdgeInsets.symmetric(horizontal: space12, vertical: space8);
+  static const EdgeInsets chipPadding = EdgeInsets.symmetric(
+    horizontal: space12,
+    vertical: space8,
+  );
 
   static SizedBox gapH(double value) => SizedBox(height: value);
   static SizedBox gapW(double value) => SizedBox(width: value);
@@ -65,12 +67,68 @@ class AgentUi {
   }
 }
 
+class AgentSpacing {
+  static const double xxs = AgentUi.space4;
+  static const double xs = AgentUi.space8;
+  static const double sm = AgentUi.space12;
+  static const double md = AgentUi.space16;
+  static const double lg = AgentUi.space20;
+  static const double xl = AgentUi.space24;
+  static const double xxl = AgentUi.space32;
+
+  static const double sectionGap = md;
+  static const double panelGap = sm;
+  static const double chipGap = xs;
+  static const double itemGap = sm;
+  static const double metricGap = sm;
+  static const double pagePadding = lg;
+  static const double compactPadding = md;
+
+  static const EdgeInsets pageInsets = EdgeInsets.all(pagePadding);
+  static const EdgeInsets panelInsets = EdgeInsets.all(pagePadding);
+  static const EdgeInsets compactInsets = EdgeInsets.all(compactPadding);
+  static const EdgeInsets contentInsets = EdgeInsets.all(md);
+  static const EdgeInsets chipInsets = EdgeInsets.symmetric(
+    horizontal: sm,
+    vertical: xs,
+  );
+}
+
+class AgentRadius {
+  static const double inset = AgentUi.radiusSmall;
+  static const double panel = AgentUi.radiusMedium;
+  static const double workspace = AgentUi.radiusLarge;
+  static const double button = AgentUi.radiusMedium;
+  static const double chip = AgentUi.radiusPill;
+}
+
+class AgentColors {
+  static Color success = AppColors.success;
+  static Color warning = AppColors.warning;
+  static Color danger = AppColors.error;
+  static Color info = AppColors.info;
+  static Color accentBlue = const Color(0xFF2563EB);
+  static Color accentIndigo = const Color(0xFF4F46E5);
+  static Color accentTeal = const Color(0xFF0F766E);
+  static Color accentPurple = const Color(0xFF7C3AED);
+  static Color accentOrange = const Color(0xFFEA580C);
+  static Color accentRed = const Color(0xFFB91C1C);
+
+  static Color surfaceTint(BuildContext context) =>
+      Theme.of(context).colorScheme.surfaceContainerLowest;
+}
+
+class AgentType {
+  static TextStyle pageTitle = AppTypography.h4;
+  static TextStyle sectionTitle = AppTypography.h5;
+  static TextStyle metricValue = AppTypography.h3;
+  static TextStyle body = AppTypography.body;
+  static TextStyle bodySmall = AppTypography.small;
+  static TextStyle caption = AppTypography.tiny;
+}
+
 class AgentFormFieldWidth extends StatelessWidget {
-  const AgentFormFieldWidth({
-    super.key,
-    required this.child,
-    this.width = 280,
-  });
+  const AgentFormFieldWidth({super.key, required this.child, this.width = 280});
 
   final Widget child;
   final double width;
@@ -118,10 +176,7 @@ class AgentSearchField extends StatelessWidget {
 }
 
 class AgentFilterWrap extends StatelessWidget {
-  const AgentFilterWrap({
-    super.key,
-    required this.children,
-  });
+  const AgentFilterWrap({super.key, required this.children});
 
   final List<Widget> children;
 

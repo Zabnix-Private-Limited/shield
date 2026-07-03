@@ -74,6 +74,55 @@ class AgentPanelCard extends StatelessWidget {
   }
 }
 
+class AgentWorkspaceSurface extends StatelessWidget {
+  const AgentWorkspaceSurface({
+    super.key,
+    required this.child,
+    this.padding = AgentSpacing.pageInsets,
+  });
+
+  final Widget child;
+  final EdgeInsetsGeometry padding;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      margin: EdgeInsets.zero,
+      child: Padding(padding: padding, child: child),
+    );
+  }
+}
+
+class AgentInsetSurface extends StatelessWidget {
+  const AgentInsetSurface({
+    super.key,
+    required this.child,
+    this.padding = AgentSpacing.contentInsets,
+    this.backgroundColor,
+    this.borderColor,
+  });
+
+  final Widget child;
+  final EdgeInsetsGeometry padding;
+  final Color? backgroundColor;
+  final Color? borderColor;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: padding,
+      decoration: BoxDecoration(
+        color:
+            backgroundColor ??
+            Theme.of(context).colorScheme.surfaceContainerLowest,
+        borderRadius: AgentUi.radius(AgentRadius.panel),
+        border: borderColor == null ? null : Border.all(color: borderColor!),
+      ),
+      child: child,
+    );
+  }
+}
+
 class AgentMetricGrid extends StatelessWidget {
   const AgentMetricGrid({super.key, required this.children});
 
@@ -118,54 +167,58 @@ class AgentMetricCard extends StatelessWidget {
       width: width,
       child: ConstrainedBox(
         constraints: BoxConstraints(minHeight: height),
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: AgentUi.radius(AgentUi.radiusLarge),
-          child: Card(
-            margin: EdgeInsets.zero,
-            child: Padding(
-              padding: AgentUi.cardBodyPadding,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: resolvedColor.withValues(alpha: 0.12),
-                      borderRadius: AgentUi.radius(AgentUi.radiusMedium),
+        child: Semantics(
+          button: onTap != null,
+          label: '$label: $value. $helper',
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: AgentUi.radius(AgentUi.radiusLarge),
+            child: Card(
+              margin: EdgeInsets.zero,
+              child: Padding(
+                padding: AgentUi.cardBodyPadding,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: resolvedColor.withValues(alpha: 0.12),
+                        borderRadius: AgentUi.radius(AgentUi.radiusMedium),
+                      ),
+                      child: Icon(
+                        icon,
+                        size: AgentUi.iconSize,
+                        color: resolvedColor,
+                      ),
                     ),
-                    child: Icon(
-                      icon,
-                      size: AgentUi.iconSize,
-                      color: resolvedColor,
+                    AgentUi.gapH(AgentUi.space20),
+                    Text(
+                      value,
+                      style: AppTypography.h3.copyWith(
+                        color: resolvedColor,
+                        fontWeight: FontWeight.w800,
+                      ),
                     ),
-                  ),
-                  AgentUi.gapH(AgentUi.space20),
-                  Text(
-                    value,
-                    style: AppTypography.h3.copyWith(
-                      color: resolvedColor,
-                      fontWeight: FontWeight.w800,
+                    AgentUi.gapH(AgentUi.space4),
+                    Text(
+                      label,
+                      style: AppTypography.small.copyWith(
+                        color: AppColors.shieldNavy,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
-                  ),
-                  AgentUi.gapH(AgentUi.space4),
-                  Text(
-                    label,
-                    style: AppTypography.small.copyWith(
-                      color: AppColors.shieldNavy,
-                      fontWeight: FontWeight.w700,
+                    AgentUi.gapH(AgentUi.space4),
+                    Text(
+                      helper,
+                      maxLines: 3,
+                      overflow: TextOverflow.fade,
+                      style: AppTypography.tiny.copyWith(color: AppColors.gray),
                     ),
-                  ),
-                  AgentUi.gapH(AgentUi.space4),
-                  Text(
-                    helper,
-                    maxLines: 3,
-                    overflow: TextOverflow.fade,
-                    style: AppTypography.tiny.copyWith(color: AppColors.gray),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
@@ -271,21 +324,56 @@ class AgentEmptyState extends StatelessWidget {
               if ((actionLabel ?? '').trim().isNotEmpty &&
                   onAction != null) ...[
                 AgentUi.gapH(AgentUi.space20),
-                FilledButton.tonal(
-                  onPressed: onAction,
-                  child: Text(actionLabel!),
-                ),
+                AgentSecondaryButton(onPressed: onAction, label: actionLabel!),
               ],
               if ((secondaryActionLabel ?? '').trim().isNotEmpty &&
                   onSecondaryAction != null) ...[
                 AgentUi.gapH(AgentUi.space8),
-                TextButton(
+                AgentGhostButton(
                   onPressed: onSecondaryAction,
-                  child: Text(secondaryActionLabel!),
+                  label: secondaryActionLabel!,
                 ),
               ],
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class AgentLoadingState extends StatelessWidget {
+  const AgentLoadingState({
+    super.key,
+    required this.title,
+    required this.message,
+  });
+
+  final String title;
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 420),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const SizedBox(
+              width: 28,
+              height: 28,
+              child: CircularProgressIndicator(strokeWidth: 2.5),
+            ),
+            AgentUi.gapH(AgentSpacing.md),
+            Text(title, style: AppTypography.h5, textAlign: TextAlign.center),
+            AgentUi.gapH(AgentSpacing.xs),
+            Text(
+              message,
+              style: AppTypography.small.copyWith(color: AppColors.gray),
+              textAlign: TextAlign.center,
+            ),
+          ],
         ),
       ),
     );
@@ -340,10 +428,10 @@ class AgentErrorState extends StatelessWidget {
                 textAlign: TextAlign.center,
               ),
               AgentUi.gapH(AgentUi.space20),
-              FilledButton.icon(
+              AgentPrimaryButton(
                 onPressed: onRetry,
                 icon: const Icon(Icons.refresh_rounded),
-                label: Text(retryLabel),
+                label: retryLabel,
               ),
             ],
           ),
@@ -369,10 +457,14 @@ class AgentActionTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return SizedBox(
       width: 180,
-      child: FilledButton.tonalIcon(
-        onPressed: onTap,
-        icon: Icon(icon, size: AgentUi.iconSize),
-        label: Text(label),
+      child: Semantics(
+        button: true,
+        label: label,
+        child: AgentSecondaryButton(
+          onPressed: onTap,
+          icon: Icon(icon, size: AgentUi.iconSize),
+          label: label,
+        ),
       ),
     );
   }

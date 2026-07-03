@@ -54,111 +54,112 @@ class _AgentNotificationsScreenState
       return true;
     }).toList();
     final groups = _groupNotifications(notifications);
-    final bodyHeight = (MediaQuery.sizeOf(context).height - 220).clamp(
-      320.0,
+    final bodyHeight = (MediaQuery.sizeOf(context).height - 340).clamp(
+      360.0,
       1200.0,
     );
 
-    return Card(
-      child: Padding(
-        padding: AgentUi.compactPanelPadding,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            AgentSectionHeader(
-              title: 'Notifications',
-              description:
-                  'Unread, today, and older alerts are grouped into one timeline so the screen feels like an inbox instead of an empty admin list.',
-              actions: [
-                AgentPrimaryButton(
-                  onPressed: notifications.isEmpty
-                      ? null
-                      : () => ref
-                            .read(agentPortalControllerProvider)
-                            .markAllNotificationsRead(
-                              customerId: selectedCustomerId,
-                            ),
-                  label: 'Mark All Read',
-                ),
-              ],
-            ),
-            AgentUi.gapH(AgentUi.space12),
-            AgentFilterWrap(
-              children: [
-                _FilterChipButton(
-                  label: 'All',
-                  selected: _filter == 'ALL',
-                  onTap: () => setState(() => _filter = 'ALL'),
-                ),
-                _FilterChipButton(
-                  label: 'Unread',
-                  selected: _filter == 'UNREAD',
-                  onTap: () => setState(() => _filter = 'UNREAD'),
-                ),
-                _FilterChipButton(
-                  label: 'Read',
-                  selected: _filter == 'READ',
-                  onTap: () => setState(() => _filter = 'READ'),
-                ),
-              ],
-            ),
-            AgentUi.gapH(AgentUi.space12),
-            SizedBox(
-              height: bodyHeight,
-              child: notifications.isEmpty
-                  ? _EmptyNotificationState(
-                      filter: _filter,
-                      onRefresh: () => ref
+    return AgentWorkspaceSurface(
+      padding: AgentUi.compactPanelPadding,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          AgentSectionHeader(
+            title: 'Notifications',
+            description:
+                'Unread, today, and older alerts are grouped into one timeline so the screen feels like an inbox instead of an empty admin list.',
+            actions: [
+              AgentPrimaryButton(
+                onPressed: notifications.isEmpty
+                    ? null
+                    : () => ref
                           .read(agentPortalControllerProvider)
-                          .refreshWorkspace(),
-                      onShowAll: () => setState(() => _filter = 'ALL'),
-                    )
-                  : ListView(
-                      children: groups.entries
-                          .map(
-                            (entry) => Padding(
-                              padding: const EdgeInsets.only(bottom: 16),
-                              child: _NotificationGroup(
-                                heading: entry.key,
-                                items: entry.value,
-                                onOpenCustomer: (notification) async {
-                                  final messenger = ScaffoldMessenger.of(
-                                    context,
-                                  );
-                                  final customerId =
-                                      notification['customerId']?.toString() ??
-                                      '';
-                                  if (customerId.isEmpty) {
-                                    return;
-                                  }
-                                  await ref
-                                      .read(agentPortalControllerProvider)
-                                      .selectCustomer(customerId);
-                                  if (!context.mounted) {
-                                    return;
-                                  }
-                                  context.go('/portal/agent/customers');
-                                  messenger.showSnackBar(
-                                    const SnackBar(
-                                      content: Text(
-                                        'Customer workspace is ready in Customers.',
-                                      ),
-                                    ),
-                                  );
-                                },
-                                onMarkRead: (notification) => ref
-                                    .read(agentPortalControllerProvider)
-                                    .markNotificationRead(
-                                      notification['id']?.toString() ?? '',
-                                    ),
-                              ),
-                            ),
-                          )
-                          .toList(),
+                          .markAllNotificationsRead(
+                            customerId: selectedCustomerId,
+                          ),
+                label: 'Mark All Read',
+              ),
+            ],
+          ),
+          AgentUi.gapH(AgentUi.space12),
+          AgentFilterWrap(
+            children: [
+              _FilterChipButton(
+                label: 'All',
+                selected: _filter == 'ALL',
+                onTap: () => setState(() => _filter = 'ALL'),
+              ),
+              _FilterChipButton(
+                label: 'Unread',
+                selected: _filter == 'UNREAD',
+                onTap: () => setState(() => _filter = 'UNREAD'),
+              ),
+              _FilterChipButton(
+                label: 'Read',
+                selected: _filter == 'READ',
+                onTap: () => setState(() => _filter = 'READ'),
+              ),
+            ],
+          ),
+          AgentUi.gapH(AgentUi.space12),
+          SizedBox(
+            height: bodyHeight,
+            child: notifications.isEmpty
+                ? SingleChildScrollView(
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(minHeight: bodyHeight),
+                      child: _EmptyNotificationState(
+                        filter: _filter,
+                        onRefresh: () => ref
+                            .read(agentPortalControllerProvider)
+                            .refreshWorkspace(),
+                        onShowAll: () => setState(() => _filter = 'ALL'),
+                      ),
                     ),
-            ),
-          ],
-        ),
+                  )
+                : ListView(
+                    children: groups.entries
+                        .map(
+                          (entry) => Padding(
+                            padding: const EdgeInsets.only(bottom: 16),
+                            child: _NotificationGroup(
+                              heading: entry.key,
+                              items: entry.value,
+                              onOpenCustomer: (notification) async {
+                                final messenger = ScaffoldMessenger.of(context);
+                                final customerId =
+                                    notification['customerId']?.toString() ??
+                                    '';
+                                if (customerId.isEmpty) {
+                                  return;
+                                }
+                                await ref
+                                    .read(agentPortalControllerProvider)
+                                    .selectCustomer(customerId);
+                                if (!context.mounted) {
+                                  return;
+                                }
+                                context.go('/portal/agent/customers');
+                                messenger.showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                      'Customer workspace is ready in Customers.',
+                                    ),
+                                  ),
+                                );
+                              },
+                              onMarkRead: (notification) => ref
+                                  .read(agentPortalControllerProvider)
+                                  .markNotificationRead(
+                                    notification['id']?.toString() ?? '',
+                                  ),
+                            ),
+                          ),
+                        )
+                        .toList(),
+                  ),
+          ),
+        ],
       ),
     );
   }
@@ -239,8 +240,8 @@ class _NotificationGroup extends StatelessWidget {
                                             .toString()
                                             .toUpperCase() ==
                                         'READ'
-                                    ? Colors.green.shade700
-                                    : Colors.orange.shade700,
+                                    ? AgentColors.success
+                                    : AgentColors.warning,
                                 icon:
                                     (notification['status'] ?? '')
                                             .toString()
@@ -357,13 +358,9 @@ class _NotificationsLoadingState extends StatelessWidget {
     return AgentPanelCard(
       title: 'Loading Notifications',
       subtitle: 'Fetching unread, today, and older alerts for this workspace.',
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: const [
-          LinearProgressIndicator(),
-          SizedBox(height: 12),
-          Text('Loading the notification inbox...'),
-        ],
+      child: const AgentLoadingState(
+        title: 'Loading notification inbox',
+        message: 'Loading the notification inbox...',
       ),
     );
   }

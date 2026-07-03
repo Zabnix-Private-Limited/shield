@@ -7946,3 +7946,53 @@ est build, ackend/vercel.json, ackend/src/auth/auth.service.ts, and uth_devic
 - cd frontend && flutter test ✅
 ### Timestamp
 - 2026-07-03 19:32:39 IST
+
+## 216. Agent Portal Final Stabilization: Tokens, Responsive Matrix, Goldens, and Accessibility
+**High-level desc**: Finished the ordered Agent Portal stabilization pass by tightening the shared design tokens, removing the last shell-sensitive layout regressions, standardizing more visual primitives onto the agent design system, and adding durable responsive, golden, and accessibility regression coverage so future UI drift is caught before it ships.
+- Replaced the remaining narrow-width customer workspace failure with a scroll-safe stacked layout that keeps the list pane and the tabbed customer workspace usable inside constrained desktop widths instead of collapsing the detail panel into overflow.
+- Hardened the notifications workspace empty-state container with larger bounded work-area sizing and scroll-safe fallback behavior so empty inbox and filtered-empty states no longer clip or disappear at supported desktop heights.
+- Moved the app typography foundation off runtime-fetched Google Fonts in favor of a deterministic local Flutter-test-safe typography path, then wired the shared agent test harness to the real SHIELD theme so visual regression tests render against the same design language the portal uses in production.
+- Added semantic design-token usage across the main agent surfaces by routing more dashboard, performance, follow-up, registration, and customer status/accent colors through `AgentColors` instead of ad-hoc `Colors.*` values.
+- Added a full responsive regression matrix for the primary agent screens across 1280x720, 1366x768, 1440x900, 1600x900, 1920x1080, a narrow desktop width, and large-text coverage at 2.0x for the highest-risk screens.
+- Added stable desktop golden coverage for Dashboard, Customers, Registration, Follow-ups, Documents, Notifications, Reports, Performance, and Settings, plus a shared test bootstrap that loads deterministic fonts for widget and golden runs.
+- Added accessibility regression coverage around labeled tap targets on core agent screens and cleaned unrelated repo-wide analyzer infos so `flutter analyze` now closes fully green instead of passing only on touched files.
+
+### Files Modified/Created
+**Frontend Files (Modified)**:
+- frontend/lib/app/theme/app_typography.dart
+- frontend/lib/features/agent/customers/presentation/screens/agent_customers_screen.dart
+- frontend/lib/features/agent/dashboard/presentation/screens/agent_dashboard_screen.dart
+- frontend/lib/features/agent/followups/presentation/screens/agent_followups_screen.dart
+- frontend/lib/features/agent/notifications/presentation/screens/agent_notifications_screen.dart
+- frontend/lib/features/agent/performance/presentation/screens/agent_performance_screen.dart
+- frontend/lib/features/agent/registration/presentation/screens/agent_registration_screen.dart
+- frontend/lib/features/customer/documents/presentation/screens/customer_documents_screen.dart
+- frontend/lib/features/customer/prescriptions/presentation/screens/customer_prescriptions_screen.dart
+- frontend/lib/features/portal/presentation/screens/portal_shell.dart
+- frontend/pubspec.yaml
+- frontend/test/agent_portal_golden_test.dart
+- frontend/test/agent_portal_test_harness.dart
+- log.md
+**Frontend Files (New)**:
+- frontend/test/agent_portal_accessibility_test.dart
+- frontend/test/agent_portal_responsive_matrix_test.dart
+- frontend/test/flutter_test_config.dart
+- frontend/test/goldens/agent_portal/customers.png
+- frontend/test/goldens/agent_portal/dashboard.png
+- frontend/test/goldens/agent_portal/documents.png
+- frontend/test/goldens/agent_portal/followups.png
+- frontend/test/goldens/agent_portal/notifications.png
+- frontend/test/goldens/agent_portal/performance.png
+- frontend/test/goldens/agent_portal/registration.png
+- frontend/test/goldens/agent_portal/reports.png
+- frontend/test/goldens/agent_portal/settings.png
+**Backend Files (Modified)**:
+- None.
+### Verification
+- `cd frontend && flutter analyze` ✅
+- `cd frontend && flutter test test/agent_portal_responsive_matrix_test.dart` ✅
+- `cd frontend && flutter test --update-goldens test/agent_portal_golden_test.dart` ✅
+- `cd frontend && flutter test test/agent_portal_accessibility_test.dart` ✅
+- `cd frontend && flutter test` ✅
+### Timestamp
+- 2026-07-03 20:05:00 IST

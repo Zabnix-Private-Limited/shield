@@ -128,7 +128,7 @@ class _CustomerDocumentsScreenState extends State<CustomerDocumentsScreen> {
             const SizedBox(height: 18),
             if (documents.isEmpty)
               AppCard(
-                child: Column(
+                child: const Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text('No documents yet', style: AppTypography.h4),
