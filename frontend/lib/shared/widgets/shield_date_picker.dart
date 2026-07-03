@@ -61,6 +61,73 @@ Future<DateTime?> showShieldDatePicker(
   );
 }
 
+Future<DateTimeRange?> showShieldDateRangePicker(
+  BuildContext context, {
+  required DateTime firstDate,
+  required DateTime lastDate,
+  DateTimeRange? initialDateRange,
+  String title = 'Select Date Range',
+  String? helperText,
+  String startTitle = 'Select Start Date',
+  String endTitle = 'Select End Date',
+  String confirmLabel = 'Confirm',
+  String cancelLabel = 'Cancel',
+  ShieldSelectableDatePredicate? selectableDayPredicate,
+}) async {
+  final normalizedFirstDate = ShieldDateUtils.dateOnly(firstDate);
+  final normalizedLastDate = ShieldDateUtils.dateOnly(lastDate);
+  final fallbackRange = DateTimeRange(
+    start: normalizedFirstDate,
+    end: normalizedFirstDate,
+  );
+  final normalizedInitialRange = ShieldDateUtils.normalizeDateRange(
+    initialDateRange ?? fallbackRange,
+  );
+
+  final startDate = await showShieldDatePicker(
+    context,
+    firstDate: normalizedFirstDate,
+    lastDate: normalizedLastDate,
+    initialDate: normalizedInitialRange.start,
+    title: startTitle,
+    helperText:
+        helperText ?? '$title\nChoose the first date in the reporting range.',
+    confirmLabel: 'Next',
+    cancelLabel: cancelLabel,
+    selectableDayPredicate: selectableDayPredicate,
+  );
+  if (startDate == null) {
+    return null;
+  }
+  if (!context.mounted) {
+    return null;
+  }
+
+  final normalizedStart = ShieldDateUtils.dateOnly(startDate);
+  final fallbackEnd = normalizedInitialRange.end.isBefore(normalizedStart)
+      ? normalizedStart
+      : normalizedInitialRange.end;
+  final endDate = await showShieldDatePicker(
+    context,
+    firstDate: normalizedStart,
+    lastDate: normalizedLastDate,
+    initialDate: fallbackEnd,
+    title: endTitle,
+    helperText:
+        helperText ?? '$title\nChoose the last date in the reporting range.',
+    confirmLabel: confirmLabel,
+    cancelLabel: cancelLabel,
+    selectableDayPredicate: selectableDayPredicate,
+  );
+  if (endDate == null) {
+    return null;
+  }
+
+  return ShieldDateUtils.normalizeDateRange(
+    DateTimeRange(start: normalizedStart, end: endDate),
+  );
+}
+
 class _ShieldDatePickerSurface extends StatefulWidget {
   const _ShieldDatePickerSurface({
     required this.firstDate,

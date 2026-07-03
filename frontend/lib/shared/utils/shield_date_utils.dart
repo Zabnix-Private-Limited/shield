@@ -1,4 +1,5 @@
 import 'package:intl/intl.dart';
+import 'package:flutter/material.dart';
 
 class ShieldDateUtils {
   ShieldDateUtils._();
@@ -54,5 +55,31 @@ class ShieldDateUtils {
 
   static String formatShortMonthDateTime(DateTime date) {
     return shortMonthDateTimeFormat.format(date.toLocal());
+  }
+
+  static DateTimeRange buildNormalizedDateRange(
+    DateTime startDate,
+    DateTime endDate,
+  ) {
+    final start = dateOnly(startDate);
+    final end = dateOnly(endDate);
+    if (end.isBefore(start)) {
+      return DateTimeRange(start: end, end: start);
+    }
+    return DateTimeRange(start: start, end: end);
+  }
+
+  static DateTimeRange normalizeDateRange(DateTimeRange range) {
+    return buildNormalizedDateRange(range.start, range.end);
+  }
+
+  static String formatDisplayDateRange(DateTimeRange range) {
+    final normalized = normalizeDateRange(range);
+    final start = formatDisplayDate(normalized.start);
+    final end = formatDisplayDate(normalized.end);
+    if (isSameDate(normalized.start, normalized.end)) {
+      return start;
+    }
+    return '$start - $end';
   }
 }

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../../shared/services/platform_file_actions.dart';
+import '../../../../../shared/utils/shield_date_utils.dart';
+import '../../../../../shared/widgets/shield_date_picker.dart';
 import '../../../shared/presentation/controllers/agent_portal_provider.dart';
 import '../../../shared/presentation/widgets/agent_experience_widgets.dart';
 import '../../../shared/presentation/widgets/agent_section_header.dart';
@@ -19,6 +21,8 @@ class _AgentReportsScreenState extends ConsumerState<AgentReportsScreen> {
   final _searchController = TextEditingController();
   DateTimeRange? _dateRange;
   bool _generating = false;
+  String? _activeReportId;
+  String? _reportErrorMessage;
   final List<String> _recentExports = <String>[];
 
   @override
@@ -93,31 +97,98 @@ class _AgentReportsScreenState extends ConsumerState<AgentReportsScreen> {
                   ),
                   OutlinedButton.icon(
                     onPressed: () async {
-                      final picked = await showDateRangePicker(
-                        context: context,
+                      final picked = await showShieldDateRangePicker(
+                        context,
                         firstDate: DateTime(2024),
                         lastDate: DateTime.now().add(const Duration(days: 365)),
+                        initialDateRange: _dateRange,
+                        title: 'Select Report Range',
+                        startTitle: 'Select Start Date',
+                        endTitle: 'Select End Date',
+                        helperText:
+                            'Choose the reporting window before exporting the selected SHIELD report.',
                       );
                       if (picked != null) {
-                        setState(() => _dateRange = picked);
+                        setState(() {
+                          _dateRange = picked;
+                          _reportErrorMessage = null;
+                        });
                       }
                     },
                     icon: const Icon(Icons.date_range_outlined),
                     label: Text(
                       _dateRange == null
                           ? 'Choose date range'
-                          : '${_dateRange!.start.day}/${_dateRange!.start.month} - ${_dateRange!.end.day}/${_dateRange!.end.month}',
+                          : ShieldDateUtils.formatDisplayDateRange(_dateRange!),
                     ),
                   ),
+                  if (_dateRange != null ||
+                      _searchController.text.trim().isNotEmpty ||
+                      _status != 'ALL')
+                    TextButton.icon(
+                      onPressed: _generating
+                          ? null
+                          : () {
+                              setState(() {
+                                _status = 'ALL';
+                                _dateRange = null;
+                                _reportErrorMessage = null;
+                                _searchController.clear();
+                              });
+                            },
+                      icon: const Icon(Icons.refresh_rounded),
+                      label: const Text('Clear filters'),
+                    ),
                 ],
               ),
             ),
             const SizedBox(height: 12),
+            if ((_reportErrorMessage ?? '').trim().isNotEmpty) ...[
+              AgentPanelCard(
+                title: 'Report export needs attention',
+                subtitle: _reportErrorMessage,
+                action: TextButton.icon(
+                  onPressed: _generating
+                      ? null
+                      : () {
+                          setState(() => _reportErrorMessage = null);
+                        },
+                  icon: const Icon(Icons.close_rounded),
+                  label: const Text('Dismiss'),
+                ),
+                child: Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    AgentStatusBadge(
+                      label: 'Retry available',
+                      color: Colors.orange.shade700,
+                      icon: Icons.refresh_rounded,
+                    ),
+                    if (_activeReportId != null)
+                      FilledButton.tonalIcon(
+                        onPressed: _generating
+                            ? null
+                            : () => _downloadReport(
+                                  context,
+                                  controller,
+                                  _activeReportId!,
+                                ),
+                        icon: const Icon(Icons.refresh_rounded),
+                        label: const Text('Retry export'),
+                      ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+            ],
             if (_generating) ...[
               const LinearProgressIndicator(),
               const SizedBox(height: 8),
               Text(
-                'Generating report export...',
+                _activeReportId == null
+                    ? 'Generating report export...'
+                    : 'Generating ${_resolveReportTitle(reports, _activeReportId!)} export...',
                 style: Theme.of(context).textTheme.bodySmall,
               ),
               const SizedBox(height: 12),
@@ -158,32 +229,46 @@ class _AgentReportsScreenState extends ConsumerState<AgentReportsScreen> {
                                             ),
                                             if (_dateRange != null)
                                               AgentStatusBadge(
-                                                label:
-                                                    '${_dateRange!.start.day}/${_dateRange!.start.month} - ${_dateRange!.end.day}/${_dateRange!.end.month}',
+                                                label: ShieldDateUtils
+                                                    .formatDisplayDateRange(
+                                                  _dateRange!,
+                                                ),
                                                 color: Colors.green.shade700,
                                               ),
+                                            AgentStatusBadge(
+                                              label: _status == 'ALL'
+                                                  ? 'All statuses'
+                                                  : _status,
+                                              color: Colors.blueGrey.shade700,
+                                            ),
                                           ],
                                         ),
                                         const SizedBox(height: 12),
-                                        Wrap(
-                                          spacing: 8,
-                                          runSpacing: 8,
+                                        Row(
                                           children: [
-                                            FilledButton(
-                                              onPressed: () => _downloadReport(
-                                                context,
-                                                controller,
-                                                report['id']?.toString() ?? '',
+                                            Expanded(
+                                              child: FilledButton.icon(
+                                                onPressed: _generating
+                                                    ? null
+                                                    : () => _downloadReport(
+                                                          context,
+                                                          controller,
+                                                          report['id']
+                                                                  ?.toString() ??
+                                                              '',
+                                                        ),
+                                                icon: const Icon(
+                                                  Icons.download_rounded,
+                                                ),
+                                                label: Text(
+                                                  _generating &&
+                                                          _activeReportId ==
+                                                              report['id']
+                                                                  ?.toString()
+                                                      ? 'Exporting...'
+                                                      : 'Export',
+                                                ),
                                               ),
-                                              child: const Text('View'),
-                                            ),
-                                            OutlinedButton(
-                                              onPressed: () => _downloadReport(
-                                                context,
-                                                controller,
-                                                report['id']?.toString() ?? '',
-                                              ),
-                                              child: const Text('Print'),
                                             ),
                                           ],
                                         ),
@@ -238,7 +323,11 @@ class _AgentReportsScreenState extends ConsumerState<AgentReportsScreen> {
       return;
     }
     final messenger = ScaffoldMessenger.of(context);
-    setState(() => _generating = true);
+    setState(() {
+      _generating = true;
+      _activeReportId = reportId;
+      _reportErrorMessage = null;
+    });
     try {
       final result = await controller.runAgentReport(
         reportId,
@@ -267,9 +356,10 @@ class _AgentReportsScreenState extends ConsumerState<AgentReportsScreen> {
       }
       setState(() {
         _generating = false;
+        _activeReportId = null;
         _recentExports.insert(
           0,
-          exportFile['fileName']?.toString() ?? '$reportId.$_format',
+          '${_resolveReportTitle(controller.availableReports, reportId)} • ${exportFile['fileName']?.toString() ?? '$reportId.$_format'}',
         );
       });
       messenger.showSnackBar(
@@ -281,16 +371,49 @@ class _AgentReportsScreenState extends ConsumerState<AgentReportsScreen> {
           ),
         ),
       );
-    } catch (_) {
+    } catch (error) {
       if (!mounted) {
         return;
       }
-      setState(() => _generating = false);
+      setState(() {
+        _generating = false;
+        _reportErrorMessage = _resolveExportError(error);
+      });
       messenger.showSnackBar(
-        const SnackBar(
-          content: Text('We could not export that report right now.'),
-        ),
+        SnackBar(content: Text(_reportErrorMessage!)),
       );
     }
+  }
+
+  String _resolveReportTitle(
+    List<Map<String, dynamic>> reports,
+    String reportId,
+  ) {
+    final match = reports.cast<Map<String, dynamic>?>().firstWhere(
+          (report) => report?['id']?.toString() == reportId,
+          orElse: () => null,
+        );
+    return match?['title']?.toString() ?? 'report';
+  }
+
+  String _resolveExportError(Object error) {
+    final message = error.toString().trim();
+    final lowered = message.toLowerCase();
+    if (lowered.contains('403') || lowered.contains('forbidden')) {
+      return 'This SHIELD account can see the report, but export permission is missing for the selected action. Retry with the correct role or ask an administrator to grant export access.';
+    }
+    if (lowered.contains('401') || lowered.contains('unauthorized')) {
+      return 'Your SHIELD session expired before the report export completed. Sign in again and retry the export.';
+    }
+    if (lowered.contains('network') || lowered.contains('socket')) {
+      return 'The report export could not reach the server. Check the network connection and retry.';
+    }
+    if (lowered.contains('429')) {
+      return 'Too many export attempts were sent in a short time. Wait a moment and retry the report.';
+    }
+    if (lowered.contains('empty')) {
+      return 'The report completed without any exportable content for the selected filters. Adjust the filters and try again.';
+    }
+    return 'We could not export that report right now. Retry in a moment.';
   }
 }

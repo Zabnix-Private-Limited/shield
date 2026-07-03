@@ -1,0 +1,11 @@
+00:00 +0: loading E:/K4NN4N/shield/frontend/test/shield_date_utils_test.dart
+00:00 +0: ShieldDateUtils normalizes a date range into ascending date-only bounds
+00:00 +0 -1: ShieldDateUtils normalizes a date range into ascending date-only bounds [E]
+  'package:flutter/src/material/date.dart': Failed assertion: line 453 pos 68: '!start.isAfter(end)': is not true.
+  dart:core                                      _AssertionError._throwNew
+  package:flutter/src/material/date.dart 453:68  new DateTimeRange
+  test\shield_date_utils_test.dart 9:9           main.<fn>.<fn>
+  
+00:00 +0 -1: ShieldDateUtils formats a single-day range without duplicating the date
+00:00 +1 -1: ShieldDateUtils formats a multi-day range as a concise span
+00:00 +2 -1: Some tests failed.

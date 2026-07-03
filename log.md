@@ -7745,3 +7745,26 @@ est build, ackend/vercel.json, ackend/src/auth/auth.service.ts, and uth_devic
 
 ---
 2026-07-03 14:46:22 IST
+
+## 208. Agent Reports SHIELD Date-Range Hardening
+**High-level desc**: Replaced the last generic Material date-range flow in the agent workspace with a SHIELD-native picker path and tightened the report export workflow so filters, retries, and user-facing failures behave like a production workflow instead of a thin utility action.
+- Added shared date-range normalization and formatting helpers so report filters use one consistent display and ordering rule.
+- Added a SHIELD-native date-range picker flow built on the existing shared date picker, removing the last direct `showDateRangePicker()` usage from the app.
+- Hardened the agent report export experience with filter reset, active-export state, inline retry guidance, clearer permission/auth/network/rate-limit messages, and a single non-duplicated export action.
+- Added regression coverage for the shared date-range utility behavior so future picker or reporting changes keep the same normalized range output.
+### Files Modified/Created
+**Frontend Files (Modified)**:
+- frontend/lib/features/agent/reports/presentation/screens/agent_reports_screen.dart
+- frontend/lib/shared/utils/shield_date_utils.dart
+- frontend/lib/shared/widgets/shield_date_picker.dart
+**Frontend Files (New)**:
+- frontend/test/shield_date_utils_test.dart
+### Verification
+- `cd frontend && flutter test test/shield_date_utils_test.dart` ✅
+- `cd frontend && flutter analyze --no-pub lib/shared/utils/shield_date_utils.dart lib/shared/widgets/shield_date_picker.dart lib/features/agent/reports/presentation/screens/agent_reports_screen.dart test/shield_date_utils_test.dart` ✅
+- `cd frontend && flutter test` ✅
+- `cd frontend && flutter analyze --no-pub` ✅
+- `cd backend && npm run build` ✅
+- `cd backend && npm test` ✅
+### Timestamp
+- 2026-07-03 15:19:39 IST

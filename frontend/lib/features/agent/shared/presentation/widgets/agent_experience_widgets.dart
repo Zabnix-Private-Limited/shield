@@ -164,6 +164,8 @@ class AgentEmptyState extends StatelessWidget {
     required this.message,
     this.actionLabel,
     this.onAction,
+    this.secondaryActionLabel,
+    this.onSecondaryAction,
   });
 
   final IconData icon;
@@ -171,6 +173,8 @@ class AgentEmptyState extends StatelessWidget {
   final String message;
   final String? actionLabel;
   final VoidCallback? onAction;
+  final String? secondaryActionLabel;
+  final VoidCallback? onSecondaryAction;
 
   @override
   Widget build(BuildContext context) {
@@ -200,6 +204,64 @@ class AgentEmptyState extends StatelessWidget {
                 child: Text(actionLabel!),
               ),
             ],
+            if ((secondaryActionLabel ?? '').trim().isNotEmpty &&
+                onSecondaryAction != null) ...[
+              const SizedBox(height: 8),
+              TextButton(
+                onPressed: onSecondaryAction,
+                child: Text(secondaryActionLabel!),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class AgentErrorState extends StatelessWidget {
+  const AgentErrorState({
+    super.key,
+    required this.title,
+    required this.message,
+    required this.onRetry,
+    this.retryLabel = 'Retry',
+    this.icon = Icons.error_outline_rounded,
+  });
+
+  final String title;
+  final String message;
+  final VoidCallback onRetry;
+  final String retryLabel;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              icon,
+              size: 48,
+              color: Theme.of(context).colorScheme.error,
+            ),
+            const SizedBox(height: 12),
+            Text(title, style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 4),
+            Text(
+              message,
+              style: Theme.of(context).textTheme.bodySmall,
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+            FilledButton.icon(
+              onPressed: onRetry,
+              icon: const Icon(Icons.refresh_rounded),
+              label: Text(retryLabel),
+            ),
           ],
         ),
       ),
