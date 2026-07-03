@@ -18,8 +18,6 @@ class AgentNotificationsScreen extends ConsumerStatefulWidget {
 
 class _AgentNotificationsScreenState
     extends ConsumerState<AgentNotificationsScreen> {
-  String _filter = 'ALL';
-
   @override
   void initState() {
     super.initState();
@@ -43,34 +41,33 @@ class _AgentNotificationsScreenState
             ref.read(agentPortalControllerProvider).refreshWorkspace(),
       );
     }
-    final notifications = controller.notifications.where((item) {
-      final status = (item['status'] ?? '').toString().toUpperCase();
-      if (_filter == 'UNREAD') {
-        return status != 'READ';
-      }
-      if (_filter == 'READ') {
-        return status == 'READ';
-      }
-      return true;
-    }).toList();
+    final notifications = controller.notifications;
     final groups = _groupNotifications(notifications);
-    final bodyHeight = (MediaQuery.sizeOf(context).height - 340).clamp(
+    final unreadCount = notifications.where((item) {
+      return (item['status'] ?? '').toString().toUpperCase() != 'READ';
+    }).length;
+    final bodyHeight = (MediaQuery.sizeOf(context).height - 320).clamp(
       360.0,
       1200.0,
     );
 
     return AgentWorkspaceSurface(
-      padding: AgentUi.compactPanelPadding,
+      padding: AgentSpacing.compactInsets,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           AgentSectionHeader(
             title: 'Notifications',
-            description:
-                'Unread, today, and older alerts are grouped into one timeline so the screen feels like an inbox instead of an empty admin list.',
+            description: 'A grouped inbox for customer and system updates.',
             actions: [
+              AgentGhostButton(
+                onPressed: () =>
+                    ref.read(agentPortalControllerProvider).refreshWorkspace(),
+                icon: const Icon(Icons.refresh_rounded),
+                label: 'Refresh',
+              ),
               AgentPrimaryButton(
-                onPressed: notifications.isEmpty
+                onPressed: unreadCount == 0
                     ? null
                     : () => ref
                           .read(agentPortalControllerProvider)
@@ -81,47 +78,45 @@ class _AgentNotificationsScreenState
               ),
             ],
           ),
-          AgentUi.gapH(AgentUi.space12),
-          AgentFilterWrap(
+          AgentUi.gapH(AgentSpacing.sectionGap),
+          Wrap(
+            spacing: AgentSpacing.xs,
+            runSpacing: AgentSpacing.xs,
             children: [
-              _FilterChipButton(
-                label: 'All',
-                selected: _filter == 'ALL',
-                onTap: () => setState(() => _filter = 'ALL'),
+              AgentStatusBadge(
+                label: '$unreadCount unread',
+                color: unreadCount == 0
+                    ? AgentColors.accentSlate
+                    : AgentColors.accentBlue,
+                icon: Icons.mark_email_unread_outlined,
               ),
-              _FilterChipButton(
-                label: 'Unread',
-                selected: _filter == 'UNREAD',
-                onTap: () => setState(() => _filter = 'UNREAD'),
+              AgentStatusBadge(
+                label: '${groups['Today']?.length ?? 0} today',
+                color: AgentColors.accentTeal,
+                icon: Icons.today_outlined,
               ),
-              _FilterChipButton(
-                label: 'Read',
-                selected: _filter == 'READ',
-                onTap: () => setState(() => _filter = 'READ'),
+              AgentStatusBadge(
+                label: '${notifications.length} total',
+                color: AgentColors.accentPurple,
+                icon: Icons.notifications_active_outlined,
               ),
             ],
           ),
-          AgentUi.gapH(AgentUi.space12),
+          AgentUi.gapH(AgentSpacing.sectionGap),
           SizedBox(
             height: bodyHeight,
             child: notifications.isEmpty
                 ? SingleChildScrollView(
                     child: ConstrainedBox(
                       constraints: BoxConstraints(minHeight: bodyHeight),
-                      child: _EmptyNotificationState(
-                        filter: _filter,
-                        onRefresh: () => ref
-                            .read(agentPortalControllerProvider)
-                            .refreshWorkspace(),
-                        onShowAll: () => setState(() => _filter = 'ALL'),
-                      ),
+                      child: const _EmptyNotificationState(),
                     ),
                   )
                 : ListView(
                     children: groups.entries
                         .map(
                           (entry) => Padding(
-                            padding: const EdgeInsets.only(bottom: 16),
+                            padding: const EdgeInsets.only(bottom: 12),
                             child: _NotificationGroup(
                               heading: entry.key,
                               items: entry.value,
@@ -182,114 +177,136 @@ class _NotificationGroup extends StatelessWidget {
   Widget build(BuildContext context) {
     return AgentPanelCard(
       title: heading,
-      padding: AgentUi.compactPanelPadding,
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: items
             .map(
               (notification) => Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    CircleAvatar(
-                      radius: 18,
-                      backgroundColor:
-                          (notification['status'] ?? '')
-                                  .toString()
-                                  .toUpperCase() ==
-                              'READ'
-                          ? Theme.of(context).colorScheme.surfaceContainerHigh
-                          : Theme.of(context).colorScheme.primaryContainer,
-                      child: Icon(
-                        (notification['status'] ?? '')
+                padding: const EdgeInsets.only(bottom: 10),
+                child: AgentInsetSurface(
+                  padding: AgentSpacing.compactInsets,
+                  backgroundColor:
+                      (notification['status'] ?? '').toString().toUpperCase() ==
+                          'READ'
+                      ? null
+                      : Theme.of(
+                          context,
+                        ).colorScheme.primaryContainer.withValues(alpha: 0.3),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      CircleAvatar(
+                        radius: 18,
+                        backgroundColor:
+                            (notification['status'] ?? '')
                                     .toString()
                                     .toUpperCase() ==
                                 'READ'
-                            ? Icons.mark_email_read_outlined
-                            : Icons.notifications_active_outlined,
-                        size: 18,
+                            ? Theme.of(
+                                context,
+                              ).colorScheme.surfaceContainerHighest
+                            : Theme.of(context).colorScheme.primaryContainer,
+                        child: Text(
+                          _initials(notification['customerName']),
+                          style: Theme.of(context).textTheme.labelMedium,
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  notification['title']?.toString() ??
-                                      'Notification',
-                                  style: Theme.of(context).textTheme.titleSmall,
+                      AgentUi.gapW(AgentSpacing.xs),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    notification['title']?.toString() ??
+                                        'Notification',
+                                    style: Theme.of(
+                                      context,
+                                    ).textTheme.titleSmall,
+                                  ),
                                 ),
-                              ),
-                              AgentUi.gapW(AgentUi.space8),
-                              AgentStatusBadge(
-                                label:
-                                    (notification['status'] ?? '')
-                                            .toString()
-                                            .toUpperCase() ==
-                                        'READ'
-                                    ? 'Read'
-                                    : 'Unread',
-                                color:
-                                    (notification['status'] ?? '')
-                                            .toString()
-                                            .toUpperCase() ==
-                                        'READ'
-                                    ? AgentColors.success
-                                    : AgentColors.warning,
-                                icon:
-                                    (notification['status'] ?? '')
-                                            .toString()
-                                            .toUpperCase() ==
-                                        'READ'
-                                    ? Icons.mark_email_read_outlined
-                                    : Icons.mark_email_unread_outlined,
-                              ),
-                            ],
-                          ),
-                          AgentUi.gapH(AgentUi.space4),
-                          Text(
-                            notification['message']
-                                        ?.toString()
-                                        .trim()
-                                        .isNotEmpty ==
-                                    true
-                                ? notification['message'].toString()
-                                : 'A new customer alert is available.',
-                          ),
-                          AgentUi.gapH(AgentUi.space4),
-                          Text(
-                            '${notification['customerName'] ?? 'Customer'} • ${_formatDate(notification['sentAt'])}',
-                            style: Theme.of(context).textTheme.bodySmall,
-                          ),
-                          AgentUi.gapH(AgentUi.space8),
-                          Wrap(
-                            spacing: AgentUi.space8,
-                            runSpacing: AgentUi.space8,
-                            children: [
-                              AgentGhostButton(
-                                onPressed: () => onOpenCustomer(notification),
-                                label: 'Open Customer',
-                              ),
-                              if ((notification['status'] ?? '')
-                                      .toString()
-                                      .toUpperCase() !=
-                                  'READ')
+                                AgentUi.gapW(AgentSpacing.xs),
+                                Text(
+                                  _formatTime(notification['sentAt']),
+                                  style: Theme.of(context).textTheme.bodySmall,
+                                ),
+                              ],
+                            ),
+                            AgentUi.gapH(AgentSpacing.xxs),
+                            Text(
+                              notification['message']
+                                          ?.toString()
+                                          .trim()
+                                          .isNotEmpty ==
+                                      true
+                                  ? notification['message'].toString()
+                                  : 'A new customer alert is available.',
+                            ),
+                            AgentUi.gapH(AgentSpacing.xs),
+                            Wrap(
+                              spacing: AgentSpacing.xs,
+                              runSpacing: AgentSpacing.xs,
+                              children: [
+                                AgentStatusBadge(
+                                  label:
+                                      notification['customerName']
+                                          ?.toString()
+                                          .ifBlank('Customer') ??
+                                      'Customer',
+                                  color: AgentColors.accentSlate,
+                                  icon: Icons.person_outline,
+                                ),
+                                AgentStatusBadge(
+                                  label:
+                                      (notification['status'] ?? '')
+                                              .toString()
+                                              .toUpperCase() ==
+                                          'READ'
+                                      ? 'Read'
+                                      : 'Unread',
+                                  color:
+                                      (notification['status'] ?? '')
+                                              .toString()
+                                              .toUpperCase() ==
+                                          'READ'
+                                      ? AgentColors.success
+                                      : AgentColors.warning,
+                                  icon:
+                                      (notification['status'] ?? '')
+                                              .toString()
+                                              .toUpperCase() ==
+                                          'READ'
+                                      ? Icons.mark_email_read_outlined
+                                      : Icons.mark_email_unread_outlined,
+                                ),
+                              ],
+                            ),
+                            AgentUi.gapH(AgentSpacing.xs),
+                            Wrap(
+                              spacing: AgentSpacing.xs,
+                              runSpacing: AgentSpacing.xs,
+                              children: [
                                 AgentGhostButton(
-                                  onPressed: () => onMarkRead(notification),
-                                  label: 'Mark Read',
+                                  onPressed: () => onOpenCustomer(notification),
+                                  label: 'Open Customer',
                                 ),
-                            ],
-                          ),
-                        ],
+                                if ((notification['status'] ?? '')
+                                        .toString()
+                                        .toUpperCase() !=
+                                    'READ')
+                                  AgentGhostButton(
+                                    onPressed: () => onMarkRead(notification),
+                                    label: 'Mark Read',
+                                  ),
+                              ],
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             )
@@ -299,53 +316,15 @@ class _NotificationGroup extends StatelessWidget {
   }
 }
 
-class _FilterChipButton extends StatelessWidget {
-  const _FilterChipButton({
-    required this.label,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return ChoiceChip(
-      label: Text(label),
-      selected: selected,
-      onSelected: (_) => onTap(),
-    );
-  }
-}
-
 class _EmptyNotificationState extends StatelessWidget {
-  const _EmptyNotificationState({
-    required this.filter,
-    required this.onRefresh,
-    required this.onShowAll,
-  });
-
-  final String filter;
-  final VoidCallback onRefresh;
-  final VoidCallback onShowAll;
+  const _EmptyNotificationState();
 
   @override
   Widget build(BuildContext context) {
-    final isFiltered = filter != 'ALL';
-    return AgentEmptyState(
+    return const AgentEmptyState(
       icon: Icons.notifications_off_outlined,
-      title: isFiltered
-          ? 'No Notifications Match This Filter'
-          : "You're all caught up",
-      message: isFiltered
-          ? 'Try a different filter or refresh the inbox to check for newer customer alerts.'
-          : 'No unread or recent notifications need attention right now. The inbox will populate as customer events arrive.',
-      actionLabel: 'Refresh',
-      onAction: onRefresh,
-      secondaryActionLabel: isFiltered ? 'Show All' : null,
-      onSecondaryAction: isFiltered ? onShowAll : null,
+      title: 'You are all caught up',
+      message: 'New customer and system alerts will appear here.',
     );
   }
 }
@@ -355,10 +334,10 @@ class _NotificationsLoadingState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AgentPanelCard(
+    return const AgentPanelCard(
       title: 'Loading Notifications',
-      subtitle: 'Fetching unread, today, and older alerts for this workspace.',
-      child: const AgentLoadingState(
+      subtitle: 'Loading the inbox for this workspace.',
+      child: AgentLoadingState(
         title: 'Loading notification inbox',
         message: 'Loading the notification inbox...',
       ),
@@ -379,8 +358,7 @@ class _NotificationsErrorState extends StatelessWidget {
   Widget build(BuildContext context) {
     return AgentPanelCard(
       title: 'Notifications Unavailable',
-      subtitle:
-          'The notification inbox could not be loaded, so SHIELD is showing a recoverable error state instead of an empty panel.',
+      subtitle: 'The inbox could not be loaded right now.',
       child: AgentErrorState(
         title: 'We could not load notifications',
         message: message,
@@ -419,27 +397,44 @@ Map<String, List<Map<String, dynamic>>> _groupNotifications(
   };
 }
 
-String _formatDate(dynamic value) {
+String _formatTime(dynamic value) {
   final parsed = DateTime.tryParse((value ?? '').toString());
   if (parsed == null) {
     return '-';
   }
-  return DateFormat('dd MMM, h:mm a').format(parsed.toLocal());
+  return DateFormat('h:mm a').format(parsed.toLocal());
+}
+
+String _initials(dynamic value) {
+  final text = (value ?? '').toString().trim();
+  if (text.isEmpty) {
+    return 'C';
+  }
+  final parts = text.split(RegExp(r'\s+'));
+  if (parts.length == 1) {
+    return parts.first.substring(0, 1).toUpperCase();
+  }
+  return '${parts.first.substring(0, 1)}${parts.last.substring(0, 1)}'
+      .toUpperCase();
 }
 
 String _resolveNotificationsError(String message) {
   final normalized = message.trim();
   final lowered = normalized.toLowerCase();
   if (lowered.contains('401') || lowered.contains('unauthorized')) {
-    return 'Your SHIELD session expired before notifications finished loading. Sign in again and retry.';
+    return 'Your SHIELD session expired before notifications finished loading.';
   }
   if (lowered.contains('403') || lowered.contains('forbidden')) {
-    return 'This SHIELD role does not have permission to view the notification inbox.';
+    return 'This SHIELD role does not have permission to view the inbox.';
   }
   if (lowered.contains('network') || lowered.contains('socket')) {
-    return 'The notification inbox could not reach the server. Check the connection and retry.';
+    return 'The notification inbox could not reach the server.';
   }
   return normalized.isEmpty
       ? 'The notification inbox could not be loaded right now.'
       : normalized;
+}
+
+extension on String {
+  String ifBlank(String fallback) => trim().isEmpty ? fallback : this;
 }

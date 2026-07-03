@@ -36,7 +36,7 @@ void main() {
 
     await tester.pumpAndSettle();
 
-    expect(find.text('My Account'), findsOneWidget);
+    expect(find.text('Profile'), findsOneWidget);
     expect(find.text('Personal Information'), findsOneWidget);
     expect(find.text('Employee Information'), findsOneWidget);
     expect(find.text('Preferences'), findsNothing);
@@ -178,9 +178,15 @@ class _FakeAgentSettingsRepository extends AgentPortalRepository {
   @override
   Future<List<Map<String, dynamic>>> getSessions() async => const [
     {
+      'sessionId': 's1',
       'isCurrent': true,
       'loginMethod': 'Google',
-      'device': {'deviceName': 'Office Laptop'},
+      'device': {
+        'deviceName': 'Office Laptop',
+        'browser': 'Chrome',
+        'os': 'Windows 11',
+        'city': 'Perinthalmanna',
+      },
     },
   ];
 
@@ -188,8 +194,13 @@ class _FakeAgentSettingsRepository extends AgentPortalRepository {
   Future<List<Map<String, dynamic>>> getLoginHistory() async => const [
     {
       'status': 'SUCCESS',
-      'createdAt': '2026-07-03 09:15 IST',
+      'createdAt': '2026-07-03T09:15:00.000Z',
       'loginMethod': 'Google',
+      'device': {
+        'browser': 'Chrome',
+        'os': 'Windows 11',
+        'city': 'Perinthalmanna',
+      },
     },
   ];
 

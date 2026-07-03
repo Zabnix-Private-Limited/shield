@@ -50,7 +50,7 @@ class AgentPanelCard extends StatelessWidget {
                           AgentUi.gapH(AgentUi.space4),
                           Text(
                             subtitle!,
-                            style: AppTypography.small.copyWith(
+                            style: AppTypography.tiny.copyWith(
                               color: AppColors.gray,
                             ),
                           ),
@@ -64,7 +64,7 @@ class AgentPanelCard extends StatelessWidget {
                   ],
                 ],
               ),
-              AgentUi.gapH(AgentUi.space16),
+              AgentUi.gapH(AgentSpacing.sm),
               child,
             ],
           ),
@@ -131,8 +131,8 @@ class AgentMetricGrid extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Wrap(
-      spacing: AgentUi.space12,
-      runSpacing: AgentUi.space12,
+      spacing: AgentSpacing.metricGap,
+      runSpacing: AgentSpacing.metricGap,
       children: children,
     );
   }
@@ -182,8 +182,8 @@ class AgentMetricCard extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Container(
-                      width: 40,
-                      height: 40,
+                      width: 36,
+                      height: 36,
                       decoration: BoxDecoration(
                         color: resolvedColor.withValues(alpha: 0.12),
                         borderRadius: AgentUi.radius(AgentUi.radiusMedium),
@@ -194,7 +194,7 @@ class AgentMetricCard extends StatelessWidget {
                         color: resolvedColor,
                       ),
                     ),
-                    AgentUi.gapH(AgentUi.space20),
+                    AgentUi.gapH(AgentSpacing.sm),
                     Text(
                       value,
                       style: AppTypography.h3.copyWith(
@@ -213,7 +213,7 @@ class AgentMetricCard extends StatelessWidget {
                     AgentUi.gapH(AgentUi.space4),
                     Text(
                       helper,
-                      maxLines: 3,
+                      maxLines: 2,
                       overflow: TextOverflow.fade,
                       style: AppTypography.tiny.copyWith(color: AppColors.gray),
                     ),
@@ -294,15 +294,15 @@ class AgentEmptyState extends StatelessWidget {
   Widget build(BuildContext context) {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(AgentUi.space24),
+        padding: const EdgeInsets.all(AgentUi.space20),
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 420),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Container(
-                width: 64,
-                height: 64,
+                width: 56,
+                height: 56,
                 decoration: BoxDecoration(
                   color: Theme.of(context).colorScheme.surfaceContainerHighest,
                   borderRadius: AgentUi.radius(AgentUi.radiusLarge),
@@ -313,7 +313,7 @@ class AgentEmptyState extends StatelessWidget {
                   color: Theme.of(context).colorScheme.outline,
                 ),
               ),
-              AgentUi.gapH(AgentUi.space16),
+              AgentUi.gapH(AgentSpacing.sm),
               Text(title, style: AppTypography.h5, textAlign: TextAlign.center),
               AgentUi.gapH(AgentUi.space8),
               Text(
@@ -323,7 +323,7 @@ class AgentEmptyState extends StatelessWidget {
               ),
               if ((actionLabel ?? '').trim().isNotEmpty &&
                   onAction != null) ...[
-                AgentUi.gapH(AgentUi.space20),
+                AgentUi.gapH(AgentSpacing.sm),
                 AgentSecondaryButton(onPressed: onAction, label: actionLabel!),
               ],
               if ((secondaryActionLabel ?? '').trim().isNotEmpty &&
@@ -447,23 +447,51 @@ class AgentActionTile extends StatelessWidget {
     required this.label,
     required this.icon,
     required this.onTap,
+    this.color,
   });
 
   final String label;
   final IconData icon;
   final VoidCallback onTap;
+  final Color? color;
 
   @override
   Widget build(BuildContext context) {
+    final resolvedColor = color ?? Theme.of(context).colorScheme.primary;
     return SizedBox(
-      width: 180,
+      width: 190,
       child: Semantics(
         button: true,
         label: label,
-        child: AgentSecondaryButton(
-          onPressed: onTap,
-          icon: Icon(icon, size: AgentUi.iconSize),
-          label: label,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: AgentUi.radius(AgentRadius.panel),
+          child: AgentInsetSurface(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            borderColor: resolvedColor.withValues(alpha: 0.18),
+            child: Row(
+              children: [
+                Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    color: resolvedColor.withValues(alpha: 0.14),
+                    borderRadius: AgentUi.radius(AgentRadius.inset),
+                  ),
+                  child: Icon(icon, size: 18, color: resolvedColor),
+                ),
+                AgentUi.gapW(AgentSpacing.xs),
+                Expanded(
+                  child: Text(
+                    label,
+                    style: AppTypography.small.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );

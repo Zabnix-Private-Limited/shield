@@ -78,8 +78,7 @@ class _AgentAppointmentsScreenState
         children: [
           const AgentSectionHeader(
             title: 'Visits',
-            description:
-                'Booking now follows a clearer customer → provider → service → date → time → confirmation flow, with visit history split by status instead of one flat list.',
+            description: 'Schedule visits and track them by status.',
           ),
           AgentUi.gapH(AgentSpacing.sectionGap),
           Wrap(
@@ -155,26 +154,66 @@ class _AgentAppointmentsScreenState
       orElse: () => <String, dynamic>{},
     );
     return AgentPanelCard(
-      title: 'Book a Visit',
-      subtitle:
-          'The visit setup is sequenced so the agent always knows the next decision to make.',
+      title: 'Schedule Visit',
+      subtitle: 'Move through the booking steps in order.',
       child: Column(
         key: _composerKey,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          ListTile(
-            contentPadding: EdgeInsets.zero,
-            leading: const CircleAvatar(child: Icon(Icons.person_outline)),
-            title: Text(customerName),
-            subtitle: Text(
-              selectedCustomerId == null
-                  ? 'Choose a customer before booking a visit.'
-                  : 'Customer selected for visit booking.',
-            ),
+          Wrap(
+            spacing: AgentSpacing.xs,
+            runSpacing: AgentSpacing.xs,
+            children: [
+              AgentStatusBadge(
+                label: '1 Customer',
+                icon: Icons.person_outline,
+                color: AgentColors.accentBlue,
+              ),
+              AgentStatusBadge(
+                label: '2 Provider',
+                icon: Icons.local_hospital_outlined,
+                color: AgentColors.accentTeal,
+              ),
+              AgentStatusBadge(
+                label: '3 Service',
+                icon: Icons.medical_services_outlined,
+                color: AgentColors.accentIndigo,
+              ),
+              AgentStatusBadge(
+                label: '4 Date',
+                icon: Icons.calendar_month_outlined,
+                color: AgentColors.warning,
+              ),
+              AgentStatusBadge(
+                label: '5 Time',
+                icon: Icons.schedule_outlined,
+                color: AgentColors.accentPurple,
+              ),
+              AgentStatusBadge(
+                label: '6 Confirm',
+                icon: Icons.check_circle_outline,
+                color: AgentColors.success,
+              ),
+            ],
           ),
           const SizedBox(height: 12),
           _FlowStep(
             step: '1',
+            label: 'Customer',
+            child: ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const CircleAvatar(child: Icon(Icons.person_outline)),
+              title: Text(customerName),
+              subtitle: Text(
+                selectedCustomerId == null
+                    ? 'Choose a customer before booking.'
+                    : 'Customer selected.',
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          _FlowStep(
+            step: '2',
             label: 'Provider',
             child: _buildProviderSelector(
               providers,
@@ -184,7 +223,7 @@ class _AgentAppointmentsScreenState
           ),
           const SizedBox(height: 12),
           _FlowStep(
-            step: '2',
+            step: '3',
             label: 'Service',
             child: DropdownButtonFormField<String>(
               initialValue: _appointmentType,
@@ -210,7 +249,7 @@ class _AgentAppointmentsScreenState
           ),
           const SizedBox(height: 12),
           _FlowStep(
-            step: '3',
+            step: '4',
             label: 'Date',
             child: AgentSecondaryButton(
               onPressed: () async {
@@ -220,8 +259,7 @@ class _AgentAppointmentsScreenState
                   firstDate: DateTime.now(),
                   lastDate: DateTime.now().add(const Duration(days: 365)),
                   title: 'Choose visit date',
-                  helperText:
-                      'Select the visit date before choosing the final slot.',
+                  helperText: 'Select the visit date.',
                   autoCloseOnSelect: true,
                 );
                 if (picked != null) {
@@ -238,8 +276,8 @@ class _AgentAppointmentsScreenState
           ),
           const SizedBox(height: 12),
           _FlowStep(
-            step: '4',
-            label: 'Available slots',
+            step: '5',
+            label: 'Time',
             child: Wrap(
               spacing: 8,
               runSpacing: 8,
@@ -268,36 +306,37 @@ class _AgentAppointmentsScreenState
           ),
           const SizedBox(height: 12),
           _FlowStep(
-            step: '5',
-            label: 'Confirmation note',
-            child: TextField(
-              controller: _remarksController,
-              maxLines: 3,
-              decoration: const InputDecoration(
-                labelText: 'Visit notes',
-                hintText:
-                    'Reason for visit, customer expectation, or coordination note',
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
-          AgentPanelCard(
-            title: 'Confirmation',
-            subtitle:
-                'A quick summary before the agent confirms the visit booking.',
+            step: '6',
+            label: 'Confirm',
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Customer: $customerName'),
-                const SizedBox(height: 4),
-                Text(
-                  'Provider: ${selectedProvider['providerName'] ?? 'Not selected'}',
+                TextField(
+                  controller: _remarksController,
+                  maxLines: 3,
+                  decoration: const InputDecoration(
+                    labelText: 'Visit Notes',
+                    hintText: 'Reason for visit or coordination note',
+                  ),
                 ),
-                const SizedBox(height: 4),
-                Text('Service: ${_humanize(_appointmentType)}'),
-                const SizedBox(height: 4),
-                Text(
-                  'Date and slot: ${_appointmentDate == null ? 'Not selected' : _formatDate(_appointmentDate)} • ${_slotLabel(_slot)}',
+                const SizedBox(height: 12),
+                AgentInsetSurface(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Customer: $customerName'),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Provider: ${selectedProvider['providerName'] ?? 'Not selected'}',
+                      ),
+                      const SizedBox(height: 4),
+                      Text('Service: ${_humanize(_appointmentType)}'),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Date and time: ${_appointmentDate == null ? 'Not selected' : _formatDate(_appointmentDate)} • ${_slotLabel(_slot)}',
+                      ),
+                    ],
+                  ),
                 ),
                 const SizedBox(height: 12),
                 Align(

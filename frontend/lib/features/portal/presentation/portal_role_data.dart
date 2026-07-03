@@ -623,7 +623,7 @@ class _PortalSectionFactory {
   );
   static final PortalSectionData agentProfile = _section(
     'profile',
-      title: 'Account',
+      title: 'Profile',
     summary: 'Agent identity, contact info, and employee assignment details.',
   );
   static final PortalSectionData agentSettings = _section(

@@ -49,19 +49,19 @@ Widget buildAgentTestApp({
     overrides: [
       agentPortalControllerProvider.overrideWith((ref) => controller),
     ],
-      child: MediaQuery(
-        data: MediaQueryData(textScaler: TextScaler.linear(textScaleFactor)),
-        child: MaterialApp(
-          theme: AppTheme.lightTheme,
-          home: Scaffold(
-            body: shellScroll
-                ? CustomScrollView(slivers: [SliverToBoxAdapter(child: body)])
-                : body,
-          ),
+    child: MediaQuery(
+      data: MediaQueryData(textScaler: TextScaler.linear(textScaleFactor)),
+      child: MaterialApp(
+        theme: AppTheme.lightTheme,
+        home: Scaffold(
+          body: shellScroll
+              ? CustomScrollView(slivers: [SliverToBoxAdapter(child: body)])
+              : body,
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
 class AgentPortalTestRepository extends AgentPortalRepository {
   @override
@@ -151,7 +151,12 @@ class AgentPortalTestRepository extends AgentPortalRepository {
       'sessionId': 's1',
       'isCurrent': true,
       'loginMethod': 'Google',
-      'device': {'deviceName': 'Office Laptop'},
+      'device': {
+        'deviceName': 'Office Laptop',
+        'browser': 'Chrome',
+        'os': 'Windows 11',
+        'city': 'Perinthalmanna',
+      },
     },
   ];
 
@@ -161,6 +166,11 @@ class AgentPortalTestRepository extends AgentPortalRepository {
       'status': 'SUCCESS',
       'createdAt': '2026-07-03T09:15:00.000Z',
       'loginMethod': 'Google',
+      'device': {
+        'browser': 'Chrome',
+        'os': 'Windows 11',
+        'city': 'Perinthalmanna',
+      },
     },
   ];
 
@@ -187,6 +197,12 @@ class AgentPortalTestRepository extends AgentPortalRepository {
         'title': 'Agent Activity Summary',
         'description': 'Daily operational activity report.',
         'formats': ['PDF'],
+      },
+      {
+        'id': 'r2',
+        'title': 'Follow-Up Status Report',
+        'description': 'Pending and completed follow-up export.',
+        'formats': ['PDF', 'CSV'],
       },
     ],
   };

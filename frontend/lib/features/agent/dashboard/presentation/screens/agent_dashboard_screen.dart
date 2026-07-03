@@ -209,14 +209,12 @@ class _AgentDashboardScreenState extends ConsumerState<AgentDashboardScreen> {
       children: [
         AgentSectionHeader(
           title: 'Good morning, $firstName',
-          description:
-              'Start with what needs action today. Statistics stay visible, but customer tasks, overdue follow-ups, documents, and visits lead the workspace.',
+          description: 'Start with what needs action today.',
         ),
         const SizedBox(height: 12),
         AgentPanelCard(
           title: 'Today’s Tasks',
-          subtitle:
-              'This section answers what needs to happen next before the broader monthly metrics take over.',
+          subtitle: 'What needs attention first.',
           child: Wrap(
             spacing: 12,
             runSpacing: 12,
@@ -237,8 +235,7 @@ class _AgentDashboardScreenState extends ConsumerState<AgentDashboardScreen> {
         const SizedBox(height: 12),
         AgentPanelCard(
           title: 'Quick Actions',
-          subtitle:
-              'The main operational actions stay large and obvious for field use on smaller laptops and tablets.',
+          subtitle: 'Fast actions for field work.',
           child: Wrap(
             spacing: 12,
             runSpacing: 12,
@@ -246,26 +243,31 @@ class _AgentDashboardScreenState extends ConsumerState<AgentDashboardScreen> {
               AgentActionTile(
                 label: 'Register Customer',
                 icon: Icons.person_add_alt_1_outlined,
+                color: AgentColors.accentGreen,
                 onTap: () => context.go('/portal/agent/registration'),
               ),
               AgentActionTile(
                 label: 'Upload Documents',
                 icon: Icons.upload_file_outlined,
+                color: AgentColors.accentOrange,
                 onTap: () => context.go('/portal/agent/documents'),
               ),
               AgentActionTile(
                 label: 'Create Follow-Up',
                 icon: Icons.playlist_add_check_circle_outlined,
+                color: AgentColors.accentPurple,
                 onTap: () => context.go('/portal/agent/followups'),
               ),
               AgentActionTile(
                 label: 'Schedule Visit',
                 icon: Icons.event_available_outlined,
+                color: AgentColors.accentTeal,
                 onTap: () => context.go('/portal/agent/appointments'),
               ),
               AgentActionTile(
                 label: 'Open Customers',
                 icon: Icons.groups_outlined,
+                color: AgentColors.accentBlue,
                 onTap: () => context.go('/portal/agent/customers'),
               ),
             ],

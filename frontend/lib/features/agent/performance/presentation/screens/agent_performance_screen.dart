@@ -51,8 +51,7 @@ class _AgentPerformanceScreenState
       children: [
         AgentSectionHeader(
           title: 'Performance',
-          description:
-              'This page now reads more like a performance review than a row of placeholder cards, using daily and monthly summaries plus simple progress visuals.',
+          description: 'A quick view of today and this month.',
         ),
         const SizedBox(height: 12),
         Wrap(
@@ -61,36 +60,36 @@ class _AgentPerformanceScreenState
           children: [
             AgentMetricCard(
               value: '${summary['todaysFollowUps'] ?? 0}',
-                label: 'Daily follow-ups',
-                helper: 'Tasks actively scheduled today.',
-                icon: Icons.today_outlined,
-                color: AgentColors.accentBlue,
-                onTap: () => context.go('/portal/agent/followups'),
-              ),
+              label: 'Daily follow-ups',
+              helper: 'Tasks actively scheduled today.',
+              icon: Icons.today_outlined,
+              color: AgentColors.accentBlue,
+              onTap: () => context.go('/portal/agent/followups'),
+            ),
             AgentMetricCard(
               value: '${summary['appointmentsToday'] ?? 0}',
-                label: 'Daily visits',
-                helper: 'Appointments scheduled for the day.',
-                icon: Icons.event_available_outlined,
-                color: AgentColors.success,
-                onTap: () => context.go('/portal/agent/appointments'),
-              ),
+              label: 'Daily visits',
+              helper: 'Appointments scheduled for the day.',
+              icon: Icons.event_available_outlined,
+              color: AgentColors.success,
+              onTap: () => context.go('/portal/agent/appointments'),
+            ),
             AgentMetricCard(
               value: '$customersAdded',
-                label: 'Monthly customers',
-                helper: 'Customers added in the current month view.',
-                icon: Icons.person_add_alt_1_outlined,
-                color: AgentColors.accentIndigo,
-                onTap: () => context.go('/portal/agent/customers'),
-              ),
+              label: 'Monthly customers',
+              helper: 'Customers added in the current month view.',
+              icon: Icons.person_add_alt_1_outlined,
+              color: AgentColors.accentIndigo,
+              onTap: () => context.go('/portal/agent/customers'),
+            ),
             AgentMetricCard(
               value: '${summary['pendingDocuments'] ?? 0}',
-                label: 'Document backlog',
-                helper: 'Customer documents still waiting for upload.',
-                icon: Icons.folder_open_outlined,
-                color: AgentColors.warning,
-                onTap: () => context.go('/portal/agent/documents'),
-              ),
+              label: 'Document backlog',
+              helper: 'Customer documents still waiting for upload.',
+              icon: Icons.folder_open_outlined,
+              color: AgentColors.warning,
+              onTap: () => context.go('/portal/agent/documents'),
+            ),
           ],
         ),
         const SizedBox(height: 12),
@@ -100,9 +99,8 @@ class _AgentPerformanceScreenState
             final left = Column(
               children: [
                 AgentPanelCard(
-                  title: 'Monthly Overview',
-                  subtitle:
-                      'The high-level measures that describe how the current month is moving.',
+                  title: 'Monthly Progress',
+                  subtitle: 'How the month is moving.',
                   child: Wrap(
                     spacing: 12,
                     runSpacing: 12,
@@ -143,8 +141,7 @@ class _AgentPerformanceScreenState
                 const SizedBox(height: 12),
                 AgentPanelCard(
                   title: 'Progress',
-                  subtitle:
-                      'Simple visual progress indicators replace dead placeholder analytics.',
+                  subtitle: 'Key progress measures.',
                   child: Column(
                     children: [
                       _ProgressLine(
@@ -171,8 +168,7 @@ class _AgentPerformanceScreenState
               children: [
                 AgentPanelCard(
                   title: 'Operational Breakdown',
-                  subtitle:
-                      'A cleaner view of where the agent effort is being spent.',
+                  subtitle: 'Where the work is concentrated.',
                   child: Column(
                     children: [
                       _BreakdownTile(

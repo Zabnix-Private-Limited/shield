@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 
 import '../../../../../shared/services/internal_auth_session.dart';
 import '../../../shared/presentation/controllers/agent_portal_provider.dart';
@@ -319,6 +320,7 @@ class _AgentSettingsScreenState extends ConsumerState<AgentSettingsScreen> {
       context,
       controller,
       display: display,
+      branchLifecycle: branchLifecycle,
       assignments: assignments,
       branches: branches,
       safeRequestedBranchId: safeRequestedBranchId,
@@ -336,9 +338,72 @@ class _AgentSettingsScreenState extends ConsumerState<AgentSettingsScreen> {
       900.0,
     );
     final sections = <Widget>[
+      AgentInsetSurface(
+        child: Row(
+          children: [
+            CircleAvatar(
+              radius: 28,
+              child: Text(
+                _displayName()
+                    .split(RegExp(r'\s+'))
+                    .take(2)
+                    .map((part) => part.substring(0, 1).toUpperCase())
+                    .join(),
+              ),
+            ),
+            AgentUi.gapW(AgentSpacing.sm),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    display['fullName']?.toString().ifBlank(_displayName()) ??
+                        _displayName(),
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
+                  AgentUi.gapH(AgentSpacing.xxs),
+                  Text(
+                    display['employeeCode']?.toString().ifBlank('-') ?? '-',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                  AgentUi.gapH(AgentSpacing.xs),
+                  Wrap(
+                    spacing: AgentSpacing.xs,
+                    runSpacing: AgentSpacing.xs,
+                    children: [
+                      AgentStatusBadge(
+                        label: _availableForAssignments ? 'Active' : 'Paused',
+                        color: _availableForAssignments
+                            ? AgentColors.success
+                            : AgentColors.warning,
+                        icon: Icons.verified_user_outlined,
+                      ),
+                      AgentStatusBadge(
+                        label: _workingModeLabel(_availabilityMode),
+                        color: AgentColors.accentTeal,
+                        icon: Icons.location_on_outlined,
+                      ),
+                      AgentStatusBadge(
+                        label:
+                            display['designation']?.toString().ifBlank(
+                              'Field Agent',
+                            ) ??
+                            'Field Agent',
+                        color: AgentColors.accentIndigo,
+                        icon: Icons.badge_outlined,
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+      AgentUi.gapH(AgentSpacing.sm),
       AgentPanelCard(
         title: 'Personal Information',
-        subtitle: 'Editable identity fields used across the SHIELD account.',
+        subtitle: 'Editable identity details.',
         child: Wrap(
           spacing: AgentUi.space12,
           runSpacing: AgentUi.space12,
@@ -375,8 +440,7 @@ class _AgentSettingsScreenState extends ConsumerState<AgentSettingsScreen> {
       AgentUi.gapH(AgentUi.space12),
       AgentPanelCard(
         title: 'Employee Information',
-        subtitle:
-            'Read-only employment and assignment details that define this agent identity.',
+        subtitle: 'Read-only assignment details.',
         child: Wrap(
           spacing: AgentUi.space12,
           runSpacing: AgentUi.space12,
@@ -431,7 +495,7 @@ class _AgentSettingsScreenState extends ConsumerState<AgentSettingsScreen> {
               width: 240,
               child: AgentKeyValueItem(
                 label: 'Availability',
-                value: _availabilityMode,
+                value: _workingModeLabel(_availabilityMode),
                 icon: Icons.location_on_outlined,
               ),
             ),
@@ -477,9 +541,8 @@ class _AgentSettingsScreenState extends ConsumerState<AgentSettingsScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const AgentSectionHeader(
-            title: 'My Account',
-            description:
-                'Manage identity and employee information here. Application preferences, devices, notifications, and session controls stay in Settings so the account screen remains focused on who the agent is.',
+            title: 'Profile',
+            description: 'Manage identity and assignment details here.',
           ),
           AgentUi.gapH(AgentUi.space16),
           SizedBox(
@@ -495,6 +558,7 @@ class _AgentSettingsScreenState extends ConsumerState<AgentSettingsScreen> {
     BuildContext context,
     dynamic controller, {
     required Map<String, dynamic> display,
+    required Map<String, dynamic> branchLifecycle,
     required List<Map<String, dynamic>> assignments,
     required List<Map<String, dynamic>> branches,
     required String? safeRequestedBranchId,
@@ -512,7 +576,7 @@ class _AgentSettingsScreenState extends ConsumerState<AgentSettingsScreen> {
             const AgentSectionHeader(
               title: 'Settings',
               description:
-                  'Manage application behavior here: workflow defaults, notifications, workspace operations, devices, and session security. Identity and employee details stay in My Account.',
+                  'Manage app behavior, workspace defaults, and security here. Identity details stay in Profile.',
             ),
             AgentUi.gapH(AgentUi.space16),
             const TabBar(
@@ -533,8 +597,7 @@ class _AgentSettingsScreenState extends ConsumerState<AgentSettingsScreen> {
                     children: [
                       AgentPanelCard(
                         title: 'Appearance and Workflow',
-                        subtitle:
-                            'Shared defaults that shape how the portal opens and behaves.',
+                        subtitle: 'Defaults for how the portal opens.',
                         child: Wrap(
                           spacing: AgentUi.space12,
                           runSpacing: AgentUi.space12,
@@ -660,7 +723,7 @@ class _AgentSettingsScreenState extends ConsumerState<AgentSettingsScreen> {
                       AgentPanelCard(
                         title: 'Notifications and Display',
                         subtitle:
-                            'Controls for reminders, push delivery, and portal defaults.',
+                            'Reminders, push delivery, and display defaults.',
                         child: Column(
                           children: [
                             _SettingsToggleTile(
@@ -720,6 +783,15 @@ class _AgentSettingsScreenState extends ConsumerState<AgentSettingsScreen> {
                               onChanged: (value) =>
                                   setState(() => _showMembershipBadges = value),
                             ),
+                            AgentUi.gapH(AgentSpacing.xs),
+                            AgentFormFieldWidth(
+                              child: TextField(
+                                controller: _deviceLabelController,
+                                decoration: const InputDecoration(
+                                  labelText: 'Current Device Label',
+                                ),
+                              ),
+                            ),
                           ],
                         ),
                       ),
@@ -744,7 +816,7 @@ class _AgentSettingsScreenState extends ConsumerState<AgentSettingsScreen> {
                       AgentPanelCard(
                         title: 'Availability and Working Hours',
                         subtitle:
-                            'Operational status, schedule, and routing behavior for agent assignments.',
+                            'Schedule and routing behavior for assignments.',
                         child: Column(
                           children: [
                             _SettingsToggleTile(
@@ -766,7 +838,7 @@ class _AgentSettingsScreenState extends ConsumerState<AgentSettingsScreen> {
                                     isExpanded: true,
                                     initialValue: _availabilityMode,
                                     decoration: const InputDecoration(
-                                      labelText: 'Availability Mode',
+                                      labelText: 'Working Mode',
                                     ),
                                     items: const [
                                       DropdownMenuItem(
@@ -775,7 +847,7 @@ class _AgentSettingsScreenState extends ConsumerState<AgentSettingsScreen> {
                                       ),
                                       DropdownMenuItem(
                                         value: 'REMOTE',
-                                        child: Text('Remote'),
+                                        child: Text('Office / Remote'),
                                       ),
                                       DropdownMenuItem(
                                         value: 'HYBRID',
@@ -814,8 +886,7 @@ class _AgentSettingsScreenState extends ConsumerState<AgentSettingsScreen> {
                       AgentUi.gapH(AgentUi.space12),
                       AgentPanelCard(
                         title: 'Field Coverage and Emergency Contact',
-                        subtitle:
-                            'Workspace routing data and support contacts used during field operations.',
+                        subtitle: 'Coverage details and emergency contact.',
                         child: Wrap(
                           spacing: AgentUi.space12,
                           runSpacing: AgentUi.space12,
@@ -875,17 +946,22 @@ class _AgentSettingsScreenState extends ConsumerState<AgentSettingsScreen> {
                       ),
                       AgentUi.gapH(AgentUi.space12),
                       AgentPanelCard(
-                        title: 'Branch Request',
+                        title: 'Request Branch Transfer',
                         subtitle:
-                            'Operational branch requests stay here so the account screen is not overloaded with workflow controls.',
+                            'Submit a branch request and review its history.',
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
+                            Text(
+                              'Current branch: ${_resolveBranchName(branchLifecycle).ifBlank('Not assigned')}',
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
+                            AgentUi.gapH(AgentSpacing.xs),
                             DropdownButtonFormField<String>(
                               isExpanded: true,
                               initialValue: safeRequestedBranchId,
                               decoration: const InputDecoration(
-                                labelText: 'Request Transfer or Assign Branch',
+                                labelText: 'Requested Branch',
                               ),
                               items: branches
                                   .map(
@@ -908,7 +984,7 @@ class _AgentSettingsScreenState extends ConsumerState<AgentSettingsScreen> {
                               controller: _branchNotesController,
                               maxLines: 2,
                               decoration: const InputDecoration(
-                                labelText: 'Branch Request Note',
+                                labelText: 'Reason',
                               ),
                             ),
                             AgentUi.gapH(AgentUi.space16),
@@ -966,29 +1042,9 @@ class _AgentSettingsScreenState extends ConsumerState<AgentSettingsScreen> {
                   ListView(
                     children: [
                       AgentPanelCard(
-                        title: 'Device Preferences',
+                        title: 'Session Management',
                         subtitle:
-                            'Control device labeling and push behavior for this agent account.',
-                        child: Wrap(
-                          spacing: AgentUi.space12,
-                          runSpacing: AgentUi.space12,
-                          children: [
-                            AgentFormFieldWidth(
-                              child: TextField(
-                                controller: _deviceLabelController,
-                                decoration: const InputDecoration(
-                                  labelText: 'Preferred Device Label',
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      AgentUi.gapH(AgentUi.space12),
-                      AgentPanelCard(
-                        title: 'Session Controls',
-                        subtitle:
-                            'Security actions and device management for the current SHIELD account.',
+                            'Security actions for the current SHIELD account.',
                         child: Wrap(
                           spacing: AgentUi.space8,
                           runSpacing: AgentUi.space8,
@@ -1014,7 +1070,7 @@ class _AgentSettingsScreenState extends ConsumerState<AgentSettingsScreen> {
                       AgentPanelCard(
                         title: 'Active Sessions',
                         subtitle:
-                            'Visible devices currently signed in with this account.',
+                            'Devices currently signed in with this account.',
                         child: controller.sessions.isEmpty
                             ? const AgentEmptyState(
                                 icon: Icons.devices_outlined,
@@ -1031,13 +1087,10 @@ class _AgentSettingsScreenState extends ConsumerState<AgentSettingsScreen> {
                                           Icons.devices_outlined,
                                         ),
                                         title: Text(
-                                          session['device']?['deviceName']
-                                                  ?.toString() ??
-                                              'Session',
+                                          _describeSessionDevice(session),
                                         ),
                                         subtitle: Text(
-                                          session['loginMethod']?.toString() ??
-                                              'Internal login',
+                                          _describeSessionMeta(session),
                                         ),
                                         trailing: session['isCurrent'] == true
                                             ? AgentStatusBadge(
@@ -1069,8 +1122,7 @@ class _AgentSettingsScreenState extends ConsumerState<AgentSettingsScreen> {
                       AgentUi.gapH(AgentUi.space12),
                       AgentPanelCard(
                         title: 'Login History',
-                        subtitle:
-                            'Recent access activity for quick security review.',
+                        subtitle: 'Recent access activity.',
                         child: controller.loginHistory.isEmpty
                             ? const AgentEmptyState(
                                 icon: Icons.history_outlined,
@@ -1087,34 +1139,15 @@ class _AgentSettingsScreenState extends ConsumerState<AgentSettingsScreen> {
                                         leading: const Icon(
                                           Icons.history_outlined,
                                         ),
-                                        title: Text(
-                                          row['status']?.toString() ??
-                                              'Status unavailable',
-                                        ),
-                                        subtitle: Text(
-                                          row['createdAt']?.toString() ?? '',
-                                        ),
+                                        title: Text(_describeLoginTitle(row)),
+                                        subtitle: Text(_describeLoginMeta(row)),
                                         trailing: Text(
-                                          row['loginMethod']?.toString() ?? '',
+                                          _formatLoginAt(row['createdAt']),
                                         ),
                                       ),
                                     )
                                     .toList(),
                               ),
-                      ),
-                      AgentUi.gapH(AgentUi.space12),
-                      Align(
-                        alignment: Alignment.centerRight,
-                        child: AgentPrimaryButton(
-                          onPressed: controller.isProfileSaving
-                              ? null
-                              : () => _saveSettings(controller),
-                          icon: const Icon(Icons.save_outlined),
-                          label: controller.isProfileSaving
-                              ? 'Saving...'
-                              : 'Save Device Settings',
-                          isLoading: controller.isProfileSaving,
-                        ),
                       ),
                     ],
                   ),
@@ -1134,6 +1167,23 @@ class _AgentSettingsScreenState extends ConsumerState<AgentSettingsScreen> {
     return currentBranch ?? '';
   }
 
+  String _humanize(dynamic value) {
+    final text = (value ?? '').toString().trim();
+    if (text.isEmpty) {
+      return 'Unknown';
+    }
+    return text
+        .replaceAll('_', ' ')
+        .toLowerCase()
+        .split(' ')
+        .map(
+          (part) => part.isEmpty
+              ? part
+              : '${part[0].toUpperCase()}${part.substring(1)}',
+        )
+        .join(' ');
+  }
+
   String _displayName() {
     final name =
         '${_firstNameController.text.trim()} ${_lastNameController.text.trim()}'
@@ -1143,6 +1193,77 @@ class _AgentSettingsScreenState extends ConsumerState<AgentSettingsScreen> {
 
   String _sanitizeChoice(String? value, List<String> allowed, String fallback) {
     return allowed.contains(value) ? value! : fallback;
+  }
+
+  String _workingModeLabel(String value) {
+    switch (value.toUpperCase()) {
+      case 'HYBRID':
+        return 'Hybrid';
+      case 'REMOTE':
+        return 'Office / Remote';
+      default:
+        return 'Field';
+    }
+  }
+
+  String _describeSessionDevice(Map<String, dynamic> session) {
+    final device = session['device'] is Map
+        ? Map<String, dynamic>.from(session['device'] as Map)
+        : const <String, dynamic>{};
+    final browser = device['browser']?.toString();
+    final os = device['os']?.toString();
+    final fallback = device['deviceName']?.toString();
+    final joined = [
+      browser,
+      os,
+    ].where((item) => (item ?? '').trim().isNotEmpty).join(' on ');
+    return joined.ifBlank((fallback ?? '').ifBlank('Session'));
+  }
+
+  String _describeSessionMeta(Map<String, dynamic> session) {
+    final method = _humanize(session['loginMethod']);
+    final device = session['device'] is Map
+        ? Map<String, dynamic>.from(session['device'] as Map)
+        : const <String, dynamic>{};
+    final location = [
+      device['city']?.toString(),
+      device['region']?.toString(),
+    ].where((item) => (item ?? '').trim().isNotEmpty).join(', ');
+    return [method, location.ifBlank(session['lastActiveAt']?.toString() ?? '')]
+        .where((item) => (item).trim().isNotEmpty)
+        .join(' • ')
+        .ifBlank('Internal login');
+  }
+
+  String _describeLoginTitle(Map<String, dynamic> row) {
+    final status = _humanize(row['status']);
+    final method = _humanize(row['loginMethod']);
+    return '$status • $method';
+  }
+
+  String _describeLoginMeta(Map<String, dynamic> row) {
+    final device = row['device'] is Map
+        ? Map<String, dynamic>.from(row['device'] as Map)
+        : const <String, dynamic>{};
+    final browser = device['browser']?.toString();
+    final os = device['os']?.toString();
+    final location = [
+      device['city']?.toString(),
+      device['region']?.toString(),
+    ].where((item) => (item ?? '').trim().isNotEmpty).join(', ');
+    return [browser, os, location]
+        .where((item) => (item ?? '').trim().isNotEmpty)
+        .join(' • ')
+        .ifBlank('Device details unavailable');
+  }
+
+  String _formatLoginAt(dynamic value) {
+    final raw = (value ?? '').toString().trim();
+    final parsed = DateTime.tryParse(raw);
+    if (parsed == null) {
+      return raw.ifBlank('-');
+    }
+    return '${DateFormat('dd MMM yyyy').format(parsed.toLocal())}\n${DateFormat('h:mm a').format(parsed.toLocal())}';
   }
 
   void _showMessage(String message) {

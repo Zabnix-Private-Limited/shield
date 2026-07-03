@@ -22,16 +22,16 @@ class AgentUi {
   static const double iconSizeLarge = 24;
   static const double statusIconSize = 14;
   static const double touchTargetMin = 44;
-  static const double controlHeight = 52;
-  static const double metricWidth = 220;
-  static const double metricHeight = 152;
+  static const double controlHeight = 48;
+  static const double metricWidth = 210;
+  static const double metricHeight = 136;
 
-  static const EdgeInsets panelPadding = EdgeInsets.all(space20);
-  static const EdgeInsets compactPanelPadding = EdgeInsets.all(space16);
-  static const EdgeInsets cardBodyPadding = EdgeInsets.all(space16);
+  static const EdgeInsets panelPadding = EdgeInsets.all(18);
+  static const EdgeInsets compactPanelPadding = EdgeInsets.all(14);
+  static const EdgeInsets cardBodyPadding = EdgeInsets.all(14);
   static const EdgeInsets chipPadding = EdgeInsets.symmetric(
-    horizontal: space12,
-    vertical: space8,
+    horizontal: 10,
+    vertical: 6,
   );
 
   static SizedBox gapH(double value) => SizedBox(height: value);
@@ -76,13 +76,13 @@ class AgentSpacing {
   static const double xl = AgentUi.space24;
   static const double xxl = AgentUi.space32;
 
-  static const double sectionGap = md;
-  static const double panelGap = sm;
+  static const double sectionGap = sm;
+  static const double panelGap = xs;
   static const double chipGap = xs;
-  static const double itemGap = sm;
+  static const double itemGap = xs;
   static const double metricGap = sm;
-  static const double pagePadding = lg;
-  static const double compactPadding = md;
+  static const double pagePadding = md;
+  static const double compactPadding = sm;
 
   static const EdgeInsets pageInsets = EdgeInsets.all(pagePadding);
   static const EdgeInsets panelInsets = EdgeInsets.all(pagePadding);
@@ -113,6 +113,8 @@ class AgentColors {
   static Color accentPurple = const Color(0xFF7C3AED);
   static Color accentOrange = const Color(0xFFEA580C);
   static Color accentRed = const Color(0xFFB91C1C);
+  static Color accentGreen = const Color(0xFF15803D);
+  static Color accentSlate = const Color(0xFF475569);
 
   static Color surfaceTint(BuildContext context) =>
       Theme.of(context).colorScheme.surfaceContainerLowest;

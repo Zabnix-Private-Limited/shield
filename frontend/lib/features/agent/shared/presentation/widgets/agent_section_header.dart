@@ -34,16 +34,13 @@ class AgentSectionHeader extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(title, style: AppTypography.h4),
-          AgentUi.gapH(AgentUi.space4),
+          AgentUi.gapH(AgentSpacing.xxs),
           Text(
             description,
-            style: AppTypography.body.copyWith(color: AppColors.gray),
+            style: AppTypography.small.copyWith(color: AppColors.gray),
           ),
-          if (actionRow != null) ...[
-            AgentUi.gapH(AgentUi.space16),
-            actionRow,
-          ],
-          AgentUi.gapH(AgentUi.space16),
+          if (actionRow != null) ...[AgentUi.gapH(AgentSpacing.sm), actionRow],
+          AgentUi.gapH(AgentSpacing.sm),
           const Divider(height: 1),
         ],
       );
@@ -59,10 +56,10 @@ class AgentSectionHeader extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(title, style: AppTypography.h4),
-                  AgentUi.gapH(AgentUi.space4),
+                  AgentUi.gapH(AgentSpacing.xxs),
                   Text(
                     description,
-                    style: AppTypography.body.copyWith(color: AppColors.gray),
+                    style: AppTypography.small.copyWith(color: AppColors.gray),
                   ),
                 ],
               ),
@@ -71,7 +68,7 @@ class AgentSectionHeader extends StatelessWidget {
             if (actionRow != null) Flexible(child: actionRow),
           ],
         ),
-        AgentUi.gapH(AgentUi.space16),
+        AgentUi.gapH(AgentSpacing.sm),
         const Divider(height: 1),
       ],
     );

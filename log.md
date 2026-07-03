@@ -7996,3 +7996,66 @@ est build, ackend/vercel.json, ackend/src/auth/auth.service.ts, and uth_devic
 - `cd frontend && flutter test` ✅
 ### Timestamp
 - 2026-07-03 20:05:00 IST
+
+## 217. Agent Portal UX Polish: Timeline-First Customers, Guided Reports, Inbox Notifications, and Settings/Profile Refinement
+**High-level desc**: Completed the requested one-pass Agent Portal product polish by tightening shared UI density, reducing instructional copy, promoting stronger semantic cues, reordering customer workflows around operational behavior, rebuilding reports and notifications into clearer task-first flows, and revalidating the portal through analyze, responsive, golden, accessibility, and full widget-test coverage.
+- Tightened the shared agent design system density so buttons, cards, section headers, empty states, metrics, and chip surfaces now consume less vertical space while still staying accessible across desktop and large-text test scenarios.
+- Renamed the agent navigation label from `Account` to `Profile`, shortened repetitive screen copy across dashboard, documents, settings, performance, visits, and reports, and pushed more interaction styling through shared semantic agent tokens and shared button primitives instead of page-local values.
+- Upgraded Dashboard quick actions with semantic action colors, rebuilt Reports into a single guided export workflow, redesigned Notifications into a grouped inbox with customer-aware quick actions, and turned Visits into a visible six-step booking flow so the main operational screens read like workflows instead of generic admin templates.
+- Reworked the Customer workspace around agent behavior by moving Timeline and Tasks ahead of lower-frequency detail tabs, reordering the hero actions to prioritize follow-up and visit creation, adding a richer merged customer story feed, and keeping profile editing available as a later-detail activity instead of the primary call to action.
+- Refined Settings and Profile separation by adding a profile summary surface, clearer working-mode language, better branch-transfer wording, more human-readable session and login history labels, and removal of backend-facing terminology from the visible security surface.
+- Fixed the rebuilt Reports screen to stay shell-safe inside responsive scroll parents, which closed the last regression in the desktop responsive matrix after the UX rewrite.
+
+### Files Modified/Created
+**Frontend Files (Modified)**:
+- frontend/lib/features/agent/appointments/presentation/screens/agent_appointments_screen.dart
+- frontend/lib/features/agent/customers/presentation/screens/agent_customers_screen.dart
+- frontend/lib/features/agent/dashboard/presentation/screens/agent_dashboard_screen.dart
+- frontend/lib/features/agent/documents/presentation/screens/agent_documents_screen.dart
+- frontend/lib/features/agent/notifications/presentation/screens/agent_notifications_screen.dart
+- frontend/lib/features/agent/performance/presentation/screens/agent_performance_screen.dart
+- frontend/lib/features/agent/reports/presentation/screens/agent_reports_screen.dart
+- frontend/lib/features/agent/settings/presentation/screens/agent_settings_screen.dart
+- frontend/lib/features/agent/shared/presentation/widgets/agent_design_system.dart
+- frontend/lib/features/agent/shared/presentation/widgets/agent_experience_widgets.dart
+- frontend/lib/features/agent/shared/presentation/widgets/agent_section_header.dart
+- frontend/lib/features/portal/presentation/portal_role_data.dart
+- frontend/test/agent_portal_test_harness.dart
+- frontend/test/agent_settings_screen_test.dart
+- frontend/test/goldens/agent_portal/customers.png
+- frontend/test/goldens/agent_portal/dashboard.png
+- frontend/test/goldens/agent_portal/documents.png
+- frontend/test/goldens/agent_portal/notifications.png
+- frontend/test/goldens/agent_portal/performance.png
+- frontend/test/goldens/agent_portal/reports.png
+- frontend/test/goldens/agent_portal/settings.png
+- log.md
+**Backend Files (Modified)**:
+- None.
+### Verification
+- `cd frontend && flutter analyze` ✅
+- `cd frontend && flutter test test/agent_settings_screen_test.dart` ✅
+- `cd frontend && flutter test test/agent_portal_accessibility_test.dart` ✅
+- `cd frontend && flutter test test/agent_portal_responsive_matrix_test.dart` ✅
+- `cd frontend && flutter test --update-goldens test/agent_portal_golden_test.dart` ✅
+- `cd frontend && flutter test test/agent_portal_golden_test.dart` ✅
+- `cd frontend && flutter test` ✅
+### Timestamp
+- 2026-07-03 21:27:15 IST
+
+## 218. Log Correction for Entry 217 Golden Asset Refresh
+**High-level desc**: Recorded the remaining golden assets refreshed during the final Agent Portal UX polish verification so the append-only change log matches the full test-updated file set.
+- Added the missing Follow-ups and Registration desktop golden updates that were regenerated alongside the other primary Agent Portal screenshots during the final `--update-goldens` verification pass.
+
+### Files Modified/Created
+**Frontend Files (Modified)**:
+- frontend/test/goldens/agent_portal/followups.png
+- frontend/test/goldens/agent_portal/registration.png
+- log.md
+**Backend Files (Modified)**:
+- None.
+### Verification
+- `cd frontend && flutter test --update-goldens test/agent_portal_golden_test.dart` ✅
+- `cd frontend && flutter test test/agent_portal_golden_test.dart` ✅
+### Timestamp
+- 2026-07-03 21:28:24 IST

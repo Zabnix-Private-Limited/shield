@@ -68,10 +68,7 @@ class _AgentCustomersScreenState extends ConsumerState<AgentCustomersScreen> {
       360.0,
       1200.0,
     );
-    final stackedWorkspaceHeight = (workspaceHeight + 520).clamp(
-      920.0,
-      1600.0,
-    );
+    final stackedWorkspaceHeight = (workspaceHeight + 520).clamp(920.0, 1600.0);
 
     return AgentWorkspaceSurface(
       padding: AgentSpacing.contentInsets,
@@ -79,8 +76,7 @@ class _AgentCustomersScreenState extends ConsumerState<AgentCustomersScreen> {
         children: [
           AgentSectionHeader(
             title: 'Customers',
-            description:
-                'Search your assigned customers, open one operational workspace at a time, and keep follow-ups, visits, documents, wallet, and timeline inside tabs instead of one long scrolling page.',
+            description: 'Search customers and open one workspace at a time.',
             actions: [
               AgentPrimaryButton(
                 onPressed: () => context.go('/portal/agent/registration'),
@@ -365,6 +361,16 @@ class _CustomerWorkspaceDetail extends ConsumerWidget {
     final rewardPoints = wallet['rewardPoints'] is Map
         ? (wallet['rewardPoints'] as Map)['available']
         : 0;
+    final storyEntries = _buildCustomerStoryEntries(
+      customer: customer,
+      tasks: tasks,
+      activities: activities,
+      appointments: appointments,
+      documents: documents,
+      purchases: purchases,
+      notifications: notifications,
+      timeline: timeline,
+    );
 
     return DefaultTabController(
       length: 8,
@@ -431,13 +437,13 @@ class _CustomerWorkspaceDetail extends ConsumerWidget {
               tabAlignment: TabAlignment.start,
               tabs: [
                 Tab(text: 'Overview'),
-                Tab(text: 'Profile'),
+                Tab(text: 'Timeline'),
+                Tab(text: 'Tasks'),
                 Tab(text: 'Documents'),
                 Tab(text: 'Visits'),
-                Tab(text: 'Follow-ups'),
                 Tab(text: 'Medical'),
                 Tab(text: 'Wallet'),
-                Tab(text: 'Timeline'),
+                Tab(text: 'Profile'),
               ],
             ),
             const SizedBox(height: 12),
@@ -545,45 +551,144 @@ class _CustomerWorkspaceDetail extends ConsumerWidget {
                               ],
                             ),
                             _TimelineCard(
-                              title: 'Today and next',
+                              title: 'Customer timeline',
                               emptyLabel:
-                                  'No visits, follow-ups, or alerts are queued right now.',
-                              entries: [
-                                ...tasks
-                                    .take(3)
-                                    .map(
-                                      (item) => _TimelineEntry(
-                                        title: _humanize(item['status']),
-                                        subtitle:
-                                            item['notes']?.toString().ifBlank(
-                                              'Follow-up scheduled',
-                                            ) ??
-                                            'Follow-up scheduled',
-                                        timeLabel: _formatDateTime(
-                                          item['dueDate'],
-                                        ),
-                                        icon: Icons.assignment_outlined,
-                                      ),
-                                    ),
-                                ...appointments
-                                    .take(2)
-                                    .map(
-                                      (item) => _TimelineEntry(
-                                        title:
-                                            item['provider']?['providerName']
-                                                ?.toString()
-                                                .ifBlank('Visit scheduled') ??
-                                            'Visit scheduled',
-                                        subtitle: _humanize(
-                                          item['appointmentType'],
-                                        ),
-                                        timeLabel: _formatDateTime(
-                                          item['appointmentDate'],
-                                        ),
-                                        icon: Icons.event_available_outlined,
-                                      ),
-                                    ),
-                              ],
+                                  'No customer activity is recorded yet.',
+                              entries: storyEntries.take(5).toList(),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  SingleChildScrollView(
+                    child: _TimelineCard(
+                      title: 'Customer Timeline',
+                      emptyLabel:
+                          'No activity is recorded in the timeline yet.',
+                      entries: storyEntries,
+                    ),
+                  ),
+                  _SimpleListView(
+                    title: 'Tasks',
+                    emptyLabel: 'No follow-up activity is recorded yet.',
+                    items: [
+                      ...tasks.map(
+                        (item) => _TimelineEntry(
+                          title: _humanize(item['status']),
+                          subtitle:
+                              item['notes']?.toString().ifBlank('No remarks') ??
+                              'No remarks',
+                          timeLabel: _formatDateTime(item['dueDate']),
+                          icon: Icons.assignment_outlined,
+                        ),
+                      ),
+                      ...activities.map(
+                        (item) => _TimelineEntry(
+                          title: _humanize(item['activityType']),
+                          subtitle:
+                              item['notes']?.toString().ifBlank('No remarks') ??
+                              'No remarks',
+                          timeLabel: _formatDateTime(item['createdAt']),
+                          icon: Icons.sticky_note_2_outlined,
+                        ),
+                      ),
+                    ],
+                  ),
+                  _SimpleListView(
+                    title: 'Uploaded Documents',
+                    emptyLabel:
+                        'No documents are linked yet. Upload the required files from the Customer Documents flow.',
+                    items: documents
+                        .map(
+                          (item) => _TimelineEntry(
+                            title:
+                                item['fileName']?.toString().ifBlank(
+                                  'Document',
+                                ) ??
+                                'Document',
+                            subtitle:
+                                '${_humanize(item['documentType'])} • ${_humanize(item['status'])}',
+                            timeLabel: _formatDateTime(item['createdAt']),
+                            icon: Icons.description_outlined,
+                          ),
+                        )
+                        .toList(),
+                  ),
+                  _SimpleListView(
+                    title: 'Visits',
+                    emptyLabel: 'No visits scheduled or completed yet.',
+                    items: appointments
+                        .map(
+                          (item) => _TimelineEntry(
+                            title:
+                                item['provider']?['providerName']
+                                    ?.toString()
+                                    .ifBlank('Provider') ??
+                                'Provider',
+                            subtitle:
+                                '${_humanize(item['appointmentType'])} • ${_humanize(item['status'])}',
+                            timeLabel: _formatDateTime(item['appointmentDate']),
+                            icon: Icons.event_note_outlined,
+                          ),
+                        )
+                        .toList(),
+                  ),
+                  _SimpleListView(
+                    title: 'Medical Records',
+                    emptyLabel: 'No medical records are linked yet.',
+                    items: records
+                        .map(
+                          (item) => _TimelineEntry(
+                            title:
+                                item['title']?.toString().ifBlank('Record') ??
+                                'Record',
+                            subtitle:
+                                '${item['category'] ?? 'Record'} • ${item['status'] ?? 'Pending'}',
+                            timeLabel: _formatDateTime(item['createdAt']),
+                            icon: Icons.medical_information_outlined,
+                          ),
+                        )
+                        .toList(),
+                  ),
+                  SingleChildScrollView(
+                    child: _TwoColumnOverview(
+                      leftChildren: [
+                        _SummarySection(
+                          title: 'Wallet',
+                          items: [
+                            _SummaryItem(
+                              label: 'Cash available',
+                              value: '${activeWallet ?? 0}',
+                            ),
+                            _SummaryItem(
+                              label: 'Reward points',
+                              value: '${rewardPoints ?? 0}',
+                            ),
+                            _SummaryItem(
+                              label: 'Membership status',
+                              value: _humanize(membership['status']),
+                            ),
+                          ],
+                        ),
+                      ],
+                      rightChildren: [
+                        _SummarySection(
+                          title: 'Customer network',
+                          items: [
+                            _SummaryItem(
+                              label: 'Direct customers',
+                              value:
+                                  '${referralSummary['directReferrals'] ?? 0}',
+                            ),
+                            _SummaryItem(
+                              label: 'Total network',
+                              value:
+                                  '${referralSummary['totalReferrals'] ?? 0}',
+                            ),
+                            _SummaryItem(
+                              label: 'Network rewards',
+                              value: '${referralSummary['rewardPoints'] ?? 0}',
                             ),
                           ],
                         ),
@@ -702,150 +807,6 @@ class _CustomerWorkspaceDetail extends ConsumerWidget {
                       ],
                     ),
                   ),
-                  _SimpleListView(
-                    title: 'Uploaded Documents',
-                    emptyLabel:
-                        'No documents are linked yet. Upload the required files from the Customer Documents flow.',
-                    items: documents
-                        .map(
-                          (item) => _TimelineEntry(
-                            title:
-                                item['fileName']?.toString().ifBlank(
-                                  'Document',
-                                ) ??
-                                'Document',
-                            subtitle:
-                                '${_humanize(item['documentType'])} • ${_humanize(item['status'])}',
-                            timeLabel: _formatDateTime(item['createdAt']),
-                            icon: Icons.description_outlined,
-                          ),
-                        )
-                        .toList(),
-                  ),
-                  _SimpleListView(
-                    title: 'Visits',
-                    emptyLabel: 'No visits scheduled or completed yet.',
-                    items: appointments
-                        .map(
-                          (item) => _TimelineEntry(
-                            title:
-                                item['provider']?['providerName']
-                                    ?.toString()
-                                    .ifBlank('Provider') ??
-                                'Provider',
-                            subtitle:
-                                '${_humanize(item['appointmentType'])} • ${_humanize(item['status'])}',
-                            timeLabel: _formatDateTime(item['appointmentDate']),
-                            icon: Icons.event_note_outlined,
-                          ),
-                        )
-                        .toList(),
-                  ),
-                  _SimpleListView(
-                    title: 'Follow-ups',
-                    emptyLabel: 'No follow-up activity is recorded yet.',
-                    items: [
-                      ...tasks.map(
-                        (item) => _TimelineEntry(
-                          title: _humanize(item['status']),
-                          subtitle:
-                              item['notes']?.toString().ifBlank('No remarks') ??
-                              'No remarks',
-                          timeLabel: _formatDateTime(item['dueDate']),
-                          icon: Icons.assignment_outlined,
-                        ),
-                      ),
-                      ...activities.map(
-                        (item) => _TimelineEntry(
-                          title: _humanize(item['activityType']),
-                          subtitle:
-                              item['notes']?.toString().ifBlank('No remarks') ??
-                              'No remarks',
-                          timeLabel: _formatDateTime(item['createdAt']),
-                          icon: Icons.sticky_note_2_outlined,
-                        ),
-                      ),
-                    ],
-                  ),
-                  _SimpleListView(
-                    title: 'Medical Records',
-                    emptyLabel: 'No medical records are linked yet.',
-                    items: records
-                        .map(
-                          (item) => _TimelineEntry(
-                            title:
-                                item['title']?.toString().ifBlank('Record') ??
-                                'Record',
-                            subtitle:
-                                '${item['category'] ?? 'Record'} • ${item['status'] ?? 'Pending'}',
-                            timeLabel: _formatDateTime(item['createdAt']),
-                            icon: Icons.medical_information_outlined,
-                          ),
-                        )
-                        .toList(),
-                  ),
-                  SingleChildScrollView(
-                    child: _TwoColumnOverview(
-                      leftChildren: [
-                        _SummarySection(
-                          title: 'Wallet',
-                          items: [
-                            _SummaryItem(
-                              label: 'Cash available',
-                              value: '${activeWallet ?? 0}',
-                            ),
-                            _SummaryItem(
-                              label: 'Reward points',
-                              value: '${rewardPoints ?? 0}',
-                            ),
-                            _SummaryItem(
-                              label: 'Membership status',
-                              value: _humanize(membership['status']),
-                            ),
-                          ],
-                        ),
-                      ],
-                      rightChildren: [
-                        _SummarySection(
-                          title: 'Customer network',
-                          items: [
-                            _SummaryItem(
-                              label: 'Direct customers',
-                              value:
-                                  '${referralSummary['directReferrals'] ?? 0}',
-                            ),
-                            _SummaryItem(
-                              label: 'Total network',
-                              value:
-                                  '${referralSummary['totalReferrals'] ?? 0}',
-                            ),
-                            _SummaryItem(
-                              label: 'Network rewards',
-                              value: '${referralSummary['rewardPoints'] ?? 0}',
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                  _SimpleListView(
-                    title: 'Timeline',
-                    emptyLabel: 'No activity is recorded in the timeline yet.',
-                    items: timeline
-                        .map(
-                          (item) => _TimelineEntry(
-                            title: _humanize(item['type']),
-                            subtitle:
-                                item['description']?.toString().ifBlank(
-                                  item['title']?.toString() ?? '',
-                                ) ??
-                                '',
-                            timeLabel: _formatDateTime(item['timestamp']),
-                            icon: Icons.timeline_outlined,
-                          ),
-                        )
-                        .toList(),
-                  ),
                 ],
               ),
             ),
@@ -903,6 +864,13 @@ class _CustomerHero extends StatelessWidget {
   Widget build(BuildContext context) {
     final fullName =
         '${customer['firstName'] ?? ''} ${customer['lastName'] ?? ''}'.trim();
+    final initials = fullName.isEmpty
+        ? 'C'
+        : fullName
+              .split(RegExp(r'\s+'))
+              .take(2)
+              .map((part) => part.substring(0, 1).toUpperCase())
+              .join();
     return AgentInsetSurface(
       backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
       child: Column(
@@ -914,39 +882,46 @@ class _CustomerHero extends StatelessWidget {
             alignment: WrapAlignment.spaceBetween,
             crossAxisAlignment: WrapCrossAlignment.center,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(
-                    fullName.ifBlank('Customer'),
-                    style: Theme.of(context).textTheme.headlineSmall,
-                  ),
-                  const SizedBox(height: 4),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
+                  CircleAvatar(radius: 24, child: Text(initials)),
+                  const SizedBox(width: 12),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _StatusBadge(
-                        label: _humanize(customer['status']),
-                        color: _statusColor(
-                          context,
-                          customer['status']?.toString(),
-                        ),
+                      Text(
+                        fullName.ifBlank('Customer'),
+                        style: Theme.of(context).textTheme.headlineSmall,
                       ),
-                      _MetaChip(
-                        label:
-                            customer['customerCode']?.toString().ifBlank(
-                              'Pending ID',
-                            ) ??
-                            'Pending ID',
-                        icon: Icons.badge_outlined,
+                      const SizedBox(height: 4),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          _StatusBadge(
+                            label: _humanize(customer['status']),
+                            color: _statusColor(
+                              context,
+                              customer['status']?.toString(),
+                            ),
+                          ),
+                          _MetaChip(
+                            label:
+                                customer['customerCode']?.toString().ifBlank(
+                                  'Pending ID',
+                                ) ??
+                                'Pending ID',
+                            icon: Icons.badge_outlined,
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        customer['mobile']?.toString() ?? 'No mobile recorded',
+                        style: Theme.of(context).textTheme.bodyMedium,
                       ),
                     ],
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    customer['mobile']?.toString() ?? 'No mobile recorded',
-                    style: Theme.of(context).textTheme.bodyMedium,
                   ),
                 ],
               ),
@@ -954,16 +929,12 @@ class _CustomerHero extends StatelessWidget {
                 spacing: 8,
                 runSpacing: 8,
                 children: [
-                  AgentPrimaryButton(onPressed: onEdit, label: 'Edit'),
-                  AgentSecondaryButton(
-                    onPressed: onFollowUp,
-                    label: 'Follow-up',
-                  ),
+                  AgentPrimaryButton(onPressed: onFollowUp, label: 'Follow-up'),
+                  AgentSecondaryButton(onPressed: onVisit, label: 'Visit'),
                   AgentSecondaryButton(
                     onPressed: onDocuments,
                     label: 'Documents',
                   ),
-                  AgentSecondaryButton(onPressed: onVisit, label: 'Visit'),
                   PopupMenuButton<String>(
                     onSelected: onMenuAction,
                     itemBuilder: (context) => const [
@@ -985,6 +956,7 @@ class _CustomerHero extends StatelessWidget {
                       label: 'More',
                     ),
                   ),
+                  AgentSecondaryButton(onPressed: onEdit, label: 'Edit'),
                 ],
               ),
             ],
@@ -1395,6 +1367,138 @@ Future<void> _downloadPrint(
       ),
     );
   }
+}
+
+List<_TimelineEntry> _buildCustomerStoryEntries({
+  required Map<String, dynamic> customer,
+  required List<Map<String, dynamic>> tasks,
+  required List<Map<String, dynamic>> activities,
+  required List<Map<String, dynamic>> appointments,
+  required List<Map<String, dynamic>> documents,
+  required List<Map<String, dynamic>> purchases,
+  required List<Map<String, dynamic>> notifications,
+  required List<Map<String, dynamic>> timeline,
+}) {
+  final entries = <({DateTime? date, _TimelineEntry entry})>[
+    (
+      date: DateTime.tryParse((customer['createdAt'] ?? '').toString()),
+      entry: _TimelineEntry(
+        title: 'Registered',
+        subtitle:
+            customer['customerCode']?.toString().ifBlank(
+              'Customer onboarding started',
+            ) ??
+            'Customer onboarding started',
+        timeLabel: _formatDateTime(customer['createdAt']),
+        icon: Icons.person_add_alt_1_outlined,
+      ),
+    ),
+    ...tasks.map(
+      (item) => (
+        date: DateTime.tryParse((item['dueDate'] ?? '').toString()),
+        entry: _TimelineEntry(
+          title: _humanize(item['status']),
+          subtitle:
+              item['notes']?.toString().ifBlank('Follow-up scheduled') ??
+              'Follow-up scheduled',
+          timeLabel: _formatDateTime(item['dueDate']),
+          icon: Icons.assignment_outlined,
+        ),
+      ),
+    ),
+    ...activities.map(
+      (item) => (
+        date: DateTime.tryParse((item['createdAt'] ?? '').toString()),
+        entry: _TimelineEntry(
+          title: _humanize(item['activityType']),
+          subtitle:
+              item['notes']?.toString().ifBlank('No remarks') ?? 'No remarks',
+          timeLabel: _formatDateTime(item['createdAt']),
+          icon: Icons.sticky_note_2_outlined,
+        ),
+      ),
+    ),
+    ...appointments.map(
+      (item) => (
+        date: DateTime.tryParse((item['appointmentDate'] ?? '').toString()),
+        entry: _TimelineEntry(
+          title:
+              item['provider']?['providerName']?.toString().ifBlank(
+                'Visit scheduled',
+              ) ??
+              'Visit scheduled',
+          subtitle:
+              '${_humanize(item['appointmentType'])} • ${_humanize(item['status'])}',
+          timeLabel: _formatDateTime(item['appointmentDate']),
+          icon: Icons.event_available_outlined,
+        ),
+      ),
+    ),
+    ...documents.map(
+      (item) => (
+        date: DateTime.tryParse((item['createdAt'] ?? '').toString()),
+        entry: _TimelineEntry(
+          title:
+              item['fileName']?.toString().ifBlank('Document uploaded') ??
+              'Document uploaded',
+          subtitle:
+              '${_humanize(item['documentType'])} • ${_humanize(item['status'])}',
+          timeLabel: _formatDateTime(item['createdAt']),
+          icon: Icons.description_outlined,
+        ),
+      ),
+    ),
+    ...purchases.map(
+      (item) => (
+        date: DateTime.tryParse((item['createdAt'] ?? '').toString()),
+        entry: _TimelineEntry(
+          title:
+              item['providerName']?.toString().ifBlank('Wallet purchase') ??
+              'Wallet purchase',
+          subtitle:
+              item['serviceName']?.toString().ifBlank('Purchase') ?? 'Purchase',
+          timeLabel: _formatDateTime(item['createdAt']),
+          icon: Icons.account_balance_wallet_outlined,
+        ),
+      ),
+    ),
+    ...notifications.map(
+      (item) => (
+        date: DateTime.tryParse((item['sentAt'] ?? '').toString()),
+        entry: _TimelineEntry(
+          title:
+              item['title']?.toString().ifBlank('Notification') ??
+              'Notification',
+          subtitle:
+              item['message']?.toString().ifBlank('Customer update') ??
+              'Customer update',
+          timeLabel: _formatDateTime(item['sentAt']),
+          icon: Icons.notifications_active_outlined,
+        ),
+      ),
+    ),
+    ...timeline.map(
+      (item) => (
+        date: DateTime.tryParse((item['timestamp'] ?? '').toString()),
+        entry: _TimelineEntry(
+          title: _humanize(item['type']),
+          subtitle:
+              item['description']?.toString().ifBlank(
+                item['title']?.toString() ?? '',
+              ) ??
+              '',
+          timeLabel: _formatDateTime(item['timestamp']),
+          icon: Icons.timeline_outlined,
+        ),
+      ),
+    ),
+  ];
+  entries.sort((a, b) {
+    final left = a.date ?? DateTime(1900);
+    final right = b.date ?? DateTime(1900);
+    return right.compareTo(left);
+  });
+  return entries.map((item) => item.entry).toList();
 }
 
 Color _statusColor(BuildContext context, String? rawStatus) {

@@ -88,7 +88,7 @@ class _AgentDocumentsScreenState extends ConsumerState<AgentDocumentsScreen> {
           const AgentSectionHeader(
             title: 'Documents',
             description:
-                'This customer-first document flow now behaves more like a lightweight DMS: required files, status badges, verification states, sorting, and quick preview actions.',
+                'Required files, uploaded records, and verification status for the selected customer.',
           ),
           AgentUi.gapH(AgentSpacing.md),
           SizedBox(
@@ -144,8 +144,7 @@ class _AgentDocumentsScreenState extends ConsumerState<AgentDocumentsScreen> {
 
     return AgentPanelCard(
       title: 'Required Documents',
-      subtitle:
-          'Choose a document type, then upload or replace it while staying anchored to the selected customer.',
+      subtitle: 'Choose a type, then upload or replace it.',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -155,8 +154,8 @@ class _AgentDocumentsScreenState extends ConsumerState<AgentDocumentsScreen> {
             title: Text(customerName),
             subtitle: Text(
               customerId == null
-                  ? 'Choose a customer before uploading documents.'
-                  : 'Customer selected for document management.',
+                  ? 'Choose a customer before uploading.'
+                  : 'Customer selected.',
             ),
           ),
           const SizedBox(height: 12),
@@ -239,7 +238,7 @@ class _AgentDocumentsScreenState extends ConsumerState<AgentDocumentsScreen> {
           ),
           const SizedBox(height: 12),
           Text(
-            'Supported formats: PDF, JPG, PNG, WEBP. Verification and rejection notes appear in history when available from the backend.',
+            'Supports PDF, JPG, PNG, and WEBP.',
             style: Theme.of(context).textTheme.bodySmall,
           ),
         ],
@@ -256,9 +255,8 @@ class _AgentDocumentsScreenState extends ConsumerState<AgentDocumentsScreen> {
     final hasFilters = _query.trim().isNotEmpty || _filter != 'ALL';
 
     return AgentPanelCard(
-      title: 'Document History',
-      subtitle:
-          'Search, filter, sort, preview, and inspect the verification state of customer files.',
+      title: 'Uploaded Files',
+      subtitle: 'Search, filter, and inspect uploaded files.',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -312,7 +310,7 @@ class _AgentDocumentsScreenState extends ConsumerState<AgentDocumentsScreen> {
               icon: Icons.people_alt_outlined,
               title: 'Choose a customer first',
               message:
-                  'Open the customer workspace before previewing, downloading, or replacing documents so SHIELD can anchor the file timeline to one member.',
+                  'Open a customer workspace before previewing or downloading files.',
               actionLabel: 'Open Customers',
               onAction: () => context.go('/portal/agent/customers'),
               secondaryActionLabel: 'Refresh',
@@ -323,8 +321,7 @@ class _AgentDocumentsScreenState extends ConsumerState<AgentDocumentsScreen> {
               controller.selectedCustomerWorkspace.isEmpty)
             const AgentPanelCard(
               title: 'Loading Documents',
-              subtitle:
-                  'Fetching the selected customer document timeline and verification status.',
+              subtitle: 'Loading files for the selected customer.',
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -356,8 +353,8 @@ class _AgentDocumentsScreenState extends ConsumerState<AgentDocumentsScreen> {
                   ? 'No documents match these filters'
                   : 'No documents found',
               message: hasFilters
-                  ? 'Try clearing the active search or status filter to bring back the customer document timeline.'
-                  : 'Upload the first required file to start the document timeline for this customer.',
+                  ? 'Try clearing the search or status filter.'
+                  : 'Upload the first file for this customer.',
               actionLabel: hasFilters ? 'Clear Filters' : 'Upload Document',
               onAction: hasFilters
                   ? _clearFilters
