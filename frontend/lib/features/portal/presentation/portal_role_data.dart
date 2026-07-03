@@ -173,6 +173,8 @@ String _humanizeKey(String value) {
     'membership-plans': 'Membership Plans',
     'notification-center': 'Notification Center',
     'follow-ups': 'Follow-Ups',
+    'crm': 'CRM',
+    'referrals': 'Referral Network',
   };
   if (overrides.containsKey(value)) {
     return overrides[value]!;
@@ -446,21 +448,145 @@ PortalRoleData portalDataForRole(SHIELDRole role) {
     case SHIELDRole.superAdmin:
       return PortalRoleData(
         role: role,
-        operatorName: 'Super Admin Workspace',
-        headline: 'Platform governance, master data, and audit visibility',
+        operatorName: 'SHIELD Admin Portal',
+        headline:
+            'Platform command center for operations, growth, governance, and system control',
         regionLabel: 'System-wide administrative workspace',
         icon: Icons.security_outlined,
         accentColor: AppColors.shieldNavy,
         sections: [
-          _section('dashboard'),
-          _section('users'),
-          _section('roles'),
-          _section('businesses'),
-          _section('audit'),
-          _section('system'),
-          _section('membership-plans'),
-          _section('reports'),
-          _section('notification-center'),
+          _section(
+            'dashboard',
+            title: 'Dashboard',
+            summary:
+                'Executive dashboard, operations panel, alerts, and live activity feed.',
+          ),
+          _section(
+            'customers',
+            title: 'Customers',
+            summary:
+                'Master customer workspace across profile, timeline, visits, wallet, and documents.',
+          ),
+          _section(
+            'agents',
+            title: 'Agents',
+            summary:
+                'Agent directory, assignments, KPIs, follow-ups, and territory performance.',
+          ),
+          _section(
+            'crm',
+            title: 'CRM',
+            summary:
+                'Call queues, escalations, retention work, and CRM execution health.',
+          ),
+          _section(
+            'visits',
+            title: 'Visits',
+            summary:
+                'Master visit calendar across provider, branch, agent, and customer schedules.',
+          ),
+          _section(
+            'documents',
+            title: 'Documents',
+            summary:
+                'Verification queue, file preview, approval workflow, and audit history.',
+          ),
+          _section(
+            'memberships',
+            title: 'Memberships',
+            summary:
+                'Plans, benefits, renewal pipelines, usage, and expiry oversight.',
+          ),
+          _section(
+            'wallet',
+            title: 'Wallet',
+            summary:
+                'Ledger, transactions, recharge operations, and adjustment monitoring.',
+          ),
+          _section(
+            'rewards',
+            title: 'Rewards',
+            summary:
+                'Reward rules, redemption settings, campaigns, and points economics.',
+          ),
+          _section(
+            'referrals',
+            title: 'Referral Network',
+            summary:
+                'Referral tree, pending rewards, campaigns, and conversion intelligence.',
+          ),
+          _section(
+            'providers',
+            title: 'Providers',
+            summary:
+                'Provider profiles, services, availability, bookings, and compliance.',
+          ),
+          _section(
+            'services',
+            title: 'Services',
+            summary:
+                'Central service catalog, provider mapping, and commercial alignment.',
+          ),
+          _section(
+            'availability',
+            title: 'Availability',
+            summary:
+                'Provider capacity, schedule health, and branch-level slot pressure.',
+          ),
+          _section(
+            'branches',
+            title: 'Branches',
+            summary:
+                'Branch performance, customers, staff, providers, and local operations.',
+          ),
+          _section(
+            'employees',
+            title: 'Employees',
+            summary:
+                'Internal users, sessions, devices, and access-state visibility.',
+          ),
+          _section(
+            'roles',
+            title: 'Roles',
+            summary:
+                'Role catalog, permissions, scopes, and assignment governance.',
+          ),
+          _section(
+            'reports',
+            title: 'Reports',
+            summary:
+                'Report builder, saved exports, schedules, and delivery history.',
+          ),
+          _section(
+            'insights',
+            title: 'Insights',
+            summary:
+                'Growth, retention, branch, referral, and compliance analytics.',
+          ),
+          _section(
+            'audit',
+            title: 'Audit Logs',
+            summary:
+                'Operational activity, security events, login history, and change tracking.',
+          ),
+          _section(
+            'notifications',
+            title: 'Notifications',
+            summary:
+                'Internal inbox, broadcasts, scheduled messaging, and delivery health.',
+          ),
+          _section(
+            'settings',
+            title: 'Settings',
+            summary:
+                'Company, branding, security, API, storage, and feature-flag configuration.',
+          ),
+          _section(
+            'platform',
+            title: 'Platform',
+            summary:
+                'Runtime health, integrations, storage, and background workflow status.',
+          ),
         ],
       );
   }

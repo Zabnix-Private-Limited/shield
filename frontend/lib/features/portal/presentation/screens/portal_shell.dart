@@ -13,6 +13,7 @@ import '../../../agent/referrals/presentation/screens/agent_referrals_screen.dar
 import '../../../agent/registration/presentation/screens/agent_registration_screen.dart';
 import '../../../agent/reports/presentation/screens/agent_reports_screen.dart';
 import '../../../agent/settings/presentation/screens/agent_settings_screen.dart';
+import '../../../admin/presentation/screens/admin_portal_workspace.dart';
 import '../../../customer/dashboard/presentation/screens/dashboard_screen.dart';
 import '../../../customer/documents/presentation/screens/customer_documents_screen.dart';
 import '../../../customer/membership/presentation/screens/membership_screen.dart';
@@ -396,12 +397,12 @@ IconData _portalSectionIcon(String key) {
       return Icons.receipt_long_outlined;
     case 'notifications':
     case 'notification-center':
-      return Icons.notifications_none_rounded;
+      return Icons.notifications_active_outlined;
     case 'system':
       return Icons.settings_outlined;
     case 'customers':
     case 'patients':
-      return Icons.groups_outlined;
+      return Icons.groups_2_outlined;
     case 'verification':
       return Icons.verified_user_outlined;
     case 'bills':
@@ -427,7 +428,7 @@ IconData _portalSectionIcon(String key) {
     case 'approvals':
       return Icons.fact_check_outlined;
     case 'memberships':
-      return Icons.badge_outlined;
+      return Icons.card_membership_outlined;
     case 'reversals':
       return Icons.swap_horiz_outlined;
     case 'support':
@@ -440,6 +441,30 @@ IconData _portalSectionIcon(String key) {
       return Icons.favorite_border_rounded;
     case 'roles':
       return Icons.admin_panel_settings_outlined;
+    case 'agents':
+      return Icons.badge_outlined;
+    case 'crm':
+      return Icons.support_agent_outlined;
+    case 'visits':
+      return Icons.event_available_outlined;
+    case 'rewards':
+      return Icons.stars_outlined;
+    case 'referrals':
+      return Icons.account_tree_outlined;
+    case 'followups':
+      return Icons.call_outlined;
+    case 'providers':
+      return Icons.local_hospital_outlined;
+    case 'availability':
+      return Icons.schedule_outlined;
+    case 'branches':
+      return Icons.apartment_outlined;
+    case 'employees':
+      return Icons.manage_accounts_outlined;
+    case 'insights':
+      return Icons.insights_outlined;
+    case 'platform':
+      return Icons.hub_outlined;
     case 'businesses':
       return Icons.apartment_outlined;
     case 'audit':
@@ -489,6 +514,7 @@ class _RoleContent extends StatelessWidget {
         portal.role == SHIELDRole.customer && section.key == 'settings';
     final isAgentRole = portal.role == SHIELDRole.agent;
     final isProviderRole = portal.role == SHIELDRole.provider;
+    final isAdminRole = portal.role == SHIELDRole.superAdmin;
     final isCardUtilization =
         (portal.role == SHIELDRole.pharmacyStaff && section.key == 'qr-scan') ||
         (portal.role == SHIELDRole.clinicStaff && section.key == 'patients') ||
@@ -506,7 +532,9 @@ class _RoleContent extends StatelessWidget {
             portal.role == SHIELDRole.manager) &&
         section.key == 'reports';
 
-    if (isAdminDashboard) {
+    if (isAdminRole) {
+      content = AdminPortalWorkspace(portal: portal, section: section);
+    } else if (isAdminDashboard) {
       content = const _AdminOperationsCenterView();
     } else if (isCustomerProfile) {
       content = const _CustomerProfilePortalView();
@@ -1182,12 +1210,13 @@ class _AdminPortalNav extends StatelessWidget {
   final bool collapsed;
 
   static const List<MapEntry<String, List<String>>> _groups = [
-    MapEntry('Operations', ['dashboard', 'audit']),
-    MapEntry('People', ['users']),
-    MapEntry('Provider Network', ['businesses']),
-    MapEntry('Commercial', ['membership-plans']),
-    MapEntry('Reports', ['reports']),
-    MapEntry('System', ['roles', 'notification-center', 'system']),
+    MapEntry('Overview', ['dashboard']),
+    MapEntry('Operations', ['customers', 'agents', 'crm', 'visits', 'documents']),
+    MapEntry('Business', ['memberships', 'wallet', 'rewards', 'referrals']),
+    MapEntry('Providers', ['providers', 'services', 'availability']),
+    MapEntry('Organization', ['branches', 'employees', 'roles']),
+    MapEntry('Analytics', ['reports', 'insights', 'audit']),
+    MapEntry('System', ['notifications', 'settings', 'platform']),
   ];
 
   @override

@@ -81,6 +81,35 @@ class PortalResolver {
   }
 
   static bool _roleSupportsSection(SHIELDRole role, String sectionKey) {
+    const adminSections = <String>{
+      'dashboard',
+      'customers',
+      'agents',
+      'crm',
+      'visits',
+      'documents',
+      'memberships',
+      'wallet',
+      'rewards',
+      'referrals',
+      'providers',
+      'services',
+      'availability',
+      'branches',
+      'employees',
+      'roles',
+      'reports',
+      'insights',
+      'audit',
+      'notifications',
+      'settings',
+      'platform',
+    };
+
+    if (role == SHIELDRole.superAdmin && adminSections.contains(sectionKey)) {
+      return true;
+    }
+
     switch (sectionKey) {
       case 'dashboard':
       case 'profile':
@@ -100,10 +129,12 @@ class PortalResolver {
       case 'customers':
       case 'followups':
       case 'registration':
-      case 'referrals':
       case 'performance':
-      case 'reports':
         return role == SHIELDRole.agent;
+      case 'referrals':
+        return role == SHIELDRole.agent;
+      case 'reports':
+        return role == SHIELDRole.agent || role == SHIELDRole.manager;
       default:
         return false;
     }
