@@ -75,10 +75,7 @@ class AgentPanelCard extends StatelessWidget {
 }
 
 class AgentMetricGrid extends StatelessWidget {
-  const AgentMetricGrid({
-    super.key,
-    required this.children,
-  });
+  const AgentMetricGrid({super.key, required this.children});
 
   final List<Widget> children;
 
@@ -271,7 +268,8 @@ class AgentEmptyState extends StatelessWidget {
                 style: AppTypography.small.copyWith(color: AppColors.gray),
                 textAlign: TextAlign.center,
               ),
-              if ((actionLabel ?? '').trim().isNotEmpty && onAction != null) ...[
+              if ((actionLabel ?? '').trim().isNotEmpty &&
+                  onAction != null) ...[
                 AgentUi.gapH(AgentUi.space20),
                 FilledButton.tonal(
                   onPressed: onAction,
@@ -374,6 +372,107 @@ class AgentActionTile extends StatelessWidget {
       child: FilledButton.tonalIcon(
         onPressed: onTap,
         icon: Icon(icon, size: AgentUi.iconSize),
+        label: Text(label),
+      ),
+    );
+  }
+}
+
+class AgentPrimaryButton extends StatelessWidget {
+  const AgentPrimaryButton({
+    super.key,
+    required this.label,
+    this.onPressed,
+    this.icon,
+    this.isLoading = false,
+  });
+
+  final String label;
+  final VoidCallback? onPressed;
+  final Widget? icon;
+  final bool isLoading;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: AgentUi.controlHeight,
+      child: FilledButton.icon(
+        style: FilledButton.styleFrom(
+          padding: const EdgeInsets.symmetric(horizontal: AgentUi.space16),
+          shape: RoundedRectangleBorder(
+            borderRadius: AgentUi.radius(AgentUi.radiusMedium),
+          ),
+        ),
+        onPressed: isLoading ? null : onPressed,
+        icon: icon ?? const SizedBox.shrink(),
+        label: isLoading
+            ? const SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            : Text(label),
+      ),
+    );
+  }
+}
+
+class AgentSecondaryButton extends StatelessWidget {
+  const AgentSecondaryButton({
+    super.key,
+    required this.label,
+    this.onPressed,
+    this.icon,
+  });
+
+  final String label;
+  final VoidCallback? onPressed;
+  final Widget? icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: AgentUi.controlHeight,
+      child: OutlinedButton.icon(
+        style: OutlinedButton.styleFrom(
+          padding: const EdgeInsets.symmetric(horizontal: AgentUi.space16),
+          shape: RoundedRectangleBorder(
+            borderRadius: AgentUi.radius(AgentUi.radiusMedium),
+          ),
+        ),
+        onPressed: onPressed,
+        icon: icon ?? const SizedBox.shrink(),
+        label: Text(label),
+      ),
+    );
+  }
+}
+
+class AgentGhostButton extends StatelessWidget {
+  const AgentGhostButton({
+    super.key,
+    required this.label,
+    this.onPressed,
+    this.icon,
+  });
+
+  final String label;
+  final VoidCallback? onPressed;
+  final Widget? icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: AgentUi.controlHeight,
+      child: TextButton.icon(
+        style: TextButton.styleFrom(
+          padding: const EdgeInsets.symmetric(horizontal: AgentUi.space12),
+          shape: RoundedRectangleBorder(
+            borderRadius: AgentUi.radius(AgentUi.radiusMedium),
+          ),
+        ),
+        onPressed: onPressed,
+        icon: icon ?? const SizedBox.shrink(),
         label: Text(label),
       ),
     );

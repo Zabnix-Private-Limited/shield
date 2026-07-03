@@ -1,0 +1,180 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:shield/features/agent/appointments/presentation/screens/agent_appointments_screen.dart';
+import 'package:shield/features/agent/documents/presentation/screens/agent_documents_screen.dart';
+import 'package:shield/features/agent/referrals/presentation/screens/agent_referrals_screen.dart';
+import 'package:shield/features/agent/reports/presentation/screens/agent_reports_screen.dart';
+import 'package:shield/features/agent/settings/presentation/screens/agent_settings_screen.dart';
+import 'package:shield/features/agent/shared/data/agent_portal_repository.dart';
+import 'package:shield/features/agent/shared/presentation/controllers/agent_portal_controller.dart';
+import 'package:shield/features/agent/shared/presentation/controllers/agent_portal_provider.dart';
+
+void main() {
+  testWidgets(
+    'design-system agent screens render inside the portal scroll shell without exceptions',
+    (tester) async {
+      tester.view.physicalSize = const Size(1600, 1600);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+
+      final controller = AgentPortalController(
+        _ScrollSafeAgentPortalRepository(),
+      );
+      await controller.refreshWorkspace();
+
+      final screens = <Widget>[
+        const AgentDocumentsScreen(),
+        const AgentAppointmentsScreen(),
+        const AgentReferralsScreen(),
+        const AgentReportsScreen(),
+        const AgentSettingsScreen(profileOnly: true),
+        const DefaultTabController(length: 3, child: AgentSettingsScreen()),
+      ];
+
+      for (final screen in screens) {
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              agentPortalControllerProvider.overrideWith((ref) => controller),
+            ],
+            child: MaterialApp(
+              home: Scaffold(
+                body: CustomScrollView(
+                  slivers: [
+                    SliverToBoxAdapter(
+                      child: SizedBox(width: 1600, child: screen),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+
+        await tester.pumpAndSettle();
+        expect(
+          tester.takeException(),
+          isNull,
+          reason: screen.runtimeType.toString(),
+        );
+      }
+    },
+  );
+
+  testWidgets(
+    'settings screen falls back safely when backend preference values are outside the known design-system options',
+    (tester) async {
+      tester.view.physicalSize = const Size(1600, 1600);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+
+      final controller = AgentPortalController(
+        _ScrollSafeAgentPortalRepository(),
+      );
+      await controller.refreshWorkspace();
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            agentPortalControllerProvider.overrideWith((ref) => controller),
+          ],
+          child: const MaterialApp(
+            home: Scaffold(
+              body: SizedBox(
+                width: 1400,
+                child: DefaultTabController(
+                  length: 3,
+                  child: AgentSettingsScreen(),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+
+      expect(find.text('Settings'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
+}
+
+class _ScrollSafeAgentPortalRepository extends AgentPortalRepository {
+  @override
+  Future<Map<String, dynamic>> getWorkspace() async => {
+    'summary': const <String, dynamic>{},
+    'performance': const <String, dynamic>{},
+    'customers': const <Map<String, dynamic>>[],
+    'tasks': const <Map<String, dynamic>>[],
+    'notifications': const <Map<String, dynamic>>[],
+    'recentActivity': const <Map<String, dynamic>>[],
+    'upcomingAppointments': const <Map<String, dynamic>>[],
+    'authProfile': {
+      'display': {
+        'fullName': 'Asha Patel',
+        'designation': 'Field Agent',
+        'employeeCode': 'AG-102',
+        'lastLoginAt': '2026-07-03 09:15 IST',
+      },
+      'profile': {
+        'firstName': 'Asha',
+        'lastName': 'Patel',
+        'mobile': '9876543210',
+        'email': 'asha@shield.test',
+      },
+    },
+    'agentSettings': {
+      'preferences': {
+        'theme': 'sepia',
+        'language': 'ta',
+        'timezone': 'Asia/Kolkata',
+        'availability': {'mode': 'ONSITE', 'availableForAssignments': true},
+        'workingHours': {'startTime': '09:00', 'endTime': '18:00'},
+        'workingArea': {
+          'label': 'Perinthalmanna',
+          'district': 'Malappuram',
+          'travelRadiusKm': 15,
+        },
+        'dashboardLayout': {'defaultView': 'pipeline'},
+      },
+      'branchLifecycle': {
+        'activeBranch': {'name': 'Perinthalmanna Branch'},
+        'assignments': const <Map<String, dynamic>>[],
+      },
+      'lookups': {
+        'branches': const [
+          {'id': 'b1', 'name': 'Perinthalmanna Branch', 'code': 'PMNA'},
+        ],
+      },
+    },
+  };
+
+  @override
+  Future<Map<String, dynamic>> getCurrentProfile() async =>
+      (await getWorkspace())['authProfile'] as Map<String, dynamic>;
+
+  @override
+  Future<Map<String, dynamic>> getCurrentPreferences() async =>
+      (await getWorkspace())['agentSettings'] as Map<String, dynamic>;
+
+  @override
+  Future<List<Map<String, dynamic>>> getSessions() async => const [];
+
+  @override
+  Future<List<Map<String, dynamic>>> getLoginHistory() async => const [];
+
+  @override
+  Future<List<Map<String, dynamic>>> getProviders() async => const [];
+
+  @override
+  Future<List<Map<String, dynamic>>> getBusinesses() async => const [];
+
+  @override
+  Future<List<Map<String, dynamic>>> getMembershipTypes() async => const [];
+
+  @override
+  Future<Map<String, dynamic>> getReportRegistry() async =>
+      const <String, dynamic>{'reports': <Map<String, dynamic>>[]};
+}

@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../shared/presentation/controllers/agent_portal_provider.dart';
-import '../../../shared/presentation/widgets/agent_experience_widgets.dart';
-import '../../../shared/presentation/widgets/agent_section_header.dart';
 import '../../../../../shared/utils/shield_date_utils.dart';
 import '../../../../../shared/widgets/shield_date_picker.dart';
+import '../../../shared/presentation/controllers/agent_portal_provider.dart';
+import '../../../shared/presentation/widgets/agent_design_system.dart';
+import '../../../shared/presentation/widgets/agent_experience_widgets.dart';
+import '../../../shared/presentation/widgets/agent_section_header.dart';
 
 class AgentAppointmentsScreen extends ConsumerStatefulWidget {
   const AgentAppointmentsScreen({super.key});
@@ -45,14 +46,15 @@ class _AgentAppointmentsScreenState
     final selectedCustomer = controller.selectedCustomer;
     final customerName =
         selectedCustomer['firstName']?.toString().isNotEmpty == true
-            ? '${selectedCustomer['firstName']} ${selectedCustomer['lastName'] ?? ''}'
-                .trim()
-            : 'Select a customer from Customers';
+        ? '${selectedCustomer['firstName']} ${selectedCustomer['lastName'] ?? ''}'
+              .trim()
+        : 'Select a customer from Customers';
     final providerLookupError = controller.providerLookupError;
     final isProviderLookupLoading = controller.isReferenceDataLoading;
     final providers = controller.providers;
-    _providerId ??=
-        providers.isNotEmpty ? providers.first['id']?.toString() : null;
+    _providerId ??= providers.isNotEmpty
+        ? providers.first['id']?.toString()
+        : null;
 
     final visitHistory = controller.customerAppointments.isNotEmpty
         ? controller.customerAppointments
@@ -72,11 +74,11 @@ class _AgentAppointmentsScreenState
 
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: AgentUi.panelPadding,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            AgentSectionHeader(
+            const AgentSectionHeader(
               title: 'Visits',
               description:
                   'Booking now follows a clearer customer → provider → service → date → time → confirmation flow, with visit history split by status instead of one flat list.',
@@ -109,39 +111,37 @@ class _AgentAppointmentsScreenState
                 ),
               ],
             ),
-            const SizedBox(height: 12),
-            Expanded(
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  final stack = constraints.maxWidth < 980;
-                  final composer = _buildComposer(
-                    context,
-                    selectedCustomerId,
-                    customerName,
-                    providers,
-                    providerLookupError: providerLookupError,
-                    isProviderLookupLoading: isProviderLookupLoading,
-                  );
-                  final history = _buildHistory(visitHistory.toList());
-                  if (stack) {
-                    return ListView(
-                      children: [
-                        composer,
-                        const SizedBox(height: 16),
-                        history,
-                      ],
-                    );
-                  }
-                  return Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+            AgentUi.gapH(AgentUi.space12),
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final stack = constraints.maxWidth < 980;
+                final composer = _buildComposer(
+                  context,
+                  selectedCustomerId,
+                  customerName,
+                  providers,
+                  providerLookupError: providerLookupError,
+                  isProviderLookupLoading: isProviderLookupLoading,
+                );
+                final history = _buildHistory(visitHistory.toList());
+                if (stack) {
+                  return Column(
                     children: [
-                      Expanded(child: composer),
-                      const SizedBox(width: 16),
-                      Expanded(child: history),
+                      composer,
+                      AgentUi.gapH(AgentUi.space16),
+                      history,
                     ],
                   );
-                },
-              ),
+                }
+                return Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(child: composer),
+                    AgentUi.gapW(AgentUi.space16),
+                    Expanded(child: history),
+                  ],
+                );
+              },
             ),
           ],
         ),
@@ -153,10 +153,10 @@ class _AgentAppointmentsScreenState
     BuildContext context,
     String? selectedCustomerId,
     String customerName,
-    List<Map<String, dynamic>> providers,
-    {required String? providerLookupError,
-    required bool isProviderLookupLoading,}
-  ) {
+    List<Map<String, dynamic>> providers, {
+    required String? providerLookupError,
+    required bool isProviderLookupLoading,
+  }) {
     final selectedProvider = providers.firstWhere(
       (provider) => provider['id']?.toString() == _providerId,
       orElse: () => <String, dynamic>{},
@@ -210,9 +210,8 @@ class _AgentAppointmentsScreenState
                 ),
                 DropdownMenuItem(value: 'LAB', child: Text('Lab Test')),
               ],
-              onChanged: (value) => setState(
-                () => _appointmentType = value ?? 'CONSULTATION',
-              ),
+              onChanged: (value) =>
+                  setState(() => _appointmentType = value ?? 'CONSULTATION'),
               decoration: const InputDecoration(labelText: 'Select service'),
             ),
           ),
@@ -253,23 +252,27 @@ class _AgentAppointmentsScreenState
             child: Wrap(
               spacing: 8,
               runSpacing: 8,
-              children: const [
-                _SlotChip(slot: 'MORNING'),
-                _SlotChip(slot: 'AFTERNOON'),
-                _SlotChip(slot: 'EVENING'),
-              ].map((chip) {
-                final selected = chip.slot == _slot;
-                return ChoiceChip(
-                  label: Text(_slotLabel(chip.slot)),
-                  selected: selected,
-                  onSelected: (_) => setState(() {
-                    _slot = chip.slot;
-                    if (_appointmentDate != null) {
-                      _appointmentDate = _slotDate(_appointmentDate!, _slot);
-                    }
-                  }),
-                );
-              }).toList(),
+              children:
+                  const [
+                    _SlotChip(slot: 'MORNING'),
+                    _SlotChip(slot: 'AFTERNOON'),
+                    _SlotChip(slot: 'EVENING'),
+                  ].map((chip) {
+                    final selected = chip.slot == _slot;
+                    return ChoiceChip(
+                      label: Text(_slotLabel(chip.slot)),
+                      selected: selected,
+                      onSelected: (_) => setState(() {
+                        _slot = chip.slot;
+                        if (_appointmentDate != null) {
+                          _appointmentDate = _slotDate(
+                            _appointmentDate!,
+                            _slot,
+                          );
+                        }
+                      }),
+                    );
+                  }).toList(),
             ),
           ),
           const SizedBox(height: 12),
@@ -308,8 +311,9 @@ class _AgentAppointmentsScreenState
                 const SizedBox(height: 12),
                 Align(
                   alignment: Alignment.centerRight,
-                  child: FilledButton(
-                    onPressed: selectedCustomerId == null ||
+                  child: AgentPrimaryButton(
+                    onPressed:
+                        selectedCustomerId == null ||
                             _providerId == null ||
                             _appointmentDate == null
                         ? null
@@ -337,7 +341,7 @@ class _AgentAppointmentsScreenState
                               ),
                             );
                           },
-                    child: const Text('Confirm Visit'),
+                    label: 'Confirm Visit',
                   ),
                 ),
               ],
@@ -353,7 +357,8 @@ class _AgentAppointmentsScreenState
       'Upcoming': appointments
           .where(
             (item) =>
-                (item['status'] ?? '').toString().toUpperCase() != 'COMPLETED' &&
+                (item['status'] ?? '').toString().toUpperCase() !=
+                    'COMPLETED' &&
                 (item['status'] ?? '').toString().toUpperCase() != 'CANCELLED',
           )
           .toList(),
@@ -387,140 +392,163 @@ class _AgentAppointmentsScreenState
       );
     }
 
-    return ListView(
-      children: grouped.entries
-          .map(
-            (entry) => Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: AgentPanelCard(
-                title: entry.key,
-                child: entry.value.isEmpty
-                    ? AgentEmptyState(
-                        icon: Icons.event_note_outlined,
-                        title: 'No ${entry.key.toLowerCase()} visits',
-                        message:
-                            'This visit section will fill once more appointments move into ${entry.key.toLowerCase()}.',
-                      )
-                    : Column(
-                        children: entry.value.take(10).map<Widget>((appointment) {
-                          final appointmentId = appointment['id']?.toString() ?? '';
-                          final customerId = appointment['customerId']?.toString() ??
-                              ref
-                                  .read(agentPortalControllerProvider)
-                                  .selectedCustomerId ??
-                              '';
-                          return Container(
-                            margin: const EdgeInsets.only(bottom: 12),
-                            padding: const EdgeInsets.all(14),
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(16),
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .surfaceContainerLowest,
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    Expanded(
-                                      child: Text(
-                                        appointment['customerName']?.toString() ??
-                                            appointment['customer']?['firstName']
-                                                ?.toString() ??
-                                            'Customer',
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .titleSmall,
+    return AgentPanelCard(
+      title: 'Visit History',
+      subtitle:
+          'Status-split history keeps upcoming, completed, and cancelled visits readable inside one workspace.',
+      child: Column(
+        children: grouped.entries
+            .map(
+              (entry) => Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: AgentPanelCard(
+                  title: entry.key,
+                  child: entry.value.isEmpty
+                      ? AgentEmptyState(
+                          icon: Icons.event_note_outlined,
+                          title: 'No ${entry.key.toLowerCase()} visits',
+                          message:
+                              'This visit section will fill once more appointments move into ${entry.key.toLowerCase()}.',
+                        )
+                      : Column(
+                          children: entry.value.take(10).map<Widget>((
+                            appointment,
+                          ) {
+                            final appointmentId =
+                                appointment['id']?.toString() ?? '';
+                            final customerId =
+                                appointment['customerId']?.toString() ??
+                                ref
+                                    .read(agentPortalControllerProvider)
+                                    .selectedCustomerId ??
+                                '';
+                            return Container(
+                              margin: const EdgeInsets.only(bottom: 12),
+                              padding: const EdgeInsets.all(14),
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(16),
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.surfaceContainerLowest,
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: Text(
+                                          appointment['customerName']
+                                                  ?.toString() ??
+                                              appointment['customer']?['firstName']
+                                                  ?.toString() ??
+                                              'Customer',
+                                          style: Theme.of(
+                                            context,
+                                          ).textTheme.titleSmall,
+                                        ),
                                       ),
-                                    ),
-                                    AgentStatusBadge(
-                                      label: _humanize(appointment['status']),
-                                      color: _statusColor(
-                                        appointment['status']?.toString(),
+                                      AgentStatusBadge(
+                                        label: _humanize(appointment['status']),
+                                        color: _statusColor(
+                                          appointment['status']?.toString(),
+                                        ),
                                       ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 6),
-                                Text(
-                                  '${_formatDate(appointment['appointmentDate'])} • ${_humanize(appointment['appointmentType'])}',
-                                ),
-                                const SizedBox(height: 6),
-                                Text(
-                                  appointment['provider']?['providerName']
-                                          ?.toString() ??
-                                      appointment['providerName']?.toString() ??
-                                      'Provider',
-                                  style: Theme.of(context).textTheme.bodySmall,
-                                ),
-                                const SizedBox(height: 8),
-                                Wrap(
-                                  spacing: 8,
-                                  runSpacing: 8,
-                                  children: [
-                                    TextButton(
-                                      onPressed: () async {
-                                        await ref
-                                            .read(agentPortalControllerProvider)
-                                            .confirmAppointment(
-                                              appointmentId: appointmentId,
-                                              customerId: customerId,
-                                            );
-                                      },
-                                      child: const Text('Confirm'),
-                                    ),
-                                    TextButton(
-                                      onPressed: () async {
-                                        final picked = await showShieldDatePicker(
-                                          context,
-                                          initialDate: DateTime.now()
-                                              .add(const Duration(days: 1)),
-                                          firstDate: DateTime.now(),
-                                          lastDate: DateTime.now()
-                                              .add(const Duration(days: 365)),
-                                          title: 'Reschedule visit',
-                                          helperText:
-                                              'Choose the replacement date for this appointment.',
-                                          autoCloseOnSelect: true,
-                                        );
-                                        if (picked != null) {
+                                    ],
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    '${_formatDate(appointment['appointmentDate'])} • ${_humanize(appointment['appointmentType'])}',
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    appointment['provider']?['providerName']
+                                            ?.toString() ??
+                                        appointment['providerName']
+                                            ?.toString() ??
+                                        'Provider',
+                                    style: Theme.of(
+                                      context,
+                                    ).textTheme.bodySmall,
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Wrap(
+                                    spacing: 8,
+                                    runSpacing: 8,
+                                    children: [
+                                      AgentGhostButton(
+                                        onPressed: () async {
                                           await ref
-                                              .read(agentPortalControllerProvider)
-                                              .rescheduleAppointment(
+                                              .read(
+                                                agentPortalControllerProvider,
+                                              )
+                                              .confirmAppointment(
                                                 appointmentId: appointmentId,
                                                 customerId: customerId,
-                                                appointmentDate:
-                                                    _slotDate(picked, _slot),
-                                                remarks:
-                                                    'Rescheduled from Agent Portal',
                                               );
-                                        }
-                                      },
-                                      child: const Text('Reschedule'),
-                                    ),
-                                    TextButton(
-                                      onPressed: () async {
-                                        await ref
-                                            .read(agentPortalControllerProvider)
-                                            .cancelAppointment(
-                                              appointmentId: appointmentId,
-                                              customerId: customerId,
-                                            );
-                                      },
-                                      child: const Text('Cancel'),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                          );
-                        }).toList(),
-                      ),
+                                        },
+                                        label: 'Confirm',
+                                      ),
+                                      AgentGhostButton(
+                                        onPressed: () async {
+                                          final picked = await showShieldDatePicker(
+                                            context,
+                                            initialDate: DateTime.now().add(
+                                              const Duration(days: 1),
+                                            ),
+                                            firstDate: DateTime.now(),
+                                            lastDate: DateTime.now().add(
+                                              const Duration(days: 365),
+                                            ),
+                                            title: 'Reschedule visit',
+                                            helperText:
+                                                'Choose the replacement date for this appointment.',
+                                            autoCloseOnSelect: true,
+                                          );
+                                          if (picked != null) {
+                                            await ref
+                                                .read(
+                                                  agentPortalControllerProvider,
+                                                )
+                                                .rescheduleAppointment(
+                                                  appointmentId: appointmentId,
+                                                  customerId: customerId,
+                                                  appointmentDate: _slotDate(
+                                                    picked,
+                                                    _slot,
+                                                  ),
+                                                  remarks:
+                                                      'Rescheduled from Agent Portal',
+                                                );
+                                          }
+                                        },
+                                        label: 'Reschedule',
+                                      ),
+                                      AgentGhostButton(
+                                        onPressed: () async {
+                                          await ref
+                                              .read(
+                                                agentPortalControllerProvider,
+                                              )
+                                              .cancelAppointment(
+                                                appointmentId: appointmentId,
+                                                customerId: customerId,
+                                              );
+                                        },
+                                        label: 'Cancel',
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                ),
               ),
-            ),
-          )
-          .toList(),
+            )
+            .toList(),
+      ),
     );
   }
 
@@ -547,9 +575,9 @@ class _AgentAppointmentsScreenState
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(16),
-          color: Theme.of(context).colorScheme.errorContainer.withValues(
-                alpha: 0.32,
-              ),
+          color: Theme.of(
+            context,
+          ).colorScheme.errorContainer.withValues(alpha: 0.32),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -561,11 +589,11 @@ class _AgentAppointmentsScreenState
             const SizedBox(height: 6),
             Text(providerLookupError),
             const SizedBox(height: 10),
-            FilledButton.tonal(
+            AgentSecondaryButton(
               onPressed: () => ref
                   .read(agentPortalControllerProvider)
                   .reloadReferenceData(force: true),
-              child: const Text('Retry provider list'),
+              label: 'Retry provider list',
             ),
           ],
         ),
@@ -697,8 +725,9 @@ String _humanize(dynamic value) {
       .toLowerCase()
       .split(' ')
       .map(
-        (part) =>
-            part.isEmpty ? part : '${part[0].toUpperCase()}${part.substring(1)}',
+        (part) => part.isEmpty
+            ? part
+            : '${part[0].toUpperCase()}${part.substring(1)}',
       )
       .join(' ');
 }

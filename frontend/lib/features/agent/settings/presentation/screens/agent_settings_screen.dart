@@ -13,7 +13,8 @@ class AgentSettingsScreen extends ConsumerStatefulWidget {
   final bool profileOnly;
 
   @override
-  ConsumerState<AgentSettingsScreen> createState() => _AgentSettingsScreenState();
+  ConsumerState<AgentSettingsScreen> createState() =>
+      _AgentSettingsScreenState();
 }
 
 class _AgentSettingsScreenState extends ConsumerState<AgentSettingsScreen> {
@@ -76,7 +77,9 @@ class _AgentSettingsScreenState extends ConsumerState<AgentSettingsScreen> {
   }
 
   void _hydrateProfile(Map<String, dynamic> profile) {
-    final profileData = Map<String, dynamic>.from(profile['profile'] ?? const {});
+    final profileData = Map<String, dynamic>.from(
+      profile['profile'] ?? const {},
+    );
     _firstNameController.text = profileData['firstName']?.toString() ?? '';
     _lastNameController.text = profileData['lastName']?.toString() ?? '';
     _mobileController.text = profileData['mobile']?.toString() ?? '';
@@ -87,7 +90,8 @@ class _AgentSettingsScreenState extends ConsumerState<AgentSettingsScreen> {
     if (settings.isEmpty) {
       return;
     }
-    final version = settings['updatedAt']?.toString() ??
+    final version =
+        settings['updatedAt']?.toString() ??
         settings['preferenceId']?.toString() ??
         'agent-settings';
     if (_settingsVersion == version) {
@@ -128,11 +132,31 @@ class _AgentSettingsScreenState extends ConsumerState<AgentSettingsScreen> {
         ? Map<String, dynamic>.from(branchLifecycle['requestedBranch'] as Map)
         : const <String, dynamic>{};
 
-    _theme = preferences['theme']?.toString() ?? 'system';
-    _language = preferences['language']?.toString() ?? 'en';
-    _timezone = preferences['timezone']?.toString() ?? 'Asia/Calcutta';
-    _defaultDashboard = dashboardLayout['defaultView']?.toString() ?? 'overview';
-    _availabilityMode = availability['mode']?.toString() ?? 'FIELD';
+    _theme = _sanitizeChoice(preferences['theme']?.toString(), const [
+      'system',
+      'light',
+      'dark',
+    ], 'system');
+    _language = _sanitizeChoice(preferences['language']?.toString(), const [
+      'en',
+      'ml',
+      'hi',
+    ], 'en');
+    _timezone = _sanitizeChoice(preferences['timezone']?.toString(), const [
+      'Asia/Calcutta',
+      'Asia/Dubai',
+      'UTC',
+    ], 'Asia/Calcutta');
+    _defaultDashboard = _sanitizeChoice(
+      dashboardLayout['defaultView']?.toString(),
+      const ['overview', 'customers', 'followups'],
+      'overview',
+    );
+    _availabilityMode = _sanitizeChoice(
+      availability['mode']?.toString(),
+      const ['FIELD', 'REMOTE', 'HYBRID'],
+      'FIELD',
+    );
     _availableForAssignments = availability['availableForAssignments'] != false;
     _followUpReminders = notifications['followUpReminders'] != false;
     _appointmentChanges = notifications['appointmentChanges'] != false;
@@ -140,14 +164,14 @@ class _AgentSettingsScreenState extends ConsumerState<AgentSettingsScreen> {
     _membershipReminders = notifications['membershipReminders'] != false;
     _showCustomerCodes = profilePreferences['showCustomerCodes'] != false;
     _showMembershipBadges = profilePreferences['showMembershipBadges'] != false;
-    _allowPushNotifications = devicePreferences['allowPushNotifications'] != false;
+    _allowPushNotifications =
+        devicePreferences['allowPushNotifications'] != false;
     _requestedBranchId = requestedBranch['businessId']?.toString();
     _workingAreaController.text = workingArea['label']?.toString() ?? '';
     _workingDistrictController.text = workingArea['district']?.toString() ?? '';
     _travelRadiusController.text =
         workingArea['travelRadiusKm']?.toString() ?? '15';
-    _emergencyNameController.text =
-        emergencyContact['name']?.toString() ?? '';
+    _emergencyNameController.text = emergencyContact['name']?.toString() ?? '';
     _emergencyPhoneController.text =
         emergencyContact['phone']?.toString() ?? '';
     _emergencyRelationController.text =
@@ -219,9 +243,7 @@ class _AgentSettingsScreenState extends ConsumerState<AgentSettingsScreen> {
             'referralUpdates': _referralUpdates,
             'membershipReminders': _membershipReminders,
           },
-          'dashboardLayout': {
-            'defaultView': _defaultDashboard,
-          },
+          'dashboardLayout': {'defaultView': _defaultDashboard},
           'profilePreferences': {
             'showCustomerCodes': _showCustomerCodes,
             'showMembershipBadges': _showMembershipBadges,
@@ -253,7 +275,9 @@ class _AgentSettingsScreenState extends ConsumerState<AgentSettingsScreen> {
     final settings = controller.agentSettings.isNotEmpty
         ? controller.agentSettings
         : Map<String, dynamic>.from(authProfile['settings'] ?? const {});
-    final display = Map<String, dynamic>.from(authProfile['display'] ?? const {});
+    final display = Map<String, dynamic>.from(
+      authProfile['display'] ?? const {},
+    );
     final branchLifecycle = Map<String, dynamic>.from(
       settings['branchLifecycle'] ?? const {},
     );
@@ -268,8 +292,8 @@ class _AgentSettingsScreenState extends ConsumerState<AgentSettingsScreen> {
     );
     final safeRequestedBranchId =
         branches.any((branch) => branch['id']?.toString() == _requestedBranchId)
-            ? _requestedBranchId
-            : null;
+        ? _requestedBranchId
+        : null;
 
     _hydrateProfile(authProfile);
     _hydrateSettings(settings);
@@ -307,6 +331,147 @@ class _AgentSettingsScreenState extends ConsumerState<AgentSettingsScreen> {
     required Map<String, dynamic> display,
     required Map<String, dynamic> branchLifecycle,
   }) {
+    final bodyHeight = (MediaQuery.sizeOf(context).height - 260).clamp(
+      280.0,
+      900.0,
+    );
+    final sections = <Widget>[
+      AgentPanelCard(
+        title: 'Personal Information',
+        subtitle: 'Editable identity fields used across the SHIELD account.',
+        child: Wrap(
+          spacing: AgentUi.space12,
+          runSpacing: AgentUi.space12,
+          children: [
+            AgentFormFieldWidth(
+              child: TextField(
+                controller: _firstNameController,
+                decoration: const InputDecoration(labelText: 'First Name'),
+              ),
+            ),
+            AgentFormFieldWidth(
+              child: TextField(
+                controller: _lastNameController,
+                decoration: const InputDecoration(labelText: 'Last Name'),
+              ),
+            ),
+            AgentFormFieldWidth(
+              child: TextField(
+                controller: _mobileController,
+                keyboardType: TextInputType.phone,
+                decoration: const InputDecoration(labelText: 'Phone'),
+              ),
+            ),
+            AgentFormFieldWidth(
+              child: TextField(
+                controller: _emailController,
+                keyboardType: TextInputType.emailAddress,
+                decoration: const InputDecoration(labelText: 'Email'),
+              ),
+            ),
+          ],
+        ),
+      ),
+      AgentUi.gapH(AgentUi.space12),
+      AgentPanelCard(
+        title: 'Employee Information',
+        subtitle:
+            'Read-only employment and assignment details that define this agent identity.',
+        child: Wrap(
+          spacing: AgentUi.space12,
+          runSpacing: AgentUi.space12,
+          children: [
+            SizedBox(
+              width: 240,
+              child: AgentKeyValueItem(
+                label: 'Full Name',
+                value:
+                    display['fullName']?.toString().ifBlank(_displayName()) ??
+                    _displayName(),
+                icon: Icons.person_outline,
+              ),
+            ),
+            SizedBox(
+              width: 240,
+              child: AgentKeyValueItem(
+                label: 'Employee Code',
+                value: display['employeeCode']?.toString().ifBlank('-') ?? '-',
+                icon: Icons.badge_outlined,
+              ),
+            ),
+            SizedBox(
+              width: 240,
+              child: AgentKeyValueItem(
+                label: 'Role',
+                value:
+                    display['designation']?.toString().ifBlank('Field Agent') ??
+                    'Field Agent',
+                icon: Icons.account_circle_outlined,
+              ),
+            ),
+            SizedBox(
+              width: 240,
+              child: AgentKeyValueItem(
+                label: 'Assigned Branch',
+                value: _resolveBranchName(
+                  branchLifecycle,
+                ).ifBlank('Pending assignment'),
+                icon: Icons.business_outlined,
+              ),
+            ),
+            SizedBox(
+              width: 240,
+              child: AgentKeyValueItem(
+                label: 'Working Area',
+                value: _workingAreaController.text.ifBlank('Not set'),
+                icon: Icons.map_outlined,
+              ),
+            ),
+            SizedBox(
+              width: 240,
+              child: AgentKeyValueItem(
+                label: 'Availability',
+                value: _availabilityMode,
+                icon: Icons.location_on_outlined,
+              ),
+            ),
+            SizedBox(
+              width: 240,
+              child: AgentKeyValueItem(
+                label: 'Account Status',
+                value: _availableForAssignments ? 'Active' : 'Paused',
+                icon: Icons.verified_user_outlined,
+              ),
+            ),
+            SizedBox(
+              width: 240,
+              child: AgentKeyValueItem(
+                label: 'Last Login',
+                value:
+                    display['lastLoginAt']?.toString().ifBlank(
+                      'Not recorded',
+                    ) ??
+                    'Not recorded',
+                icon: Icons.history_outlined,
+              ),
+            ),
+          ],
+        ),
+      ),
+      AgentUi.gapH(AgentUi.space12),
+      Align(
+        alignment: Alignment.centerRight,
+        child: AgentPrimaryButton(
+          onPressed: controller.isProfileSaving
+              ? null
+              : () => _saveProfile(controller),
+          icon: const Icon(Icons.save_outlined),
+          label: controller.isProfileSaving ? 'Saving...' : 'Save Profile',
+          isLoading: controller.isProfileSaving,
+        ),
+      ),
+    ];
+
     return Card(
       child: Padding(
         padding: AgentUi.panelPadding,
@@ -319,147 +484,9 @@ class _AgentSettingsScreenState extends ConsumerState<AgentSettingsScreen> {
                   'Manage identity and employee information here. Application preferences, devices, notifications, and session controls stay in Settings so the account screen remains focused on who the agent is.',
             ),
             AgentUi.gapH(AgentUi.space16),
-            Expanded(
-              child: ListView(
-                children: [
-                  AgentPanelCard(
-                    title: 'Personal Information',
-                    subtitle:
-                        'Editable identity fields used across the SHIELD account.',
-                    child: Wrap(
-                      spacing: AgentUi.space12,
-                      runSpacing: AgentUi.space12,
-                      children: [
-                        AgentFormFieldWidth(
-                          child: TextField(
-                            controller: _firstNameController,
-                            decoration:
-                                const InputDecoration(labelText: 'First Name'),
-                          ),
-                        ),
-                        AgentFormFieldWidth(
-                          child: TextField(
-                            controller: _lastNameController,
-                            decoration:
-                                const InputDecoration(labelText: 'Last Name'),
-                          ),
-                        ),
-                        AgentFormFieldWidth(
-                          child: TextField(
-                            controller: _mobileController,
-                            keyboardType: TextInputType.phone,
-                            decoration: const InputDecoration(labelText: 'Phone'),
-                          ),
-                        ),
-                        AgentFormFieldWidth(
-                          child: TextField(
-                            controller: _emailController,
-                            keyboardType: TextInputType.emailAddress,
-                            decoration: const InputDecoration(labelText: 'Email'),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  AgentUi.gapH(AgentUi.space12),
-                  AgentPanelCard(
-                    title: 'Employee Information',
-                    subtitle:
-                        'Read-only employment and assignment details that define this agent identity.',
-                    child: Wrap(
-                      spacing: AgentUi.space12,
-                      runSpacing: AgentUi.space12,
-                      children: [
-                        SizedBox(
-                          width: 240,
-                          child: AgentKeyValueItem(
-                            label: 'Full Name',
-                            value: display['fullName']?.toString().ifBlank(
-                                      _displayName(),
-                                    ) ??
-                                _displayName(),
-                            icon: Icons.person_outline,
-                          ),
-                        ),
-                        SizedBox(
-                          width: 240,
-                          child: AgentKeyValueItem(
-                            label: 'Employee Code',
-                            value: display['employeeCode']?.toString().ifBlank('-') ??
-                                '-',
-                            icon: Icons.badge_outlined,
-                          ),
-                        ),
-                        SizedBox(
-                          width: 240,
-                          child: AgentKeyValueItem(
-                            label: 'Role',
-                            value: display['designation']?.toString().ifBlank(
-                                      'Field Agent',
-                                    ) ??
-                                'Field Agent',
-                            icon: Icons.account_circle_outlined,
-                          ),
-                        ),
-                        SizedBox(
-                          width: 240,
-                          child: AgentKeyValueItem(
-                            label: 'Assigned Branch',
-                            value:
-                                _resolveBranchName(branchLifecycle).ifBlank('Pending assignment'),
-                            icon: Icons.business_outlined,
-                          ),
-                        ),
-                        SizedBox(
-                          width: 240,
-                          child: AgentKeyValueItem(
-                            label: 'Working Area',
-                            value: _workingAreaController.text.ifBlank('Not set'),
-                            icon: Icons.map_outlined,
-                          ),
-                        ),
-                        SizedBox(
-                          width: 240,
-                          child: AgentKeyValueItem(
-                            label: 'Availability',
-                            value: _availabilityMode,
-                            icon: Icons.location_on_outlined,
-                          ),
-                        ),
-                        SizedBox(
-                          width: 240,
-                          child: AgentKeyValueItem(
-                            label: 'Account Status',
-                            value: _availableForAssignments ? 'Active' : 'Paused',
-                            icon: Icons.verified_user_outlined,
-                          ),
-                        ),
-                        SizedBox(
-                          width: 240,
-                          child: AgentKeyValueItem(
-                            label: 'Last Login',
-                            value: display['lastLoginAt']?.toString().ifBlank('Not recorded') ??
-                                'Not recorded',
-                            icon: Icons.history_outlined,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  AgentUi.gapH(AgentUi.space12),
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: FilledButton.icon(
-                      onPressed:
-                          controller.isProfileSaving ? null : () => _saveProfile(controller),
-                      icon: const Icon(Icons.save_outlined),
-                      label: Text(
-                        controller.isProfileSaving ? 'Saving...' : 'Save Profile',
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+            SizedBox(
+              height: bodyHeight,
+              child: ListView(children: sections),
             ),
           ],
         ),
@@ -475,6 +502,10 @@ class _AgentSettingsScreenState extends ConsumerState<AgentSettingsScreen> {
     required List<Map<String, dynamic>> branches,
     required String? safeRequestedBranchId,
   }) {
+    final bodyHeight = (MediaQuery.sizeOf(context).height - 300).clamp(
+      300.0,
+      900.0,
+    );
     return DefaultTabController(
       length: 3,
       child: Card(
@@ -499,7 +530,8 @@ class _AgentSettingsScreenState extends ConsumerState<AgentSettingsScreen> {
                 ],
               ),
               AgentUi.gapH(AgentUi.space16),
-              Expanded(
+              SizedBox(
+                height: bodyHeight,
                 child: TabBarView(
                   children: [
                     ListView(
@@ -516,8 +548,9 @@ class _AgentSettingsScreenState extends ConsumerState<AgentSettingsScreen> {
                                 child: DropdownButtonFormField<String>(
                                   isExpanded: true,
                                   initialValue: _theme,
-                                  decoration:
-                                      const InputDecoration(labelText: 'Theme'),
+                                  decoration: const InputDecoration(
+                                    labelText: 'Theme',
+                                  ),
                                   items: const [
                                     DropdownMenuItem(
                                       value: 'system',
@@ -534,16 +567,18 @@ class _AgentSettingsScreenState extends ConsumerState<AgentSettingsScreen> {
                                   ],
                                   onChanged: controller.isProfileSaving
                                       ? null
-                                      : (value) =>
-                                            setState(() => _theme = value ?? 'system'),
+                                      : (value) => setState(
+                                          () => _theme = value ?? 'system',
+                                        ),
                                 ),
                               ),
                               AgentFormFieldWidth(
                                 child: DropdownButtonFormField<String>(
                                   isExpanded: true,
                                   initialValue: _language,
-                                  decoration:
-                                      const InputDecoration(labelText: 'Language'),
+                                  decoration: const InputDecoration(
+                                    labelText: 'Language',
+                                  ),
                                   items: const [
                                     DropdownMenuItem(
                                       value: 'en',
@@ -560,16 +595,18 @@ class _AgentSettingsScreenState extends ConsumerState<AgentSettingsScreen> {
                                   ],
                                   onChanged: controller.isProfileSaving
                                       ? null
-                                      : (value) =>
-                                            setState(() => _language = value ?? 'en'),
+                                      : (value) => setState(
+                                          () => _language = value ?? 'en',
+                                        ),
                                 ),
                               ),
                               AgentFormFieldWidth(
                                 child: DropdownButtonFormField<String>(
                                   isExpanded: true,
                                   initialValue: _timezone,
-                                  decoration:
-                                      const InputDecoration(labelText: 'Timezone'),
+                                  decoration: const InputDecoration(
+                                    labelText: 'Timezone',
+                                  ),
                                   items: const [
                                     DropdownMenuItem(
                                       value: 'Asia/Calcutta',
@@ -587,9 +624,9 @@ class _AgentSettingsScreenState extends ConsumerState<AgentSettingsScreen> {
                                   onChanged: controller.isProfileSaving
                                       ? null
                                       : (value) => setState(
-                                            () => _timezone =
-                                                value ?? 'Asia/Calcutta',
-                                          ),
+                                          () => _timezone =
+                                              value ?? 'Asia/Calcutta',
+                                        ),
                                 ),
                               ),
                               AgentFormFieldWidth(
@@ -616,9 +653,9 @@ class _AgentSettingsScreenState extends ConsumerState<AgentSettingsScreen> {
                                   onChanged: controller.isProfileSaving
                                       ? null
                                       : (value) => setState(
-                                            () => _defaultDashboard =
-                                                value ?? 'overview',
-                                          ),
+                                          () => _defaultDashboard =
+                                              value ?? 'overview',
+                                        ),
                                 ),
                               ),
                             ],
@@ -669,8 +706,9 @@ class _AgentSettingsScreenState extends ConsumerState<AgentSettingsScreen> {
                                 icon: Icons.card_membership_outlined,
                                 value: _membershipReminders,
                                 enabled: !controller.isProfileSaving,
-                                onChanged: (value) =>
-                                    setState(() => _membershipReminders = value),
+                                onChanged: (value) => setState(
+                                  () => _membershipReminders = value,
+                                ),
                               ),
                               _SettingsToggleTile(
                                 label: 'Show customer codes by default',
@@ -685,8 +723,9 @@ class _AgentSettingsScreenState extends ConsumerState<AgentSettingsScreen> {
                                 icon: Icons.sell_outlined,
                                 value: _showMembershipBadges,
                                 enabled: !controller.isProfileSaving,
-                                onChanged: (value) =>
-                                    setState(() => _showMembershipBadges = value),
+                                onChanged: (value) => setState(
+                                  () => _showMembershipBadges = value,
+                                ),
                               ),
                             ],
                           ),
@@ -754,9 +793,9 @@ class _AgentSettingsScreenState extends ConsumerState<AgentSettingsScreen> {
                                       onChanged: controller.isProfileSaving
                                           ? null
                                           : (value) => setState(
-                                                () => _availabilityMode =
-                                                    value ?? 'FIELD',
-                                              ),
+                                              () => _availabilityMode =
+                                                  value ?? 'FIELD',
+                                            ),
                                     ),
                                   ),
                                   AgentFormFieldWidth(
@@ -800,8 +839,9 @@ class _AgentSettingsScreenState extends ConsumerState<AgentSettingsScreen> {
                               AgentFormFieldWidth(
                                 child: TextField(
                                   controller: _workingDistrictController,
-                                  decoration:
-                                      const InputDecoration(labelText: 'District'),
+                                  decoration: const InputDecoration(
+                                    labelText: 'District',
+                                  ),
                                 ),
                               ),
                               AgentFormFieldWidth(
@@ -853,7 +893,8 @@ class _AgentSettingsScreenState extends ConsumerState<AgentSettingsScreen> {
                                 isExpanded: true,
                                 initialValue: safeRequestedBranchId,
                                 decoration: const InputDecoration(
-                                  labelText: 'Request Transfer or Assign Branch',
+                                  labelText:
+                                      'Request Transfer or Assign Branch',
                                 ),
                                 items: branches
                                     .map(
@@ -867,8 +908,9 @@ class _AgentSettingsScreenState extends ConsumerState<AgentSettingsScreen> {
                                     .toList(),
                                 onChanged: controller.isProfileSaving
                                     ? null
-                                    : (value) =>
-                                          setState(() => _requestedBranchId = value),
+                                    : (value) => setState(
+                                        () => _requestedBranchId = value,
+                                      ),
                               ),
                               AgentUi.gapH(AgentUi.space12),
                               TextField(
@@ -887,12 +929,15 @@ class _AgentSettingsScreenState extends ConsumerState<AgentSettingsScreen> {
                                 ...assignments.map<Widget>(
                                   (assignment) => ListTile(
                                     contentPadding: EdgeInsets.zero,
-                                    leading: const Icon(Icons.business_outlined),
+                                    leading: const Icon(
+                                      Icons.business_outlined,
+                                    ),
                                     title: Text(
                                       assignment['business'] is Map
-                                          ? (assignment['business'] as Map)['name']
-                                                  ?.toString() ??
-                                              'Branch'
+                                          ? (assignment['business']
+                                                        as Map)['name']
+                                                    ?.toString() ??
+                                                'Branch'
                                           : 'Branch',
                                     ),
                                     subtitle: Text(
@@ -969,9 +1014,11 @@ class _AgentSettingsScreenState extends ConsumerState<AgentSettingsScreen> {
                                 onPressed: controller.isSettingsLoading
                                     ? null
                                     : () => ref
-                                        .read(agentPortalControllerProvider)
-                                        .revokeOtherOwnedSessions(),
-                                icon: const Icon(Icons.phonelink_erase_outlined),
+                                          .read(agentPortalControllerProvider)
+                                          .revokeOtherOwnedSessions(),
+                                icon: const Icon(
+                                  Icons.phonelink_erase_outlined,
+                                ),
                                 label: const Text('Sign Out Other Devices'),
                               ),
                             ],
@@ -994,14 +1041,17 @@ class _AgentSettingsScreenState extends ConsumerState<AgentSettingsScreen> {
                                       .map<Widget>(
                                         (session) => ListTile(
                                           contentPadding: EdgeInsets.zero,
-                                          leading: const Icon(Icons.devices_outlined),
+                                          leading: const Icon(
+                                            Icons.devices_outlined,
+                                          ),
                                           title: Text(
                                             session['device']?['deviceName']
                                                     ?.toString() ??
                                                 'Session',
                                           ),
                                           subtitle: Text(
-                                            session['loginMethod']?.toString() ??
+                                            session['loginMethod']
+                                                    ?.toString() ??
                                                 'Internal login',
                                           ),
                                           trailing: session['isCurrent'] == true
@@ -1011,7 +1061,8 @@ class _AgentSettingsScreenState extends ConsumerState<AgentSettingsScreen> {
                                                     context,
                                                     'ACTIVE',
                                                   ),
-                                                  icon: Icons.check_circle_outline,
+                                                  icon: Icons
+                                                      .check_circle_outline,
                                                 )
                                               : TextButton(
                                                   onPressed: () => ref
@@ -1048,7 +1099,9 @@ class _AgentSettingsScreenState extends ConsumerState<AgentSettingsScreen> {
                                       .map<Widget>(
                                         (row) => ListTile(
                                           contentPadding: EdgeInsets.zero,
-                                          leading: const Icon(Icons.history_outlined),
+                                          leading: const Icon(
+                                            Icons.history_outlined,
+                                          ),
                                           title: Text(
                                             row['status']?.toString() ??
                                                 'Status unavailable',
@@ -1057,7 +1110,8 @@ class _AgentSettingsScreenState extends ConsumerState<AgentSettingsScreen> {
                                             row['createdAt']?.toString() ?? '',
                                           ),
                                           trailing: Text(
-                                            row['loginMethod']?.toString() ?? '',
+                                            row['loginMethod']?.toString() ??
+                                                '',
                                           ),
                                         ),
                                       )
@@ -1103,6 +1157,10 @@ class _AgentSettingsScreenState extends ConsumerState<AgentSettingsScreen> {
         '${_firstNameController.text.trim()} ${_lastNameController.text.trim()}'
             .trim();
     return name.ifBlank('SHIELD Agent');
+  }
+
+  String _sanitizeChoice(String? value, List<String> allowed, String fallback) {
+    return allowed.contains(value) ? value! : fallback;
   }
 
   void _showMessage(String message) {

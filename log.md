@@ -7891,4 +7891,30 @@ est build, ackend/vercel.json, ackend/src/auth/auth.service.ts, and uth_devic
 - `cd backend && npm run build` ✅
 - `cd backend && npm test` ✅
 ### Timestamp
-- 2026-07-03 17:13:23 IST
+- 2026-07-03 17:13:23 IST## 214. Agent Portal Blank-Screen Stabilization + Button Unification Pass
+**High-level desc**: Fixed the migrated Agent Portal screens that were going white after successful API responses by making the affected UI modules safe inside the portal shell scroll container, hardening settings/profile rendering against backend preference drift, and routing the touched screens through shared button primitives for more consistent interaction sizing.
+- Removed the shell-conflicting `Expanded`/inner-scroll composition from the migrated Documents, Visits, Reports, Customer Network, and Account/Profile agent screens so those pages now render as normal content inside the portal shell instead of failing when mounted in the shared scroll layout.
+- Stabilized the Account and Settings screens for both real shell usage and widget-test-sized desktop viewports by giving their long forms bounded internal scrolling rather than relying on unconstrained page-height assumptions.
+- Added shared agent button primitives for primary, secondary, and ghost actions, then switched the touched migrated screens onto those wrappers so core action height, radius, and padding are no longer drifting screen by screen in this slice.
+- Hardened settings preference hydration with safe fallback normalization for theme, language, timezone, dashboard, and availability values so unexpected backend preference strings no longer break dropdown rendering.
+- Tightened the Reports filter controls for desktop rendering by expanding dropdown fields and constraining the date-range action width, which removed the remaining migration-era horizontal layout regression in the reports workspace.
+- Added desktop-shell regression coverage that mounts the affected agent screens inside the same scroll-parent shape used by the real portal, plus a settings fallback test for out-of-contract preference values, so these blank-page failures stay caught by Flutter tests.
+### Files Modified/Created
+**Frontend Files (Modified)**:
+- frontend/lib/features/agent/appointments/presentation/screens/agent_appointments_screen.dart
+- frontend/lib/features/agent/documents/presentation/screens/agent_documents_screen.dart
+- frontend/lib/features/agent/referrals/presentation/screens/agent_referrals_screen.dart
+- frontend/lib/features/agent/reports/presentation/screens/agent_reports_screen.dart
+- frontend/lib/features/agent/settings/presentation/screens/agent_settings_screen.dart
+- frontend/lib/features/agent/shared/presentation/widgets/agent_experience_widgets.dart
+- frontend/test/agent_settings_screen_test.dart
+- log.md
+**Frontend Files (New)**:
+- frontend/test/agent_scroll_render_regression_test.dart
+**Backend Files (Modified)**:
+- None.
+### Verification
+- `cd frontend && flutter analyze` ✅
+- `cd frontend && flutter test` ✅
+### Timestamp
+- 2026-07-03 18:28:46 IST

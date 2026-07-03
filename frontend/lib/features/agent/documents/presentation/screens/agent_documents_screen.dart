@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../../shared/services/platform_file_actions.dart';
 import '../../../../../shared/utils/prescription_file_picker.dart';
 import '../../../shared/presentation/controllers/agent_portal_provider.dart';
+import '../../../shared/presentation/widgets/agent_design_system.dart';
 import '../../../shared/presentation/widgets/agent_experience_widgets.dart';
 import '../../../shared/presentation/widgets/agent_section_header.dart';
 
@@ -40,27 +41,27 @@ class _AgentDocumentsScreenState extends ConsumerState<AgentDocumentsScreen> {
     final selectedCustomer = controller.selectedCustomer;
     final customerName =
         selectedCustomer['firstName']?.toString().isNotEmpty == true
-            ? '${selectedCustomer['firstName']} ${selectedCustomer['lastName'] ?? ''}'
-                .trim()
-            : 'Select a customer from Customers';
+        ? '${selectedCustomer['firstName']} ${selectedCustomer['lastName'] ?? ''}'
+              .trim()
+        : 'Select a customer from Customers';
 
-    final docs = controller.customerDocuments.where((doc) {
-      final status = (doc['status'] ?? '').toString().toUpperCase();
-      final matchesFilter = _filter == 'ALL' || status == _filter;
-      final combined =
-          '${doc['fileName'] ?? ''} ${doc['documentType'] ?? ''} ${doc['status'] ?? ''}'
-              .toLowerCase();
-      final matchesQuery = combined.contains(_query.toLowerCase());
-      return matchesFilter && matchesQuery;
-    }).toList()
-      ..sort((a, b) {
-        final aDate = DateTime.tryParse((a['createdAt'] ?? '').toString());
-        final bDate = DateTime.tryParse((b['createdAt'] ?? '').toString());
-        if (_sort == 'OLDEST') {
-          return (aDate ?? DateTime(1900)).compareTo(bDate ?? DateTime(1900));
-        }
-        return (bDate ?? DateTime(1900)).compareTo(aDate ?? DateTime(1900));
-      });
+    final docs =
+        controller.customerDocuments.where((doc) {
+          final status = (doc['status'] ?? '').toString().toUpperCase();
+          final matchesFilter = _filter == 'ALL' || status == _filter;
+          final combined =
+              '${doc['fileName'] ?? ''} ${doc['documentType'] ?? ''} ${doc['status'] ?? ''}'
+                  .toLowerCase();
+          final matchesQuery = combined.contains(_query.toLowerCase());
+          return matchesFilter && matchesQuery;
+        }).toList()..sort((a, b) {
+          final aDate = DateTime.tryParse((a['createdAt'] ?? '').toString());
+          final bDate = DateTime.tryParse((b['createdAt'] ?? '').toString());
+          if (_sort == 'OLDEST') {
+            return (aDate ?? DateTime(1900)).compareTo(bDate ?? DateTime(1900));
+          }
+          return (bDate ?? DateTime(1900)).compareTo(aDate ?? DateTime(1900));
+        });
 
     final uploadedTypes = docs
         .map((doc) => (doc['documentType'] ?? '').toString().toUpperCase())
@@ -77,47 +78,41 @@ class _AgentDocumentsScreenState extends ConsumerState<AgentDocumentsScreen> {
 
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: AgentUi.panelPadding,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            AgentSectionHeader(
+            const AgentSectionHeader(
               title: 'Documents',
               description:
                   'This customer-first document flow now behaves more like a lightweight DMS: required files, status badges, verification states, sorting, and quick preview actions.',
             ),
-            const SizedBox(height: 12),
-            Expanded(
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  final stack = constraints.maxWidth < 980;
-                  final left = _buildRequiredDocumentsCard(
-                    context,
-                    customerId,
-                    customerName,
-                    uploadedTypes,
-                    controller,
+            AgentUi.gapH(AgentUi.space16),
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final stack = constraints.maxWidth < 980;
+                final left = _buildRequiredDocumentsCard(
+                  context,
+                  customerId,
+                  customerName,
+                  uploadedTypes,
+                  controller,
+                );
+                final right = _buildHistoryCard(context, controller, docs);
+                if (stack) {
+                  return Column(
+                    children: [left, AgentUi.gapH(AgentUi.space16), right],
                   );
-                  final right = _buildHistoryCard(context, controller, docs);
-                  return ListView(
-                    children: [
-                      if (stack) ...[
-                        left,
-                        const SizedBox(height: 16),
-                        right,
-                      ] else
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            SizedBox(width: 320, child: left),
-                            const SizedBox(width: 16),
-                            Expanded(child: right),
-                          ],
-                        ),
-                    ],
-                  );
-                },
-              ),
+                }
+                return Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SizedBox(width: 320, child: left),
+                    AgentUi.gapW(AgentUi.space16),
+                    Expanded(child: right),
+                  ],
+                );
+              },
             ),
           ],
         ),
@@ -184,7 +179,8 @@ class _AgentDocumentsScreenState extends ConsumerState<AgentDocumentsScreen> {
                     children: [
                       Expanded(child: Text(doc.label)),
                       TextButton(
-                        onPressed: () => setState(() => _documentType = doc.type),
+                        onPressed: () =>
+                            setState(() => _documentType = doc.type),
                         child: Text(
                           _documentType == doc.type ? 'Selected' : 'Choose',
                         ),
@@ -197,38 +193,39 @@ class _AgentDocumentsScreenState extends ConsumerState<AgentDocumentsScreen> {
           ),
           const SizedBox(height: 12),
           Wrap(
-            spacing: 8,
-            runSpacing: 8,
+            spacing: AgentUi.space8,
+            runSpacing: AgentUi.space8,
             children: [
-              FilledButton.icon(
+              AgentPrimaryButton(
                 onPressed: customerId == null || controller.isSaving
                     ? null
                     : () => _uploadDocument(
-                          controller,
-                          customerId: customerId,
-                          documentType: _documentType,
-                          replaceExisting: false,
-                        ),
+                        controller,
+                        customerId: customerId,
+                        documentType: _documentType,
+                        replaceExisting: false,
+                      ),
                 icon: const Icon(Icons.upload_file_outlined),
-                label: Text(controller.isSaving ? 'Uploading...' : 'Upload'),
+                label: controller.isSaving ? 'Uploading...' : 'Upload',
+                isLoading: controller.isSaving,
               ),
-              OutlinedButton.icon(
+              AgentSecondaryButton(
                 onPressed: customerId == null || controller.isSaving
                     ? null
                     : () => _uploadDocument(
-                          controller,
-                          customerId: customerId,
-                          documentType: _documentType,
-                          replaceExisting: true,
-                        ),
+                        controller,
+                        customerId: customerId,
+                        documentType: _documentType,
+                        replaceExisting: true,
+                      ),
                 icon: const Icon(Icons.refresh_outlined),
-                label: const Text('Replace'),
+                label: 'Replace',
               ),
               if (customerId == null)
-                TextButton.icon(
+                AgentGhostButton(
                   onPressed: () => context.go('/portal/agent/customers'),
                   icon: const Icon(Icons.people_alt_outlined),
-                  label: const Text('Open Customers'),
+                  label: 'Open Customers',
                 ),
             ],
           ),
@@ -277,7 +274,10 @@ class _AgentDocumentsScreenState extends ConsumerState<AgentDocumentsScreen> {
                   DropdownMenuItem(value: 'ALL', child: Text('All statuses')),
                   DropdownMenuItem(value: 'PENDING', child: Text('Pending')),
                   DropdownMenuItem(value: 'APPROVED', child: Text('Approved')),
-                  DropdownMenuItem(value: 'VALIDATED', child: Text('Validated')),
+                  DropdownMenuItem(
+                    value: 'VALIDATED',
+                    child: Text('Validated'),
+                  ),
                   DropdownMenuItem(value: 'REJECTED', child: Text('Rejected')),
                 ],
                 onChanged: (value) => setState(() => _filter = value ?? 'ALL'),
@@ -285,8 +285,14 @@ class _AgentDocumentsScreenState extends ConsumerState<AgentDocumentsScreen> {
               DropdownButton<String>(
                 value: _sort,
                 items: const [
-                  DropdownMenuItem(value: 'NEWEST', child: Text('Newest first')),
-                  DropdownMenuItem(value: 'OLDEST', child: Text('Oldest first')),
+                  DropdownMenuItem(
+                    value: 'NEWEST',
+                    child: Text('Newest first'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'OLDEST',
+                    child: Text('Oldest first'),
+                  ),
                 ],
                 onChanged: (value) => setState(() => _sort = value ?? 'NEWEST'),
               ),
@@ -338,7 +344,9 @@ class _AgentDocumentsScreenState extends ConsumerState<AgentDocumentsScreen> {
               icon: hasFilters
                   ? Icons.filter_alt_off_outlined
                   : Icons.folder_copy_outlined,
-              title: hasFilters ? 'No documents match these filters' : 'No documents found',
+              title: hasFilters
+                  ? 'No documents match these filters'
+                  : 'No documents found',
               message: hasFilters
                   ? 'Try clearing the active search or status filter to bring back the customer document timeline.'
                   : 'Upload the first required file to start the document timeline for this customer.',
@@ -360,8 +368,9 @@ class _AgentDocumentsScreenState extends ConsumerState<AgentDocumentsScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     CircleAvatar(
-                      backgroundColor:
-                          Theme.of(context).colorScheme.primaryContainer,
+                      backgroundColor: Theme.of(
+                        context,
+                      ).colorScheme.primaryContainer,
                       child: Icon(_docIcon(doc['fileName']?.toString())),
                     ),
                     const SizedBox(width: 12),
@@ -424,15 +433,14 @@ class _AgentDocumentsScreenState extends ConsumerState<AgentDocumentsScreen> {
                       children: [
                         IconButton(
                           tooltip: 'Preview',
-                          onPressed: _isDocumentActionBusy(
-                            doc['id']?.toString() ?? '',
-                          )
+                          onPressed:
+                              _isDocumentActionBusy(doc['id']?.toString() ?? '')
                               ? null
                               : () => _previewDocument(
-                            context,
-                            controller,
-                            doc['id']?.toString() ?? '',
-                          ),
+                                  context,
+                                  controller,
+                                  doc['id']?.toString() ?? '',
+                                ),
                           icon: _buildDocumentActionIcon(
                             doc['id']?.toString() ?? '',
                             _DocumentAction.preview,
@@ -441,15 +449,11 @@ class _AgentDocumentsScreenState extends ConsumerState<AgentDocumentsScreen> {
                         ),
                         IconButton(
                           tooltip: 'Download',
-                          onPressed: _isDocumentActionBusy(
-                            doc['id']?.toString() ?? '',
-                          )
+                          onPressed:
+                              _isDocumentActionBusy(doc['id']?.toString() ?? '')
                               ? null
-                              : () => _downloadDocument(
-                            context,
-                            controller,
-                            doc,
-                          ),
+                              : () =>
+                                    _downloadDocument(context, controller, doc),
                           icon: _buildDocumentActionIcon(
                             doc['id']?.toString() ?? '',
                             _DocumentAction.download,
@@ -458,15 +462,10 @@ class _AgentDocumentsScreenState extends ConsumerState<AgentDocumentsScreen> {
                         ),
                         IconButton(
                           tooltip: 'Copy link',
-                          onPressed: _isDocumentActionBusy(
-                            doc['id']?.toString() ?? '',
-                          )
+                          onPressed:
+                              _isDocumentActionBusy(doc['id']?.toString() ?? '')
                               ? null
-                              : () => _copyLink(
-                            context,
-                            controller,
-                            doc,
-                          ),
+                              : () => _copyLink(context, controller, doc),
                           icon: _buildDocumentActionIcon(
                             doc['id']?.toString() ?? '',
                             _DocumentAction.copy,
@@ -617,7 +616,8 @@ class _AgentDocumentsScreenState extends ConsumerState<AgentDocumentsScreen> {
           message,
           fallback: 'The document workspace could not be loaded right now.',
         ),
-        onRetry: () => ref.read(agentPortalControllerProvider).refreshWorkspace(),
+        onRetry: () =>
+            ref.read(agentPortalControllerProvider).refreshWorkspace(),
       ),
     );
   }
@@ -658,8 +658,12 @@ class _AgentDocumentsScreenState extends ConsumerState<AgentDocumentsScreen> {
     }
   }
 
-  Future<String> _resolveDocumentUrl(dynamic controller, String documentId) async {
-    final url = await controller.getCustomerDocumentDownloadUrl(documentId) as String;
+  Future<String> _resolveDocumentUrl(
+    dynamic controller,
+    String documentId,
+  ) async {
+    final url =
+        await controller.getCustomerDocumentDownloadUrl(documentId) as String;
     if (url.trim().isEmpty) {
       throw const _DocumentActionException('Document link unavailable.');
     }
@@ -756,8 +760,9 @@ String _humanize(dynamic value) {
       .toLowerCase()
       .split(' ')
       .map(
-        (part) =>
-            part.isEmpty ? part : '${part[0].toUpperCase()}${part.substring(1)}',
+        (part) => part.isEmpty
+            ? part
+            : '${part[0].toUpperCase()}${part.substring(1)}',
       )
       .join(' ');
 }
@@ -775,10 +780,7 @@ String _formatDate(dynamic value) {
   return '${local.day.toString().padLeft(2, '0')}/${local.month.toString().padLeft(2, '0')}/${local.year}';
 }
 
-String _resolveDocumentError(
-  Object error, {
-  required String fallback,
-}) {
+String _resolveDocumentError(Object error, {required String fallback}) {
   final message = error.toString().trim();
   final lowered = message.toLowerCase();
   if (error is _DocumentActionException) {

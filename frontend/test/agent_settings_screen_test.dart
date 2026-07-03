@@ -7,42 +7,49 @@ import 'package:shield/features/agent/shared/presentation/controllers/agent_port
 import 'package:shield/features/agent/shared/presentation/controllers/agent_portal_provider.dart';
 
 void main() {
-  testWidgets(
-    'my account stays focused on identity instead of settings tabs',
-    (tester) async {
-      final controller = AgentPortalController(_FakeAgentSettingsRepository());
-      await controller.refreshWorkspace();
+  testWidgets('my account stays focused on identity instead of settings tabs', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1400, 1400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
 
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            agentPortalControllerProvider.overrideWith((ref) => controller),
-          ],
-          child: const MaterialApp(
-            home: Scaffold(
-              body: SizedBox(
-                width: 1400,
-                height: 1200,
-                child: AgentSettingsScreen(profileOnly: true),
-              ),
+    final controller = AgentPortalController(_FakeAgentSettingsRepository());
+    await controller.refreshWorkspace();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          agentPortalControllerProvider.overrideWith((ref) => controller),
+        ],
+        child: const MaterialApp(
+          home: Scaffold(
+            body: SizedBox(
+              width: 1400,
+              height: 1200,
+              child: AgentSettingsScreen(profileOnly: true),
             ),
           ),
         ),
-      );
+      ),
+    );
 
-      await tester.pumpAndSettle();
+    await tester.pumpAndSettle();
 
-      expect(find.text('My Account'), findsOneWidget);
-      expect(find.text('Personal Information'), findsOneWidget);
-      expect(find.text('Employee Information'), findsOneWidget);
-      expect(find.text('Preferences'), findsNothing);
-      expect(find.text('Security'), findsNothing);
-    },
-  );
+    expect(find.text('My Account'), findsOneWidget);
+    expect(find.text('Personal Information'), findsOneWidget);
+    expect(find.text('Employee Information'), findsOneWidget);
+    expect(find.text('Preferences'), findsNothing);
+    expect(find.text('Security'), findsNothing);
+  });
 
   testWidgets(
     'settings screen keeps preferences and security without profile form duplication',
     (tester) async {
+      tester.view.physicalSize = const Size(1400, 1400);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+
       final controller = AgentPortalController(_FakeAgentSettingsRepository());
       await controller.refreshWorkspace();
 
@@ -78,121 +85,113 @@ void main() {
 class _FakeAgentSettingsRepository extends AgentPortalRepository {
   @override
   Future<Map<String, dynamic>> getWorkspace() async => {
-        'summary': const <String, dynamic>{},
-        'performance': const <String, dynamic>{},
-        'customers': const <Map<String, dynamic>>[],
-        'tasks': const <Map<String, dynamic>>[],
-        'notifications': const <Map<String, dynamic>>[],
-        'recentActivity': const <Map<String, dynamic>>[],
-        'upcomingAppointments': const <Map<String, dynamic>>[],
-        'authProfile': {
-          'display': {
-            'fullName': 'Asha Patel',
-            'designation': 'Field Agent',
-            'employeeCode': 'AG-102',
-            'lastLoginAt': '2026-07-03 09:15 IST',
-          },
-          'profile': {
-            'firstName': 'Asha',
-            'lastName': 'Patel',
-            'mobile': '9876543210',
-            'email': 'asha@shield.test',
-          },
-        },
-      };
+    'summary': const <String, dynamic>{},
+    'performance': const <String, dynamic>{},
+    'customers': const <Map<String, dynamic>>[],
+    'tasks': const <Map<String, dynamic>>[],
+    'notifications': const <Map<String, dynamic>>[],
+    'recentActivity': const <Map<String, dynamic>>[],
+    'upcomingAppointments': const <Map<String, dynamic>>[],
+    'authProfile': {
+      'display': {
+        'fullName': 'Asha Patel',
+        'designation': 'Field Agent',
+        'employeeCode': 'AG-102',
+        'lastLoginAt': '2026-07-03 09:15 IST',
+      },
+      'profile': {
+        'firstName': 'Asha',
+        'lastName': 'Patel',
+        'mobile': '9876543210',
+        'email': 'asha@shield.test',
+      },
+    },
+  };
 
   @override
   Future<Map<String, dynamic>> getCurrentProfile() async => {
-        'display': {
-          'fullName': 'Asha Patel',
-          'designation': 'Field Agent',
-          'employeeCode': 'AG-102',
-          'lastLoginAt': '2026-07-03 09:15 IST',
-        },
-        'profile': {
-          'firstName': 'Asha',
-          'lastName': 'Patel',
-          'mobile': '9876543210',
-          'email': 'asha@shield.test',
-        },
-      };
+    'display': {
+      'fullName': 'Asha Patel',
+      'designation': 'Field Agent',
+      'employeeCode': 'AG-102',
+      'lastLoginAt': '2026-07-03 09:15 IST',
+    },
+    'profile': {
+      'firstName': 'Asha',
+      'lastName': 'Patel',
+      'mobile': '9876543210',
+      'email': 'asha@shield.test',
+    },
+  };
 
   @override
   Future<Map<String, dynamic>> getCurrentPreferences() async => {
-        'preferences': {
-          'theme': 'system',
-          'language': 'en',
-          'timezone': 'Asia/Calcutta',
-          'availability': {
-            'mode': 'FIELD',
-            'availableForAssignments': true,
-          },
-          'workingHours': {
-            'startTime': '09:00',
-            'endTime': '18:00',
-          },
-          'workingArea': {
-            'label': 'Perinthalmanna',
-            'district': 'Malappuram',
-            'travelRadiusKm': 15,
-          },
-          'emergencyContact': {
-            'name': 'Rahul',
-            'phone': '9999999999',
-            'relation': 'Brother',
-          },
-          'notifications': {
-            'followUpReminders': true,
-            'appointmentChanges': true,
-            'referralUpdates': true,
-            'membershipReminders': true,
-          },
-          'dashboardLayout': {
-            'defaultView': 'overview',
-          },
-          'profilePreferences': {
-            'showCustomerCodes': true,
-            'showMembershipBadges': true,
-          },
-          'devicePreferences': {
-            'preferredDeviceLabel': 'Office Laptop',
-            'allowPushNotifications': true,
-          },
+    'preferences': {
+      'theme': 'system',
+      'language': 'en',
+      'timezone': 'Asia/Calcutta',
+      'availability': {'mode': 'FIELD', 'availableForAssignments': true},
+      'workingHours': {'startTime': '09:00', 'endTime': '18:00'},
+      'workingArea': {
+        'label': 'Perinthalmanna',
+        'district': 'Malappuram',
+        'travelRadiusKm': 15,
+      },
+      'emergencyContact': {
+        'name': 'Rahul',
+        'phone': '9999999999',
+        'relation': 'Brother',
+      },
+      'notifications': {
+        'followUpReminders': true,
+        'appointmentChanges': true,
+        'referralUpdates': true,
+        'membershipReminders': true,
+      },
+      'dashboardLayout': {'defaultView': 'overview'},
+      'profilePreferences': {
+        'showCustomerCodes': true,
+        'showMembershipBadges': true,
+      },
+      'devicePreferences': {
+        'preferredDeviceLabel': 'Office Laptop',
+        'allowPushNotifications': true,
+      },
+    },
+    'branchLifecycle': {
+      'activeBranch': {'name': 'Perinthalmanna Branch'},
+      'assignments': const [
+        {
+          'business': {'name': 'Perinthalmanna Branch'},
+          'status': 'ACTIVE',
+          'isPrimary': true,
         },
-        'branchLifecycle': {
-          'activeBranch': {'name': 'Perinthalmanna Branch'},
-          'assignments': const [
-            {
-              'business': {'name': 'Perinthalmanna Branch'},
-              'status': 'ACTIVE',
-              'isPrimary': true,
-            },
-          ],
-        },
-        'lookups': {
-          'branches': const [
-            {'id': 'b1', 'name': 'Perinthalmanna Branch', 'code': 'PMNA'},
-          ],
-        },
-      };
+      ],
+    },
+    'lookups': {
+      'branches': const [
+        {'id': 'b1', 'name': 'Perinthalmanna Branch', 'code': 'PMNA'},
+      ],
+    },
+  };
 
   @override
   Future<List<Map<String, dynamic>>> getSessions() async => const [
-        {
-          'isCurrent': true,
-          'loginMethod': 'Google',
-          'device': {'deviceName': 'Office Laptop'},
-        },
-      ];
+    {
+      'isCurrent': true,
+      'loginMethod': 'Google',
+      'device': {'deviceName': 'Office Laptop'},
+    },
+  ];
 
   @override
   Future<List<Map<String, dynamic>>> getLoginHistory() async => const [
-        {
-          'status': 'SUCCESS',
-          'createdAt': '2026-07-03 09:15 IST',
-          'loginMethod': 'Google',
-        },
-      ];
+    {
+      'status': 'SUCCESS',
+      'createdAt': '2026-07-03 09:15 IST',
+      'loginMethod': 'Google',
+    },
+  ];
 
   @override
   Future<List<Map<String, dynamic>>> getProviders() async => const [];
