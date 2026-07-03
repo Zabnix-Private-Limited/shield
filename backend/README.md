@@ -64,6 +64,7 @@ This NestJS application is configured for deployment on Vercel.
 * **Vercel Project Name**: `shield-backend`
 * **Vercel Project ID**: `prj_TBuLbV6r6QptZeyoyuKJshGrWnlY`
 * **Live Production URL**: `https://shield-backend.vercel.app`
+* **Canonical Frontend App URL**: `https://shield-zabnix.vercel.app`
 
 For manual CLI deployments:
 ```bash

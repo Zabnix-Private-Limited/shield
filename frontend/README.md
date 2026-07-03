@@ -19,9 +19,10 @@ samples, guidance on mobile development, and a full API reference.
 
 This Flutter Web application is configured for deployment on Vercel.
 
-* **Vercel Project Name**: `shield-demo`
+* **Vercel Project Name**: `shield-zabnix`
 * **Vercel Project ID**: `prj_iZUPqbwbQbudPB6If2YcD06GfUEN`
-* **Live Production URL**: `http://shield-zabnix.vercel.app/`
+* **Live Production URL**: `https://shield-zabnix.vercel.app`
+* **Production API URL**: `https://shield-backend.vercel.app`
 
 For manual CLI deployments:
 ```bash

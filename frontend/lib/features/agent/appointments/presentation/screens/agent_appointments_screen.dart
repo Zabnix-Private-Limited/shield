@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 
 import '../../../shared/presentation/controllers/agent_portal_provider.dart';
 import '../../../shared/presentation/widgets/agent_experience_widgets.dart';
 import '../../../shared/presentation/widgets/agent_section_header.dart';
+import '../../../../../shared/utils/shield_date_utils.dart';
+import '../../../../../shared/widgets/shield_date_picker.dart';
 
 class AgentAppointmentsScreen extends ConsumerStatefulWidget {
   const AgentAppointmentsScreen({super.key});
@@ -16,6 +17,7 @@ class AgentAppointmentsScreen extends ConsumerStatefulWidget {
 
 class _AgentAppointmentsScreenState
     extends ConsumerState<AgentAppointmentsScreen> {
+  final GlobalKey _composerKey = GlobalKey();
   String? _providerId;
   String _appointmentType = 'CONSULTATION';
   DateTime? _appointmentDate;
@@ -46,6 +48,8 @@ class _AgentAppointmentsScreenState
             ? '${selectedCustomer['firstName']} ${selectedCustomer['lastName'] ?? ''}'
                 .trim()
             : 'Select a customer from Customers';
+    final providerLookupError = controller.providerLookupError;
+    final isProviderLookupLoading = controller.isReferenceDataLoading;
     final providers = controller.providers;
     _providerId ??=
         providers.isNotEmpty ? providers.first['id']?.toString() : null;
@@ -114,6 +118,8 @@ class _AgentAppointmentsScreenState
                   selectedCustomerId,
                   customerName,
                   providers,
+                  providerLookupError: providerLookupError,
+                  isProviderLookupLoading: isProviderLookupLoading,
                 );
                 final history = _buildHistory(visitHistory.toList());
                 if (stack) {
@@ -150,6 +156,8 @@ class _AgentAppointmentsScreenState
     String? selectedCustomerId,
     String customerName,
     List<Map<String, dynamic>> providers,
+    {required String? providerLookupError,
+    required bool isProviderLookupLoading,}
   ) {
     final selectedProvider = providers.firstWhere(
       (provider) => provider['id']?.toString() == _providerId,
@@ -160,6 +168,7 @@ class _AgentAppointmentsScreenState
       subtitle:
           'The visit setup is sequenced so the agent always knows the next decision to make.',
       child: Column(
+        key: _composerKey,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           ListTile(
@@ -176,20 +185,10 @@ class _AgentAppointmentsScreenState
           _FlowStep(
             step: '1',
             label: 'Provider',
-            child: DropdownButtonFormField<String>(
-              initialValue: _providerId,
-              items: providers
-                  .map(
-                    (provider) => DropdownMenuItem<String>(
-                      value: provider['id']?.toString(),
-                      child: Text(
-                        provider['providerName']?.toString() ?? 'Provider',
-                      ),
-                    ),
-                  )
-                  .toList(),
-              onChanged: (value) => setState(() => _providerId = value),
-              decoration: const InputDecoration(labelText: 'Select provider'),
+            child: _buildProviderSelector(
+              providers,
+              providerLookupError: providerLookupError,
+              isProviderLookupLoading: isProviderLookupLoading,
             ),
           ),
           const SizedBox(height: 12),
@@ -225,11 +224,15 @@ class _AgentAppointmentsScreenState
             label: 'Date',
             child: OutlinedButton.icon(
               onPressed: () async {
-                final picked = await showDatePicker(
-                  context: context,
+                final picked = await showShieldDatePicker(
+                  context,
                   initialDate: DateTime.now().add(const Duration(days: 1)),
                   firstDate: DateTime.now(),
                   lastDate: DateTime.now().add(const Duration(days: 365)),
+                  title: 'Choose visit date',
+                  helperText:
+                      'Select the visit date before choosing the final slot.',
+                  autoCloseOnSelect: true,
                 );
                 if (picked != null) {
                   setState(() {
@@ -241,7 +244,7 @@ class _AgentAppointmentsScreenState
               label: Text(
                 _appointmentDate == null
                     ? 'Choose visit date'
-                    : DateFormat('dd MMM yyyy').format(_appointmentDate!),
+                    : ShieldDateUtils.formatShortMonthDate(_appointmentDate!),
               ),
             ),
           ),
@@ -326,7 +329,10 @@ class _AgentAppointmentsScreenState
                             if (!context.mounted) {
                               return;
                             }
-                            setState(() => _appointmentDate = null);
+                            setState(() {
+                              _appointmentDate = null;
+                              _slot = 'MORNING';
+                            });
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
                                 content: Text('Visit booked successfully.'),
@@ -366,6 +372,22 @@ class _AgentAppointmentsScreenState
           )
           .toList(),
     };
+
+    if (appointments.isEmpty) {
+      return AgentPanelCard(
+        title: 'Visit History',
+        subtitle:
+            'Once visits are created for the selected customer, they appear here with status-aware actions.',
+        child: AgentEmptyState(
+          icon: Icons.event_available_outlined,
+          title: 'No visits booked yet',
+          message:
+              'Use the booking flow to create the first appointment for this customer. Upcoming, completed, and cancelled visits will then stay separated here.',
+          actionLabel: 'Book the first visit',
+          onAction: _scrollComposerIntoView,
+        ),
+      );
+    }
 
     return ListView(
       children: grouped.entries
@@ -452,13 +474,17 @@ class _AgentAppointmentsScreenState
                                     ),
                                     TextButton(
                                       onPressed: () async {
-                                        final picked = await showDatePicker(
-                                          context: context,
+                                        final picked = await showShieldDatePicker(
+                                          context,
                                           initialDate: DateTime.now()
                                               .add(const Duration(days: 1)),
                                           firstDate: DateTime.now(),
                                           lastDate: DateTime.now()
                                               .add(const Duration(days: 365)),
+                                          title: 'Reschedule visit',
+                                          helperText:
+                                              'Choose the replacement date for this appointment.',
+                                          autoCloseOnSelect: true,
                                         );
                                         if (picked != null) {
                                           await ref
@@ -497,6 +523,95 @@ class _AgentAppointmentsScreenState
             ),
           )
           .toList(),
+    );
+  }
+
+  Widget _buildProviderSelector(
+    List<Map<String, dynamic>> providers, {
+    required String? providerLookupError,
+    required bool isProviderLookupLoading,
+  }) {
+    if (isProviderLookupLoading && providers.isEmpty) {
+      return const ListTile(
+        contentPadding: EdgeInsets.zero,
+        leading: SizedBox(
+          width: 18,
+          height: 18,
+          child: CircularProgressIndicator(strokeWidth: 2),
+        ),
+        title: Text('Loading providers'),
+        subtitle: Text('Fetching the live provider directory for booking.'),
+      );
+    }
+
+    if (providerLookupError != null && providers.isEmpty) {
+      return Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          color: Theme.of(context).colorScheme.errorContainer.withValues(
+                alpha: 0.32,
+              ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Provider directory unavailable',
+              style: Theme.of(context).textTheme.titleSmall,
+            ),
+            const SizedBox(height: 6),
+            Text(providerLookupError),
+            const SizedBox(height: 10),
+            FilledButton.tonal(
+              onPressed: () => ref
+                  .read(agentPortalControllerProvider)
+                  .reloadReferenceData(force: true),
+              child: const Text('Retry provider list'),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (providers.isEmpty) {
+      return Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          color: Theme.of(context).colorScheme.surfaceContainerLowest,
+        ),
+        child: const Text(
+          'No active providers are available for booking right now. Try again later or ask an administrator to verify provider access.',
+        ),
+      );
+    }
+
+    return DropdownButtonFormField<String>(
+      initialValue: _providerId,
+      items: providers
+          .map(
+            (provider) => DropdownMenuItem<String>(
+              value: provider['id']?.toString(),
+              child: Text(provider['providerName']?.toString() ?? 'Provider'),
+            ),
+          )
+          .toList(),
+      onChanged: (value) => setState(() => _providerId = value),
+      decoration: const InputDecoration(labelText: 'Select provider'),
+    );
+  }
+
+  Future<void> _scrollComposerIntoView() async {
+    final currentContext = _composerKey.currentContext;
+    if (currentContext == null) {
+      return;
+    }
+    await Scrollable.ensureVisible(
+      currentContext,
+      duration: const Duration(milliseconds: 260),
+      curve: Curves.easeOutCubic,
+      alignment: 0.05,
     );
   }
 }
@@ -597,5 +712,5 @@ String _formatDate(dynamic value) {
   if (parsed == null) {
     return 'Not scheduled';
   }
-  return DateFormat('dd MMM, h:mm a').format(parsed.toLocal());
+  return ShieldDateUtils.formatShortMonthDateTime(parsed);
 }

@@ -27,6 +27,7 @@ describe('app env helpers', () => {
       'http://127.0.0.1:53431',
       'http://localhost:3000',
       'http://127.0.0.1:3000',
+      'https://shield-zabnix.vercel.app',
     ]);
     expect(env.prescriptionAiUrl).toBe('http://127.0.0.1:8010');
     expect(env.ocrEnabled).toBe(false);
@@ -50,6 +51,7 @@ describe('app env helpers', () => {
       'http://127.0.0.1:53431',
       'http://localhost:3000',
       'http://127.0.0.1:3000',
+      'https://shield-zabnix.vercel.app',
       'https://shield.example.com',
       'https://portal.example.com',
     ]);

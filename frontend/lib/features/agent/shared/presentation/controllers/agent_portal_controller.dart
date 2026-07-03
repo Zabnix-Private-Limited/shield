@@ -12,7 +12,9 @@ class AgentPortalController extends ChangeNotifier {
   bool _profileSaving = false;
   bool _settingsLoading = false;
   bool _saving = false;
+  bool _referenceDataLoading = false;
   String? _error;
+  String? _providerLookupError;
   Map<String, dynamic> _workspace = const <String, dynamic>{};
   Map<String, dynamic> _selectedCustomerWorkspace = const <String, dynamic>{};
   Map<String, dynamic> _reportRegistry = const <String, dynamic>{};
@@ -28,7 +30,9 @@ class AgentPortalController extends ChangeNotifier {
   bool get isProfileSaving => _profileSaving;
   bool get isSettingsLoading => _settingsLoading;
   bool get isSaving => _saving;
+  bool get isReferenceDataLoading => _referenceDataLoading;
   String? get error => _error;
+  String? get providerLookupError => _providerLookupError;
   Map<String, dynamic> get workspace => _workspace;
   Map<String, dynamic> get selectedCustomerWorkspace => _selectedCustomerWorkspace;
   Map<String, dynamic> get reportRegistry => _reportRegistry;
@@ -179,14 +183,18 @@ class AgentPortalController extends ChangeNotifier {
     }
   }
 
-  Future<void> _ensureReferenceData() async {
+  Future<void> _ensureReferenceData({bool force = false}) async {
     if (_providers.isNotEmpty &&
         _businesses.isNotEmpty &&
         _membershipTypes.isNotEmpty &&
-        _reportRegistry.isNotEmpty) {
+        _reportRegistry.isNotEmpty &&
+        !force) {
       return;
     }
 
+    _referenceDataLoading = true;
+    _providerLookupError = null;
+    notifyListeners();
     try {
       final providers = await _repository.getProviders();
       final businesses = await _repository.getBusinesses();
@@ -196,9 +204,17 @@ class AgentPortalController extends ChangeNotifier {
       _businesses = businesses;
       _membershipTypes = membershipTypes;
       _reportRegistry = reports;
-    } catch (_) {
-      // Keep the workspace usable even if optional reference lookups fail.
+      _providerLookupError = null;
+    } catch (error) {
+      _providerLookupError = _resolveReferenceDataError(error);
+    } finally {
+      _referenceDataLoading = false;
+      notifyListeners();
     }
+  }
+
+  Future<void> reloadReferenceData({bool force = true}) async {
+    await _ensureReferenceData(force: force);
   }
 
   Future<void> selectCustomer(String customerId) async {
@@ -522,5 +538,19 @@ class AgentPortalController extends ChangeNotifier {
 
   Future<String> getCustomerDocumentDownloadUrl(String documentId) {
     return _repository.getDocumentDownloadUrl(documentId);
+  }
+
+  String _resolveReferenceDataError(Object error) {
+    final message = error.toString().trim();
+    final lowered = message.toLowerCase();
+    if (lowered.contains('403') || lowered.contains('forbidden')) {
+      return 'Your current SHIELD role can open the visit workflow, but provider-directory access was denied. Retry after permissions are updated or use an admin-approved account.';
+    }
+    if (lowered.contains('network')) {
+      return 'The provider directory could not be reached because the network connection is unavailable. Retry when the connection is stable.';
+    }
+    return message.isEmpty
+        ? 'The provider directory could not be loaded right now.'
+        : message;
   }
 }

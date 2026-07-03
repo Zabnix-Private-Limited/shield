@@ -16,6 +16,10 @@ Base URL:
 * Staging/Custom: `https://api.shield.sahakar.com/api/v1`
 * Live Vercel Production: `https://shield-backend.vercel.app`
 
+Primary Frontend Application:
+
+* Live Vercel Production: `https://shield-zabnix.vercel.app`
+
 API Versioning:
 
 /api/v1

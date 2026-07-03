@@ -195,6 +195,7 @@ export const RBAC_ROLES: RoleDefinition[] = [
       ...permissionsFor(['documents'], ['view', 'create']),
       ...permissionsFor(['appointments'], ['view', 'create', 'update']),
       ...permissionsFor(['crm'], ['view', 'create', 'update']),
+      ...permissionsFor(['providers'], ['view']),
       ...permissionsFor(['notifications'], ['view', 'update']),
       ...permissionsFor(['settings'], ['view', 'update']),
     ],

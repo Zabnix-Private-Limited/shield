@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 
 import '../../../shared/presentation/controllers/agent_portal_provider.dart';
 import '../../../shared/presentation/widgets/agent_experience_widgets.dart';
 import '../../../shared/presentation/widgets/agent_section_header.dart';
+import '../../../../../shared/utils/shield_date_utils.dart';
+import '../../../../../shared/widgets/shield_date_picker.dart';
 
 class AgentFollowUpsScreen extends ConsumerStatefulWidget {
   const AgentFollowUpsScreen({super.key});
@@ -257,11 +258,15 @@ class _AgentFollowUpsScreenState extends ConsumerState<AgentFollowUpsScreen> {
                 width: 220,
                 child: OutlinedButton.icon(
                   onPressed: () async {
-                    final picked = await showDatePicker(
-                      context: context,
+                    final picked = await showShieldDatePicker(
+                      context,
                       initialDate: DateTime.now().add(const Duration(days: 1)),
                       firstDate: DateTime.now().subtract(const Duration(days: 1)),
                       lastDate: DateTime.now().add(const Duration(days: 365)),
+                      title: 'Schedule follow-up',
+                      helperText:
+                          'Choose the next follow-up date for this customer.',
+                      autoCloseOnSelect: true,
                     );
                     if (picked != null) {
                       setState(() => _selectedDueDate = picked);
@@ -271,7 +276,9 @@ class _AgentFollowUpsScreenState extends ConsumerState<AgentFollowUpsScreen> {
                   label: Text(
                     _selectedDueDate == null
                         ? 'Choose next follow-up'
-                        : DateFormat('dd MMM yyyy').format(_selectedDueDate!),
+                        : ShieldDateUtils.formatShortMonthDate(
+                            _selectedDueDate!,
+                          ),
                   ),
                 ),
               ),
@@ -518,7 +525,7 @@ String _formatDate(dynamic value) {
   if (parsed == null) {
     return 'Date not set';
   }
-  return DateFormat('dd MMM, h:mm a').format(parsed.toLocal());
+  return ShieldDateUtils.formatShortMonthDateTime(parsed);
 }
 
 extension on String {

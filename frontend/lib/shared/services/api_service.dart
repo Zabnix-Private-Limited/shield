@@ -15,6 +15,8 @@ import '../models/prescription_analysis.dart';
 import '../models/wallet.dart';
 
 class ApiService {
+  static const String _productionBackendBaseUrl =
+      'https://shield-backend.vercel.app';
   static String? _accessToken;
   static String? _activeCustomerId;
   static final Map<String, Map<String, dynamic>>
@@ -131,14 +133,14 @@ class ApiService {
           kReleaseMode &&
           (AppConfig.apiBaseUrl.contains('localhost') ||
               AppConfig.apiBaseUrl.contains('127.0.0.1'))) {
-        return 'https://shield-backend.vercel.app';
+        return _productionBackendBaseUrl;
       }
       return AppConfig.apiBaseUrl.trim().replaceAll(RegExp(r'/+$'), '');
     }
 
     if (!kIsWeb) {
       if (kReleaseMode) {
-        return 'https://shield-backend.vercel.app';
+        return _productionBackendBaseUrl;
       } else {
         return 'http://10.0.2.2:3000'; // Android emulator host loopback
       }
@@ -148,7 +150,7 @@ class ApiService {
     final host = base.host.isEmpty ? 'localhost' : base.host;
     final isLocalHost = host == 'localhost' || host == '127.0.0.1';
     if (!isLocalHost && host.contains('vercel.app')) {
-      return 'https://shield-backend.vercel.app';
+      return _productionBackendBaseUrl;
     }
     final scheme = isLocalHost
         ? 'http'
@@ -1331,19 +1333,14 @@ class ApiService {
   }
 
   static Future<List<Map<String, dynamic>>> getProviders() async {
-    try {
-      final response = await _getWithRetry(
-        '/service-providers',
-        maxAttempts: 3,
-      );
-      final data = _readEnvelopeList(response);
-      return List<Map<String, dynamic>>.from(
-        data.map((item) => Map<String, dynamic>.from(item as Map)),
-      );
-    } catch (e) {
-      debugPrint('Error getting service providers: $e');
-      return [];
-    }
+    final response = await _getWithRetry(
+      '/service-providers',
+      maxAttempts: 3,
+    );
+    final data = _readEnvelopeList(response);
+    return List<Map<String, dynamic>>.from(
+      data.map((item) => Map<String, dynamic>.from(item as Map)),
+    );
   }
 
   static Future<Map<String, dynamic>?> createProvider(

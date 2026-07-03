@@ -7681,3 +7681,54 @@ est build, ackend/vercel.json, ackend/src/auth/auth.service.ts, and uth_devic
 - Continue with Phase 1A and Phase 1B discipline: keep the next pass focused on remaining authentication gaps if any are still reproducible, otherwise move directly into validation and workflow completion without mixing unrelated routing or portal-shell work.
 ---
 2026-07-03 12:31:38 IST
+
+## 205. Canonical Production URL Alignment
+**High-level description**: Aligned the repository with the live SHIELD Vercel frontend and backend URLs so deployed app references, runtime API fallbacks, and backend CORS defaults all point at the current production surfaces.
+- Updated frontend deployment docs to use the canonical `https://shield-zabnix.vercel.app` app URL and the live backend API URL.
+- Updated backend deployment/docs to reference the canonical frontend origin so environment setup and operational handoffs do not drift.
+- Added the live frontend origin to backend default CORS origins so the deployed app remains explicitly allowed even when `APP_URL` or `CORS_ORIGIN` are not set.
+- Consolidated the frontend production API base URL into a single constant to reduce drift across release fallbacks.
+
+### Files Modified/Created
+**Frontend Files (Modified)**:
+- frontend/README.md
+- frontend/lib/shared/services/api_service.dart
+
+**Backend Files (Modified)**:
+- backend/README.md
+- backend/src/config/app-env.ts
+- backend/src/config/app-env.spec.ts
+
+**Documentation Files (Modified)**:
+- docs/SHIELD REST API Specification.docx.md
+
+---
+2026-07-03 12:41:39 IST
+
+## 206. Shared Date Picker + Agent Appointment Hardening
+**High-level description**: Replaced the remaining generic Material date pickers with one reusable SHIELD date picker and hardened the agent visit booking flow so provider lookup failures surface as recoverable UI states instead of degrading into empty selections.
+- Added one shared SHIELD date picker with desktop dialog and mobile bottom-sheet behavior, shared formatting utilities, wheel-based month navigation, and reusable min/max and selectable-date handling.
+- Updated agent appointments and follow-up scheduling to use the shared picker, and aligned existing SHIELD date-input fields to the same calendar component instead of keeping a separate picker implementation.
+- Switched the agent provider directory to the live `/service-providers` endpoint, granted `providers.view` to `SHIELD_AGENT`, and exposed explicit provider-directory loading, forbidden, retry, and empty states during visit booking.
+- Improved empty visit history UX so new customers see a richer first-use state with a direct CTA back to booking instead of a dead-end blank section.
+
+### Files Modified/Created
+**Frontend Files (Modified)**:
+- frontend/lib/features/agent/appointments/presentation/screens/agent_appointments_screen.dart
+- frontend/lib/features/agent/followups/presentation/screens/agent_followups_screen.dart
+- frontend/lib/features/agent/shared/data/agent_portal_repository.dart
+- frontend/lib/features/agent/shared/presentation/controllers/agent_portal_controller.dart
+- frontend/lib/features/agent/shared/presentation/widgets/agent_experience_widgets.dart
+- frontend/lib/features/customer/auth/presentation/widgets/shield_date_picker_sheet.dart
+- frontend/lib/shared/services/api_service.dart
+- frontend/lib/shared/widgets/shield_date_input_field.dart
+
+**Frontend Files (New)**:
+- frontend/lib/shared/utils/shield_date_utils.dart
+- frontend/lib/shared/widgets/shield_date_picker.dart
+
+**Backend Files (Modified)**:
+- backend/src/auth/rbac-catalog.ts
+
+---
+2026-07-03 13:16:40 IST
