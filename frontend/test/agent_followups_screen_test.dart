@@ -10,6 +10,10 @@ void main() {
   testWidgets(
     'shows a single workflow empty state instead of stacked empty panels',
     (tester) async {
+      tester.view.physicalSize = const Size(1400, 1400);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+
       final controller = AgentPortalController(_FakeAgentPortalRepository());
       await controller.refreshWorkspace();
 

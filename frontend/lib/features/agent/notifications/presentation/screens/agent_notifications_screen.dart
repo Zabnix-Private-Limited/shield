@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../../shared/presentation/controllers/agent_portal_provider.dart';
+import '../../../shared/presentation/widgets/agent_experience_widgets.dart';
 import '../../../shared/presentation/widgets/agent_section_header.dart';
 
 class AgentNotificationsScreen extends ConsumerStatefulWidget {
@@ -30,6 +31,16 @@ class _AgentNotificationsScreenState
   Widget build(BuildContext context) {
     final controller = ref.watch(agentPortalControllerProvider);
     final selectedCustomerId = controller.selectedCustomerId;
+    if (controller.isLoading && controller.workspace.isEmpty) {
+      return const _NotificationsLoadingState();
+    }
+    if ((controller.error ?? '').trim().isNotEmpty &&
+        controller.workspace.isEmpty) {
+      return _NotificationsErrorState(
+        message: _resolveNotificationsError(controller.error!),
+        onRetry: () => ref.read(agentPortalControllerProvider).refreshWorkspace(),
+      );
+    }
     final notifications = controller.notifications.where((item) {
       final status = (item['status'] ?? '').toString().toUpperCase();
       if (_filter == 'UNREAD') {
@@ -53,9 +64,13 @@ class _AgentNotificationsScreenState
                   'Unread, today, and older alerts are grouped into one timeline so the screen feels like an inbox instead of an empty admin list.',
               actions: [
                 FilledButton(
-                  onPressed: () => ref
-                      .read(agentPortalControllerProvider)
-                      .markAllNotificationsRead(customerId: selectedCustomerId),
+                  onPressed: notifications.isEmpty
+                      ? null
+                      : () => ref
+                          .read(agentPortalControllerProvider)
+                          .markAllNotificationsRead(
+                            customerId: selectedCustomerId,
+                          ),
                   child: const Text('Mark All Read'),
                 ),
               ],
@@ -85,7 +100,13 @@ class _AgentNotificationsScreenState
             const SizedBox(height: 12),
             Expanded(
               child: notifications.isEmpty
-                  ? const _EmptyNotificationState()
+                  ? _EmptyNotificationState(
+                      filter: _filter,
+                      onRefresh: () => ref
+                          .read(agentPortalControllerProvider)
+                          .refreshWorkspace(),
+                      onShowAll: () => setState(() => _filter = 'ALL'),
+                    )
                   : ListView(
                       children: groups.entries
                           .map(
@@ -307,34 +328,72 @@ class _NotificationStatusBadge extends StatelessWidget {
 }
 
 class _EmptyNotificationState extends StatelessWidget {
-  const _EmptyNotificationState();
+  const _EmptyNotificationState({
+    required this.filter,
+    required this.onRefresh,
+    required this.onShowAll,
+  });
+
+  final String filter;
+  final VoidCallback onRefresh;
+  final VoidCallback onShowAll;
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.notifications_off_outlined,
-              size: 56,
-              color: Theme.of(context).colorScheme.outline,
-            ),
-            const SizedBox(height: 12),
-            Text(
-              "You're all caught up.",
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-            const SizedBox(height: 4),
-            Text(
-              'No new notifications match this filter right now.',
-              style: Theme.of(context).textTheme.bodySmall,
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
+    final isFiltered = filter != 'ALL';
+    return AgentEmptyState(
+      icon: Icons.notifications_off_outlined,
+      title: isFiltered ? 'No Notifications Match This Filter' : "You're all caught up",
+      message: isFiltered
+          ? 'Try a different filter or refresh the inbox to check for newer customer alerts.'
+          : 'No unread or recent notifications need attention right now. The inbox will populate as customer events arrive.',
+      actionLabel: 'Refresh',
+      onAction: onRefresh,
+      secondaryActionLabel: isFiltered ? 'Show All' : null,
+      onSecondaryAction: isFiltered ? onShowAll : null,
+    );
+  }
+}
+
+class _NotificationsLoadingState extends StatelessWidget {
+  const _NotificationsLoadingState();
+
+  @override
+  Widget build(BuildContext context) {
+    return AgentPanelCard(
+      title: 'Loading Notifications',
+      subtitle: 'Fetching unread, today, and older alerts for this workspace.',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: const [
+          LinearProgressIndicator(),
+          SizedBox(height: 12),
+          Text('Loading the notification inbox...'),
+        ],
+      ),
+    );
+  }
+}
+
+class _NotificationsErrorState extends StatelessWidget {
+  const _NotificationsErrorState({
+    required this.message,
+    required this.onRetry,
+  });
+
+  final String message;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return AgentPanelCard(
+      title: 'Notifications Unavailable',
+      subtitle:
+          'The notification inbox could not be loaded, so SHIELD is showing a recoverable error state instead of an empty panel.',
+      child: AgentErrorState(
+        title: 'We could not load notifications',
+        message: message,
+        onRetry: onRetry,
       ),
     );
   }
@@ -374,4 +433,21 @@ String _formatDate(dynamic value) {
     return '-';
   }
   return DateFormat('dd MMM, h:mm a').format(parsed.toLocal());
+}
+
+String _resolveNotificationsError(String message) {
+  final normalized = message.trim();
+  final lowered = normalized.toLowerCase();
+  if (lowered.contains('401') || lowered.contains('unauthorized')) {
+    return 'Your SHIELD session expired before notifications finished loading. Sign in again and retry.';
+  }
+  if (lowered.contains('403') || lowered.contains('forbidden')) {
+    return 'This SHIELD role does not have permission to view the notification inbox.';
+  }
+  if (lowered.contains('network') || lowered.contains('socket')) {
+    return 'The notification inbox could not reach the server. Check the connection and retry.';
+  }
+  return normalized.isEmpty
+      ? 'The notification inbox could not be loaded right now.'
+      : normalized;
 }

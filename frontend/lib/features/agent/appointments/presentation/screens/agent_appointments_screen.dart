@@ -110,40 +110,38 @@ class _AgentAppointmentsScreenState
               ],
             ),
             const SizedBox(height: 12),
-            LayoutBuilder(
-              builder: (context, constraints) {
-                final stack = constraints.maxWidth < 980;
-                final composer = _buildComposer(
-                  context,
-                  selectedCustomerId,
-                  customerName,
-                  providers,
-                  providerLookupError: providerLookupError,
-                  isProviderLookupLoading: isProviderLookupLoading,
-                );
-                final history = _buildHistory(visitHistory.toList());
-                if (stack) {
-                  return Expanded(
-                    child: ListView(
+            Expanded(
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final stack = constraints.maxWidth < 980;
+                  final composer = _buildComposer(
+                    context,
+                    selectedCustomerId,
+                    customerName,
+                    providers,
+                    providerLookupError: providerLookupError,
+                    isProviderLookupLoading: isProviderLookupLoading,
+                  );
+                  final history = _buildHistory(visitHistory.toList());
+                  if (stack) {
+                    return ListView(
                       children: [
                         composer,
                         const SizedBox(height: 16),
                         history,
                       ],
-                    ),
-                  );
-                }
-                return Expanded(
-                  child: Row(
+                    );
+                  }
+                  return Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Expanded(child: composer),
                       const SizedBox(width: 16),
                       Expanded(child: history),
                     ],
-                  ),
-                );
-              },
+                  );
+                },
+              ),
             ),
           ],
         ),

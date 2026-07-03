@@ -379,7 +379,7 @@ class _AgentFollowUpsScreenState extends ConsumerState<AgentFollowUpsScreen> {
 
     if (!hasFollowUpContent) {
       return AgentPanelCard(
-        title: 'No Follow-Ups Yet',
+        title: 'Follow-Up Queue',
         subtitle:
             'This customer does not have any open or completed follow-up activity yet.',
         child: AgentEmptyState(

@@ -7768,3 +7768,45 @@ est build, ackend/vercel.json, ackend/src/auth/auth.service.ts, and uth_devic
 - `cd backend && npm test` ✅
 ### Timestamp
 - 2026-07-03 15:19:39 IST
+
+## 209. Follow-Ups Empty-State + Layout Waste Hardening
+**High-level desc**: Removed the broken follow-up empty-panel rendering path so the agent workflow no longer reserves large dead regions or stacks multiple meaningless empty cards when there is no activity to show.
+- Fixed the follow-up screen layout root cause by moving `Expanded` ownership out of the `LayoutBuilder` branch and rendering one bounded workspace body instead of invalid nested expansion.
+- Replaced stacked empty task/history cards with a single workflow-level empty state for no-customer and no-follow-up cases, including actionable CTAs to open customers, schedule follow-up work, or refresh the workspace.
+- Added proper loading and recoverable error states for follow-up workspace and selected-customer loading so the screen now stays in explicit loading, empty, error, or data modes.
+- Fixed the same `LayoutBuilder -> Expanded` structural bug in the agent appointments workflow to prevent the sibling screen from exhibiting the same broken rendering pattern.
+- Added a widget regression test for the follow-up empty workflow and extended shared agent state widgets to support secondary CTA actions and reusable inline error states.
+### Files Modified/Created
+**Frontend Files (Modified)**:
+- frontend/lib/features/agent/appointments/presentation/screens/agent_appointments_screen.dart
+- frontend/lib/features/agent/followups/presentation/screens/agent_followups_screen.dart
+- frontend/lib/features/agent/shared/presentation/widgets/agent_experience_widgets.dart
+**Frontend Files (New)**:
+- frontend/test/agent_followups_screen_test.dart
+### Verification
+- `cd frontend && flutter test test/agent_followups_screen_test.dart` ✅
+- `cd frontend && flutter analyze --no-pub lib/features/agent/followups/presentation/screens/agent_followups_screen.dart lib/features/agent/appointments/presentation/screens/agent_appointments_screen.dart lib/features/agent/shared/presentation/widgets/agent_experience_widgets.dart test/agent_followups_screen_test.dart` ✅
+- `cd frontend && flutter test` ✅
+- `cd frontend && flutter analyze --no-pub` ✅
+- `cd backend && npm run build` ✅
+- `cd backend && npm test` ✅
+### Timestamp
+- 2026-07-03 15:33:39 IST
+
+## 210. Dashboard + Notifications Empty-Card Cleanup
+**High-level desc**: Removed more empty-panel and wasted-layout behavior from the agent workspace so the dashboard and notification inbox stay in explicit loading, empty, error, or data states instead of rendering placeholder cards or dead sections.
+- Reworked the agent dashboard to replace the bare loading spinner with a structured loading state, show a recoverable error state for workspace failures, collapse empty urgent/activity sections into one meaningful operational empty state, and hide the empty upcoming-visits card when there are no scheduled visits.
+- Kept the metrics rail visible while removing low-signal empty timeline cards, so the dashboard no longer stacks multiple `Nothing waiting here` blocks when the workspace is quiet.
+- Hardened the notifications screen with explicit loading and error states, disabled `Mark All Read` when the inbox is already empty, and upgraded the empty inbox/filter states with actionable refresh and clear-filter behavior instead of a flat dead-end message.
+### Files Modified/Created
+**Frontend Files (Modified)**:
+- frontend/lib/features/agent/dashboard/presentation/screens/agent_dashboard_screen.dart
+- frontend/lib/features/agent/notifications/presentation/screens/agent_notifications_screen.dart
+### Verification
+- `cd frontend && flutter analyze --no-pub lib/features/agent/dashboard/presentation/screens/agent_dashboard_screen.dart lib/features/agent/notifications/presentation/screens/agent_notifications_screen.dart lib/features/agent/followups/presentation/screens/agent_followups_screen.dart lib/features/agent/appointments/presentation/screens/agent_appointments_screen.dart lib/features/agent/shared/presentation/widgets/agent_experience_widgets.dart test/agent_followups_screen_test.dart` ✅
+- `cd frontend && flutter test` ✅
+- `cd frontend && flutter analyze --no-pub` ✅
+- `cd backend && npm run build` ✅
+- `cd backend && npm test` ✅
+### Timestamp
+- 2026-07-03 15:53:37 IST
