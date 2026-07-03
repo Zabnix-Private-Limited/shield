@@ -30,9 +30,12 @@ class _AgentDashboardScreenState extends ConsumerState<AgentDashboardScreen> {
     final summary = controller.summary;
     final performance = controller.performance;
     final authProfile = controller.authProfile;
-    final display = Map<String, dynamic>.from(authProfile['display'] ?? const {});
+    final display = Map<String, dynamic>.from(
+      authProfile['display'] ?? const {},
+    );
     final firstName =
-        display['fullName']?.toString().trim().split(' ').firstOrNull ?? 'Agent';
+        display['fullName']?.toString().trim().split(' ').firstOrNull ??
+        'Agent';
 
     if (controller.isLoading && controller.workspace.isEmpty) {
       return _DashboardLoadingState(firstName: firstName);
@@ -42,7 +45,8 @@ class _AgentDashboardScreenState extends ConsumerState<AgentDashboardScreen> {
         controller.workspace.isEmpty) {
       return _DashboardErrorState(
         message: _resolveDashboardError(controller.error!),
-        onRetry: () => ref.read(agentPortalControllerProvider).refreshWorkspace(),
+        onRetry: () =>
+            ref.read(agentPortalControllerProvider).refreshWorkspace(),
       );
     }
 
@@ -146,27 +150,31 @@ class _AgentDashboardScreenState extends ConsumerState<AgentDashboardScreen> {
     ];
 
     final urgentItems = [
-      ...controller.tasks.take(4).map(
-        (item) => _TimelineItemData(
-          title: item['customerName']?.toString() ?? 'Customer',
-          subtitle:
-              '${_humanize(item['status'])} • ${item['notes'] ?? 'No remarks'}',
-          timeLabel: _formatDateTime(item['dueDate']),
-          icon: _isOverdue(item['dueDate'])
-              ? Icons.priority_high_rounded
-              : Icons.assignment_outlined,
-        ),
-      ),
-      ...urgentAlerts.take(2).map(
-        (item) => _TimelineItemData(
-          title: item['title']?.toString() ?? 'Alert',
-          subtitle: item['message']?.toString().trim().isNotEmpty == true
-              ? item['message'].toString()
-              : 'Agent attention required.',
-          timeLabel: _formatDateTime(item['sentAt']),
-          icon: Icons.notification_important_outlined,
-        ),
-      ),
+      ...controller.tasks
+          .take(4)
+          .map(
+            (item) => _TimelineItemData(
+              title: item['customerName']?.toString() ?? 'Customer',
+              subtitle:
+                  '${_humanize(item['status'])} • ${item['notes'] ?? 'No remarks'}',
+              timeLabel: _formatDateTime(item['dueDate']),
+              icon: _isOverdue(item['dueDate'])
+                  ? Icons.priority_high_rounded
+                  : Icons.assignment_outlined,
+            ),
+          ),
+      ...urgentAlerts
+          .take(2)
+          .map(
+            (item) => _TimelineItemData(
+              title: item['title']?.toString() ?? 'Alert',
+              subtitle: item['message']?.toString().trim().isNotEmpty == true
+                  ? item['message'].toString()
+                  : 'Agent attention required.',
+              timeLabel: _formatDateTime(item['sentAt']),
+              icon: Icons.notification_important_outlined,
+            ),
+          ),
     ];
     final activityItems = controller.recentActivity.take(6).map((item) {
       final activityType = _humanize(item['activityType']).toLowerCase();
@@ -178,19 +186,22 @@ class _AgentDashboardScreenState extends ConsumerState<AgentDashboardScreen> {
         icon: activityType.contains('upload')
             ? Icons.upload_file_outlined
             : activityType.contains('register')
-                ? Icons.person_add_alt_1_outlined
-                : Icons.history_outlined,
+            ? Icons.person_add_alt_1_outlined
+            : Icons.history_outlined,
       );
     }).toList();
-    final upcomingVisitItems = controller.upcomingAppointments.take(6).map(
-      (item) => _TimelineItemData(
-        title: item['customerName']?.toString() ?? 'Customer',
-        subtitle:
-            '${item['providerName'] ?? 'Provider'} • ${_humanize(item['appointmentType'])}',
-        timeLabel: _formatDateTime(item['appointmentDate']),
-        icon: Icons.calendar_month_outlined,
-      ),
-    ).toList();
+    final upcomingVisitItems = controller.upcomingAppointments
+        .take(6)
+        .map(
+          (item) => _TimelineItemData(
+            title: item['customerName']?.toString() ?? 'Customer',
+            subtitle:
+                '${item['providerName'] ?? 'Provider'} • ${_humanize(item['appointmentType'])}',
+            timeLabel: _formatDateTime(item['appointmentDate']),
+            icon: Icons.calendar_month_outlined,
+          ),
+        )
+        .toList();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -340,11 +351,7 @@ class _AgentDashboardScreenState extends ConsumerState<AgentDashboardScreen> {
 
             if (stack) {
               return Column(
-                children: [
-                  primary,
-                  const SizedBox(height: 12),
-                  secondary,
-                ],
+                children: [primary, const SizedBox(height: 12), secondary],
               );
             }
 
@@ -382,10 +389,7 @@ class _TimelineSection extends StatelessWidget {
       title: title,
       action: actionLabel == null
           ? null
-          : TextButton(
-              onPressed: onActionTap,
-              child: Text(actionLabel!),
-            ),
+          : AgentGhostButton(onPressed: onActionTap, label: actionLabel!),
       child: Column(
         children: items
             .map(
@@ -394,10 +398,7 @@ class _TimelineSection extends StatelessWidget {
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    CircleAvatar(
-                      radius: 18,
-                      child: Icon(item.icon, size: 18),
-                    ),
+                    CircleAvatar(radius: 18, child: Icon(item.icon, size: 18)),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Column(
@@ -462,10 +463,7 @@ class _DashboardLoadingState extends StatelessWidget {
 }
 
 class _DashboardErrorState extends StatelessWidget {
-  const _DashboardErrorState({
-    required this.message,
-    required this.onRetry,
-  });
+  const _DashboardErrorState({required this.message, required this.onRetry});
 
   final String message;
   final VoidCallback onRetry;
@@ -545,8 +543,9 @@ String _humanize(dynamic value) {
       .toLowerCase()
       .split(' ')
       .map(
-        (part) =>
-            part.isEmpty ? part : '${part[0].toUpperCase()}${part.substring(1)}',
+        (part) => part.isEmpty
+            ? part
+            : '${part[0].toUpperCase()}${part.substring(1)}',
       )
       .join(' ');
 }

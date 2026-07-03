@@ -2,8 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shield/features/agent/appointments/presentation/screens/agent_appointments_screen.dart';
+import 'package:shield/features/agent/customers/presentation/screens/agent_customers_screen.dart';
+import 'package:shield/features/agent/dashboard/presentation/screens/agent_dashboard_screen.dart';
 import 'package:shield/features/agent/documents/presentation/screens/agent_documents_screen.dart';
+import 'package:shield/features/agent/followups/presentation/screens/agent_followups_screen.dart';
+import 'package:shield/features/agent/notifications/presentation/screens/agent_notifications_screen.dart';
+import 'package:shield/features/agent/performance/presentation/screens/agent_performance_screen.dart';
 import 'package:shield/features/agent/referrals/presentation/screens/agent_referrals_screen.dart';
+import 'package:shield/features/agent/registration/presentation/screens/agent_registration_screen.dart';
 import 'package:shield/features/agent/reports/presentation/screens/agent_reports_screen.dart';
 import 'package:shield/features/agent/settings/presentation/screens/agent_settings_screen.dart';
 import 'package:shield/features/agent/shared/data/agent_portal_repository.dart';
@@ -11,28 +17,40 @@ import 'package:shield/features/agent/shared/presentation/controllers/agent_port
 import 'package:shield/features/agent/shared/presentation/controllers/agent_portal_provider.dart';
 
 void main() {
-  testWidgets(
-    'design-system agent screens render inside the portal scroll shell without exceptions',
-    (tester) async {
-      tester.view.physicalSize = const Size(1600, 1600);
-      tester.view.devicePixelRatio = 1;
-      addTearDown(tester.view.reset);
+  final cases = <({String name, Widget screen})>[
+    (name: 'dashboard', screen: const AgentDashboardScreen()),
+    (name: 'customers', screen: const AgentCustomersScreen()),
+    (name: 'registration', screen: const AgentRegistrationScreen()),
+    (name: 'followups', screen: const AgentFollowUpsScreen()),
+    (name: 'appointments', screen: const AgentAppointmentsScreen()),
+    (name: 'documents', screen: const AgentDocumentsScreen()),
+    (name: 'notifications', screen: const AgentNotificationsScreen()),
+    (name: 'performance', screen: const AgentPerformanceScreen()),
+    (name: 'referrals', screen: const AgentReferralsScreen()),
+    (name: 'reports', screen: const AgentReportsScreen()),
+    (name: 'account', screen: const AgentSettingsScreen(profileOnly: true)),
+    (
+      name: 'settings',
+      screen: const DefaultTabController(
+        length: 3,
+        child: AgentSettingsScreen(),
+      ),
+    ),
+  ];
 
-      final controller = AgentPortalController(
-        _ScrollSafeAgentPortalRepository(),
-      );
-      await controller.refreshWorkspace();
+  for (final testCase in cases) {
+    testWidgets(
+      '${testCase.name} renders inside the portal scroll shell without exceptions',
+      (tester) async {
+        tester.view.physicalSize = const Size(1600, 1600);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.reset);
 
-      final screens = <Widget>[
-        const AgentDocumentsScreen(),
-        const AgentAppointmentsScreen(),
-        const AgentReferralsScreen(),
-        const AgentReportsScreen(),
-        const AgentSettingsScreen(profileOnly: true),
-        const DefaultTabController(length: 3, child: AgentSettingsScreen()),
-      ];
+        final controller = AgentPortalController(
+          _ScrollSafeAgentPortalRepository(),
+        );
+        await controller.refreshWorkspace();
 
-      for (final screen in screens) {
         await tester.pumpWidget(
           ProviderScope(
             overrides: [
@@ -43,7 +61,7 @@ void main() {
                 body: CustomScrollView(
                   slivers: [
                     SliverToBoxAdapter(
-                      child: SizedBox(width: 1600, child: screen),
+                      child: SizedBox(width: 1600, child: testCase.screen),
                     ),
                   ],
                 ),
@@ -56,11 +74,11 @@ void main() {
         expect(
           tester.takeException(),
           isNull,
-          reason: screen.runtimeType.toString(),
+          reason: testCase.screen.runtimeType.toString(),
         );
-      }
-    },
-  );
+      },
+    );
+  }
 
   testWidgets(
     'settings screen falls back safely when backend preference values are outside the known design-system options',

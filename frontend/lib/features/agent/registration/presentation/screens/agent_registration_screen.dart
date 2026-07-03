@@ -66,25 +66,34 @@ class _AgentRegistrationScreenState
   Widget build(BuildContext context) {
     final controller = ref.watch(agentPortalControllerProvider);
     final authProfile = controller.authProfile;
-    final display = Map<String, dynamic>.from(authProfile['display'] ?? const {});
+    final display = Map<String, dynamic>.from(
+      authProfile['display'] ?? const {},
+    );
     final employeeCode = display['employeeCode']?.toString() ?? '';
     final membershipTypes = controller.membershipTypes;
     final businesses = controller.businesses;
     final drafts = controller.customers
         .where(
-          (customer) => ['PENDING', 'INCOMPLETE', 'REJECTED'].contains(
-            (customer['status'] ?? '').toString().toUpperCase(),
-          ),
+          (customer) => [
+            'PENDING',
+            'INCOMPLETE',
+            'REJECTED',
+          ].contains((customer['status'] ?? '').toString().toUpperCase()),
         )
         .toList();
 
     _membershipTypeCode ??= membershipTypes.isNotEmpty
         ? membershipTypes.first['code']?.toString()
         : null;
-    _selectedBusinessId ??=
-        businesses.isNotEmpty ? businesses.first['id']?.toString() : null;
+    _selectedBusinessId ??= businesses.isNotEmpty
+        ? businesses.first['id']?.toString()
+        : null;
 
     final progress = (_currentStep + 1) / 5;
+    final bodyHeight = (MediaQuery.sizeOf(context).height - 280).clamp(
+      320.0,
+      1200.0,
+    );
 
     return Card(
       child: Padding(
@@ -97,17 +106,17 @@ class _AgentRegistrationScreenState
               description:
                   'This onboarding flow now moves one responsibility at a time: personal details, identity, membership, documents, and then review before submission.',
               actions: [
-                OutlinedButton(
+                AgentSecondaryButton(
                   onPressed: employeeCode.isEmpty
                       ? null
                       : () => _saveRegistration(
-                            controller,
-                            submit: false,
-                            showFeedback: true,
-                          ),
-                  child: Text(_autoSaving ? 'Saving...' : 'Save Draft'),
+                          controller,
+                          submit: false,
+                          showFeedback: true,
+                        ),
+                  label: _autoSaving ? 'Saving...' : 'Save Draft',
                 ),
-                FilledButton(
+                AgentPrimaryButton(
                   onPressed: employeeCode.isEmpty
                       ? null
                       : () async {
@@ -119,7 +128,7 @@ class _AgentRegistrationScreenState
                           }
                           await _submitRegistration(controller);
                         },
-                  child: const Text('Register Customer'),
+                  label: 'Register Customer',
                 ),
               ],
             ),
@@ -168,7 +177,10 @@ class _AgentRegistrationScreenState
                 children: [
                   ClipRRect(
                     borderRadius: BorderRadius.circular(999),
-                    child: LinearProgressIndicator(value: progress, minHeight: 8),
+                    child: LinearProgressIndicator(
+                      value: progress,
+                      minHeight: 8,
+                    ),
                   ),
                   const SizedBox(height: 12),
                   Wrap(
@@ -181,8 +193,8 @@ class _AgentRegistrationScreenState
                         state: index < _currentStep
                             ? _StepChipState.complete
                             : index == _currentStep
-                                ? _StepChipState.active
-                                : _StepChipState.inactive,
+                            ? _StepChipState.active
+                            : _StepChipState.inactive,
                       ),
                     ),
                   ),
@@ -190,19 +202,22 @@ class _AgentRegistrationScreenState
               ),
             ),
             const SizedBox(height: 16),
-            Expanded(
+            SizedBox(
+              height: bodyHeight,
               child: AnimatedSwitcher(
                 duration: const Duration(milliseconds: 220),
-                child: _RegistrationStepScaffold(
+                child: SingleChildScrollView(
                   key: ValueKey(_currentStep),
-                  title: _steps[_currentStep],
-                  subtitle: _stepSubtitle(_currentStep),
-                  body: _buildCurrentStep(
-                    context,
-                    controller,
-                    employeeCode,
-                    membershipTypes,
-                    businesses,
+                  child: _RegistrationStepScaffold(
+                    title: _steps[_currentStep],
+                    subtitle: _stepSubtitle(_currentStep),
+                    body: _buildCurrentStep(
+                      context,
+                      controller,
+                      employeeCode,
+                      membershipTypes,
+                      businesses,
+                    ),
                   ),
                 ),
               ),
@@ -210,22 +225,22 @@ class _AgentRegistrationScreenState
             const SizedBox(height: 16),
             Row(
               children: [
-                OutlinedButton(
+                AgentSecondaryButton(
                   onPressed: _currentStep == 0
                       ? null
                       : () => setState(() => _currentStep -= 1),
-                  child: const Text('Previous'),
+                  label: 'Previous',
                 ),
                 const Spacer(),
                 if (_currentStep < 4)
-                  FilledButton(
+                  AgentPrimaryButton(
                     onPressed: () => _goToNextStep(controller),
-                    child: const Text('Next'),
+                    label: 'Next',
                   )
                 else
-                  FilledButton(
+                  AgentPrimaryButton(
                     onPressed: () => _submitRegistration(controller),
-                    child: const Text('Submit Registration'),
+                    label: 'Submit Registration',
                   ),
               ],
             ),
@@ -362,8 +377,9 @@ class _AgentRegistrationScreenState
                     initialValue: employeeCode.isEmpty
                         ? 'Agent code unavailable'
                         : employeeCode,
-                    decoration:
-                        const InputDecoration(labelText: 'Assigned agent'),
+                    decoration: const InputDecoration(
+                      labelText: 'Assigned agent',
+                    ),
                   ),
                 ),
                 _fieldBox(
@@ -413,8 +429,9 @@ class _AgentRegistrationScreenState
                         validator: (value) => (value ?? '').trim().isEmpty
                             ? 'Choose membership plan'
                             : null,
-                        decoration:
-                            const InputDecoration(labelText: 'Membership plan'),
+                        decoration: const InputDecoration(
+                          labelText: 'Membership plan',
+                        ),
                       ),
                     ),
                     _fieldBox(
@@ -424,7 +441,9 @@ class _AgentRegistrationScreenState
                             .map(
                               (item) => DropdownMenuItem<String>(
                                 value: item['id']?.toString(),
-                                child: Text(item['name']?.toString() ?? 'Branch'),
+                                child: Text(
+                                  item['name']?.toString() ?? 'Branch',
+                                ),
                               ),
                             )
                             .toList(),
@@ -443,10 +462,9 @@ class _AgentRegistrationScreenState
                       child: TextFormField(
                         controller: _addressController,
                         maxLines: 3,
-                        decoration: const InputDecoration(
-                          labelText: 'Address',
-                        ),
-                        validator: (value) => value == null || value.trim().isEmpty
+                        decoration: const InputDecoration(labelText: 'Address'),
+                        validator: (value) =>
+                            value == null || value.trim().isEmpty
                             ? 'Enter address'
                             : null,
                       ),
@@ -476,7 +494,9 @@ class _AgentRegistrationScreenState
                       label: 'Aadhaar / Government ID',
                       done: customerDocs.any(
                         (doc) =>
-                            (doc['documentType'] ?? '').toString().toUpperCase() ==
+                            (doc['documentType'] ?? '')
+                                .toString()
+                                .toUpperCase() ==
                             'ID_PROOF',
                       ),
                     ),
@@ -484,7 +504,9 @@ class _AgentRegistrationScreenState
                       label: 'Address Proof',
                       done: customerDocs.any(
                         (doc) =>
-                            (doc['documentType'] ?? '').toString().toUpperCase() ==
+                            (doc['documentType'] ?? '')
+                                .toString()
+                                .toUpperCase() ==
                             'ADDRESS_PROOF',
                       ),
                     ),
@@ -492,7 +514,9 @@ class _AgentRegistrationScreenState
                       label: 'Profile Photo',
                       done: customerDocs.any(
                         (doc) =>
-                            (doc['documentType'] ?? '').toString().toUpperCase() ==
+                            (doc['documentType'] ?? '')
+                                .toString()
+                                .toUpperCase() ==
                             'PROFILE_PHOTO',
                       ),
                     ),
@@ -500,7 +524,9 @@ class _AgentRegistrationScreenState
                       label: 'Prescription if available',
                       done: customerDocs.any(
                         (doc) =>
-                            (doc['documentType'] ?? '').toString().toUpperCase() ==
+                            (doc['documentType'] ?? '')
+                                .toString()
+                                .toUpperCase() ==
                             'PRESCRIPTION',
                       ),
                     ),
@@ -511,22 +537,21 @@ class _AgentRegistrationScreenState
                   spacing: 12,
                   runSpacing: 12,
                   children: [
-                    FilledButton.icon(
+                    AgentPrimaryButton(
                       onPressed: _draftCustomerId == null
                           ? null
                           : () => _uploadStepDocument(controller, 'ID_PROOF'),
                       icon: const Icon(Icons.upload_file_outlined),
-                      label: Text(
-                        _draftCustomerId == null
-                            ? 'Save draft before upload'
-                            : 'Upload Document',
-                      ),
+                      label: _draftCustomerId == null
+                          ? 'Save draft before upload'
+                          : 'Upload Document',
                     ),
                     if (_draftCustomerId != null)
-                      OutlinedButton.icon(
-                        onPressed: () => setState(() => _uploadedDocumentCount = 0),
+                      AgentSecondaryButton(
+                        onPressed: () =>
+                            setState(() => _uploadedDocumentCount = 0),
                         icon: const Icon(Icons.refresh_outlined),
-                        label: const Text('Refresh progress'),
+                        label: 'Refresh progress',
                       ),
                   ],
                 ),
@@ -594,12 +619,14 @@ class _AgentRegistrationScreenState
               ),
               _ReviewItem(
                 label: 'Membership plan',
-                value: _membershipTypeCode?.ifBlank('Not selected') ??
+                value:
+                    _membershipTypeCode?.ifBlank('Not selected') ??
                     'Not selected',
               ),
               _ReviewItem(
                 label: 'Preferred branch',
-                value: _selectedBusinessId?.ifBlank('Not selected') ??
+                value:
+                    _selectedBusinessId?.ifBlank('Not selected') ??
                     'Not selected',
               ),
               _ReviewItem(
@@ -688,11 +715,7 @@ class _AgentRegistrationScreenState
     }
     _setAutoSaveState(true, 'Saving draft...');
     try {
-      await _saveRegistration(
-        controller,
-        submit: false,
-        showFeedback: false,
-      );
+      await _saveRegistration(controller, submit: false, showFeedback: false);
       _setAutoSaveState(false, 'Draft saved automatically.');
     } catch (_) {
       _setAutoSaveState(false, 'Autosave failed. You can still save manually.');
@@ -769,12 +792,8 @@ class _AgentRegistrationScreenState
   void _hydrateDraft(Map<String, dynamic> selected) {
     _firstNameController.text =
         selected['fullName']?.toString().split(' ').firstOrNull ?? '';
-    _lastNameController.text = selected['fullName']
-            ?.toString()
-            .split(' ')
-            .skip(1)
-            .join(' ') ??
-        '';
+    _lastNameController.text =
+        selected['fullName']?.toString().split(' ').skip(1).join(' ') ?? '';
     _mobileController.text = selected['mobile']?.toString() ?? '';
     _emailController.text = selected['email']?.toString() ?? '';
     _addressController.text = selected['addressLine1']?.toString() ?? '';
@@ -821,13 +840,7 @@ class _AgentRegistrationScreenState
   }
 }
 
-const _steps = [
-  'Personal',
-  'Identity',
-  'Membership',
-  'Documents',
-  'Review',
-];
+const _steps = ['Personal', 'Identity', 'Membership', 'Documents', 'Review'];
 
 String _stepSubtitle(int index) {
   switch (index) {
@@ -846,7 +859,6 @@ String _stepSubtitle(int index) {
 
 class _RegistrationStepScaffold extends StatelessWidget {
   const _RegistrationStepScaffold({
-    super.key,
     required this.title,
     required this.subtitle,
     required this.body,
@@ -859,13 +871,14 @@ class _RegistrationStepScaffold extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Column(
+      mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(title, style: Theme.of(context).textTheme.headlineSmall),
         const SizedBox(height: 4),
         Text(subtitle, style: Theme.of(context).textTheme.bodyMedium),
         const SizedBox(height: 16),
-        Expanded(child: SingleChildScrollView(child: body)),
+        Padding(padding: const EdgeInsets.only(bottom: 4), child: body),
       ],
     );
   }
@@ -884,19 +897,12 @@ class _StepContentCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AgentPanelCard(
-      title: title,
-      subtitle: summary,
-      child: child,
-    );
+    return AgentPanelCard(title: title, subtitle: summary, child: child);
   }
 }
 
 class _StepChip extends StatelessWidget {
-  const _StepChip({
-    required this.label,
-    required this.state,
-  });
+  const _StepChip({required this.label, required this.state});
 
   final String label;
   final _StepChipState state;
@@ -920,10 +926,7 @@ class _StepChip extends StatelessWidget {
 enum _StepChipState { complete, active, inactive }
 
 class _RequiredDocumentRow extends StatelessWidget {
-  const _RequiredDocumentRow({
-    required this.label,
-    required this.done,
-  });
+  const _RequiredDocumentRow({required this.label, required this.done});
 
   final String label;
   final bool done;
@@ -952,10 +955,7 @@ class _RequiredDocumentRow extends StatelessWidget {
 }
 
 class _ReviewItem extends StatelessWidget {
-  const _ReviewItem({
-    required this.label,
-    required this.value,
-  });
+  const _ReviewItem({required this.label, required this.value});
 
   final String label;
   final String value;
@@ -969,10 +969,7 @@ class _ReviewItem extends StatelessWidget {
         children: [
           SizedBox(
             width: 160,
-            child: Text(
-              label,
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
+            child: Text(label, style: Theme.of(context).textTheme.bodySmall),
           ),
           const SizedBox(width: 12),
           Expanded(child: Text(value)),
@@ -992,8 +989,9 @@ String _humanize(dynamic value) {
       .toLowerCase()
       .split(' ')
       .map(
-        (part) =>
-            part.isEmpty ? part : '${part[0].toUpperCase()}${part.substring(1)}',
+        (part) => part.isEmpty
+            ? part
+            : '${part[0].toUpperCase()}${part.substring(1)}',
       )
       .join(' ');
 }

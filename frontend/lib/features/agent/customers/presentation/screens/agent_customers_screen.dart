@@ -5,6 +5,8 @@ import 'package:intl/intl.dart';
 
 import '../../../../../shared/services/platform_file_actions.dart';
 import '../../../shared/presentation/controllers/agent_portal_provider.dart';
+import '../../../shared/presentation/widgets/agent_design_system.dart';
+import '../../../shared/presentation/widgets/agent_experience_widgets.dart';
 import '../../../shared/presentation/widgets/agent_section_header.dart';
 
 class AgentCustomersScreen extends ConsumerStatefulWidget {
@@ -73,10 +75,10 @@ class _AgentCustomersScreenState extends ConsumerState<AgentCustomersScreen> {
               description:
                   'Search your assigned customers, open one operational workspace at a time, and keep follow-ups, visits, documents, wallet, and timeline inside tabs instead of one long scrolling page.',
               actions: [
-                FilledButton.icon(
+                AgentPrimaryButton(
                   onPressed: () => context.go('/portal/agent/registration'),
                   icon: const Icon(Icons.person_add_alt_1_outlined),
-                  label: const Text('Register Customer'),
+                  label: 'Register Customer',
                 ),
               ],
             ),
@@ -122,9 +124,8 @@ class _AgentCustomersScreenState extends ConsumerState<AgentCustomersScreen> {
                           onCancelEdit: () =>
                               setState(() => _editingProfile = false),
                           onSaveProfile: () async {
-                            final customerId = controller
-                                    .selectedCustomer['id']
-                                    ?.toString() ??
+                            final customerId =
+                                controller.selectedCustomer['id']?.toString() ??
                                 '';
                             if (customerId.isEmpty) {
                               return;
@@ -132,17 +133,19 @@ class _AgentCustomersScreenState extends ConsumerState<AgentCustomersScreen> {
                             await ref
                                 .read(agentPortalControllerProvider)
                                 .updateCustomer(
-                              customerId: customerId,
-                              payload: {
-                                'first_name': _firstNameController.text.trim(),
-                                'last_name': _lastNameController.text.trim(),
-                                'mobile': _mobileController.text.trim(),
-                                'email': _emailController.text.trim(),
-                                'city': _cityController.text.trim(),
-                                'address_line1':
-                                    _addressController.text.trim(),
-                              },
-                            );
+                                  customerId: customerId,
+                                  payload: {
+                                    'first_name': _firstNameController.text
+                                        .trim(),
+                                    'last_name': _lastNameController.text
+                                        .trim(),
+                                    'mobile': _mobileController.text.trim(),
+                                    'email': _emailController.text.trim(),
+                                    'city': _cityController.text.trim(),
+                                    'address_line1': _addressController.text
+                                        .trim(),
+                                  },
+                                );
                             if (mounted) {
                               setState(() => _editingProfile = false);
                             }
@@ -210,11 +213,11 @@ class _CustomerListPane extends StatelessWidget {
           final customer = customers[index];
           final customerId = customer['id']?.toString() ?? '';
           final selected = selectedCustomerId == customerId;
-          final fullName = customer['fullName']?.toString().trim().isNotEmpty ==
-                  true
+          final fullName =
+              customer['fullName']?.toString().trim().isNotEmpty == true
               ? customer['fullName'].toString()
               : '${customer['firstName'] ?? ''} ${customer['lastName'] ?? ''}'
-                  .trim();
+                    .trim();
           return InkWell(
             onTap: customerId.isEmpty ? null : () => onTap(customerId),
             borderRadius: BorderRadius.circular(16),
@@ -262,14 +265,16 @@ class _CustomerListPane extends StatelessWidget {
                     runSpacing: 8,
                     children: [
                       _MetaChip(
-                        label: customer['customerCode']?.toString().isNotEmpty ==
+                        label:
+                            customer['customerCode']?.toString().isNotEmpty ==
                                 true
                             ? customer['customerCode'].toString()
                             : 'Pending ID',
                         icon: Icons.badge_outlined,
                       ),
                       _MetaChip(
-                        label: customer['membershipStatus']?.toString() ??
+                        label:
+                            customer['membershipStatus']?.toString() ??
                             'Membership pending',
                         icon: Icons.workspace_premium_outlined,
                       ),
@@ -348,7 +353,8 @@ class _CustomerWorkspaceDetail extends ConsumerWidget {
     final fullName =
         '${customer['firstName'] ?? ''} ${customer['lastName'] ?? ''}'.trim();
     final membershipName = membership['membershipType'] is Map
-        ? (membership['membershipType'] as Map)['name']?.toString() ?? 'Standard'
+        ? (membership['membershipType'] as Map)['name']?.toString() ??
+              'Standard'
         : 'Standard';
     final activeWallet = wallet['cashWallet'] is Map
         ? (wallet['cashWallet'] as Map)['available']
@@ -376,11 +382,7 @@ class _CustomerWorkspaceDetail extends ConsumerWidget {
                 onDocuments: () => context.go('/portal/agent/documents'),
                 onMenuAction: (action) async {
                   if (action == 'print') {
-                    await _downloadPrint(
-                      context,
-                      ref,
-                      'PATIENT_SUMMARY',
-                    );
+                    await _downloadPrint(context, ref, 'PATIENT_SUMMARY');
                     return;
                   }
                   if (action == 'onboarding') {
@@ -452,16 +454,18 @@ class _CustomerWorkspaceDetail extends ConsumerWidget {
                                 items: [
                                   _SummaryItem(
                                     label: 'SHIELD ID',
-                                    value: customer['customerCode']
+                                    value:
+                                        customer['customerCode']
                                             ?.toString()
                                             .ifBlank('Pending generation') ??
                                         'Pending generation',
                                   ),
                                   _SummaryItem(
                                     label: 'Phone',
-                                    value: customer['mobile']
-                                            ?.toString()
-                                            .ifBlank('Not recorded') ??
+                                    value:
+                                        customer['mobile']?.toString().ifBlank(
+                                          'Not recorded',
+                                        ) ??
                                         'Not recorded',
                                   ),
                                   _SummaryItem(
@@ -483,7 +487,8 @@ class _CustomerWorkspaceDetail extends ConsumerWidget {
                                   ),
                                   _SummaryItem(
                                     label: 'Membership number',
-                                    value: membership['membershipNumber']
+                                    value:
+                                        membership['membershipNumber']
                                             ?.toString()
                                             .ifBlank('Pending') ??
                                         'Pending',
@@ -491,8 +496,8 @@ class _CustomerWorkspaceDetail extends ConsumerWidget {
                                   _SummaryItem(
                                     label: 'Card status',
                                     value: _humanize(
-                                      controller.customerMembership['shieldCard']
-                                          ?['status'],
+                                      controller
+                                          .customerMembership['shieldCard']?['status'],
                                     ),
                                   ),
                                   _SummaryItem(
@@ -511,7 +516,8 @@ class _CustomerWorkspaceDetail extends ConsumerWidget {
                                     value: appointments.isEmpty
                                         ? 'Not scheduled'
                                         : _formatDateTime(
-                                            appointments.first['appointmentDate'],
+                                            appointments
+                                                .first['appointmentDate'],
                                           ),
                                   ),
                                   _SummaryItem(
@@ -519,9 +525,9 @@ class _CustomerWorkspaceDetail extends ConsumerWidget {
                                     value: activities.isEmpty
                                         ? 'No notes yet'
                                         : activities.first['notes']
-                                                ?.toString()
-                                                .ifBlank('No remarks') ??
-                                            'No remarks',
+                                                  ?.toString()
+                                                  .ifBlank('No remarks') ??
+                                              'No remarks',
                                   ),
                                   _SummaryItem(
                                     label: 'Network rewards',
@@ -533,9 +539,9 @@ class _CustomerWorkspaceDetail extends ConsumerWidget {
                                     value: purchases.isEmpty
                                         ? 'No purchases'
                                         : purchases.first['providerName']
-                                                ?.toString()
-                                                .ifBlank('Provider') ??
-                                            'Provider',
+                                                  ?.toString()
+                                                  .ifBlank('Provider') ??
+                                              'Provider',
                                   ),
                                 ],
                               ),
@@ -544,33 +550,40 @@ class _CustomerWorkspaceDetail extends ConsumerWidget {
                                 emptyLabel:
                                     'No visits, follow-ups, or alerts are queued right now.',
                                 entries: [
-                                  ...tasks.take(3).map(
-                                    (item) => _TimelineEntry(
-                                      title: _humanize(item['status']),
-                                      subtitle:
-                                          item['notes']?.toString().ifBlank(
+                                  ...tasks
+                                      .take(3)
+                                      .map(
+                                        (item) => _TimelineEntry(
+                                          title: _humanize(item['status']),
+                                          subtitle:
+                                              item['notes']?.toString().ifBlank(
                                                 'Follow-up scheduled',
                                               ) ??
                                               'Follow-up scheduled',
-                                      timeLabel:
-                                          _formatDateTime(item['dueDate']),
-                                      icon: Icons.assignment_outlined,
-                                    ),
-                                  ),
-                                  ...appointments.take(2).map(
-                                    (item) => _TimelineEntry(
-                                      title: item['provider']?['providerName']
-                                              ?.toString()
-                                              .ifBlank('Visit scheduled') ??
-                                          'Visit scheduled',
-                                      subtitle:
-                                          _humanize(item['appointmentType']),
-                                      timeLabel: _formatDateTime(
-                                        item['appointmentDate'],
+                                          timeLabel: _formatDateTime(
+                                            item['dueDate'],
+                                          ),
+                                          icon: Icons.assignment_outlined,
+                                        ),
                                       ),
-                                      icon: Icons.event_available_outlined,
-                                    ),
-                                  ),
+                                  ...appointments
+                                      .take(2)
+                                      .map(
+                                        (item) => _TimelineEntry(
+                                          title:
+                                              item['provider']?['providerName']
+                                                  ?.toString()
+                                                  .ifBlank('Visit scheduled') ??
+                                              'Visit scheduled',
+                                          subtitle: _humanize(
+                                            item['appointmentType'],
+                                          ),
+                                          timeLabel: _formatDateTime(
+                                            item['appointmentDate'],
+                                          ),
+                                          icon: Icons.event_available_outlined,
+                                        ),
+                                      ),
                                 ],
                               ),
                             ],
@@ -605,9 +618,10 @@ class _CustomerWorkspaceDetail extends ConsumerWidget {
                                     ),
                                     _SummaryItem(
                                       label: 'Email',
-                                      value: customer['email']
-                                              ?.toString()
-                                              .ifBlank('Not recorded') ??
+                                      value:
+                                          customer['email']?.toString().ifBlank(
+                                            'Not recorded',
+                                          ) ??
                                           'Not recorded',
                                     ),
                                     _SummaryItem(
@@ -625,35 +639,38 @@ class _CustomerWorkspaceDetail extends ConsumerWidget {
                                   items: [
                                     _SummaryItem(
                                       label: 'Phone',
-                                      value: customer['mobile']
+                                      value:
+                                          customer['mobile']
                                               ?.toString()
                                               .ifBlank('Not recorded') ??
                                           'Not recorded',
                                     ),
                                     _SummaryItem(
                                       label: 'City',
-                                      value: customer['city']
-                                              ?.toString()
-                                              .ifBlank('Not recorded') ??
+                                      value:
+                                          customer['city']?.toString().ifBlank(
+                                            'Not recorded',
+                                          ) ??
                                           'Not recorded',
                                     ),
                                     _SummaryItem(
                                       label: 'Address',
-                                      value: [
-                                        customer['addressLine1'],
-                                        customer['addressLine2'],
-                                        customer['city'],
-                                        customer['district'],
-                                        customer['state'],
-                                      ]
-                                          .where(
-                                            (item) => (item ?? '')
-                                                .toString()
-                                                .trim()
-                                                .isNotEmpty,
-                                          )
-                                          .join(', ')
-                                          .ifBlank('Not recorded'),
+                                      value:
+                                          [
+                                                customer['addressLine1'],
+                                                customer['addressLine2'],
+                                                customer['city'],
+                                                customer['district'],
+                                                customer['state'],
+                                              ]
+                                              .where(
+                                                (item) => (item ?? '')
+                                                    .toString()
+                                                    .trim()
+                                                    .isNotEmpty,
+                                              )
+                                              .join(', ')
+                                              .ifBlank('Not recorded'),
                                     ),
                                   ],
                                 ),
@@ -666,13 +683,14 @@ class _CustomerWorkspaceDetail extends ConsumerWidget {
                                   entries: family
                                       .map(
                                         (item) => _TimelineEntry(
-                                          title: item['name']
-                                                  ?.toString()
-                                                  .ifBlank('Contact') ??
+                                          title:
+                                              item['name']?.toString().ifBlank(
+                                                'Contact',
+                                              ) ??
                                               'Contact',
                                           subtitle:
                                               item['relation']?.toString() ??
-                                                  'Relation',
+                                              'Relation',
                                           timeLabel:
                                               item['mobile']?.toString() ?? '',
                                           icon: Icons.family_restroom_outlined,
@@ -692,7 +710,8 @@ class _CustomerWorkspaceDetail extends ConsumerWidget {
                       items: documents
                           .map(
                             (item) => _TimelineEntry(
-                              title: item['fileName']?.toString().ifBlank(
+                              title:
+                                  item['fileName']?.toString().ifBlank(
                                     'Document',
                                   ) ??
                                   'Document',
@@ -710,7 +729,8 @@ class _CustomerWorkspaceDetail extends ConsumerWidget {
                       items: appointments
                           .map(
                             (item) => _TimelineEntry(
-                              title: item['provider']?['providerName']
+                              title:
+                                  item['provider']?['providerName']
                                       ?.toString()
                                       .ifBlank('Provider') ??
                                   'Provider',
@@ -731,9 +751,10 @@ class _CustomerWorkspaceDetail extends ConsumerWidget {
                         ...tasks.map(
                           (item) => _TimelineEntry(
                             title: _humanize(item['status']),
-                            subtitle: item['notes']
-                                    ?.toString()
-                                    .ifBlank('No remarks') ??
+                            subtitle:
+                                item['notes']?.toString().ifBlank(
+                                  'No remarks',
+                                ) ??
                                 'No remarks',
                             timeLabel: _formatDateTime(item['dueDate']),
                             icon: Icons.assignment_outlined,
@@ -742,9 +763,10 @@ class _CustomerWorkspaceDetail extends ConsumerWidget {
                         ...activities.map(
                           (item) => _TimelineEntry(
                             title: _humanize(item['activityType']),
-                            subtitle: item['notes']
-                                    ?.toString()
-                                    .ifBlank('No remarks') ??
+                            subtitle:
+                                item['notes']?.toString().ifBlank(
+                                  'No remarks',
+                                ) ??
                                 'No remarks',
                             timeLabel: _formatDateTime(item['createdAt']),
                             icon: Icons.sticky_note_2_outlined,
@@ -758,9 +780,8 @@ class _CustomerWorkspaceDetail extends ConsumerWidget {
                       items: records
                           .map(
                             (item) => _TimelineEntry(
-                              title: item['title']?.toString().ifBlank(
-                                    'Record',
-                                  ) ??
+                              title:
+                                  item['title']?.toString().ifBlank('Record') ??
                                   'Record',
                               subtitle:
                                   '${item['category'] ?? 'Record'} • ${item['status'] ?? 'Pending'}',
@@ -817,17 +838,18 @@ class _CustomerWorkspaceDetail extends ConsumerWidget {
                     ),
                     _SimpleListView(
                       title: 'Timeline',
-                      emptyLabel: 'No activity is recorded in the timeline yet.',
+                      emptyLabel:
+                          'No activity is recorded in the timeline yet.',
                       items: timeline
                           .map(
                             (item) => _TimelineEntry(
                               title: _humanize(item['type']),
-                              subtitle: item['description']
-                                      ?.toString()
-                                      .ifBlank(item['title']?.toString() ?? '') ??
+                              subtitle:
+                                  item['description']?.toString().ifBlank(
+                                    item['title']?.toString() ?? '',
+                                  ) ??
                                   '',
-                              timeLabel:
-                                  _formatDateTime(item['timestamp']),
+                              timeLabel: _formatDateTime(item['timestamp']),
                               icon: Icons.timeline_outlined,
                             ),
                           )
@@ -844,13 +866,14 @@ class _CustomerWorkspaceDetail extends ConsumerWidget {
                     spacing: 8,
                     runSpacing: 8,
                     children: [
-                      OutlinedButton(
-                        onPressed: () => context.go('/portal/agent/registration'),
-                        child: const Text('Continue Onboarding'),
+                      AgentSecondaryButton(
+                        onPressed: () =>
+                            context.go('/portal/agent/registration'),
+                        label: 'Continue Onboarding',
                       ),
-                      OutlinedButton(
+                      AgentSecondaryButton(
                         onPressed: () => context.go('/portal/agent/referrals'),
-                        child: const Text('Open Network'),
+                        label: 'Open Network',
                       ),
                     ],
                   ),
@@ -921,13 +944,16 @@ class _CustomerHero extends StatelessWidget {
                     children: [
                       _StatusBadge(
                         label: _humanize(customer['status']),
-                        color:
-                            _statusColor(context, customer['status']?.toString()),
+                        color: _statusColor(
+                          context,
+                          customer['status']?.toString(),
+                        ),
                       ),
                       _MetaChip(
-                        label: customer['customerCode']
-                                ?.toString()
-                                .ifBlank('Pending ID') ??
+                        label:
+                            customer['customerCode']?.toString().ifBlank(
+                              'Pending ID',
+                            ) ??
                             'Pending ID',
                         icon: Icons.badge_outlined,
                       ),
@@ -944,22 +970,16 @@ class _CustomerHero extends StatelessWidget {
                 spacing: 8,
                 runSpacing: 8,
                 children: [
-                  FilledButton(
-                    onPressed: onEdit,
-                    child: const Text('Edit'),
-                  ),
-                  OutlinedButton(
+                  AgentPrimaryButton(onPressed: onEdit, label: 'Edit'),
+                  AgentSecondaryButton(
                     onPressed: onFollowUp,
-                    child: const Text('Follow-up'),
+                    label: 'Follow-up',
                   ),
-                  OutlinedButton(
+                  AgentSecondaryButton(
                     onPressed: onDocuments,
-                    child: const Text('Documents'),
+                    label: 'Documents',
                   ),
-                  OutlinedButton(
-                    onPressed: onVisit,
-                    child: const Text('Visit'),
-                  ),
+                  AgentSecondaryButton(onPressed: onVisit, label: 'Visit'),
                   PopupMenuButton<String>(
                     onSelected: onMenuAction,
                     itemBuilder: (context) => const [
@@ -976,9 +996,9 @@ class _CustomerHero extends StatelessWidget {
                         child: Text('Open Network'),
                       ),
                     ],
-                    child: const OutlinedButton(
+                    child: const AgentSecondaryButton(
                       onPressed: null,
-                      child: Text('More'),
+                      label: 'More',
                     ),
                   ),
                 ],
@@ -1053,8 +1073,7 @@ class _EditableProfileCard extends StatelessWidget {
                 _AdaptiveField(
                   child: TextField(
                     controller: firstNameController,
-                    decoration:
-                        const InputDecoration(labelText: 'First name'),
+                    decoration: const InputDecoration(labelText: 'First name'),
                   ),
                 ),
                 _AdaptiveField(
@@ -1098,13 +1117,14 @@ class _EditableProfileCard extends StatelessWidget {
                 spacing: 8,
                 runSpacing: 8,
                 children: [
-                  OutlinedButton(
+                  AgentSecondaryButton(
                     onPressed: isSaving ? null : onCancel,
-                    child: const Text('Cancel'),
+                    label: 'Cancel',
                   ),
-                  FilledButton(
+                  AgentPrimaryButton(
                     onPressed: isSaving ? null : onSave,
-                    child: Text(isSaving ? 'Saving...' : 'Save Details'),
+                    label: isSaving ? 'Saving...' : 'Save Details',
+                    isLoading: isSaving,
                   ),
                 ],
               ),
@@ -1131,26 +1151,22 @@ class _TwoColumnOverview extends StatelessWidget {
       builder: (context, constraints) {
         final stack = constraints.maxWidth < 920;
         final left = Column(
-          children: leftChildren
-              .expand((child) => [child, const SizedBox(height: 12)])
-              .toList()
-            ..removeLast(),
+          children:
+              leftChildren
+                  .expand((child) => [child, const SizedBox(height: 12)])
+                  .toList()
+                ..removeLast(),
         );
         final right = Column(
-          children: rightChildren
-              .expand((child) => [child, const SizedBox(height: 12)])
-              .toList()
-            ..removeLast(),
+          children:
+              rightChildren
+                  .expand((child) => [child, const SizedBox(height: 12)])
+                  .toList()
+                ..removeLast(),
         );
 
         if (stack) {
-          return Column(
-            children: [
-              left,
-              const SizedBox(height: 12),
-              right,
-            ],
-          );
+          return Column(children: [left, const SizedBox(height: 12), right]);
         }
 
         return Row(
@@ -1167,25 +1183,18 @@ class _TwoColumnOverview extends StatelessWidget {
 }
 
 class _SummarySection extends StatelessWidget {
-  const _SummarySection({
-    required this.title,
-    required this.items,
-  });
+  const _SummarySection({required this.title, required this.items});
 
   final String title;
   final List<_SummaryItem> items;
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(title, style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 12),
-            ...items.map(
+    return AgentPanelCard(
+      title: title,
+      child: Column(
+        children: items
+            .map(
               (item) => Padding(
                 padding: const EdgeInsets.only(bottom: 10),
                 child: Row(
@@ -1198,14 +1207,13 @@ class _SummarySection extends StatelessWidget {
                         style: Theme.of(context).textTheme.bodySmall,
                       ),
                     ),
-                    const SizedBox(width: 12),
+                    AgentUi.gapW(AgentUi.space12),
                     Expanded(child: Text(item.value)),
                   ],
                 ),
               ),
-            ),
-          ],
-        ),
+            )
+            .toList(),
       ),
     );
   }
@@ -1224,11 +1232,7 @@ class _SimpleListView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return _TimelineCard(
-      title: title,
-      emptyLabel: emptyLabel,
-      entries: items,
-    );
+    return _TimelineCard(title: title, emptyLabel: emptyLabel, entries: items);
   }
 }
 
@@ -1245,53 +1249,51 @@ class _TimelineCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(title, style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 12),
-            if (entries.isEmpty)
-              Text(emptyLabel)
-            else
-              ...entries.map(
-                (entry) => Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      CircleAvatar(
-                        radius: 18,
-                        child: Icon(entry.icon, size: 18),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              entry.title,
-                              style: Theme.of(context).textTheme.titleSmall,
+    return AgentPanelCard(
+      title: title,
+      child: entries.isEmpty
+          ? AgentEmptyState(
+              icon: Icons.timeline_outlined,
+              title: title,
+              message: emptyLabel,
+            )
+          : Column(
+              children: entries
+                  .map(
+                    (entry) => Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          CircleAvatar(
+                            radius: 18,
+                            child: Icon(entry.icon, size: 18),
+                          ),
+                          AgentUi.gapW(AgentUi.space12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  entry.title,
+                                  style: Theme.of(context).textTheme.titleSmall,
+                                ),
+                                const SizedBox(height: 2),
+                                Text(entry.subtitle),
+                              ],
                             ),
-                            const SizedBox(height: 2),
-                            Text(entry.subtitle),
-                          ],
-                        ),
+                          ),
+                          AgentUi.gapW(AgentUi.space12),
+                          Text(
+                            entry.timeLabel,
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                        ],
                       ),
-                      const SizedBox(width: 12),
-                      Text(
-                        entry.timeLabel,
-                        style: Theme.of(context).textTheme.bodySmall,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-          ],
-        ),
-      ),
+                    ),
+                  )
+                  .toList(),
+            ),
     );
   }
 }
@@ -1311,113 +1313,59 @@ class _CompactMetricCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
+    return AgentMetricCard(
+      value: value,
+      label: label,
+      helper: helper,
+      icon: icon,
       width: 220,
-      child: Card(
-        margin: EdgeInsets.zero,
-        child: Padding(
-          padding: const EdgeInsets.all(14),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Icon(icon),
-              const SizedBox(height: 10),
-              Text(
-                value,
-                style: Theme.of(context).textTheme.headlineSmall,
-              ),
-              const SizedBox(height: 4),
-              Text(label, style: Theme.of(context).textTheme.titleSmall),
-              const SizedBox(height: 2),
-              Text(helper, style: Theme.of(context).textTheme.bodySmall),
-            ],
-          ),
-        ),
-      ),
+      height: 136,
     );
   }
 }
 
 class _AdaptiveField extends StatelessWidget {
-  const _AdaptiveField({
-    required this.child,
-    this.wide = false,
-  });
+  const _AdaptiveField({required this.child, this.wide = false});
 
   final Widget child;
   final bool wide;
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: wide ? 572 : 280,
-      child: child,
-    );
+    return AgentFormFieldWidth(width: wide ? 572 : 280, child: child);
   }
 }
 
 class _MetaChip extends StatelessWidget {
-  const _MetaChip({
-    required this.label,
-    required this.icon,
-  });
+  const _MetaChip({required this.label, required this.icon});
 
   final String label;
   final IconData icon;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(999),
-        color: Theme.of(context).colorScheme.surfaceContainerHigh,
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 16),
-          const SizedBox(width: 6),
-          Text(label, style: Theme.of(context).textTheme.bodySmall),
-        ],
-      ),
+    return AgentStatusBadge(
+      label: label,
+      color: Theme.of(context).colorScheme.primary,
+      icon: icon,
     );
   }
 }
 
 class _StatusBadge extends StatelessWidget {
-  const _StatusBadge({
-    required this.label,
-    required this.color,
-  });
+  const _StatusBadge({required this.label, required this.color});
 
   final String label;
   final Color color;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.14),
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Text(
-        label,
-        style: Theme.of(context).textTheme.labelMedium?.copyWith(
-              color: color,
-              fontWeight: FontWeight.w600,
-            ),
-      ),
-    );
+    return AgentStatusBadge(label: label, color: color);
   }
 }
 
 class _SummaryItem {
-  const _SummaryItem({
-    required this.label,
-    required this.value,
-  });
+  const _SummaryItem({required this.label, required this.value});
 
   final String label;
   final String value;

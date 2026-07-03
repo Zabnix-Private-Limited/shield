@@ -219,7 +219,7 @@ class _AgentAppointmentsScreenState
           _FlowStep(
             step: '3',
             label: 'Date',
-            child: OutlinedButton.icon(
+            child: AgentSecondaryButton(
               onPressed: () async {
                 final picked = await showShieldDatePicker(
                   context,
@@ -238,11 +238,9 @@ class _AgentAppointmentsScreenState
                 }
               },
               icon: const Icon(Icons.calendar_month_outlined),
-              label: Text(
-                _appointmentDate == null
-                    ? 'Choose visit date'
-                    : ShieldDateUtils.formatShortMonthDate(_appointmentDate!),
-              ),
+              label: _appointmentDate == null
+                  ? 'Choose visit date'
+                  : ShieldDateUtils.formatShortMonthDate(_appointmentDate!),
             ),
           ),
           const SizedBox(height: 12),

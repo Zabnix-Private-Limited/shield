@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../../shared/utils/shield_date_utils.dart';
 import '../../../../../shared/widgets/shield_date_picker.dart';
 import '../../../shared/presentation/controllers/agent_portal_provider.dart';
+import '../../../shared/presentation/widgets/agent_design_system.dart';
 import '../../../shared/presentation/widgets/agent_experience_widgets.dart';
 import '../../../shared/presentation/widgets/agent_section_header.dart';
 
@@ -43,11 +44,13 @@ class _AgentFollowUpsScreenState extends ConsumerState<AgentFollowUpsScreen> {
     final selectedCustomer = controller.selectedCustomer;
     final customerName =
         selectedCustomer['firstName']?.toString().isNotEmpty == true
-            ? '${selectedCustomer['firstName']} ${selectedCustomer['lastName'] ?? ''}'
-                .trim()
-            : 'Select a customer from Customers';
+        ? '${selectedCustomer['firstName']} ${selectedCustomer['lastName'] ?? ''}'
+              .trim()
+        : 'Select a customer from Customers';
 
-    final todayTasks = controller.tasks.where((task) => _sameDay(task['dueDate']));
+    final todayTasks = controller.tasks.where(
+      (task) => _sameDay(task['dueDate']),
+    );
     final overdueTasks = controller.tasks.where(
       (task) =>
           _isOverdue(task['dueDate']) &&
@@ -57,10 +60,9 @@ class _AgentFollowUpsScreenState extends ConsumerState<AgentFollowUpsScreen> {
       (task) => !_sameDay(task['dueDate']) && !_isOverdue(task['dueDate']),
     );
     final completedHistory = controller.customerActivities.where(
-      (item) => (item['activityType'] ?? '')
-          .toString()
-          .toUpperCase()
-          .contains('COMPLETED'),
+      (item) => (item['activityType'] ?? '').toString().toUpperCase().contains(
+        'COMPLETED',
+      ),
     );
     final taskSections = <_TaskSectionConfig>[
       if (overdueTasks.isNotEmpty)
@@ -94,13 +96,19 @@ class _AgentFollowUpsScreenState extends ConsumerState<AgentFollowUpsScreen> {
       return _buildLoadErrorState(
         context,
         controller.error!,
-        onRetry: () => ref.read(agentPortalControllerProvider).refreshWorkspace(),
+        onRetry: () =>
+            ref.read(agentPortalControllerProvider).refreshWorkspace(),
       );
     }
 
+    final bodyHeight = (MediaQuery.sizeOf(context).height - 360).clamp(
+      320.0,
+      1200.0,
+    );
+
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: AgentUi.compactPanelPadding,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -144,8 +152,9 @@ class _AgentFollowUpsScreenState extends ConsumerState<AgentFollowUpsScreen> {
                 ),
               ],
             ),
-            const SizedBox(height: 12),
-            Expanded(
+            AgentUi.gapH(AgentUi.space12),
+            SizedBox(
+              height: bodyHeight,
               child: LayoutBuilder(
                 builder: (context, constraints) {
                   final stack = constraints.maxWidth < 980;
@@ -176,9 +185,9 @@ class _AgentFollowUpsScreenState extends ConsumerState<AgentFollowUpsScreen> {
                   return Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Expanded(child: composer),
-                      const SizedBox(width: 16),
-                      Expanded(child: detailPane),
+                      Expanded(child: SingleChildScrollView(child: composer)),
+                      AgentUi.gapW(AgentUi.space16),
+                      Expanded(child: SingleChildScrollView(child: detailPane)),
                     ],
                   );
                 },
@@ -220,7 +229,8 @@ class _AgentFollowUpsScreenState extends ConsumerState<AgentFollowUpsScreen> {
           if (lastActivity != null) ...[
             const SizedBox(height: 8),
             AgentStatusBadge(
-              label: 'Last follow-up: ${_formatDate(lastActivity['createdAt'])}',
+              label:
+                  'Last follow-up: ${_formatDate(lastActivity['createdAt'])}',
               color: Colors.indigo.shade700,
               icon: Icons.history_outlined,
             ),
@@ -262,12 +272,14 @@ class _AgentFollowUpsScreenState extends ConsumerState<AgentFollowUpsScreen> {
               ),
               SizedBox(
                 width: 220,
-                child: OutlinedButton.icon(
+                child: AgentSecondaryButton(
                   onPressed: () async {
                     final picked = await showShieldDatePicker(
                       context,
                       initialDate: DateTime.now().add(const Duration(days: 1)),
-                      firstDate: DateTime.now().subtract(const Duration(days: 1)),
+                      firstDate: DateTime.now().subtract(
+                        const Duration(days: 1),
+                      ),
                       lastDate: DateTime.now().add(const Duration(days: 365)),
                       title: 'Schedule follow-up',
                       helperText:
@@ -279,13 +291,9 @@ class _AgentFollowUpsScreenState extends ConsumerState<AgentFollowUpsScreen> {
                     }
                   },
                   icon: const Icon(Icons.calendar_month_outlined),
-                  label: Text(
-                    _selectedDueDate == null
-                        ? 'Choose next follow-up'
-                        : ShieldDateUtils.formatShortMonthDate(
-                            _selectedDueDate!,
-                          ),
-                  ),
+                  label: _selectedDueDate == null
+                      ? 'Choose next follow-up'
+                      : ShieldDateUtils.formatShortMonthDate(_selectedDueDate!),
                 ),
               ),
             ],
@@ -293,7 +301,7 @@ class _AgentFollowUpsScreenState extends ConsumerState<AgentFollowUpsScreen> {
           const SizedBox(height: 12),
           Align(
             alignment: Alignment.centerRight,
-            child: FilledButton(
+            child: AgentPrimaryButton(
               onPressed: customerId == null || _selectedDueDate == null
                   ? null
                   : () async {
@@ -327,7 +335,7 @@ class _AgentFollowUpsScreenState extends ConsumerState<AgentFollowUpsScreen> {
                         ),
                       );
                     },
-              child: const Text('Save Follow-Up'),
+              label: 'Save Follow-Up',
             ),
           ),
         ],
@@ -352,9 +360,8 @@ class _AgentFollowUpsScreenState extends ConsumerState<AgentFollowUpsScreen> {
       return _buildLoadErrorState(
         context,
         controller.error!,
-        onRetry: () => ref.read(agentPortalControllerProvider).selectCustomer(
-              customerId,
-            ),
+        onRetry: () =>
+            ref.read(agentPortalControllerProvider).selectCustomer(customerId),
       );
     }
 
@@ -536,7 +543,7 @@ class _AgentFollowUpsScreenState extends ConsumerState<AgentFollowUpsScreen> {
                           color: Colors.indigo.shade700,
                           icon: Icons.schedule_outlined,
                         ),
-                        TextButton(
+                        AgentGhostButton(
                           onPressed: () async {
                             await ref
                                 .read(agentPortalControllerProvider)
@@ -548,9 +555,9 @@ class _AgentFollowUpsScreenState extends ConsumerState<AgentFollowUpsScreen> {
                                   notes: task['notes']?.toString(),
                                 );
                           },
-                          child: const Text('Complete'),
+                          label: 'Complete',
                         ),
-                        TextButton(
+                        AgentGhostButton(
                           onPressed: () async {
                             await ref
                                 .read(agentPortalControllerProvider)
@@ -562,7 +569,7 @@ class _AgentFollowUpsScreenState extends ConsumerState<AgentFollowUpsScreen> {
                                   notes: task['notes']?.toString(),
                                 );
                           },
-                          child: const Text('Cancel'),
+                          label: 'Cancel',
                         ),
                       ],
                     ),
@@ -686,8 +693,9 @@ String _humanize(dynamic value) {
       .toLowerCase()
       .split(' ')
       .map(
-        (part) =>
-            part.isEmpty ? part : '${part[0].toUpperCase()}${part.substring(1)}',
+        (part) => part.isEmpty
+            ? part
+            : '${part[0].toUpperCase()}${part.substring(1)}',
       )
       .join(' ');
 }

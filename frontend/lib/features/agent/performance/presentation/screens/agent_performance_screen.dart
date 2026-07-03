@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../shared/presentation/controllers/agent_portal_provider.dart';
+import '../../../shared/presentation/widgets/agent_design_system.dart';
 import '../../../shared/presentation/widgets/agent_experience_widgets.dart';
 import '../../../shared/presentation/widgets/agent_section_header.dart';
 
@@ -31,14 +32,19 @@ class _AgentPerformanceScreenState
     final summary = controller.summary;
     final completedFollowUps =
         (performance['completedFollowUps'] as num?)?.toInt() ?? 0;
-    final customersAdded = (performance['customersAdded'] as num?)?.toInt() ?? 0;
+    final customersAdded =
+        (performance['customersAdded'] as num?)?.toInt() ?? 0;
     final customersActive =
         (performance['customersActive'] as num?)?.toInt() ?? 0;
-    final pendingFollowUps =
-        customersAdded - completedFollowUps < 0 ? 0 : customersAdded - completedFollowUps;
-    final appointments = (performance['appointmentsGenerated'] as num?)?.toInt() ?? 0;
-    final retentionRate = (performance['retentionRate'] as num?)?.toDouble() ?? 0;
-    final conversionRate = (performance['conversionRate'] as num?)?.toDouble() ?? 0;
+    final pendingFollowUps = customersAdded - completedFollowUps < 0
+        ? 0
+        : customersAdded - completedFollowUps;
+    final appointments =
+        (performance['appointmentsGenerated'] as num?)?.toInt() ?? 0;
+    final retentionRate =
+        (performance['retentionRate'] as num?)?.toDouble() ?? 0;
+    final conversionRate =
+        (performance['conversionRate'] as num?)?.toDouble() ?? 0;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -171,12 +177,14 @@ class _AgentPerformanceScreenState
                     children: [
                       _BreakdownTile(
                         label: 'Customer activity',
-                        value: '$customersActive active / $customersAdded added',
+                        value:
+                            '$customersActive active / $customersAdded added',
                         helper: 'Portfolio health and acquisition balance.',
                       ),
                       _BreakdownTile(
                         label: 'Follow-up completion',
-                        value: '$completedFollowUps completed / $pendingFollowUps pending',
+                        value:
+                            '$completedFollowUps completed / $pendingFollowUps pending',
                         helper: 'Workload and completion discipline.',
                       ),
                       _BreakdownTile(
@@ -186,8 +194,10 @@ class _AgentPerformanceScreenState
                       ),
                       _BreakdownTile(
                         label: 'Document backlog',
-                        value: '${summary['pendingDocuments'] ?? 0} pending files',
-                        helper: 'Customer documentation still waiting for action.',
+                        value:
+                            '${summary['pendingDocuments'] ?? 0} pending files',
+                        helper:
+                            'Customer documentation still waiting for action.',
                       ),
                     ],
                   ),
@@ -197,11 +207,7 @@ class _AgentPerformanceScreenState
 
             if (stack) {
               return Column(
-                children: [
-                  left,
-                  const SizedBox(height: 12),
-                  right,
-                ],
+                children: [left, const SizedBox(height: 12), right],
               );
             }
 
@@ -233,26 +239,14 @@ class _MiniPerformanceCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
+    return AgentMetricCard(
+      value: value,
+      label: label,
+      helper: 'Open $label details.',
+      icon: Icons.insights_outlined,
       width: 220,
-      child: InkWell(
-        onTap: () => context.go(route),
-        borderRadius: BorderRadius.circular(16),
-        child: Card(
-          margin: EdgeInsets.zero,
-          child: Padding(
-            padding: const EdgeInsets.all(14),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(label, style: Theme.of(context).textTheme.bodySmall),
-                const SizedBox(height: 6),
-                Text(value, style: Theme.of(context).textTheme.titleLarge),
-              ],
-            ),
-          ),
-        ),
-      ),
+      height: 132,
+      onTap: () => context.go(route),
     );
   }
 }
@@ -314,24 +308,12 @@ class _BreakdownTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          color: Theme.of(context).colorScheme.surfaceContainerLowest,
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(label, style: Theme.of(context).textTheme.titleSmall),
-            const SizedBox(height: 6),
-            Text(value),
-            const SizedBox(height: 4),
-            Text(helper, style: Theme.of(context).textTheme.bodySmall),
-          ],
-        ),
+      padding: const EdgeInsets.only(bottom: AgentUi.space12),
+      child: AgentPanelCard(
+        title: label,
+        subtitle: helper,
+        padding: AgentUi.cardBodyPadding,
+        child: Text(value),
       ),
     );
   }

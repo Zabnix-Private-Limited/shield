@@ -733,16 +733,15 @@ class _AgentSettingsScreenState extends ConsumerState<AgentSettingsScreen> {
                         AgentUi.gapH(AgentUi.space12),
                         Align(
                           alignment: Alignment.centerRight,
-                          child: FilledButton.icon(
+                          child: AgentPrimaryButton(
                             onPressed: controller.isProfileSaving
                                 ? null
                                 : () => _saveSettings(controller),
                             icon: const Icon(Icons.save_outlined),
-                            label: Text(
-                              controller.isProfileSaving
-                                  ? 'Saving...'
-                                  : 'Save Preferences',
-                            ),
+                            label: controller.isProfileSaving
+                                ? 'Saving...'
+                                : 'Save Preferences',
+                            isLoading: controller.isProfileSaving,
                           ),
                         ),
                       ],
@@ -961,16 +960,15 @@ class _AgentSettingsScreenState extends ConsumerState<AgentSettingsScreen> {
                         AgentUi.gapH(AgentUi.space12),
                         Align(
                           alignment: Alignment.centerRight,
-                          child: FilledButton.icon(
+                          child: AgentPrimaryButton(
                             onPressed: controller.isProfileSaving
                                 ? null
                                 : () => _saveSettings(controller),
                             icon: const Icon(Icons.save_outlined),
-                            label: Text(
-                              controller.isProfileSaving
-                                  ? 'Saving...'
-                                  : 'Save Workspace Settings',
-                            ),
+                            label: controller.isProfileSaving
+                                ? 'Saving...'
+                                : 'Save Workspace Settings',
+                            isLoading: controller.isProfileSaving,
                           ),
                         ),
                       ],
@@ -1005,12 +1003,12 @@ class _AgentSettingsScreenState extends ConsumerState<AgentSettingsScreen> {
                             spacing: AgentUi.space8,
                             runSpacing: AgentUi.space8,
                             children: [
-                              FilledButton.icon(
+                              AgentPrimaryButton(
                                 onPressed: InternalAuthSession.instance.signOut,
                                 icon: const Icon(Icons.logout_outlined),
-                                label: const Text('Sign Out'),
+                                label: 'Sign Out',
                               ),
-                              OutlinedButton.icon(
+                              AgentSecondaryButton(
                                 onPressed: controller.isSettingsLoading
                                     ? null
                                     : () => ref
@@ -1019,7 +1017,7 @@ class _AgentSettingsScreenState extends ConsumerState<AgentSettingsScreen> {
                                 icon: const Icon(
                                   Icons.phonelink_erase_outlined,
                                 ),
-                                label: const Text('Sign Out Other Devices'),
+                                label: 'Sign Out Other Devices',
                               ),
                             ],
                           ),
@@ -1064,7 +1062,7 @@ class _AgentSettingsScreenState extends ConsumerState<AgentSettingsScreen> {
                                                   icon: Icons
                                                       .check_circle_outline,
                                                 )
-                                              : TextButton(
+                                              : AgentGhostButton(
                                                   onPressed: () => ref
                                                       .read(
                                                         agentPortalControllerProvider,
@@ -1074,7 +1072,7 @@ class _AgentSettingsScreenState extends ConsumerState<AgentSettingsScreen> {
                                                                 ?.toString() ??
                                                             '',
                                                       ),
-                                                  child: const Text('Revoke'),
+                                                  label: 'Revoke',
                                                 ),
                                         ),
                                       )
@@ -1121,16 +1119,15 @@ class _AgentSettingsScreenState extends ConsumerState<AgentSettingsScreen> {
                         AgentUi.gapH(AgentUi.space12),
                         Align(
                           alignment: Alignment.centerRight,
-                          child: FilledButton.icon(
+                          child: AgentPrimaryButton(
                             onPressed: controller.isProfileSaving
                                 ? null
                                 : () => _saveSettings(controller),
                             icon: const Icon(Icons.save_outlined),
-                            label: Text(
-                              controller.isProfileSaving
-                                  ? 'Saving...'
-                                  : 'Save Device Settings',
-                            ),
+                            label: controller.isProfileSaving
+                                ? 'Saving...'
+                                : 'Save Device Settings',
+                            isLoading: controller.isProfileSaving,
                           ),
                         ),
                       ],

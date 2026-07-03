@@ -76,6 +76,11 @@ class _AgentDocumentsScreenState extends ConsumerState<AgentDocumentsScreen> {
       return _buildWorkspaceErrorState(controller.error!);
     }
 
+    final bodyHeight = (MediaQuery.sizeOf(context).height - 220).clamp(
+      360.0,
+      1200.0,
+    );
+
     return Card(
       child: Padding(
         padding: AgentUi.panelPadding,
@@ -88,31 +93,37 @@ class _AgentDocumentsScreenState extends ConsumerState<AgentDocumentsScreen> {
                   'This customer-first document flow now behaves more like a lightweight DMS: required files, status badges, verification states, sorting, and quick preview actions.',
             ),
             AgentUi.gapH(AgentUi.space16),
-            LayoutBuilder(
-              builder: (context, constraints) {
-                final stack = constraints.maxWidth < 980;
-                final left = _buildRequiredDocumentsCard(
-                  context,
-                  customerId,
-                  customerName,
-                  uploadedTypes,
-                  controller,
-                );
-                final right = _buildHistoryCard(context, controller, docs);
-                if (stack) {
-                  return Column(
-                    children: [left, AgentUi.gapH(AgentUi.space16), right],
+            SizedBox(
+              height: bodyHeight,
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final stack = constraints.maxWidth < 980;
+                  final left = _buildRequiredDocumentsCard(
+                    context,
+                    customerId,
+                    customerName,
+                    uploadedTypes,
+                    controller,
                   );
-                }
-                return Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    SizedBox(width: 320, child: left),
-                    AgentUi.gapW(AgentUi.space16),
-                    Expanded(child: right),
-                  ],
-                );
-              },
+                  final right = _buildHistoryCard(context, controller, docs);
+                  if (stack) {
+                    return ListView(
+                      children: [left, AgentUi.gapH(AgentUi.space16), right],
+                    );
+                  }
+                  return Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      SizedBox(
+                        width: 320,
+                        child: SingleChildScrollView(child: left),
+                      ),
+                      AgentUi.gapW(AgentUi.space16),
+                      Expanded(child: SingleChildScrollView(child: right)),
+                    ],
+                  );
+                },
+              ),
             ),
           ],
         ),
@@ -178,12 +189,12 @@ class _AgentDocumentsScreenState extends ConsumerState<AgentDocumentsScreen> {
                   Row(
                     children: [
                       Expanded(child: Text(doc.label)),
-                      TextButton(
+                      AgentGhostButton(
                         onPressed: () =>
                             setState(() => _documentType = doc.type),
-                        child: Text(
-                          _documentType == doc.type ? 'Selected' : 'Choose',
-                        ),
+                        label: _documentType == doc.type
+                            ? 'Selected'
+                            : 'Choose',
                       ),
                     ],
                   ),

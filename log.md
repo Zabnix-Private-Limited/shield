@@ -7918,3 +7918,31 @@ est build, ackend/vercel.json, ackend/src/auth/auth.service.ts, and uth_devic
 - `cd frontend && flutter test` ✅
 ### Timestamp
 - 2026-07-03 18:28:46 IST
+## 215. Agent Portal Design-System Adoption + Responsive Shell Audit
+**High-level desc**: Completed a broader Agent Portal design-system migration pass focused on shared button adoption, shell-safe responsive layout behavior, and regression coverage so the post-blank-screen portal now behaves like one consistent product surface instead of a mix of migrated and legacy UI patterns.
+- Replaced the remaining direct agent feature-page button primitives with shared AgentPrimaryButton, AgentSecondaryButton, and AgentGhostButton wrappers across dashboard, customers, registration, follow-ups, notifications, appointments, and settings so action sizing, spacing, and interaction density now come from one shared layer.
+- Migrated additional customer and performance screen visual elements onto shared portal primitives, including shared metric cards, panel cards, form-field widths, and status badges, which removes more page-local styling drift from the agent workspace.
+- Hardened registration, follow-ups, documents, and notifications for both real portal-shell mounting and standalone desktop widget-test viewports by replacing unbounded flex patterns with bounded work areas and independent internal scrolling where needed.
+- Extended the desktop-shell regression suite to cover the migrated agent screens directly, ensuring each page now renders inside the real scroll-parent shape without blank output, overflow, or layout exceptions.
+- Verified there are no remaining direct FilledButton, OutlinedButton, ElevatedButton, or TextButton usages anywhere in rontend/lib/features/agent outside the shared design-system layer.
+### Files Modified/Created
+**Frontend Files (Modified)**:
+- frontend/lib/features/agent/appointments/presentation/screens/agent_appointments_screen.dart
+- frontend/lib/features/agent/customers/presentation/screens/agent_customers_screen.dart
+- frontend/lib/features/agent/dashboard/presentation/screens/agent_dashboard_screen.dart
+- frontend/lib/features/agent/documents/presentation/screens/agent_documents_screen.dart
+- frontend/lib/features/agent/followups/presentation/screens/agent_followups_screen.dart
+- frontend/lib/features/agent/notifications/presentation/screens/agent_notifications_screen.dart
+- frontend/lib/features/agent/performance/presentation/screens/agent_performance_screen.dart
+- frontend/lib/features/agent/registration/presentation/screens/agent_registration_screen.dart
+- frontend/lib/features/agent/settings/presentation/screens/agent_settings_screen.dart
+- frontend/test/agent_scroll_render_regression_test.dart
+- frontend/test/agent_settings_screen_test.dart
+- log.md
+**Backend Files (Modified)**:
+- None.
+### Verification
+- cd frontend && flutter analyze ✅
+- cd frontend && flutter test ✅
+### Timestamp
+- 2026-07-03 19:32:39 IST
