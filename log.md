@@ -7732,3 +7732,16 @@ est build, ackend/vercel.json, ackend/src/auth/auth.service.ts, and uth_devic
 
 ---
 2026-07-03 13:16:40 IST
+
+## 207. RBAC Refresh Permission Rehydration
+**High-level description**: Fixed the RBAC synchronization gap where existing auth sessions could keep reissuing stale permission sets after role changes, causing valid backend guards like `providers.view` to continue failing even after the catalog was updated.
+- Confirmed the missing link was the refresh path: internal login already rebuilt permissions from the current role, but refresh reused the old `auth_sessions.permissions` snapshot.
+- Updated refresh-session principal rehydration to reload the current user role, role permissions, scope, and account status from the database before minting the next JWT.
+- Preserved authorization enforcement instead of bypassing guards, so stale sessions now converge onto the live RBAC state as soon as they refresh or sign in again.
+
+### Files Modified/Created
+**Backend Files (Modified)**:
+- backend/src/auth/auth.service.ts
+
+---
+2026-07-03 14:46:22 IST

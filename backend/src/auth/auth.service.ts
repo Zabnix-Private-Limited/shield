@@ -332,7 +332,7 @@ export class AuthService {
       throw new UnauthorizedException('Refresh token is invalid or expired.');
     }
 
-    const principal = this.mapSessionToPrincipal(session);
+    const principal = await this.rehydrateSessionPrincipal(session);
     return this.issueTokens(principal, requestContext, session.sessionId);
   }
 
@@ -1002,6 +1002,124 @@ export class AuthService {
       mobile: session.mobile ?? undefined,
       branchBusinessId: session.branchBusinessId ?? undefined,
     };
+  }
+
+  private async rehydrateSessionPrincipal(
+    session: SessionRecord,
+  ): Promise<ShieldPrincipal> {
+    if (session.userId != null) {
+      const user = await this.prisma.user.findUnique({
+        where: { id: session.userId },
+        include: {
+          role: {
+            include: {
+              rolePermissions: {
+                include: {
+                  permission: true,
+                },
+              },
+            },
+          },
+        },
+      });
+
+      if (!user || user.deletedAt != null) {
+        throw new UnauthorizedException(
+          'Internal user is no longer provisioned in SHIELD.',
+        );
+      }
+
+      if (
+        user.status &&
+        ['SUSPENDED', 'INACTIVE', 'DELETED'].includes(user.status.toUpperCase())
+      ) {
+        throw new UnauthorizedException(
+          `User status ${user.status} is not allowed to sign in.`,
+        );
+      }
+
+      if (!user.role?.code) {
+        throw new UnauthorizedException(
+          'Provisioned user does not have an assigned SHIELD role.',
+        );
+      }
+
+      return {
+        subjectId: session.subjectId,
+        sessionId: session.sessionId,
+        principalType: this.toPrincipalType(session.principalType),
+        roleCode: user.role.code,
+        userType: this.toUserType(user.userType ?? user.role.userType),
+        accessScope: this.toAccessScope(
+          user.accessScope ?? user.role.defaultScope,
+          'BRANCH',
+        ),
+        permissions: this.mergeRolePermissions(
+          user.role.code,
+          user.role.rolePermissions
+            .map((entry) => entry.permission.code)
+            .filter((value): value is string => !!value),
+        ),
+        firebaseUid: user.firebaseUid ?? session.firebaseUid ?? '',
+        authProvider: user.authProvider ?? session.authProvider ?? '',
+        customerId: session.customerId?.toString(),
+        userId: user.id.toString(),
+        email: user.email ?? session.email ?? undefined,
+        mobile: user.mobile ?? session.mobile ?? undefined,
+        branchBusinessId:
+          user.branchBusinessId?.toString() ??
+          session.branchBusinessId ??
+          undefined,
+      };
+    }
+
+    if (session.customerId != null) {
+      const customer = await this.prisma.customer.findUnique({
+        where: { id: session.customerId },
+        select: {
+          id: true,
+          uuid: true,
+          mobile: true,
+          email: true,
+          status: true,
+          firebaseUid: true,
+        },
+      });
+
+      if (!customer) {
+        throw new UnauthorizedException('Customer is not provisioned in SHIELD.');
+      }
+
+      if (
+        customer.status &&
+        ['SUSPENDED', 'INACTIVE', 'DELETED'].includes(
+          customer.status.toUpperCase(),
+        )
+      ) {
+        throw new UnauthorizedException(
+          `Customer status ${customer.status} is not allowed to sign in.`,
+        );
+      }
+
+      return {
+        subjectId: customer.uuid,
+        sessionId: session.sessionId,
+        principalType: 'CUSTOMER',
+        roleCode: 'CUSTOMER',
+        userType: 'CUSTOMER',
+        accessScope: 'SELF',
+        permissions: this.mergeRolePermissions('CUSTOMER', []),
+        firebaseUid: customer.firebaseUid ?? session.firebaseUid ?? '',
+        authProvider: session.authProvider ?? '',
+        customerId: customer.id.toString(),
+        userId: undefined,
+        email: customer.email ?? undefined,
+        mobile: customer.mobile ?? undefined,
+        branchBusinessId: undefined,
+      };
+    }
+
+    return this.mapSessionToPrincipal(session);
   }
 
   private getFirebaseProvider(decoded: Record<string, any>) {
