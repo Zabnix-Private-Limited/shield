@@ -61,6 +61,27 @@ class AppTheme {
         side: const BorderSide(color: AppColors.shieldBlue),
       ),
     ),
+    filledButtonTheme: FilledButtonThemeData(
+      style: FilledButton.styleFrom(
+        backgroundColor: AppColors.shieldBlue,
+        foregroundColor: AppColors.white,
+        disabledBackgroundColor: AppColors.divider,
+        disabledForegroundColor: AppColors.gray,
+        padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 16),
+        minimumSize: const Size(0, 52),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        textStyle: AppTypography.body.copyWith(fontWeight: FontWeight.w700),
+      ),
+    ),
+    textButtonTheme: TextButtonThemeData(
+      style: TextButton.styleFrom(
+        foregroundColor: AppColors.shieldBlue,
+        minimumSize: const Size(0, 44),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        textStyle: AppTypography.small.copyWith(fontWeight: FontWeight.w700),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      ),
+    ),
     cardTheme: CardThemeData(
       elevation: 0,
       color: AppColors.white,
@@ -95,6 +116,20 @@ class AppTheme {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
       side: BorderSide.none,
       labelStyle: AppTypography.small,
+    ),
+    tabBarTheme: TabBarThemeData(
+      dividerColor: AppColors.divider,
+      labelColor: AppColors.shieldBlue,
+      unselectedLabelColor: AppColors.gray,
+      labelStyle: AppTypography.small.copyWith(fontWeight: FontWeight.w700),
+      unselectedLabelStyle:
+          AppTypography.small.copyWith(fontWeight: FontWeight.w600),
+      indicator: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        color: AppColors.shieldBlue.withValues(alpha: 0.12),
+      ),
+      indicatorSize: TabBarIndicatorSize.tab,
+      splashFactory: NoSplash.splashFactory,
     ),
     dialogTheme: DialogThemeData(
       backgroundColor: AppColors.white,

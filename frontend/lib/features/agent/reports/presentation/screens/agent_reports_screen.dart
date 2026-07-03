@@ -5,6 +5,7 @@ import '../../../../../shared/services/platform_file_actions.dart';
 import '../../../../../shared/utils/shield_date_utils.dart';
 import '../../../../../shared/widgets/shield_date_picker.dart';
 import '../../../shared/presentation/controllers/agent_portal_provider.dart';
+import '../../../shared/presentation/widgets/agent_design_system.dart';
 import '../../../shared/presentation/widgets/agent_experience_widgets.dart';
 import '../../../shared/presentation/widgets/agent_section_header.dart';
 
@@ -46,54 +47,82 @@ class _AgentReportsScreenState extends ConsumerState<AgentReportsScreen> {
 
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: AgentUi.panelPadding,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            AgentSectionHeader(
+            const AgentSectionHeader(
               title: 'Reports',
               description:
-                  'Reports now behave like report generation tools instead of settings rows, with shared filters, format selection, progress, and recent export visibility.',
+                  'Generate operational exports from one shared reporting workspace with standardized filters, export controls, and history states.',
             ),
-            const SizedBox(height: 12),
+            AgentUi.gapH(AgentUi.space16),
+            AgentMetricGrid(
+              children: [
+                AgentMetricCard(
+                  value: '${reports.length}',
+                  label: 'Report Templates',
+                  helper: 'Templates exposed to the current agent workspace.',
+                  icon: Icons.description_outlined,
+                ),
+                AgentMetricCard(
+                  value: _format,
+                  label: 'Export Format',
+                  helper: 'Current file format for the next export.',
+                  icon: Icons.file_download_outlined,
+                ),
+                AgentMetricCard(
+                  value: _status == 'ALL' ? 'All' : _status,
+                  label: 'Status Filter',
+                  helper: 'Operational filter applied to generated reports.',
+                  icon: Icons.filter_alt_outlined,
+                ),
+                AgentMetricCard(
+                  value: '${_recentExports.length}',
+                  label: 'Recent Exports',
+                  helper: 'Exports generated during the current session.',
+                  icon: Icons.history_outlined,
+                ),
+              ],
+            ),
+            AgentUi.gapH(AgentUi.space16),
             AgentPanelCard(
               title: 'Report Filters',
               subtitle:
-                  'Use one filter bar for all shared agent reports instead of repeating the same controls on every card.',
-              child: Wrap(
-                spacing: 12,
-                runSpacing: 12,
+                  'Use one filter bar for all shared agent reports instead of repeating controls on each report card.',
+              child: AgentFilterWrap(
                 children: [
-                  DropdownButton<String>(
-                    value: _format,
-                    items: const [
-                      DropdownMenuItem(value: 'PDF', child: Text('PDF')),
-                      DropdownMenuItem(value: 'EXCEL', child: Text('Excel')),
-                      DropdownMenuItem(value: 'CSV', child: Text('CSV')),
-                    ],
-                    onChanged: (value) =>
-                        setState(() => _format = value ?? 'PDF'),
-                  ),
-                  DropdownButton<String>(
-                    value: _status,
-                    items: const [
-                      DropdownMenuItem(value: 'ALL', child: Text('All statuses')),
-                      DropdownMenuItem(value: 'PENDING', child: Text('Pending')),
-                      DropdownMenuItem(value: 'COMPLETED', child: Text('Completed')),
-                      DropdownMenuItem(value: 'CANCELLED', child: Text('Cancelled')),
-                    ],
-                    onChanged: (value) =>
-                        setState(() => _status = value ?? 'ALL'),
-                  ),
-                  SizedBox(
-                    width: 260,
-                    child: TextField(
-                      controller: _searchController,
-                      decoration: const InputDecoration(
-                        labelText: 'Search customer / keyword',
-                        prefixIcon: Icon(Icons.search),
-                      ),
+                  AgentFormFieldWidth(
+                    width: 180,
+                    child: DropdownButtonFormField<String>(
+                      initialValue: _format,
+                      decoration: const InputDecoration(labelText: 'Format'),
+                      items: const [
+                        DropdownMenuItem(value: 'PDF', child: Text('PDF')),
+                        DropdownMenuItem(value: 'EXCEL', child: Text('Excel')),
+                        DropdownMenuItem(value: 'CSV', child: Text('CSV')),
+                      ],
+                      onChanged: (value) => setState(() => _format = value ?? 'PDF'),
                     ),
+                  ),
+                  AgentFormFieldWidth(
+                    width: 220,
+                    child: DropdownButtonFormField<String>(
+                      initialValue: _status,
+                      decoration: const InputDecoration(labelText: 'Status'),
+                      items: const [
+                        DropdownMenuItem(value: 'ALL', child: Text('All statuses')),
+                        DropdownMenuItem(value: 'PENDING', child: Text('Pending')),
+                        DropdownMenuItem(value: 'COMPLETED', child: Text('Completed')),
+                        DropdownMenuItem(value: 'CANCELLED', child: Text('Cancelled')),
+                      ],
+                      onChanged: (value) => setState(() => _status = value ?? 'ALL'),
+                    ),
+                  ),
+                  AgentSearchField(
+                    controller: _searchController,
+                    labelText: 'Search Customer or Keyword',
+                    width: 280,
                   ),
                   OutlinedButton.icon(
                     onPressed: () async {
@@ -118,7 +147,7 @@ class _AgentReportsScreenState extends ConsumerState<AgentReportsScreen> {
                     icon: const Icon(Icons.date_range_outlined),
                     label: Text(
                       _dateRange == null
-                          ? 'Choose date range'
+                          ? 'Choose Date Range'
                           : ShieldDateUtils.formatDisplayDateRange(_dateRange!),
                     ),
                   ),
@@ -137,32 +166,30 @@ class _AgentReportsScreenState extends ConsumerState<AgentReportsScreen> {
                               });
                             },
                       icon: const Icon(Icons.refresh_rounded),
-                      label: const Text('Clear filters'),
+                      label: const Text('Clear Filters'),
                     ),
                 ],
               ),
             ),
-            const SizedBox(height: 12),
             if ((_reportErrorMessage ?? '').trim().isNotEmpty) ...[
+              AgentUi.gapH(AgentUi.space12),
               AgentPanelCard(
-                title: 'Report export needs attention',
+                title: 'Report Export Needs Attention',
                 subtitle: _reportErrorMessage,
                 action: TextButton.icon(
                   onPressed: _generating
                       ? null
-                      : () {
-                          setState(() => _reportErrorMessage = null);
-                        },
+                      : () => setState(() => _reportErrorMessage = null),
                   icon: const Icon(Icons.close_rounded),
                   label: const Text('Dismiss'),
                 ),
                 child: Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
+                  spacing: AgentUi.space8,
+                  runSpacing: AgentUi.space8,
                   children: [
                     AgentStatusBadge(
                       label: 'Retry available',
-                      color: Colors.orange.shade700,
+                      color: AgentUi.statusColor(context, 'PENDING'),
                       icon: Icons.refresh_rounded,
                     ),
                     if (_activeReportId != null)
@@ -175,138 +202,165 @@ class _AgentReportsScreenState extends ConsumerState<AgentReportsScreen> {
                                   _activeReportId!,
                                 ),
                         icon: const Icon(Icons.refresh_rounded),
-                        label: const Text('Retry export'),
+                        label: const Text('Retry Export'),
                       ),
                   ],
                 ),
               ),
-              const SizedBox(height: 12),
             ],
             if (_generating) ...[
+              AgentUi.gapH(AgentUi.space12),
               const LinearProgressIndicator(),
-              const SizedBox(height: 8),
+              AgentUi.gapH(AgentUi.space8),
               Text(
                 _activeReportId == null
                     ? 'Generating report export...'
                     : 'Generating ${_resolveReportTitle(reports, _activeReportId!)} export...',
                 style: Theme.of(context).textTheme.bodySmall,
               ),
-              const SizedBox(height: 12),
             ],
+            AgentUi.gapH(AgentUi.space16),
             Expanded(
-              child: reports.isEmpty
-                  ? const AgentEmptyState(
-                      icon: Icons.assessment_outlined,
-                      title: 'No reports available',
-                      message:
-                          'Shared report templates have not been exposed to this workspace yet.',
+              child: ListView(
+                children: [
+                  if (reports.isEmpty)
+                    AgentPanelCard(
+                      title: 'Report Center',
+                      subtitle:
+                          'The reporting workspace stays structured even before backend templates are exposed to this role.',
+                      child: Column(
+                        children: [
+                          const AgentEmptyState(
+                            icon: Icons.insert_chart_outlined,
+                            title: 'No reports available yet',
+                            message:
+                                'Shared report templates have not been exposed to this workspace yet. The export center remains ready with the same categories, filters, and recent-history layout.',
+                          ),
+                          AgentUi.gapH(AgentUi.space16),
+                          AgentMetricGrid(
+                            children: const [
+                              _ReportCategoryCard(
+                                title: 'Customer Operations',
+                                helper:
+                                    'Registrations, follow-ups, and appointment coverage exports.',
+                                icon: Icons.groups_outlined,
+                              ),
+                              _ReportCategoryCard(
+                                title: 'Network Growth',
+                                helper:
+                                    'Referral and reward visibility once templates are available.',
+                                icon: Icons.account_tree_outlined,
+                              ),
+                              _ReportCategoryCard(
+                                title: 'Document Activity',
+                                helper:
+                                    'Verification and upload history exports for customer files.',
+                                icon: Icons.folder_open_outlined,
+                              ),
+                              _ReportCategoryCard(
+                                title: 'Performance',
+                                helper:
+                                    'Monthly productivity and conversion reporting placeholders.',
+                                icon: Icons.bar_chart_outlined,
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
                     )
-                  : ListView(
-                      children: [
-                        Wrap(
-                          spacing: 12,
-                          runSpacing: 12,
-                          children: reports
-                              .map(
-                                (report) => SizedBox(
-                                  width: 320,
-                                  child: AgentPanelCard(
-                                    title:
-                                        report['title']?.toString() ?? 'Report',
-                                    subtitle: report['description']?.toString() ??
-                                        'Shared export from the agent workspace.',
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
+                  else
+                    Wrap(
+                      spacing: AgentUi.space12,
+                      runSpacing: AgentUi.space12,
+                      children: reports
+                          .map(
+                            (report) => SizedBox(
+                              width: 320,
+                              child: AgentPanelCard(
+                                title: report['title']?.toString() ?? 'Report',
+                                subtitle: report['description']?.toString() ??
+                                    'Shared export from the agent workspace.',
+                                minHeight: 220,
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Wrap(
+                                      spacing: AgentUi.space8,
+                                      runSpacing: AgentUi.space8,
                                       children: [
-                                        Wrap(
-                                          spacing: 8,
-                                          runSpacing: 8,
-                                          children: [
-                                            AgentStatusBadge(
-                                              label: _format,
-                                              color: Colors.indigo.shade700,
-                                            ),
-                                            if (_dateRange != null)
-                                              AgentStatusBadge(
-                                                label: ShieldDateUtils
-                                                    .formatDisplayDateRange(
-                                                  _dateRange!,
-                                                ),
-                                                color: Colors.green.shade700,
-                                              ),
-                                            AgentStatusBadge(
-                                              label: _status == 'ALL'
-                                                  ? 'All statuses'
-                                                  : _status,
-                                              color: Colors.blueGrey.shade700,
-                                            ),
-                                          ],
+                                        AgentStatusBadge(
+                                          label: _format,
+                                          color: AgentUi.statusColor(context, 'ACTIVE'),
+                                          icon: Icons.file_present_outlined,
                                         ),
-                                        const SizedBox(height: 12),
-                                        Row(
-                                          children: [
-                                            Expanded(
-                                              child: FilledButton.icon(
-                                                onPressed: _generating
-                                                    ? null
-                                                    : () => _downloadReport(
-                                                          context,
-                                                          controller,
-                                                          report['id']
-                                                                  ?.toString() ??
-                                                              '',
-                                                        ),
-                                                icon: const Icon(
-                                                  Icons.download_rounded,
-                                                ),
-                                                label: Text(
-                                                  _generating &&
-                                                          _activeReportId ==
-                                                              report['id']
-                                                                  ?.toString()
-                                                      ? 'Exporting...'
-                                                      : 'Export',
-                                                ),
-                                              ),
+                                        if (_dateRange != null)
+                                          AgentStatusBadge(
+                                            label: ShieldDateUtils.formatDisplayDateRange(
+                                              _dateRange!,
                                             ),
-                                          ],
+                                            color: AgentUi.statusColor(context, 'COMPLETED'),
+                                            icon: Icons.calendar_today_outlined,
+                                          ),
+                                        AgentStatusBadge(
+                                          label: _status == 'ALL'
+                                              ? 'All statuses'
+                                              : _status,
+                                          color: AgentUi.statusColor(context, _status),
+                                          icon: Icons.filter_alt_outlined,
                                         ),
                                       ],
                                     ),
-                                  ),
+                                    AgentUi.gapH(AgentUi.space16),
+                                    FilledButton.icon(
+                                      onPressed: _generating
+                                          ? null
+                                          : () => _downloadReport(
+                                                context,
+                                                controller,
+                                                report['id']?.toString() ?? '',
+                                              ),
+                                      icon: const Icon(Icons.download_outlined),
+                                      label: Text(
+                                        _generating &&
+                                                _activeReportId ==
+                                                    report['id']?.toString()
+                                            ? 'Exporting...'
+                                            : 'Generate Report',
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                              )
-                              .toList(),
-                        ),
-                        const SizedBox(height: 12),
-                        AgentPanelCard(
-                          title: 'Recent Exports',
-                          subtitle:
-                              'A lightweight history of exports generated in this session.',
-                          child: _recentExports.isEmpty
-                              ? const AgentEmptyState(
-                                  icon: Icons.download_done_outlined,
-                                  title: 'No exports yet',
-                                  message:
-                                      'Generated reports will appear here after the first export in this session.',
-                                )
-                              : Column(
-                                  children: _recentExports
-                                      .map(
-                                        (item) => ListTile(
-                                          contentPadding: EdgeInsets.zero,
-                                          leading: const Icon(
-                                            Icons.download_outlined,
-                                          ),
-                                          title: Text(item),
-                                        ),
-                                      )
-                                      .toList(),
-                                ),
-                        ),
-                      ],
+                              ),
+                            ),
+                          )
+                          .toList(),
                     ),
+                  AgentUi.gapH(AgentUi.space12),
+                  AgentPanelCard(
+                    title: 'Recent Exports',
+                    subtitle:
+                        'A lightweight history of exports generated in this session.',
+                    child: _recentExports.isEmpty
+                        ? const AgentEmptyState(
+                            icon: Icons.download_done_outlined,
+                            title: 'No exports yet',
+                            message:
+                                'Generated reports will appear here after the first export in this session.',
+                          )
+                        : Column(
+                            children: _recentExports
+                                .map(
+                                  (item) => ListTile(
+                                    contentPadding: EdgeInsets.zero,
+                                    leading: const Icon(Icons.download_outlined),
+                                    title: Text(item),
+                                  ),
+                                )
+                                .toList(),
+                          ),
+                  ),
+                ],
+              ),
             ),
           ],
         ),
@@ -347,8 +401,7 @@ class _AgentReportsScreenState extends ConsumerState<AgentReportsScreen> {
       }
       final downloaded = await downloadPlatformFile(
         fileName: exportFile['fileName']?.toString() ?? '$reportId.$_format',
-        mimeType:
-            exportFile['mimeType']?.toString() ?? 'application/octet-stream',
+        mimeType: exportFile['mimeType']?.toString() ?? 'application/octet-stream',
         contentBase64: exportFile['contentBase64']?.toString() ?? '',
       );
       if (!mounted) {
@@ -379,9 +432,7 @@ class _AgentReportsScreenState extends ConsumerState<AgentReportsScreen> {
         _generating = false;
         _reportErrorMessage = _resolveExportError(error);
       });
-      messenger.showSnackBar(
-        SnackBar(content: Text(_reportErrorMessage!)),
-      );
+      messenger.showSnackBar(SnackBar(content: Text(_reportErrorMessage!)));
     }
   }
 
@@ -415,5 +466,28 @@ class _AgentReportsScreenState extends ConsumerState<AgentReportsScreen> {
       return 'The report completed without any exportable content for the selected filters. Adjust the filters and try again.';
     }
     return 'We could not export that report right now. Retry in a moment.';
+  }
+}
+
+class _ReportCategoryCard extends StatelessWidget {
+  const _ReportCategoryCard({
+    required this.title,
+    required this.helper,
+    required this.icon,
+  });
+
+  final String title;
+  final String helper;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return AgentMetricCard(
+      value: 'Soon',
+      label: title,
+      helper: helper,
+      icon: icon,
+      color: Theme.of(context).colorScheme.primary,
+    );
   }
 }

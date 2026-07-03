@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../../shared/presentation/controllers/agent_portal_provider.dart';
+import '../../../shared/presentation/widgets/agent_design_system.dart';
+import '../../../shared/presentation/widgets/agent_experience_widgets.dart';
 import '../../../shared/presentation/widgets/agent_section_header.dart';
 
 class AgentReferralsScreen extends ConsumerStatefulWidget {
@@ -40,113 +42,105 @@ class _AgentReferralsScreenState extends ConsumerState<AgentReferralsScreen> {
 
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: AgentUi.panelPadding,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const AgentSectionHeader(
               title: 'Customer Network',
               description:
-                  'Relationship growth should feel like customer-community building, not referral administration.',
+                  'Track customer growth, reward status, and referral activity through one shared network workspace instead of a collection of unrelated cards.',
             ),
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 12,
-              runSpacing: 12,
+            AgentUi.gapH(AgentUi.space16),
+            AgentMetricGrid(
               children: [
-                _ReferralStatCard(
-                  label: 'Direct customers',
+                AgentMetricCard(
                   value: '${referralSummary['directReferrals'] ?? 0}',
+                  label: 'Direct Customers',
+                  helper: 'Customers directly linked to this member.',
+                  icon: Icons.people_alt_outlined,
                 ),
-                _ReferralStatCard(
-                  label: 'Total network',
+                AgentMetricCard(
                   value: '${referralSummary['totalReferrals'] ?? 0}',
+                  label: 'Total Network',
+                  helper: 'All connected customers in the visible referral graph.',
+                  icon: Icons.account_tree_outlined,
                 ),
-                _ReferralStatCard(
-                  label: 'Network rewards',
+                AgentMetricCard(
                   value: '${referralSummary['availablePoints'] ?? 0}',
+                  label: 'Network Rewards',
+                  helper: 'Reward points still available in the network.',
+                  icon: Icons.card_giftcard_outlined,
                 ),
-                _ReferralStatCard(
-                  label: 'Earned rewards',
+                AgentMetricCard(
                   value: '${referralSummary['earnedPoints'] ?? 0}',
+                  label: 'Earned Rewards',
+                  helper: 'Reward points already claimed or earned.',
+                  icon: Icons.emoji_events_outlined,
                 ),
               ],
             ),
-            const SizedBox(height: 16),
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Customer growth status',
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                    const SizedBox(height: 8),
-                    if (statuses.isEmpty)
-                      const Text('No customer network events have been recorded yet.')
-                    else
-                      ...statuses.entries.map(
-                        (entry) => ListTile(
-                          contentPadding: EdgeInsets.zero,
-                          title: Text(_humanize(entry.key)),
-                          trailing: Text('${entry.value}'),
-                        ),
-                      ),
-                  ],
-                ),
+            AgentUi.gapH(AgentUi.space16),
+            Expanded(
+              child: ListView(
+                children: [
+                  AgentPanelCard(
+                    title: 'Customer Growth Status',
+                    subtitle:
+                        'A normalized view of the status counts currently driving the network.',
+                    child: statuses.isEmpty
+                        ? const AgentEmptyState(
+                            icon: Icons.insights_outlined,
+                            title: 'No network status data',
+                            message:
+                                'Status totals will appear here once referral activity is recorded for this customer.',
+                          )
+                        : Wrap(
+                            spacing: AgentUi.space12,
+                            runSpacing: AgentUi.space12,
+                            children: statuses.entries
+                                .map(
+                                  (entry) => SizedBox(
+                                    width: 220,
+                                    child: AgentKeyValueItem(
+                                      label: _humanize(entry.key),
+                                      value: '${entry.value}',
+                                      icon: Icons.flag_outlined,
+                                    ),
+                                  ),
+                                )
+                                .toList(),
+                          ),
+                  ),
+                  AgentUi.gapH(AgentUi.space12),
+                  LayoutBuilder(
+                    builder: (context, constraints) {
+                      final stack = constraints.maxWidth < 900;
+                      final treeCard = _ReferralTreeCard(tree: referralTree);
+                      final historyCard = _ReferralHistoryCard(history: history);
+                      if (stack) {
+                        return Column(
+                          children: [
+                            treeCard,
+                            AgentUi.gapH(AgentUi.space12),
+                            historyCard,
+                          ],
+                        );
+                      }
+                      return Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(child: treeCard),
+                          AgentUi.gapW(AgentUi.space12),
+                          Expanded(child: historyCard),
+                        ],
+                      );
+                    },
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 16),
-            LayoutBuilder(
-              builder: (context, constraints) {
-                final stack = constraints.maxWidth < 900;
-                final treeCard = _ReferralTreeCard(tree: referralTree);
-                final historyCard = _ReferralHistoryCard(history: history);
-                if (stack) {
-                  return Column(
-                    children: [treeCard, const SizedBox(height: 16), historyCard],
-                  );
-                }
-                return Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(child: treeCard),
-                    const SizedBox(width: 16),
-                    Expanded(child: historyCard),
-                  ],
-                );
-              },
-            ),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-class _ReferralStatCard extends StatelessWidget {
-  const _ReferralStatCard({required this.label, required this.value});
-
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: 180,
-      child: Card(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(label, style: Theme.of(context).textTheme.bodySmall),
-              const SizedBox(height: 8),
-              Text(value, style: Theme.of(context).textTheme.headlineSmall),
-            ],
-          ),
         ),
       ),
     );
@@ -160,21 +154,18 @@ class _ReferralTreeCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Customer tree', style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 8),
-            if (tree.isEmpty)
-              const Text('No customer tree is available for this customer yet.')
-            else
-              _ReferralTreeNode(node: tree, depth: 0),
-          ],
-        ),
-      ),
+    return AgentPanelCard(
+      title: 'Network Tree',
+      subtitle:
+          'A consistent tree view of customer relationships and reward-bearing nodes.',
+      child: tree.isEmpty
+          ? const AgentEmptyState(
+              icon: Icons.account_tree_outlined,
+              title: 'No customer tree yet',
+              message:
+                  'The referral network tree will render here after SHIELD records linked customer relationships.',
+            )
+          : _ReferralTreeNode(node: tree, depth: 0),
     );
   }
 }
@@ -193,20 +184,54 @@ class _ReferralTreeNode extends StatelessWidget {
       ),
     );
     final indent = depth * 20.0;
+    final isActive = node['active'] == true;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Padding(
-          padding: EdgeInsets.only(left: indent, bottom: 8),
-          child: ListTile(
-            dense: true,
-            contentPadding: EdgeInsets.zero,
-            title: Text(node['name']?.toString().trim().isNotEmpty == true
-                ? node['name'].toString()
-                : 'Customer'),
-            subtitle: Text(
-              'Joined ${_formatDate(node['registrationDate'])} • ${node['active'] == true ? 'Active' : 'Inactive'} • Rewards ${node['rewardPoints'] ?? 0}',
-            ),
+        Container(
+          margin: EdgeInsets.only(left: indent, bottom: AgentUi.space12),
+          padding: AgentUi.cardBodyPadding,
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surfaceContainerLowest,
+            borderRadius: AgentUi.radius(AgentUi.radiusMedium),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.primaryContainer,
+                  borderRadius: AgentUi.radius(AgentUi.radiusMedium),
+                ),
+                child: const Icon(Icons.person_outline),
+              ),
+              AgentUi.gapW(AgentUi.space12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      node['name']?.toString().trim().isNotEmpty == true
+                          ? node['name'].toString()
+                          : 'Customer',
+                      style: Theme.of(context).textTheme.titleSmall,
+                    ),
+                    AgentUi.gapH(AgentUi.space4),
+                    Text(
+                      'Joined ${_formatDate(node['registrationDate'])} • Rewards ${node['rewardPoints'] ?? 0}',
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  ],
+                ),
+              ),
+              AgentStatusBadge(
+                label: isActive ? 'Active' : 'Inactive',
+                color: AgentUi.statusColor(context, isActive ? 'ACTIVE' : 'INACTIVE'),
+                icon: isActive ? Icons.check_circle_outline : Icons.pause_circle_outline,
+              ),
+            ],
           ),
         ),
         ...children.map((child) => _ReferralTreeNode(node: child, depth: depth + 1)),
@@ -222,32 +247,35 @@ class _ReferralHistoryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Customer growth activity', style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 8),
-            if (history.isEmpty)
-              const Text('No customer network activity has been recorded yet.')
-            else
-              ...history.take(12).map(
-                (item) => ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: Text(
-                    '${_humanize(item['status'])} • ${item['rewardPoints'] ?? 0} reward points',
-                  ),
-                  subtitle: Text(
-                    'Linked customer ${item['referredCustomerId'] ?? '-'}',
-                  ),
-                  trailing: Text(_formatDate(item['createdAt'])),
-                ),
-              ),
-          ],
-        ),
-      ),
+    return AgentPanelCard(
+      title: 'Customer Growth Activity',
+      subtitle:
+          'A shared activity list for reward events and customer network changes.',
+      child: history.isEmpty
+          ? const AgentEmptyState(
+              icon: Icons.history_outlined,
+              title: 'No network activity yet',
+              message:
+                  'Reward and referral events will appear here once the customer network starts growing.',
+            )
+          : Column(
+              children: history
+                  .take(12)
+                  .map(
+                    (item) => ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: const Icon(Icons.timeline_outlined),
+                      title: Text(
+                        '${_humanize(item['status'])} • ${item['rewardPoints'] ?? 0} reward points',
+                      ),
+                      subtitle: Text(
+                        'Linked customer ${item['referredCustomerId'] ?? '-'}',
+                      ),
+                      trailing: Text(_formatDate(item['createdAt'])),
+                    ),
+                  )
+                  .toList(),
+            ),
     );
   }
 }

@@ -624,10 +624,10 @@ class _PortalSectionFactory {
   static final PortalSectionData agentProfile = _section(
     'profile',
       title: 'Account',
-    summary: 'Agent identity, contact info, branch assignment, and session-ready account details.',
+    summary: 'Agent identity, contact info, and employee assignment details.',
   );
   static final PortalSectionData agentSettings = _section(
     'settings',
-    summary: 'Profile updates, session controls, and portal preferences foundation.',
+    summary: 'Portal preferences, workspace behavior, devices, and session security.',
   );
 }

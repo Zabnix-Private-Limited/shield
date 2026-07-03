@@ -22,8 +22,58 @@ class ProviderDocumentsScreen extends StatelessWidget {
         final otherDocuments = controller.selectedOtherDocuments;
 
         Future<void> openDocument(dynamic document) async {
-          final url = await controller.getPatientDocumentDownloadUrl(document.id);
-          await openPlatformUrl(url);
+          final messenger = ScaffoldMessenger.of(context);
+          try {
+            final url = await controller.getPatientDocumentDownloadUrl(document.id);
+            if (url.trim().isEmpty) {
+              throw StateError('Document link unavailable');
+            }
+            final opened = await openPlatformUrl(url);
+            if (!opened) {
+              messenger.showSnackBar(
+                const SnackBar(
+                  content: Text(
+                    'This device cannot open the document automatically yet.',
+                  ),
+                ),
+              );
+            }
+          } catch (_) {
+            messenger.showSnackBar(
+              const SnackBar(
+                content: Text('We could not open that document right now.'),
+              ),
+            );
+          }
+        }
+
+        Future<void> downloadDocument(dynamic document) async {
+          final messenger = ScaffoldMessenger.of(context);
+          try {
+            final url = await controller.getPatientDocumentDownloadUrl(document.id);
+            if (url.trim().isEmpty) {
+              throw StateError('Document link unavailable');
+            }
+            final downloaded = await downloadPlatformUrl(
+              url,
+              fileName: document.fileName,
+            );
+            if (!downloaded) {
+              messenger.showSnackBar(
+                const SnackBar(
+                  content: Text(
+                    'The document is ready, but automatic download is not available on this device.',
+                  ),
+                ),
+              );
+            }
+          } catch (_) {
+            messenger.showSnackBar(
+              const SnackBar(
+                content: Text('We could not download that document right now.'),
+              ),
+            );
+          }
         }
 
         void openPatientRecord() {
@@ -47,6 +97,7 @@ class ProviderDocumentsScreen extends StatelessWidget {
               emptyMessage: 'No prescription files are linked to this patient yet.',
               documents: prescriptions,
               onOpen: openDocument,
+              onDownload: downloadDocument,
               onOpenPatient: openPatientRecord,
             ),
             const SizedBox(height: 16),
@@ -55,6 +106,7 @@ class ProviderDocumentsScreen extends StatelessWidget {
               emptyMessage: 'No lab reports have been uploaded yet.',
               documents: labReports,
               onOpen: openDocument,
+              onDownload: downloadDocument,
               onOpenPatient: openPatientRecord,
             ),
             const SizedBox(height: 16),
@@ -63,6 +115,7 @@ class ProviderDocumentsScreen extends StatelessWidget {
               emptyMessage: 'No invoice files are available yet.',
               documents: invoices,
               onOpen: openDocument,
+              onDownload: downloadDocument,
               onOpenPatient: openPatientRecord,
             ),
             const SizedBox(height: 16),
@@ -71,6 +124,7 @@ class ProviderDocumentsScreen extends StatelessWidget {
               emptyMessage: 'No other records are available for this patient yet.',
               documents: otherDocuments,
               onOpen: openDocument,
+              onDownload: downloadDocument,
               onOpenPatient: openPatientRecord,
             ),
           ],
@@ -86,6 +140,7 @@ class _DocumentSection extends StatelessWidget {
     required this.emptyMessage,
     required this.documents,
     required this.onOpen,
+    required this.onDownload,
     required this.onOpenPatient,
   });
 
@@ -93,6 +148,7 @@ class _DocumentSection extends StatelessWidget {
   final String emptyMessage;
   final List<dynamic> documents;
   final Future<void> Function(dynamic document) onOpen;
+  final Future<void> Function(dynamic document) onDownload;
   final VoidCallback onOpenPatient;
 
   @override
@@ -127,6 +183,10 @@ class _DocumentSection extends StatelessWidget {
                     TextButton(
                       onPressed: () => onOpen(document),
                       child: const Text('Open'),
+                    ),
+                    TextButton(
+                      onPressed: () => onDownload(document),
+                      child: const Text('Download'),
                     ),
                     TextButton(
                       onPressed: onOpenPatient,

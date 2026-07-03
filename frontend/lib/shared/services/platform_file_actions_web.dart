@@ -34,3 +34,19 @@ Future<bool> openPlatformUrl(String url) async {
   html.window.open(url, '_blank');
   return true;
 }
+
+Future<bool> downloadPlatformUrl(String url, {String? fileName}) async {
+  final anchor =
+      html.AnchorElement(href: url)
+        ..style.display = 'none';
+  if ((fileName ?? '').trim().isNotEmpty) {
+    anchor.download = fileName!;
+  }
+  html.document.body?.append(anchor);
+  try {
+    anchor.click();
+    return true;
+  } finally {
+    anchor.remove();
+  }
+}

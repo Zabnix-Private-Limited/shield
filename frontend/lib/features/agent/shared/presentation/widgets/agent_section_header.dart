@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 
+import '../../../../../app/theme/app_colors.dart';
+import '../../../../../app/theme/app_typography.dart';
+import 'agent_design_system.dart';
+
 class AgentSectionHeader extends StatelessWidget {
   const AgentSectionHeader({
     super.key,
@@ -19,8 +23,8 @@ class AgentSectionHeader extends StatelessWidget {
     final actionRow = actionWidgets.isEmpty
         ? null
         : Wrap(
-            spacing: 8,
-            runSpacing: 8,
+            spacing: AgentUi.space8,
+            runSpacing: AgentUi.space8,
             alignment: WrapAlignment.end,
             children: actionWidgets,
           );
@@ -29,14 +33,17 @@ class AgentSectionHeader extends StatelessWidget {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: Theme.of(context).textTheme.titleLarge),
-          const SizedBox(height: 4),
-          Text(description, style: Theme.of(context).textTheme.bodyMedium),
+          Text(title, style: AppTypography.h4),
+          AgentUi.gapH(AgentUi.space4),
+          Text(
+            description,
+            style: AppTypography.body.copyWith(color: AppColors.gray),
+          ),
           if (actionRow != null) ...[
-            const SizedBox(height: 12),
+            AgentUi.gapH(AgentUi.space16),
             actionRow,
           ],
-          const SizedBox(height: 12),
+          AgentUi.gapH(AgentUi.space16),
           const Divider(height: 1),
         ],
       );
@@ -51,20 +58,20 @@ class AgentSectionHeader extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title, style: Theme.of(context).textTheme.titleLarge),
-                  const SizedBox(height: 4),
+                  Text(title, style: AppTypography.h4),
+                  AgentUi.gapH(AgentUi.space4),
                   Text(
                     description,
-                    style: Theme.of(context).textTheme.bodyMedium,
+                    style: AppTypography.body.copyWith(color: AppColors.gray),
                   ),
                 ],
               ),
             ),
-            if (actionRow != null) const SizedBox(width: 16),
+            if (actionRow != null) AgentUi.gapW(AgentUi.space16),
             if (actionRow != null) Flexible(child: actionRow),
           ],
         ),
-        const SizedBox(height: 12),
+        AgentUi.gapH(AgentUi.space16),
         const Divider(height: 1),
       ],
     );

@@ -7810,3 +7810,85 @@ est build, ackend/vercel.json, ackend/src/auth/auth.service.ts, and uth_devic
 - `cd backend && npm test` ✅
 ### Timestamp
 - 2026-07-03 15:53:37 IST
+
+## 211. Follow-Ups Empty-State Refactor Verification Closure
+**High-level desc**: Resumed the in-progress Follow-Ups empty-state refactor from the current working tree after `#210`, verified the live implementation against the reported layout concern, and confirmed the workflow is green without requiring additional production-code changes.
+- Re-ran the focused Follow-Ups widget regression to confirm the current screen no longer crashes with the previously reported `Expanded`/layout failure and still renders a single workflow-level empty state.
+- Re-ran full frontend verification to confirm loading, empty, error, and populated workflow coverage remains stable in the current tree and the broader Flutter workspace is not regressing around the follow-up slice.
+- Re-ran backend build and test verification so the resumed frontend completion pass closes with the repository in a fully green state instead of only a local widget-level confirmation.
+- Kept the source tree unchanged because the current implementation already satisfied the refactor objective and all verification gates passed from the existing working tree.
+### Files Modified/Created
+**Frontend Files (Modified)**:
+- log.md
+**Backend Files (Modified)**:
+- None.
+### Verification
+- `cd frontend && flutter test test/agent_followups_screen_test.dart` ✅
+- `cd frontend && flutter analyze --no-pub` ✅
+- `cd frontend && flutter test` ✅
+- `cd backend && npm run build` ✅
+- `cd backend && npm test` ✅
+### Timestamp
+- 2026-07-03 16:27:00 IST
+## 212. Agent + Provider Document Workflow Hardening
+**High-level desc**: Replaced dead-end document actions with a working document workflow across the agent and provider portals so uploaded files can be opened, downloaded, and recovered through explicit product states instead of link-copy workarounds and silent failures.
+- Hardened the agent document workspace with explicit loading, workspace-error, customer-selection, customer-loading, filtered-empty, and no-document states so the screen now behaves like a real operational module instead of a static upload/history panel.
+- Fixed a production layout bug in the agent document screen by moving the document body into a bounded scroll region and restructuring the required-document rows so large desktop cards no longer overflow when statuses, labels, and actions compete for width.
+- Replaced the agent-side `Copy link` fallback as the primary file action with real preview, download, and copy-link behaviors backed by the existing backend download URL, including in-progress button states and user-facing failure messages for permission, missing-link, and network problems.
+- Added shared signed-URL download support in the platform file-actions layer so web document flows can trigger real browser downloads from backend-issued URLs instead of only handling base64 payloads.
+- Standardized provider document handling with the same explicit open/download behavior so provider users are no longer limited to an open-only action on records that the backend already exposes as downloadable files.
+- Added a widget regression test covering the no-customer document state so the portal keeps rendering an actionable workspace state instead of falling back to a generic empty panel.
+### Files Modified/Created
+**Frontend Files (Modified)**:
+- frontend/lib/features/agent/documents/presentation/screens/agent_documents_screen.dart
+- frontend/lib/features/provider/documents/presentation/screens/provider_documents_screen.dart
+- frontend/lib/shared/services/platform_file_actions_stub.dart
+- frontend/lib/shared/services/platform_file_actions_web.dart
+- log.md
+**Frontend Files (New)**:
+- frontend/test/agent_documents_screen_test.dart
+**Backend Files (Modified)**:
+- None.
+### Verification
+- `cd frontend && flutter analyze --no-pub lib/features/agent/documents/presentation/screens/agent_documents_screen.dart lib/features/provider/documents/presentation/screens/provider_documents_screen.dart lib/shared/services/platform_file_actions_stub.dart lib/shared/services/platform_file_actions_web.dart test/agent_documents_screen_test.dart` ✅
+- `cd frontend && flutter test test/agent_documents_screen_test.dart` ✅
+- `cd frontend && flutter analyze --no-pub` ✅
+- `cd frontend && flutter test` ✅
+- `cd backend && npm run build` ✅
+- `cd backend && npm test` ✅
+### Timestamp
+- 2026-07-03 16:39:03 IST
+## 213. Agent Portal Design System + Account/Settings IA Cleanup
+**High-level desc**: Started the major SHIELD Agent Portal UI consistency refactor by extracting a shared design system, standardizing core portal primitives, and migrating the most inconsistent/high-impact screens onto the new system without changing business logic, routes, backend behavior, or branding.
+- Added one reusable agent design-system layer with shared spacing, radii, icon sizing, chip padding, field widths, and helper components so the portal no longer depends on random per-screen spacing and ad-hoc layout values.
+- Rebuilt the shared agent UI primitives (`AgentPanelCard`, `AgentMetricCard`, `AgentStatusBadge`, `AgentEmptyState`, `AgentErrorState`, `AgentSectionHeader`) so cards, metrics, chips, empty states, and page headers now use one consistent visual language across the portal.
+- Extended the global Flutter theme with standardized `FilledButton`, `TextButton`, and `TabBar` behavior so button hierarchy, tab styling, and interaction density align better across agent screens without introducing new colors or changing SHIELD branding.
+- Refactored `My Account` versus `Settings` into clearly different destinations: `My Account` now focuses on editable identity plus employee details, while `Settings` now owns application preferences, workspace behavior, branch request workflow, device behavior, and security/session management instead of duplicating profile content.
+- Added widget regression coverage to prove the new separation: the profile route no longer exposes settings tabs, and the settings route no longer renders the profile form sections.
+- Migrated the Reports workspace onto the new system with standardized metric cards, filter layout, report category placeholders, structured export history, and consistent empty/error states so the page no longer feels like a sparse utility screen.
+- Migrated the Customer Network screen onto the same shared system with standardized metrics, section cards, empty states, and cleaner tree/history presentation so the network workflow feels like part of the same product rather than a standalone page.
+- Updated agent portal section metadata summaries so navigation copy now matches the new information architecture for Account versus Settings.
+### Files Modified/Created
+**Frontend Files (Modified)**:
+- frontend/lib/app/theme/app_theme.dart
+- frontend/lib/features/agent/referrals/presentation/screens/agent_referrals_screen.dart
+- frontend/lib/features/agent/reports/presentation/screens/agent_reports_screen.dart
+- frontend/lib/features/agent/settings/presentation/screens/agent_settings_screen.dart
+- frontend/lib/features/agent/shared/presentation/widgets/agent_experience_widgets.dart
+- frontend/lib/features/agent/shared/presentation/widgets/agent_section_header.dart
+- frontend/lib/features/portal/presentation/portal_role_data.dart
+- log.md
+**Frontend Files (New)**:
+- frontend/lib/features/agent/shared/presentation/widgets/agent_design_system.dart
+- frontend/test/agent_settings_screen_test.dart
+**Backend Files (Modified)**:
+- None.
+### Verification
+- `cd frontend && flutter analyze --no-pub lib/app/theme/app_theme.dart lib/features/agent/shared/presentation/widgets/agent_design_system.dart lib/features/agent/shared/presentation/widgets/agent_experience_widgets.dart lib/features/agent/shared/presentation/widgets/agent_section_header.dart lib/features/agent/settings/presentation/screens/agent_settings_screen.dart lib/features/agent/reports/presentation/screens/agent_reports_screen.dart lib/features/agent/referrals/presentation/screens/agent_referrals_screen.dart lib/features/portal/presentation/portal_role_data.dart test/agent_settings_screen_test.dart` ✅
+- `cd frontend && flutter test test/agent_settings_screen_test.dart` ✅
+- `cd frontend && flutter analyze --no-pub` ✅
+- `cd frontend && flutter test` ✅
+- `cd backend && npm run build` ✅
+- `cd backend && npm test` ✅
+### Timestamp
+- 2026-07-03 17:13:23 IST

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
-import '../../../../../shared/services/api_service.dart';
 import '../../../../../shared/services/platform_file_actions.dart';
 import '../../../../../shared/utils/prescription_file_picker.dart';
 import '../../../shared/presentation/controllers/agent_portal_provider.dart';
@@ -22,6 +22,8 @@ class _AgentDocumentsScreenState extends ConsumerState<AgentDocumentsScreen> {
   String _filter = 'ALL';
   String _query = '';
   String _sort = 'NEWEST';
+  String? _activeDocumentId;
+  _DocumentAction? _activeDocumentAction;
 
   @override
   void initState() {
@@ -64,6 +66,15 @@ class _AgentDocumentsScreenState extends ConsumerState<AgentDocumentsScreen> {
         .map((doc) => (doc['documentType'] ?? '').toString().toUpperCase())
         .toSet();
 
+    if (controller.isLoading && controller.workspace.isEmpty) {
+      return _buildWorkspaceLoadingState();
+    }
+
+    if ((controller.error ?? '').trim().isNotEmpty &&
+        controller.workspace.isEmpty) {
+      return _buildWorkspaceErrorState(controller.error!);
+    }
+
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -76,31 +87,37 @@ class _AgentDocumentsScreenState extends ConsumerState<AgentDocumentsScreen> {
                   'This customer-first document flow now behaves more like a lightweight DMS: required files, status badges, verification states, sorting, and quick preview actions.',
             ),
             const SizedBox(height: 12),
-            LayoutBuilder(
-              builder: (context, constraints) {
-                final stack = constraints.maxWidth < 980;
-                final left = _buildRequiredDocumentsCard(
-                  context,
-                  customerId,
-                  customerName,
-                  uploadedTypes,
-                  controller,
-                );
-                final right = _buildHistoryCard(context, controller, docs);
-                if (stack) {
-                  return Column(
-                    children: [left, const SizedBox(height: 16), right],
+            Expanded(
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final stack = constraints.maxWidth < 980;
+                  final left = _buildRequiredDocumentsCard(
+                    context,
+                    customerId,
+                    customerName,
+                    uploadedTypes,
+                    controller,
                   );
-                }
-                return Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    SizedBox(width: 320, child: left),
-                    const SizedBox(width: 16),
-                    Expanded(child: right),
-                  ],
-                );
-              },
+                  final right = _buildHistoryCard(context, controller, docs);
+                  return ListView(
+                    children: [
+                      if (stack) ...[
+                        left,
+                        const SizedBox(height: 16),
+                        right,
+                      ] else
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            SizedBox(width: 320, child: left),
+                            const SizedBox(width: 16),
+                            Expanded(child: right),
+                          ],
+                        ),
+                    ],
+                  );
+                },
+              ),
             ),
           ],
         ),
@@ -148,7 +165,8 @@ class _AgentDocumentsScreenState extends ConsumerState<AgentDocumentsScreen> {
                 borderRadius: BorderRadius.circular(14),
                 color: Theme.of(context).colorScheme.surfaceContainerLowest,
               ),
-              child: Row(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   AgentStatusBadge(
                     label: uploadedTypes.contains(doc.type)
@@ -161,11 +179,17 @@ class _AgentDocumentsScreenState extends ConsumerState<AgentDocumentsScreen> {
                         ? Icons.check_circle
                         : Icons.radio_button_unchecked,
                   ),
-                  const SizedBox(width: 10),
-                  Expanded(child: Text(doc.label)),
-                  TextButton(
-                    onPressed: () => setState(() => _documentType = doc.type),
-                    child: Text(_documentType == doc.type ? 'Selected' : 'Choose'),
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      Expanded(child: Text(doc.label)),
+                      TextButton(
+                        onPressed: () => setState(() => _documentType = doc.type),
+                        child: Text(
+                          _documentType == doc.type ? 'Selected' : 'Choose',
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -177,7 +201,7 @@ class _AgentDocumentsScreenState extends ConsumerState<AgentDocumentsScreen> {
             runSpacing: 8,
             children: [
               FilledButton.icon(
-                onPressed: customerId == null
+                onPressed: customerId == null || controller.isSaving
                     ? null
                     : () => _uploadDocument(
                           controller,
@@ -186,10 +210,10 @@ class _AgentDocumentsScreenState extends ConsumerState<AgentDocumentsScreen> {
                           replaceExisting: false,
                         ),
                 icon: const Icon(Icons.upload_file_outlined),
-                label: const Text('Upload'),
+                label: Text(controller.isSaving ? 'Uploading...' : 'Upload'),
               ),
               OutlinedButton.icon(
-                onPressed: customerId == null
+                onPressed: customerId == null || controller.isSaving
                     ? null
                     : () => _uploadDocument(
                           controller,
@@ -200,6 +224,12 @@ class _AgentDocumentsScreenState extends ConsumerState<AgentDocumentsScreen> {
                 icon: const Icon(Icons.refresh_outlined),
                 label: const Text('Replace'),
               ),
+              if (customerId == null)
+                TextButton.icon(
+                  onPressed: () => context.go('/portal/agent/customers'),
+                  icon: const Icon(Icons.people_alt_outlined),
+                  label: const Text('Open Customers'),
+                ),
             ],
           ),
           const SizedBox(height: 12),
@@ -217,6 +247,9 @@ class _AgentDocumentsScreenState extends ConsumerState<AgentDocumentsScreen> {
     dynamic controller,
     List<Map<String, dynamic>> docs,
   ) {
+    final hasCustomer = controller.selectedCustomerId != null;
+    final hasFilters = _query.trim().isNotEmpty || _filter != 'ALL';
+
     return AgentPanelCard(
       title: 'Document History',
       subtitle:
@@ -260,12 +293,59 @@ class _AgentDocumentsScreenState extends ConsumerState<AgentDocumentsScreen> {
             ],
           ),
           const SizedBox(height: 16),
-          if (docs.isEmpty)
-            const AgentEmptyState(
-              icon: Icons.folder_copy_outlined,
-              title: 'No documents found',
+          if (!hasCustomer)
+            AgentEmptyState(
+              icon: Icons.people_alt_outlined,
+              title: 'Choose a customer first',
               message:
-                  'Select a customer and upload the first required file to start the document timeline.',
+                  'Open the customer workspace before previewing, downloading, or replacing documents so SHIELD can anchor the file timeline to one member.',
+              actionLabel: 'Open Customers',
+              onAction: () => context.go('/portal/agent/customers'),
+              secondaryActionLabel: 'Refresh',
+              onSecondaryAction: () =>
+                  ref.read(agentPortalControllerProvider).refreshWorkspace(),
+            )
+          else if (controller.isCustomerLoading &&
+              controller.selectedCustomerWorkspace.isEmpty)
+            const AgentPanelCard(
+              title: 'Loading Documents',
+              subtitle:
+                  'Fetching the selected customer document timeline and verification status.',
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  LinearProgressIndicator(),
+                  SizedBox(height: 12),
+                  Text('Loading customer documents...'),
+                ],
+              ),
+            )
+          else if ((controller.error ?? '').trim().isNotEmpty &&
+              controller.selectedCustomerWorkspace.isEmpty)
+            AgentErrorState(
+              title: 'We could not load this customer workspace',
+              message: _resolveDocumentError(
+                controller.error!,
+                fallback:
+                    'The selected customer documents could not be loaded right now.',
+              ),
+              onRetry: () => ref
+                  .read(agentPortalControllerProvider)
+                  .selectCustomer(controller.selectedCustomerId!),
+            )
+          else if (docs.isEmpty)
+            AgentEmptyState(
+              icon: hasFilters
+                  ? Icons.filter_alt_off_outlined
+                  : Icons.folder_copy_outlined,
+              title: hasFilters ? 'No documents match these filters' : 'No documents found',
+              message: hasFilters
+                  ? 'Try clearing the active search or status filter to bring back the customer document timeline.'
+                  : 'Upload the first required file to start the document timeline for this customer.',
+              actionLabel: hasFilters ? 'Clear Filters' : 'Upload Document',
+              onAction: hasFilters
+                  ? _clearFilters
+                  : () => setState(() => _documentType = 'ID_PROOF'),
             )
           else
             ...docs.map(
@@ -344,20 +424,54 @@ class _AgentDocumentsScreenState extends ConsumerState<AgentDocumentsScreen> {
                       children: [
                         IconButton(
                           tooltip: 'Preview',
-                          onPressed: () => _previewDocument(
+                          onPressed: _isDocumentActionBusy(
+                            doc['id']?.toString() ?? '',
+                          )
+                              ? null
+                              : () => _previewDocument(
                             context,
                             controller,
                             doc['id']?.toString() ?? '',
                           ),
-                          icon: const Icon(Icons.visibility_outlined),
+                          icon: _buildDocumentActionIcon(
+                            doc['id']?.toString() ?? '',
+                            _DocumentAction.preview,
+                            Icons.visibility_outlined,
+                          ),
+                        ),
+                        IconButton(
+                          tooltip: 'Download',
+                          onPressed: _isDocumentActionBusy(
+                            doc['id']?.toString() ?? '',
+                          )
+                              ? null
+                              : () => _downloadDocument(
+                            context,
+                            controller,
+                            doc,
+                          ),
+                          icon: _buildDocumentActionIcon(
+                            doc['id']?.toString() ?? '',
+                            _DocumentAction.download,
+                            Icons.download_outlined,
+                          ),
                         ),
                         IconButton(
                           tooltip: 'Copy link',
-                          onPressed: () => _copyLink(
-                            context,
+                          onPressed: _isDocumentActionBusy(
                             doc['id']?.toString() ?? '',
+                          )
+                              ? null
+                              : () => _copyLink(
+                            context,
+                            controller,
+                            doc,
                           ),
-                          icon: const Icon(Icons.link_outlined),
+                          icon: _buildDocumentActionIcon(
+                            doc['id']?.toString() ?? '',
+                            _DocumentAction.copy,
+                            Icons.link_outlined,
+                          ),
                         ),
                       ],
                     ),
@@ -380,26 +494,34 @@ class _AgentDocumentsScreenState extends ConsumerState<AgentDocumentsScreen> {
     if (file == null) {
       return;
     }
-    await controller.uploadCustomerDocument(
-      customerId: customerId,
-      fileName: file.name,
-      documentType: documentType,
-      fileBytes: file.bytes,
-      mimeType: file.mimeType ?? 'application/octet-stream',
-      fileSize: file.size,
-    );
-    if (!mounted) {
-      return;
-    }
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          replaceExisting
-              ? 'Document replacement uploaded successfully.'
-              : 'Document uploaded successfully.',
+    try {
+      await controller.uploadCustomerDocument(
+        customerId: customerId,
+        fileName: file.name,
+        documentType: documentType,
+        fileBytes: file.bytes,
+        mimeType: file.mimeType ?? 'application/octet-stream',
+        fileSize: file.size,
+      );
+      if (!mounted) {
+        return;
+      }
+      _showMessage(
+        replaceExisting
+            ? 'Document replacement uploaded successfully.'
+            : 'Document uploaded successfully.',
+      );
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+      _showMessage(
+        _resolveDocumentError(
+          error,
+          fallback: 'We could not upload this document right now.',
         ),
-      ),
-    );
+      );
+    }
   }
 
   Future<void> _previewDocument(
@@ -407,36 +529,174 @@ class _AgentDocumentsScreenState extends ConsumerState<AgentDocumentsScreen> {
     dynamic controller,
     String documentId,
   ) async {
-    final messenger = ScaffoldMessenger.of(context);
-    final url = await controller.getCustomerDocumentDownloadUrl(documentId);
-    if (!context.mounted || url.trim().isEmpty) {
-      return;
-    }
-    final opened = await openPlatformUrl(url);
-    if (!context.mounted) {
-      return;
-    }
-    messenger.showSnackBar(
-      SnackBar(
-        content: Text(
-          opened
-              ? 'Document opened in a new tab.'
-              : 'The download link is ready, but opening it is not supported on this device.',
-        ),
+    await _runDocumentAction(
+      documentId: documentId,
+      action: _DocumentAction.preview,
+      operation: () async {
+        final url = await _resolveDocumentUrl(controller, documentId);
+        final opened = await openPlatformUrl(url);
+        if (!opened) {
+          throw const _DocumentActionException(
+            'The document is ready, but opening it is not supported on this device.',
+          );
+        }
+      },
+      successMessage: 'Document opened in a new tab.',
+      failureFallback: 'We could not open that document right now.',
+    );
+  }
+
+  Future<void> _downloadDocument(
+    BuildContext context,
+    dynamic controller,
+    Map<String, dynamic> document,
+  ) async {
+    final documentId = document['id']?.toString() ?? '';
+    await _runDocumentAction(
+      documentId: documentId,
+      action: _DocumentAction.download,
+      operation: () async {
+        final url = await _resolveDocumentUrl(controller, documentId);
+        final downloaded = await downloadPlatformUrl(
+          url,
+          fileName: document['fileName']?.toString(),
+        );
+        if (!downloaded) {
+          throw const _DocumentActionException(
+            'The document is ready, but automatic download is not available on this device.',
+          );
+        }
+      },
+      successMessage: 'Document download started.',
+      failureFallback: 'We could not download that document right now.',
+    );
+  }
+
+  Future<void> _copyLink(
+    BuildContext context,
+    dynamic controller,
+    Map<String, dynamic> document,
+  ) async {
+    final documentId = document['id']?.toString() ?? '';
+    await _runDocumentAction(
+      documentId: documentId,
+      action: _DocumentAction.copy,
+      operation: () async {
+        final url = await _resolveDocumentUrl(controller, documentId);
+        await Clipboard.setData(ClipboardData(text: url));
+      },
+      successMessage: 'Download link copied for this document.',
+      failureFallback: 'We could not copy the document link right now.',
+    );
+  }
+
+  Widget _buildWorkspaceLoadingState() {
+    return const AgentPanelCard(
+      title: 'Documents',
+      subtitle:
+          'Loading the document workspace so uploads, verification states, and customer history stay synchronized.',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          LinearProgressIndicator(),
+          SizedBox(height: 12),
+          Text('Loading document workspace...'),
+        ],
       ),
     );
   }
 
-  Future<void> _copyLink(BuildContext context, String documentId) async {
-    final messenger = ScaffoldMessenger.of(context);
-    final url = await ApiService.getDocumentDownloadUrl(documentId);
-    if (!context.mounted) {
+  Widget _buildWorkspaceErrorState(String message) {
+    return AgentPanelCard(
+      title: 'Documents Unavailable',
+      subtitle:
+          'The document workspace could not be loaded, so SHIELD is showing a recoverable state instead of a dead-end panel.',
+      child: AgentErrorState(
+        title: 'We could not load the document workflow',
+        message: _resolveDocumentError(
+          message,
+          fallback: 'The document workspace could not be loaded right now.',
+        ),
+        onRetry: () => ref.read(agentPortalControllerProvider).refreshWorkspace(),
+      ),
+    );
+  }
+
+  Future<void> _runDocumentAction({
+    required String documentId,
+    required _DocumentAction action,
+    required Future<void> Function() operation,
+    required String successMessage,
+    required String failureFallback,
+  }) async {
+    if (documentId.trim().isEmpty) {
+      _showMessage(failureFallback);
       return;
     }
-    await Clipboard.setData(ClipboardData(text: url));
-    messenger.showSnackBar(
-      const SnackBar(content: Text('Download link copied for this document.')),
-    );
+    setState(() {
+      _activeDocumentId = documentId;
+      _activeDocumentAction = action;
+    });
+    try {
+      await operation();
+      if (!mounted) {
+        return;
+      }
+      _showMessage(successMessage);
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+      _showMessage(_resolveDocumentError(error, fallback: failureFallback));
+    } finally {
+      if (mounted) {
+        setState(() {
+          _activeDocumentId = null;
+          _activeDocumentAction = null;
+        });
+      }
+    }
+  }
+
+  Future<String> _resolveDocumentUrl(dynamic controller, String documentId) async {
+    final url = await controller.getCustomerDocumentDownloadUrl(documentId) as String;
+    if (url.trim().isEmpty) {
+      throw const _DocumentActionException('Document link unavailable.');
+    }
+    return url;
+  }
+
+  bool _isDocumentActionBusy(String documentId) =>
+      _activeDocumentId == documentId && _activeDocumentAction != null;
+
+  Widget _buildDocumentActionIcon(
+    String documentId,
+    _DocumentAction action,
+    IconData icon,
+  ) {
+    if (_activeDocumentId == documentId && _activeDocumentAction == action) {
+      return const SizedBox(
+        width: 18,
+        height: 18,
+        child: CircularProgressIndicator(strokeWidth: 2),
+      );
+    }
+    return Icon(icon);
+  }
+
+  void _clearFilters() {
+    setState(() {
+      _query = '';
+      _filter = 'ALL';
+      _sort = 'NEWEST';
+    });
+  }
+
+  void _showMessage(String message) {
+    final messenger = ScaffoldMessenger.of(context);
+    messenger
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(message)));
   }
 }
 
@@ -445,6 +705,17 @@ class _RequiredDoc {
 
   final String type;
   final String label;
+}
+
+enum _DocumentAction { preview, download, copy }
+
+class _DocumentActionException implements Exception {
+  const _DocumentActionException(this.message);
+
+  final String message;
+
+  @override
+  String toString() => message;
 }
 
 IconData _docIcon(String? fileName) {
@@ -502,4 +773,25 @@ String _formatDate(dynamic value) {
   }
   final local = parsed.toLocal();
   return '${local.day.toString().padLeft(2, '0')}/${local.month.toString().padLeft(2, '0')}/${local.year}';
+}
+
+String _resolveDocumentError(
+  Object error, {
+  required String fallback,
+}) {
+  final message = error.toString().trim();
+  final lowered = message.toLowerCase();
+  if (error is _DocumentActionException) {
+    return error.message;
+  }
+  if (lowered.contains('403') || lowered.contains('forbidden')) {
+    return 'Your current SHIELD role does not have access to this document action yet.';
+  }
+  if (lowered.contains('404') || lowered.contains('not found')) {
+    return 'This document is no longer available from the backend.';
+  }
+  if (lowered.contains('network') || lowered.contains('socket')) {
+    return 'The document service could not be reached because the network connection is unavailable.';
+  }
+  return message.isEmpty ? fallback : message;
 }

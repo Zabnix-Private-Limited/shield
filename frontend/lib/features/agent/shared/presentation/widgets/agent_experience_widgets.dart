@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 
+import '../../../../../app/theme/app_colors.dart';
+import '../../../../../app/theme/app_typography.dart';
+import 'agent_design_system.dart';
+
 class AgentPanelCard extends StatelessWidget {
   const AgentPanelCard({
     super.key,
@@ -7,7 +11,8 @@ class AgentPanelCard extends StatelessWidget {
     this.subtitle,
     this.action,
     required this.child,
-    this.padding = const EdgeInsets.all(16),
+    this.padding = AgentUi.panelPadding,
+    this.minHeight,
   });
 
   final String title;
@@ -15,45 +20,74 @@ class AgentPanelCard extends StatelessWidget {
   final Widget? action;
   final Widget child;
   final EdgeInsetsGeometry padding;
+  final double? minHeight;
 
   @override
   Widget build(BuildContext context) {
     return Card(
       margin: EdgeInsets.zero,
-      child: Padding(
-        padding: padding,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(title, style: Theme.of(context).textTheme.titleMedium),
-                      if ((subtitle ?? '').trim().isNotEmpty) ...[
-                        const SizedBox(height: 4),
+      child: ConstrainedBox(
+        constraints: BoxConstraints(minHeight: minHeight ?? 0),
+        child: Padding(
+          padding: padding,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
                         Text(
-                          subtitle!,
-                          style: Theme.of(context).textTheme.bodySmall,
+                          title,
+                          style: AppTypography.h5.copyWith(
+                            color: AppColors.shieldNavy,
+                          ),
                         ),
+                        if ((subtitle ?? '').trim().isNotEmpty) ...[
+                          AgentUi.gapH(AgentUi.space4),
+                          Text(
+                            subtitle!,
+                            style: AppTypography.small.copyWith(
+                              color: AppColors.gray,
+                            ),
+                          ),
+                        ],
                       ],
-                    ],
+                    ),
                   ),
-                ),
-                if (action != null) ...[
-                  const SizedBox(width: 12),
-                  action!,
+                  if (action != null) ...[
+                    AgentUi.gapW(AgentUi.space12),
+                    action!,
+                  ],
                 ],
-              ],
-            ),
-            const SizedBox(height: 12),
-            child,
-          ],
+              ),
+              AgentUi.gapH(AgentUi.space16),
+              child,
+            ],
+          ),
         ),
       ),
+    );
+  }
+}
+
+class AgentMetricGrid extends StatelessWidget {
+  const AgentMetricGrid({
+    super.key,
+    required this.children,
+  });
+
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      spacing: AgentUi.space12,
+      runSpacing: AgentUi.space12,
+      children: children,
     );
   }
 }
@@ -67,7 +101,8 @@ class AgentMetricCard extends StatelessWidget {
     required this.icon,
     this.color,
     this.onTap,
-    this.width = 220,
+    this.width = AgentUi.metricWidth,
+    this.height = AgentUi.metricHeight,
   });
 
   final String value;
@@ -77,36 +112,64 @@ class AgentMetricCard extends StatelessWidget {
   final Color? color;
   final VoidCallback? onTap;
   final double width;
+  final double height;
 
   @override
   Widget build(BuildContext context) {
     final resolvedColor = color ?? Theme.of(context).colorScheme.primary;
     return SizedBox(
       width: width,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(18),
-        child: Card(
-          margin: EdgeInsets.zero,
-          child: Padding(
-            padding: const EdgeInsets.all(14),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Icon(icon, color: resolvedColor),
-                const SizedBox(height: 10),
-                Text(
-                  value,
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                        color: resolvedColor,
-                        fontWeight: FontWeight.w700,
-                      ),
-                ),
-                const SizedBox(height: 4),
-                Text(label, style: Theme.of(context).textTheme.titleSmall),
-                const SizedBox(height: 2),
-                Text(helper, style: Theme.of(context).textTheme.bodySmall),
-              ],
+      child: ConstrainedBox(
+        constraints: BoxConstraints(minHeight: height),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: AgentUi.radius(AgentUi.radiusLarge),
+          child: Card(
+            margin: EdgeInsets.zero,
+            child: Padding(
+              padding: AgentUi.cardBodyPadding,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: resolvedColor.withValues(alpha: 0.12),
+                      borderRadius: AgentUi.radius(AgentUi.radiusMedium),
+                    ),
+                    child: Icon(
+                      icon,
+                      size: AgentUi.iconSize,
+                      color: resolvedColor,
+                    ),
+                  ),
+                  AgentUi.gapH(AgentUi.space20),
+                  Text(
+                    value,
+                    style: AppTypography.h3.copyWith(
+                      color: resolvedColor,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  AgentUi.gapH(AgentUi.space4),
+                  Text(
+                    label,
+                    style: AppTypography.small.copyWith(
+                      color: AppColors.shieldNavy,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  AgentUi.gapH(AgentUi.space4),
+                  Text(
+                    helper,
+                    maxLines: 3,
+                    overflow: TextOverflow.fade,
+                    style: AppTypography.tiny.copyWith(color: AppColors.gray),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -131,24 +194,25 @@ class AgentStatusBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     final resolvedColor = color ?? Theme.of(context).colorScheme.primary;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      constraints: const BoxConstraints(minHeight: AgentUi.touchTargetMin - 12),
+      padding: AgentUi.chipPadding,
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(999),
+        borderRadius: AgentUi.radius(AgentUi.radiusPill),
         color: resolvedColor.withValues(alpha: 0.14),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           if (icon != null) ...[
-            Icon(icon, size: 14, color: resolvedColor),
-            const SizedBox(width: 6),
+            Icon(icon, size: AgentUi.statusIconSize, color: resolvedColor),
+            AgentUi.gapW(AgentUi.space8 - 2),
           ],
           Text(
             label,
-            style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                  color: resolvedColor,
-                  fontWeight: FontWeight.w600,
-                ),
+            style: AppTypography.tiny.copyWith(
+              color: resolvedColor,
+              fontWeight: FontWeight.w700,
+            ),
           ),
         ],
       ),
@@ -180,39 +244,50 @@ class AgentEmptyState extends StatelessWidget {
   Widget build(BuildContext context) {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              icon,
-              size: 48,
-              color: Theme.of(context).colorScheme.outline,
-            ),
-            const SizedBox(height: 12),
-            Text(title, style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 4),
-            Text(
-              message,
-              style: Theme.of(context).textTheme.bodySmall,
-              textAlign: TextAlign.center,
-            ),
-            if ((actionLabel ?? '').trim().isNotEmpty && onAction != null) ...[
-              const SizedBox(height: 16),
-              FilledButton.tonal(
-                onPressed: onAction,
-                child: Text(actionLabel!),
+        padding: const EdgeInsets.all(AgentUi.space24),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 420),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                width: 64,
+                height: 64,
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                  borderRadius: AgentUi.radius(AgentUi.radiusLarge),
+                ),
+                child: Icon(
+                  icon,
+                  size: AgentUi.iconSizeLarge,
+                  color: Theme.of(context).colorScheme.outline,
+                ),
               ),
-            ],
-            if ((secondaryActionLabel ?? '').trim().isNotEmpty &&
-                onSecondaryAction != null) ...[
-              const SizedBox(height: 8),
-              TextButton(
-                onPressed: onSecondaryAction,
-                child: Text(secondaryActionLabel!),
+              AgentUi.gapH(AgentUi.space16),
+              Text(title, style: AppTypography.h5, textAlign: TextAlign.center),
+              AgentUi.gapH(AgentUi.space8),
+              Text(
+                message,
+                style: AppTypography.small.copyWith(color: AppColors.gray),
+                textAlign: TextAlign.center,
               ),
+              if ((actionLabel ?? '').trim().isNotEmpty && onAction != null) ...[
+                AgentUi.gapH(AgentUi.space20),
+                FilledButton.tonal(
+                  onPressed: onAction,
+                  child: Text(actionLabel!),
+                ),
+              ],
+              if ((secondaryActionLabel ?? '').trim().isNotEmpty &&
+                  onSecondaryAction != null) ...[
+                AgentUi.gapH(AgentUi.space8),
+                TextButton(
+                  onPressed: onSecondaryAction,
+                  child: Text(secondaryActionLabel!),
+                ),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );
@@ -239,30 +314,41 @@ class AgentErrorState extends StatelessWidget {
   Widget build(BuildContext context) {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              icon,
-              size: 48,
-              color: Theme.of(context).colorScheme.error,
-            ),
-            const SizedBox(height: 12),
-            Text(title, style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 4),
-            Text(
-              message,
-              style: Theme.of(context).textTheme.bodySmall,
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 16),
-            FilledButton.icon(
-              onPressed: onRetry,
-              icon: const Icon(Icons.refresh_rounded),
-              label: Text(retryLabel),
-            ),
-          ],
+        padding: const EdgeInsets.all(AgentUi.space24),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 420),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                width: 64,
+                height: 64,
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.errorContainer,
+                  borderRadius: AgentUi.radius(AgentUi.radiusLarge),
+                ),
+                child: Icon(
+                  icon,
+                  size: AgentUi.iconSizeLarge,
+                  color: Theme.of(context).colorScheme.error,
+                ),
+              ),
+              AgentUi.gapH(AgentUi.space16),
+              Text(title, style: AppTypography.h5, textAlign: TextAlign.center),
+              AgentUi.gapH(AgentUi.space8),
+              Text(
+                message,
+                style: AppTypography.small.copyWith(color: AppColors.gray),
+                textAlign: TextAlign.center,
+              ),
+              AgentUi.gapH(AgentUi.space20),
+              FilledButton.icon(
+                onPressed: onRetry,
+                icon: const Icon(Icons.refresh_rounded),
+                label: Text(retryLabel),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -287,7 +373,7 @@ class AgentActionTile extends StatelessWidget {
       width: 180,
       child: FilledButton.tonalIcon(
         onPressed: onTap,
-        icon: Icon(icon),
+        icon: Icon(icon, size: AgentUi.iconSize),
         label: Text(label),
       ),
     );

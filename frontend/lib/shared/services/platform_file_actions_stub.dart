@@ -10,3 +10,7 @@ Future<bool> downloadPlatformFile({
 Future<bool> openPlatformUrl(String url) async {
   return false;
 }
+
+Future<bool> downloadPlatformUrl(String url, {String? fileName}) async {
+  return false;
+}
