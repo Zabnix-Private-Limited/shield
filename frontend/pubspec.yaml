@@ -47,6 +47,7 @@ dependencies:
   firebase_auth_web: ^6.2.3
   firebase_messaging: ^16.4.1
   firebase_analytics: ^12.4.3
+  google_sign_in: ^6.3.0
   flutter_web_plugins:
     sdk: flutter
   js: ^0.6.7

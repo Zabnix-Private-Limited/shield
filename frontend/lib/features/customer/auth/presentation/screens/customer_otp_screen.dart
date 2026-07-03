@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../../app/theme/app_colors.dart';
 import '../../../../../app/theme/app_typography.dart';
+import '../../../../../shared/services/auth_error_messages.dart';
 import '../../data/customer_auth_repository.dart';
 
 class CustomerOtpScreen extends StatefulWidget {
@@ -20,6 +21,7 @@ class _CustomerOtpScreenState extends State<CustomerOtpScreen> {
   final _focusNode = FocusNode();
   Timer? _ticker;
   bool _isSubmitting = false;
+  bool _isResending = false;
   String? _errorText;
   int _remainingSeconds = 30;
 
@@ -35,6 +37,9 @@ class _CustomerOtpScreenState extends State<CustomerOtpScreen> {
       return;
     }
     _startTimer();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _completeAutoVerifiedSessionIfNeeded();
+    });
   }
 
   @override
@@ -92,11 +97,17 @@ class _CustomerOtpScreenState extends State<CustomerOtpScreen> {
       context.go('/customer/register');
     } on FirebaseAuthException catch (error) {
       setState(() {
-        _errorText = error.message ?? 'OTP verification failed.';
+        _errorText = AuthErrorMessages.resolve(
+          error,
+          flow: AuthFlow.customerOtp,
+        );
       });
     } catch (error) {
       setState(() {
-        _errorText = _cleanErrorMessage(error);
+        _errorText = AuthErrorMessages.resolve(
+          error,
+          flow: AuthFlow.customerOtp,
+        );
       });
     } finally {
       if (mounted) {
@@ -109,6 +120,7 @@ class _CustomerOtpScreenState extends State<CustomerOtpScreen> {
 
   Future<void> _resend() async {
     setState(() {
+      _isResending = true;
       _errorText = null;
     });
     try {
@@ -116,16 +128,60 @@ class _CustomerOtpScreenState extends State<CustomerOtpScreen> {
       _startTimer();
     } catch (error) {
       setState(() {
-        _errorText = _cleanErrorMessage(error);
+        _errorText = AuthErrorMessages.resolve(
+          error,
+          flow: AuthFlow.customerOtp,
+        );
       });
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isResending = false;
+        });
+      }
     }
   }
 
-  String _cleanErrorMessage(Object error) {
-    return error
-        .toString()
-        .replaceFirst('Exception: ', '')
-        .replaceFirst('Bad state: ', '');
+  Future<void> _completeAutoVerifiedSessionIfNeeded() async {
+    setState(() {
+      _isSubmitting = true;
+    });
+    try {
+      final outcome =
+          await CustomerAuthRepository.instance.tryCompleteAutoVerifiedSession();
+      if (!mounted || outcome == null) {
+        return;
+      }
+      if (outcome == CustomerAuthOutcome.authenticated) {
+        context.go('/portal/customer/dashboard');
+      } else {
+        context.go('/customer/register');
+      }
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _errorText = AuthErrorMessages.resolve(
+          error,
+          flow: AuthFlow.customerOtp,
+        );
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSubmitting = false;
+        });
+      }
+    }
+  }
+
+  String _helperCopy(BuildContext context) {
+    final platform = Theme.of(context).platform;
+    if (platform == TargetPlatform.android || platform == TargetPlatform.iOS) {
+      return 'If your device verifies automatically, SHIELD will continue without requiring manual OTP entry.';
+    }
+    return 'Keep this tab open while SHIELD completes verification. Browser anti-abuse checks can briefly delay OTP delivery.';
   }
 
   @override
@@ -166,6 +222,14 @@ class _CustomerOtpScreenState extends State<CustomerOtpScreen> {
                     ),
                     const SizedBox(height: 6),
                     Text(phone, style: AppTypography.h5),
+                    const SizedBox(height: 10),
+                    Text(
+                      _helperCopy(context),
+                      style: AppTypography.small.copyWith(
+                        color: AppColors.gray,
+                        height: 1.45,
+                      ),
+                    ),
                     const SizedBox(height: 26),
                     Stack(
                       children: [
@@ -233,9 +297,9 @@ class _CustomerOtpScreenState extends State<CustomerOtpScreen> {
                             ),
                           )
                         : TextButton(
-                            onPressed: _resend,
+                            onPressed: _isResending ? null : _resend,
                             child: Text(
-                              'Resend OTP',
+                              _isResending ? 'Sending again...' : 'Resend OTP',
                               style: AppTypography.small.copyWith(
                                 color: AppColors.shieldBlue,
                                 fontWeight: FontWeight.w700,

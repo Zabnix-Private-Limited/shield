@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../../app/theme/app_colors.dart';
 import '../../../../../app/theme/app_typography.dart';
+import '../../../../../shared/services/auth_error_messages.dart';
 import '../../data/customer_auth_repository.dart';
 
 class CustomerLoginScreen extends StatefulWidget {
@@ -37,20 +38,36 @@ class _CustomerLoginScreenState extends State<CustomerLoginScreen> {
     });
 
     try {
-      await CustomerAuthRepository.instance.startPhoneVerification(
+      final result = await CustomerAuthRepository.instance.startPhoneVerification(
         _phoneController.text,
       );
       if (!mounted) {
         return;
       }
-      context.go('/customer/otp');
+      switch (result) {
+        case CustomerPhoneVerificationStartResult.authenticated:
+          context.go('/portal/customer/dashboard');
+          break;
+        case CustomerPhoneVerificationStartResult.registrationRequired:
+          context.go('/customer/register');
+          break;
+        case CustomerPhoneVerificationStartResult.codeSent:
+          context.go('/customer/otp');
+          break;
+      }
     } on FirebaseAuthException catch (error) {
       setState(() {
-        _errorText = error.message ?? 'Unable to send OTP right now.';
+        _errorText = AuthErrorMessages.resolve(
+          error,
+          flow: AuthFlow.customerLogin,
+        );
       });
     } catch (error) {
       setState(() {
-        _errorText = error.toString().replaceFirst('Exception: ', '');
+        _errorText = AuthErrorMessages.resolve(
+          error,
+          flow: AuthFlow.customerLogin,
+        );
       });
     } finally {
       if (mounted) {
@@ -107,6 +124,18 @@ class _CustomerLoginScreenState extends State<CustomerLoginScreen> {
                       'Secure access to your healthcare benefits.',
                       textAlign: TextAlign.center,
                       style: AppTypography.body.copyWith(color: AppColors.gray),
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      Theme.of(context).platform == TargetPlatform.android ||
+                              Theme.of(context).platform == TargetPlatform.iOS
+                          ? 'On the SHIELD app, OTP verification stays in-app whenever Firebase can verify your device automatically.'
+                          : 'Browser-based sign-in may occasionally require a quick anti-abuse verification before OTP can be sent.',
+                      textAlign: TextAlign.center,
+                      style: AppTypography.small.copyWith(
+                        color: AppColors.gray,
+                        height: 1.45,
+                      ),
                     ),
                     if (reasonMessage != null) ...[
                       const SizedBox(height: 18),

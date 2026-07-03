@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../../app/theme/app_colors.dart';
 import '../../../../../app/theme/app_typography.dart';
+import '../../../../../shared/services/auth_error_messages.dart';
 import '../../data/internal_auth_repository.dart';
 
 class InternalLoginScreen extends StatefulWidget {
@@ -15,6 +16,48 @@ class InternalLoginScreen extends StatefulWidget {
 class _InternalLoginScreenState extends State<InternalLoginScreen> {
   bool _submitting = false;
   String? _error;
+  String _statusMessage =
+      'Use your provisioned Google account to open the provider, CRM, and operational screens.';
+
+  @override
+  void initState() {
+    super.initState();
+    _resumeRedirectLogin();
+  }
+
+  Future<void> _resumeRedirectLogin() async {
+    setState(() {
+      _submitting = true;
+      _error = null;
+      _statusMessage = 'Finishing your secure Google sign-in...';
+    });
+    try {
+      final resumed = await InternalAuthRepository.instance.resumeRedirectSignIn();
+      if (!mounted) {
+        return;
+      }
+      if (!resumed) {
+        setState(() {
+          _submitting = false;
+          _statusMessage =
+              'Use your provisioned Google account to open the provider, CRM, and operational screens.';
+        });
+      }
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _submitting = false;
+        _error = AuthErrorMessages.resolve(
+          error,
+          flow: AuthFlow.internalGoogle,
+        );
+        _statusMessage =
+            'Use your provisioned Google account to open the provider, CRM, and operational screens.';
+      });
+    }
+  }
 
   Future<void> _handleLogin() async {
     if (_submitting) {
@@ -24,19 +67,30 @@ class _InternalLoginScreenState extends State<InternalLoginScreen> {
     setState(() {
       _submitting = true;
       _error = null;
+      _statusMessage = 'Redirecting to Google for secure SHIELD sign-in...';
     });
 
     try {
-      await InternalAuthRepository.instance.signInWithGoogle();
+      final result = await InternalAuthRepository.instance.signInWithGoogle();
+      if (!mounted) {
+        return;
+      }
+      if (result == InternalAuthSignInResult.redirecting) {
+        setState(() {
+          _statusMessage = 'Redirecting to Google for secure SHIELD sign-in...';
+        });
+      }
     } catch (error) {
       if (!mounted) {
         return;
       }
       setState(() {
-        _error = error
-            .toString()
-            .replaceFirst('StateError: ', '')
-            .replaceFirst('Bad state: ', '');
+        _error = AuthErrorMessages.resolve(
+          error,
+          flow: AuthFlow.internalGoogle,
+        );
+        _statusMessage =
+            'Use your provisioned Google account to open the provider, CRM, and operational screens.';
       });
     } finally {
       if (mounted) {
@@ -98,7 +152,7 @@ class _InternalLoginScreenState extends State<InternalLoginScreen> {
                     Text('SHIELD Internal Access', style: AppTypography.h3),
                     const SizedBox(height: 10),
                     Text(
-                      'Use your provisioned Google account to open the provider, CRM, and operational screens.',
+                      _statusMessage,
                       style: AppTypography.body.copyWith(
                         color: AppColors.gray,
                         height: 1.45,
@@ -140,7 +194,7 @@ class _InternalLoginScreenState extends State<InternalLoginScreen> {
                             : const Icon(Icons.login_rounded),
                         label: Text(
                           _submitting
-                              ? 'Signing in...'
+                              ? 'Secure sign-in in progress...'
                               : 'Continue with Google',
                         ),
                         style: FilledButton.styleFrom(

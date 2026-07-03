@@ -46,6 +46,10 @@ describe('app env helpers', () => {
 
     expect(env.port).toBe(4200);
     expect(env.corsOrigins).toEqual([
+      'http://localhost:53431',
+      'http://127.0.0.1:53431',
+      'http://localhost:3000',
+      'http://127.0.0.1:3000',
       'https://shield.example.com',
       'https://portal.example.com',
     ]);

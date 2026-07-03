@@ -10,6 +10,11 @@ import '../../../../../shared/services/device_identity_service.dart';
 import '../../../../../shared/services/firebase_bootstrap_service.dart';
 
 enum CustomerAuthOutcome { authenticated, registrationRequired }
+enum CustomerPhoneVerificationStartResult {
+  codeSent,
+  authenticated,
+  registrationRequired,
+}
 
 class CustomerAuthRepository {
   CustomerAuthRepository._();
@@ -27,7 +32,9 @@ class CustomerAuthRepository {
   String? get pendingPhoneNumber => _pendingPhoneNumber;
   DateTime? get resendAllowedAt => _resendAllowedAt;
 
-  Future<void> startPhoneVerification(String rawPhoneNumber) async {
+  Future<CustomerPhoneVerificationStartResult> startPhoneVerification(
+    String rawPhoneNumber,
+  ) async {
     final phoneNumber = _normalizeIndianPhone(rawPhoneNumber);
     _pendingPhoneNumber = phoneNumber;
     _resendAllowedAt = DateTime.now().add(const Duration(seconds: 30));
@@ -46,17 +53,29 @@ class CustomerAuthRepository {
       _webConfirmationResult = await _firebaseAuth.signInWithPhoneNumber(
         phoneNumber,
       );
-      return;
+      return CustomerPhoneVerificationStartResult.codeSent;
     }
 
-    final completer = Completer<void>();
+    final completer = Completer<CustomerPhoneVerificationStartResult>();
     await _firebaseAuth.verifyPhoneNumber(
       phoneNumber: phoneNumber,
       forceResendingToken: _forceResendingToken,
       verificationCompleted: (credential) async {
         try {
           await _firebaseAuth.signInWithCredential(credential);
-        } catch (_) {}
+          final outcome = await _completeVerifiedCustomerSession();
+          if (!completer.isCompleted) {
+            completer.complete(
+              outcome == CustomerAuthOutcome.authenticated
+                  ? CustomerPhoneVerificationStartResult.authenticated
+                  : CustomerPhoneVerificationStartResult.registrationRequired,
+            );
+          }
+        } catch (error) {
+          if (!completer.isCompleted) {
+            completer.completeError(error);
+          }
+        }
       },
       verificationFailed: (error) {
         if (!completer.isCompleted) {
@@ -67,14 +86,14 @@ class CustomerAuthRepository {
         _verificationId = verificationId;
         _forceResendingToken = forceResendingToken;
         if (!completer.isCompleted) {
-          completer.complete();
+          completer.complete(CustomerPhoneVerificationStartResult.codeSent);
         }
       },
       codeAutoRetrievalTimeout: (verificationId) {
         _verificationId = verificationId;
       },
     );
-    await completer.future;
+    return completer.future;
   }
 
   Future<void> resendOtp() async {
@@ -118,7 +137,29 @@ class CustomerAuthRepository {
       throw StateError('Phone verification completed without a Firebase user.');
     }
 
-    final firebaseIdToken = await firebaseUser.getIdToken(true);
+    return _completeVerifiedCustomerSession(firebaseUser: firebaseUser);
+  }
+
+  Future<CustomerAuthOutcome?> tryCompleteAutoVerifiedSession() async {
+    if (_pendingPhoneNumber == null || _pendingPhoneNumber!.isEmpty) {
+      return null;
+    }
+    final firebaseUser = _firebaseAuth.currentUser;
+    if (firebaseUser == null) {
+      return null;
+    }
+    return _completeVerifiedCustomerSession(firebaseUser: firebaseUser);
+  }
+
+  Future<CustomerAuthOutcome> _completeVerifiedCustomerSession({
+    User? firebaseUser,
+  }) async {
+    final resolvedUser = firebaseUser ?? _firebaseAuth.currentUser;
+    if (resolvedUser == null) {
+      throw StateError('Phone verification completed without a Firebase user.');
+    }
+
+    final firebaseIdToken = await resolvedUser.getIdToken(true);
     if (firebaseIdToken == null || firebaseIdToken.isEmpty) {
       throw StateError('Unable to read the verified Firebase token.');
     }

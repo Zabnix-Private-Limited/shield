@@ -1,16 +1,22 @@
 import 'package:dio/dio.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 
 import '../../../../../shared/services/api_service.dart';
 import '../../../../../shared/services/device_identity_service.dart';
 import '../../../../../shared/services/internal_auth_session.dart';
+
+enum InternalAuthSignInResult { completed, redirecting }
 
 class InternalAuthRepository {
   InternalAuthRepository._();
 
   static final InternalAuthRepository instance = InternalAuthRepository._();
   final FirebaseAuth _firebaseAuth = FirebaseAuth.instance;
+  final GoogleSignIn _googleSignIn = GoogleSignIn(
+    scopes: const <String>['email'],
+  );
 
   void _trace(String message) {
     if (kDebugMode) {
@@ -18,20 +24,73 @@ class InternalAuthRepository {
     }
   }
 
-  Future<void> signInWithGoogle() async {
+  Future<InternalAuthSignInResult> signInWithGoogle() async {
     _trace('google sign-in started');
     final googleProvider = GoogleAuthProvider();
-    UserCredential userCredential;
     if (kIsWeb) {
-      userCredential = await _firebaseAuth.signInWithPopup(googleProvider);
-    } else {
-      userCredential = await _firebaseAuth.signInWithProvider(googleProvider);
+      await _firebaseAuth.signInWithRedirect(googleProvider);
+      return InternalAuthSignInResult.redirecting;
     }
+    final userCredential = await _signInWithNativeGoogleOrProvider(
+      googleProvider,
+    );
 
     final firebaseUser = userCredential.user ?? _firebaseAuth.currentUser;
     if (firebaseUser == null) {
       throw StateError('Google sign-in completed without a Firebase user.');
     }
+
+    await _completeFirebaseLogin(firebaseUser);
+    return InternalAuthSignInResult.completed;
+  }
+
+  Future<bool> resumeRedirectSignIn() async {
+    if (!kIsWeb) {
+      return false;
+    }
+    final userCredential = await _firebaseAuth.getRedirectResult();
+    final firebaseUser = userCredential.user ?? _firebaseAuth.currentUser;
+    if (firebaseUser == null) {
+      return false;
+    }
+    await _completeFirebaseLogin(firebaseUser);
+    return true;
+  }
+
+  Future<UserCredential> _signInWithNativeGoogleOrProvider(
+    GoogleAuthProvider googleProvider,
+  ) async {
+    if (defaultTargetPlatform == TargetPlatform.android ||
+        defaultTargetPlatform == TargetPlatform.iOS) {
+      try {
+        final googleUser = await _googleSignIn.signIn();
+        if (googleUser == null) {
+          throw FirebaseAuthException(
+            code: 'sign_in_canceled',
+            message: 'Google sign-in was cancelled.',
+          );
+        }
+        final googleAuth = await googleUser.authentication;
+        final idToken = googleAuth.idToken?.trim();
+        if (idToken == null || idToken.isEmpty) {
+          throw StateError('Unable to read the Google sign-in token.');
+        }
+        final credential = GoogleAuthProvider.credential(
+          accessToken: googleAuth.accessToken,
+          idToken: idToken,
+        );
+        return _firebaseAuth.signInWithCredential(credential);
+      } catch (error) {
+        _trace(
+          'native Google sign-in fallback to Firebase provider flow: $error',
+        );
+      }
+    }
+
+    return _firebaseAuth.signInWithProvider(googleProvider);
+  }
+
+  Future<void> _completeFirebaseLogin(User firebaseUser) async {
 
     final firebaseIdToken = await firebaseUser.getIdToken(true);
     if (firebaseIdToken == null || firebaseIdToken.isEmpty) {
@@ -65,6 +124,9 @@ class InternalAuthRepository {
           : '';
       try {
         await _firebaseAuth.signOut();
+      } catch (_) {}
+      try {
+        await _googleSignIn.signOut();
       } catch (_) {}
       ApiService.clearAccessToken();
       ApiService.setActiveCustomerId(null);

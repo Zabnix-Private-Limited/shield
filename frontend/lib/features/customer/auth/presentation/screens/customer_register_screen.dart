@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../../app/theme/app_colors.dart';
 import '../../../../../app/theme/app_typography.dart';
+import '../../../../../shared/services/auth_error_messages.dart';
 import '../../data/customer_auth_repository.dart';
 import '../widgets/shield_date_picker_sheet.dart';
 
@@ -281,10 +282,10 @@ class _CustomerRegisterScreenState extends State<CustomerRegisterScreen> {
   }
 
   String _cleanErrorMessage(Object error) {
-    return error
-        .toString()
-        .replaceFirst('Exception: ', '')
-        .replaceFirst('Bad state: ', '');
+    return AuthErrorMessages.resolve(
+      error,
+      flow: AuthFlow.customerRegistration,
+    );
   }
 }
 

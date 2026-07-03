@@ -7547,3 +7547,137 @@ est build, ackend/vercel.json, ackend/src/auth/auth.service.ts, and uth_devic
 - Continue with remaining production refinement on shared dialogs/snackbars/bottom sheets, deeper responsive QA across all agent screens, and a focused accessibility/micro-interaction pass.
 ---
 2026-07-02 22:19:02 IST
+
+## 201. Production-readiness design expansion into 12-phase master hardening program
+**Timestamp:** 2026-07-03 11:11:41 IST
+
+**High-level description**: Expanded the existing production-readiness hardening design from a six-phase implementation roadmap into a broader enterprise-grade master hardening program. The update keeps the original blocker-first structure intact while adding the missing readiness categories that usually surface only during real deployment, operational QA, and release-candidate review.
+- Reframed the document goal and approach around a 12-phase master program instead of a six-phase implementation slice.
+- Added Phase 7 through Phase 12 covering navigation and information architecture, RBAC and permission-matrix validation, backend API and database integrity, enterprise workflow edge cases, performance/security/scalability, and release-candidate QA.
+- Expanded the current-state summary so the design now explicitly captures route reachability, permission proof, frontend-backend-database completeness, operational edge cases, and non-functional readiness risk.
+- Strengthened architectural boundaries, testing strategy, risks, and mitigations so the added phases stay grounded in backend-owned workspace contracts and production-safe verification.
+- Rewrote the Definition of Done so SHIELD is not considered complete until feature completeness, role completeness, navigation correctness, permission enforcement, backend consistency, database integrity, enterprise edge-case handling, performance/security proof, responsive QA, accessibility, regression coverage, verification, and documentation are all in place.
+
+### Frontend Files Modified
+- docs/superpowers/specs/2026-07-03-shield-production-readiness-design.md
+- log.md
+
+### Backend Files Modified
+- None.
+
+### Verification
+- Verified the design doc now includes Phase 7 through Phase 12 sections.
+- Verified the Definition of Done now reflects a 12-phase enterprise hardening completion bar.
+
+### Suggested Next Phase
+- Use this updated design as the governing roadmap for implementation, phase-by-phase verification, and future `log.md` entries.
+---
+2026-07-03 11:11:41 IST
+
+## 202. Master hardening program governance expansion
+**Timestamp:** 2026-07-03 11:18:30 IST
+
+**High-level description**: Strengthened the SHIELD production-readiness design from a strong phase roadmap into a more disciplined enterprise execution program. This pass adds the governance pieces that make long-running hardening work measurable, controlled, and less likely to drift into incomplete audits or endless polish.
+- Added Phase 0 for discovery and inventory so the hardening program starts from authoritative inventories of screens, routes, APIs, database tables, RBAC surface, shared components, and tests.
+- Added governance rules for severity classification, no-regression discipline, phase completion gates, and code-quality expectations so later implementation work stays focused on production-critical risk.
+- Added `Artifacts produced` sections to every phase so progress is measurable and each phase leaves behind durable control documents instead of only code changes.
+- Added documentation update rules so `log.md`, architecture docs, API docs, RBAC docs, workflow docs, and phase artifacts evolve together with the implementation.
+- Added a formal final production sign-off section with a production-readiness certificate and explicit `GO`, `GO WITH ACCEPTED RISKS`, or `NO GO` launch decision.
+- Updated the Definition of Done to reflect the new Phase 0 and the requirement that artifacts, verification, and formal sign-off all exist before the hardening program is considered complete.
+
+### Frontend Files Modified
+- docs/superpowers/specs/2026-07-03-shield-production-readiness-design.md
+- log.md
+
+### Backend Files Modified
+- None.
+
+### Verification
+- Verified the design doc now includes Phase 0 discovery and inventory.
+- Verified every phase now includes an `Artifacts produced` section.
+- Verified governance, completion gates, documentation rules, and final production sign-off are present.
+
+### Suggested Next Phase
+- Use Phase 0 to generate the control artifacts first, then execute the remaining hardening phases against those inventories and gates.
+---
+2026-07-03 11:18:30 IST
+## 203. Phase 0 production-hardening discovery and inventory baseline
+**Timestamp:** 2026-07-03 11:43:32 IST
+
+**High-level description**: Executed the first implementation pass of the SHIELD production-hardening program strictly as Phase 0 discovery. No production behavior was changed in this pass. The goal was to create control artifacts from the real repository state so later phases can harden SHIELD against the actual surface area instead of assumptions.
+- Created a Phase 0 artifact set under `docs/superpowers/artifacts/2026-07-03-shield-production-readiness-phase-0/` covering screen inventory, route inventory, API inventory, database inventory, RBAC surface inventory, component inventory, test inventory, and a phase verification report.
+- Grounded the discovery pass in the live frontend router, portal resolver, portal role metadata, backend module/controller structure, RBAC catalog, Prisma schema, `current_schema.md`, and the existing route/navigation/test docs.
+- Recorded important baseline mismatches that will shape later phases: internal CRM/manager/executive/admin surfaces are much more shell-driven than customer/provider/agent, route docs have already drifted from live redirect behavior, and `PortalResolver` only proves section support for customer, agent, and provider even though broader internal shells are declared in docs and metadata.
+- Recorded the backend and database breadth so later phases can work against explicit module and schema inventories instead of vague ERP-level descriptions.
+- Recorded that automated coverage is still materially underweight compared to product depth, making Phase 6 a direct risk-reduction phase rather than optional polish.
+- Closed Phase 0 with verification commands passing on the current workspace state.
+
+### Frontend Files Modified
+- docs/superpowers/artifacts/2026-07-03-shield-production-readiness-phase-0/screen_inventory.md
+- docs/superpowers/artifacts/2026-07-03-shield-production-readiness-phase-0/route_inventory.md
+- docs/superpowers/artifacts/2026-07-03-shield-production-readiness-phase-0/component_inventory.md
+- docs/superpowers/artifacts/2026-07-03-shield-production-readiness-phase-0/test_inventory.md
+- docs/superpowers/artifacts/2026-07-03-shield-production-readiness-phase-0/phase_0_verification.md
+- log.md
+
+### Backend Files Modified
+- docs/superpowers/artifacts/2026-07-03-shield-production-readiness-phase-0/api_inventory.md
+- docs/superpowers/artifacts/2026-07-03-shield-production-readiness-phase-0/database_inventory.md
+- docs/superpowers/artifacts/2026-07-03-shield-production-readiness-phase-0/rbac_matrix.md
+
+### Verification
+- `cd frontend && flutter analyze --no-pub` ✅
+- `cd frontend && flutter test` ✅
+- `cd backend && npm run build` ✅
+
+### Remaining Blockers
+- Future phases should treat the Phase 0 artifact directory as the active control-document baseline unless a stronger canonical location is introduced.
+- Phase 1 should start from the validation gaps already called out in the production-readiness design and the new inventories rather than reopening discovery.
+
+### Suggested Next Phase
+- Begin Phase 1 only: validation and workflow completion, using these inventories and keeping routing, RBAC, responsiveness, and backend-integrity work out of that pass unless a validation fix is blocked by them.
+---
+2026-07-03 11:43:32 IST
+## 204. Authentication hardening implementation pass
+**Timestamp:** 2026-07-03 12:31:38 IST
+
+**High-level description**: Started implementation after Phase 0 by hardening authentication instead of generating more discovery output. This pass focused on user-visible sign-in reliability and session behavior, with the goal that internal and customer login flows feel more production-ready immediately after update.
+- Reordered startup bootstrap so Firebase initializes before customer/internal session restoration. This removes a risky auth/session initialization order that could interfere with cold-start restore, logout, and Firebase-backed auth state.
+- Replaced the internal web Google sign-in popup flow with redirect-based handling and added redirect-result resume support on the login screen. Internal users now follow a more stable full-page Google auth flow on web instead of relying on popup behavior.
+- Added a native-first internal Google sign-in path for Android and iOS using `google_sign_in`, with fallback to Firebase provider flow when native sign-in is unavailable. This improves the chance of in-app account-picker behavior on mobile platforms while preserving the existing backend login and RBAC mapping.
+- Hardened the customer OTP flow so Firebase auto-verification can complete the SHIELD session directly instead of leaving the app stuck on manual OTP entry paths. Login can now skip straight to dashboard or registration when auto verification succeeds.
+- Added centralized auth error message mapping so internal Google login, OTP login, OTP verification, registration, and session-restore failures surface clearer user-facing messages for invalid OTP, cancellation, provisioning gaps, session expiry, inactive accounts, and network issues.
+- Improved OTP screen recovery and feedback with better helper copy, resend loading state, and more explicit verification messaging.
+- Fixed backend verification gating by updating outdated backend tests to match the current environment defaults and dependency graph.
+
+### Frontend Files Modified
+- frontend/lib/main.dart
+- frontend/lib/features/provider/auth/data/internal_auth_repository.dart
+- frontend/lib/features/provider/auth/presentation/screens/internal_login_screen.dart
+- frontend/lib/features/customer/auth/data/customer_auth_repository.dart
+- frontend/lib/features/customer/auth/presentation/screens/customer_login_screen.dart
+- frontend/lib/features/customer/auth/presentation/screens/customer_otp_screen.dart
+- frontend/lib/features/customer/auth/presentation/screens/customer_register_screen.dart
+- frontend/lib/shared/services/auth_error_messages.dart
+- frontend/pubspec.yaml
+- frontend/test/auth_error_messages_test.dart
+- log.md
+
+### Backend Files Modified
+- backend/src/app.controller.spec.ts
+- backend/src/config/app-env.spec.ts
+
+### Verification
+- `cd frontend && flutter analyze --no-pub` ✅
+- `cd frontend && flutter test` ✅
+- `cd backend && npm run build` ✅
+- `cd backend && npm test` ✅
+
+### Remaining Blockers
+- Full elimination of browser-based phone-auth fallback for all customer environments still depends on Firebase project configuration outside this repo, including Android signing fingerprints, authorized domains, and Play Integrity or equivalent setup.
+- Internal role completeness, broader validation hardening, and non-auth workflow completion remain for later implementation passes.
+
+### Suggested Next Phase
+- Continue with Phase 1A and Phase 1B discipline: keep the next pass focused on remaining authentication gaps if any are still reproducible, otherwise move directly into validation and workflow completion without mixing unrelated routing or portal-shell work.
+---
+2026-07-03 12:31:38 IST
