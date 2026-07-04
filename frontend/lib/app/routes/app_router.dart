@@ -17,6 +17,10 @@ import '../../shared/services/portal_resolver.dart';
 
 final GlobalKey<NavigatorState> rootNavigatorKey = GlobalKey<NavigatorState>();
 
+void _traceRouter(String message) {
+  debugPrint('[AppRouter] $message');
+}
+
 final GoRouter router = GoRouter(
   navigatorKey: rootNavigatorKey,
   initialLocation: '/',
@@ -48,6 +52,9 @@ final GoRouter router = GoRouter(
       '/session-expired',
     };
     final isPublicLocation = publicLocations.contains(location);
+    _traceRouter(
+      'redirect check location=$location customerAuth=$isCustomerAuthenticated internalAuth=$isInternalAuthenticated resolvedRole=${resolvedPortal?.role.routeKey ?? 'none'}',
+    );
 
     if (authNotice.hasNotice && location != '/session-expired') {
       final kind =
@@ -59,11 +66,15 @@ final GoRouter router = GoRouter(
 
     if (isAuthenticated &&
         (location == '/' || location == '/customer/splash')) {
+      _traceRouter('redirecting authenticated root/splash to resolved home');
       return PortalResolver.resolvedHomeRoute();
     }
 
     if (!isAuthenticated && !isPublicLocation) {
       final next = Uri.encodeComponent(state.uri.toString());
+      _traceRouter(
+        'redirecting unauthenticated user away from $location to ${isCustomerPortal ? '/customer/login' : '/internal/login'}',
+      );
       return isCustomerPortal
           ? '/customer/login?next=$next'
           : '/internal/login?next=$next';
@@ -75,20 +86,25 @@ final GoRouter router = GoRouter(
             location == '/customer/register')) {
       final next = state.uri.queryParameters['next'];
       if (next != null && next.startsWith('/')) {
+        _traceRouter('customer auth redirecting to requested next=$next');
         return next;
       }
+      _traceRouter('customer auth redirecting to resolved home');
       return PortalResolver.resolvedHomeRoute();
     }
 
     if (isInternalAuthenticated && location == '/internal/login') {
       final next = state.uri.queryParameters['next'];
       if (next != null && next.startsWith('/')) {
+        _traceRouter('internal auth redirecting to requested next=$next');
         return next;
       }
+      _traceRouter('internal auth redirecting to resolved home');
       return PortalResolver.resolvedHomeRoute();
     }
 
     if (isCustomerAuthenticated && location == '/internal/login') {
+      _traceRouter('customer session blocked from internal login; redirecting home');
       return PortalResolver.resolvedHomeRoute();
     }
 
@@ -97,12 +113,16 @@ final GoRouter router = GoRouter(
         !location.startsWith('/portal/customer')) {
       final segments = state.uri.pathSegments;
       final sectionKey = segments.length >= 3 ? segments[2] : 'dashboard';
+      _traceRouter(
+        'customer session blocked from non-customer portal route=$location section=$sectionKey',
+      );
       return PortalResolver.routeForResolvedSection(sectionKey);
     }
 
     if (isInternalAuthenticated &&
         (location.startsWith('/customer/') ||
             location.startsWith('/portal/customer'))) {
+      _traceRouter('internal session blocked from customer route; redirecting home');
       return PortalResolver.resolvedHomeRoute();
     }
 
@@ -116,6 +136,9 @@ final GoRouter router = GoRouter(
           sectionKey: sectionKey,
         );
         if (guardedRoute != null) {
+          _traceRouter(
+            'portal guard rerouted requestedRole=$requestedRoleKey section=$sectionKey -> $guardedRoute',
+          );
           return guardedRoute;
         }
       }
@@ -124,6 +147,7 @@ final GoRouter router = GoRouter(
     if (isInternalAuthenticated &&
         resolvedPortal != null &&
         !resolvedPortal.isInternal) {
+      _traceRouter('internal auth resolved to non-internal portal; redirecting home');
       return PortalResolver.resolvedHomeRoute();
     }
 

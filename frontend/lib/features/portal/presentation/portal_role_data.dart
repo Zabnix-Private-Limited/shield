@@ -155,7 +155,6 @@ PortalSectionData _section(
     iconKey: key,
     moduleId: moduleId ?? key,
     rendererKey: rendererKey ?? key,
-    route: '/portal/provider/$key',
     actions: actions,
     metrics: const <PortalMetric>[],
     queueItems: const <PortalListItem>[],

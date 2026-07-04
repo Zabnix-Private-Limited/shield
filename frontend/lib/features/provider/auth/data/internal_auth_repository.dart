@@ -25,7 +25,7 @@ class InternalAuthRepository {
   }
 
   Future<InternalAuthSignInResult> signInWithGoogle() async {
-    _trace('google sign-in started');
+    _trace('1. Google Sign-In started');
     final googleProvider = GoogleAuthProvider();
     if (kIsWeb) {
       await _firebaseAuth.signInWithRedirect(googleProvider);
@@ -51,8 +51,10 @@ class InternalAuthRepository {
     final userCredential = await _firebaseAuth.getRedirectResult();
     final firebaseUser = userCredential.user ?? _firebaseAuth.currentUser;
     if (firebaseUser == null) {
+      _trace('redirect resume finished without a Firebase user');
       return false;
     }
+    _trace('2. Firebase user received from redirect: ${firebaseUser.uid}');
     await _completeFirebaseLogin(firebaseUser);
     return true;
   }
@@ -91,6 +93,7 @@ class InternalAuthRepository {
   }
 
   Future<void> _completeFirebaseLogin(User firebaseUser) async {
+    _trace('2. Firebase user received: ${firebaseUser.uid}');
 
     final firebaseIdToken = await firebaseUser.getIdToken(true);
     if (firebaseIdToken == null || firebaseIdToken.isEmpty) {
@@ -98,6 +101,7 @@ class InternalAuthRepository {
     }
 
     try {
+      _trace('3. Requesting backend session');
       final payload = await ApiService.internalLogin(
         firebaseIdToken: firebaseIdToken,
         deviceId: await DeviceIdentityService.getInstallationId(),
@@ -108,15 +112,24 @@ class InternalAuthRepository {
       if (accessToken.isEmpty) {
         throw StateError('Internal sign-in did not return an access token.');
       }
-      _trace('login completed; access token received (${accessToken.length} chars)');
+      _trace(
+        '4. Backend session created; access token received (${accessToken.length} chars)',
+      );
       ApiService.setAccessToken(accessToken);
       _trace('api access token primed before profile bootstrap');
       ApiService.setActiveCustomerId(null);
+      _trace('5. Fetching current internal user');
       final profile = await ApiService.getAuthenticatedProfile();
-      _trace('authenticated profile bootstrap completed');
+      final profileMap = profile['profile'] is Map<String, dynamic>
+          ? profile['profile'] as Map<String, dynamic>
+          : const <String, dynamic>{};
+      _trace(
+        '6. Internal user loaded; role=${payload['principal']?['roleCode'] ?? 'unknown'} email=${profileMap['email'] ?? payload['principal']?['email'] ?? 'unknown'}',
+      );
       payload['profile'] = profile['profile'];
+      _trace('7. Saving session');
       await InternalAuthSession.instance.completeLogin(tokenPayload: payload);
-      _trace('internal auth session completeLogin finished');
+      _trace('session saved; internal auth session completeLogin finished');
     } on DioException catch (error) {
       final data = error.response?.data;
       final message = data is Map

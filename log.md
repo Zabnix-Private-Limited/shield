@@ -8230,3 +8230,28 @@ est build, ackend/vercel.json, ackend/src/auth/auth.service.ts, and uth_devic
 - `cd backend && npm run build` ✅
 ### Timestamp
 - 2026-07-04 09:09:37 IST
+
+## 225. Internal Google Sign-In Traceability + Portal Route Contract Fix
+**High-level desc**: Added end-to-end internal-login tracing across the Google sign-in handoff, session persistence, portal resolution, and router guards, and fixed a static portal route bug that was still forcing shared section metadata to `/portal/provider/...` even for super-admin workspaces.
+- Instrumented the internal Google login path with ordered debug traces so browser-console output now shows the exact stage reached during redirect resume and inline sign-in: Firebase user resolution, backend session creation, authenticated-profile bootstrap, session save, portal resolution, and final navigation target.
+- Added matching trace output inside `InternalAuthSession`, `PortalResolver`, and the top-level GoRouter redirect logic so post-auth failures can be distinguished between session-write degradation, role resolution mismatch, portal guard reroute, and login-page bounce conditions.
+- Removed the hard-coded provider route override from shared `PortalSectionData` generation so admin and other internal sidebar destinations now fall back to role-correct `/portal/{role}/{section}` links instead of inheriting provider-only paths.
+- Kept the earlier explicit portal handoff and in-memory persistence hardening intact; this pass is for observability plus one concrete route-contract correction without reopening the established admin shell architecture.
+
+### Files Modified/Created
+**Frontend Files (Modified)**:
+- frontend/lib/app/routes/app_router.dart
+- frontend/lib/features/portal/presentation/portal_role_data.dart
+- frontend/lib/features/provider/auth/data/internal_auth_repository.dart
+- frontend/lib/features/provider/auth/presentation/screens/internal_login_screen.dart
+- frontend/lib/shared/services/internal_auth_session.dart
+- frontend/lib/shared/services/portal_resolver.dart
+- log.md
+**Backend Files (Modified)**:
+- None.
+### Verification
+- `cd frontend && flutter analyze --no-pub lib/features/provider/auth/data/internal_auth_repository.dart lib/features/provider/auth/presentation/screens/internal_login_screen.dart lib/shared/services/internal_auth_session.dart lib/shared/services/portal_resolver.dart lib/app/routes/app_router.dart lib/features/portal/presentation/portal_role_data.dart` ✅
+- `cd frontend && flutter test` ✅
+- `cd backend && npm run build` ✅
+### Timestamp
+- 2026-07-04 10:03:48 IST

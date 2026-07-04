@@ -112,7 +112,7 @@ class InternalAuthSession extends ChangeNotifier {
     _displayName = fullName.isNotEmpty ? fullName : (_email ?? 'Internal User');
     _isAuthenticated = _accessToken != null && _accessToken!.isNotEmpty;
     _trace(
-      'completeLogin received token payload; hasAccessToken=$_isAuthenticated userId=${_userId ?? 'unknown'}',
+      'completeLogin received token payload; hasAccessToken=$_isAuthenticated userId=${_userId ?? 'unknown'} roleCode=${_roleCode ?? 'unknown'} homeRole=${homeRole.routeKey}',
     );
 
     if (_accessToken == null || _accessToken!.isEmpty) {
@@ -130,7 +130,7 @@ class InternalAuthSession extends ChangeNotifier {
 
     await _persistSessionSnapshot();
 
-    _trace('token stored and session persistence completed');
+    _trace('token stored and session persistence completed for role=${homeRole.routeKey}');
     notifyListeners();
   }
 
@@ -319,6 +319,7 @@ class InternalAuthSession extends ChangeNotifier {
       }
     } catch (error) {
       _trace('session persistence degraded to in-memory only: $error');
+      _trace('session remains authenticated in-memory for role=${homeRole.routeKey}');
     }
   }
 }

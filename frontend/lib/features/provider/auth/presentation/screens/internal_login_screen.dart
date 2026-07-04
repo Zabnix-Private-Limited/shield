@@ -20,6 +20,10 @@ class _InternalLoginScreenState extends State<InternalLoginScreen> {
   String _statusMessage =
       'Use your provisioned Google account to open the provider, CRM, and operational screens.';
 
+  void _trace(String message) {
+    debugPrint('[InternalLoginScreen] $message');
+  }
+
   @override
   void initState() {
     super.initState();
@@ -27,6 +31,7 @@ class _InternalLoginScreenState extends State<InternalLoginScreen> {
   }
 
   Future<void> _resumeRedirectLogin() async {
+    _trace('redirect resume check started');
     setState(() {
       _submitting = true;
       _error = null;
@@ -38,6 +43,7 @@ class _InternalLoginScreenState extends State<InternalLoginScreen> {
         return;
       }
       if (!resumed) {
+        _trace('redirect resume found no pending Google session');
         setState(() {
           _submitting = false;
           _statusMessage =
@@ -45,8 +51,10 @@ class _InternalLoginScreenState extends State<InternalLoginScreen> {
         });
         return;
       }
+      _trace('redirect resume completed; proceeding to resolved portal');
       _navigateToResolvedHome();
     } catch (error) {
+      _trace('redirect resume failed: $error');
       if (!mounted) {
         return;
       }
@@ -74,18 +82,22 @@ class _InternalLoginScreenState extends State<InternalLoginScreen> {
     });
 
     try {
+      _trace('continue with Google pressed');
       final result = await InternalAuthRepository.instance.signInWithGoogle();
       if (!mounted) {
         return;
       }
       if (result == InternalAuthSignInResult.redirecting) {
+        _trace('Google Sign-In switched to browser redirect flow');
         setState(() {
           _statusMessage = 'Redirecting to Google for secure SHIELD sign-in...';
         });
         return;
       }
+      _trace('Google Sign-In completed inline; proceeding to resolved portal');
       _navigateToResolvedHome();
     } catch (error) {
+      _trace('inline Google Sign-In failed: $error');
       if (!mounted) {
         return;
       }
@@ -110,7 +122,12 @@ class _InternalLoginScreenState extends State<InternalLoginScreen> {
     if (!mounted) {
       return;
     }
-    context.go(PortalResolver.resolvedHomeRoute());
+    final resolvedRoute = PortalResolver.resolvedHomeRoute();
+    _trace(
+      '8. Resolving portal after login role=${PortalResolver.current?.role.routeKey ?? 'unknown'}',
+    );
+    _trace('9. Navigating to portal route=$resolvedRoute');
+    context.go(resolvedRoute);
   }
 
   @override
