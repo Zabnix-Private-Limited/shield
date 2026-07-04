@@ -9,6 +9,7 @@ import 'package:shield/features/admin/shared/engine/workspace/admin_workspace_re
 import 'package:shield/features/admin/shared/engine/workspace/admin_workspace_state.dart';
 import 'package:shield/features/admin/shared/engine/events/admin_event_bus.dart';
 import 'package:shield/features/admin/shared/engine/events/admin_event_definition.dart';
+import 'package:shield/features/admin/shared/engine/events/admin_event_metadata.dart';
 
 void main() {
   group('AdminWorkspaceRegistry', () {
@@ -124,6 +125,7 @@ void main() {
       final result = await bus.dispatch(
         const AdminCommandDefinition(
           type: 'refresh-workspace',
+          workspaceId: 'audit',
           payload: {'workspaceId': 'audit'},
         ),
       );
@@ -139,9 +141,14 @@ void main() {
       final subscription = bus.events.listen(events.add);
 
       bus.publish(
-        const AdminEventDefinition(
+        AdminEventDefinition(
           name: 'WalletCredited',
           version: 2,
+          metadata: AdminEventMetadata(
+            eventId: 'evt-001',
+            workspaceId: 'wallet',
+            timestamp: DateTime(2026, 7, 4),
+          ),
           payload: {'walletId': 'WAL-000001'},
         ),
       );

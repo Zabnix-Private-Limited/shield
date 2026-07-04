@@ -8588,3 +8588,50 @@ est build, ackend/vercel.json, ackend/src/auth/auth.service.ts, and uth_devic
 - `cd frontend && flutter test test/agent_portal_accessibility_test.dart --reporter expanded` ✅
 ### Timestamp
 - 2026-07-04 18:50:35 IST
+## 240. Registry-Backed Navigation, Workspace Runtime, and Action Pipeline
+**High-level desc**: Expanded the Phase 3B.1 admin platform code from static definitions into an actual runtime layer with navigation registry resolution, workspace orchestration, schema definitions, repository contracts, metadata-rich action/events, and a registry-backed module catalog that removes the hardcoded admin workspace switch.
+- Added navigation definitions plus a navigation registry so admin workspaces can now resolve route, breadcrumbs, icon key, default view, and permission metadata from one shared registry instead of scattering those concerns across widgets.
+- Replaced the placeholder admin workspace controller with an orchestration layer that loads workspace metadata, checks permissions, loads schema and data through injected contracts, produces typed workspace snapshots, and emits correlated lifecycle events.
+- Added schema primitives for tables and forms, standardized action definitions plus an action pipeline on top of the command bus, and enriched commands/events with IDs, timestamps, workspace IDs, correlation IDs, and causation IDs so future debugging and cross-module workflows have a stable envelope.
+- Added the first explicit repository-contract example for customers with an in-memory mock implementation, which keeps frontend platform work moving without committing to backend or PostgreSQL integration yet.
+- Centralized admin module rendering into a registry-backed catalog so adding a workspace no longer requires editing the AdminPortalWorkspace switch directly.
+
+### Files Modified/Created
+**Frontend Files (Created)**:
+- frontend/lib/features/admin/shared/engine/navigation/admin_navigation_definition.dart
+- frontend/lib/features/admin/shared/engine/navigation/admin_navigation_registry.dart
+- frontend/lib/features/admin/shared/engine/actions/admin_command_metadata.dart
+- frontend/lib/features/admin/shared/engine/actions/admin_action_definition.dart
+- frontend/lib/features/admin/shared/engine/actions/admin_action_pipeline.dart
+- frontend/lib/features/admin/shared/engine/events/admin_event_metadata.dart
+- frontend/lib/features/admin/shared/engine/workspace/admin_table_definition.dart
+- frontend/lib/features/admin/shared/engine/workspace/admin_form_definition.dart
+- frontend/lib/features/admin/shared/engine/workspace/admin_workspace_schema_definition.dart
+- frontend/lib/features/admin/shared/engine/workspace/admin_workspace_snapshot.dart
+- frontend/lib/features/admin/shared/engine/workspace/admin_workspace_repository.dart
+- frontend/lib/features/admin/shared/engine/workspace/admin_workspace_schema_repository.dart
+- frontend/lib/features/admin/shared/engine/workspace/admin_workspace_permission_gateway.dart
+- frontend/lib/features/admin/presentation/registry/admin_workspace_catalog.dart
+- frontend/lib/features/admin/customers/domain/entities/admin_customer_summary.dart
+- frontend/lib/features/admin/customers/domain/repositories/admin_customer_repository.dart
+- frontend/lib/features/admin/customers/data/repositories/mock_admin_customer_repository.dart
+- frontend/test/admin_engine_runtime_test.dart
+**Frontend Files (Modified)**:
+- frontend/lib/features/admin/shared/engine/actions/admin_command_definition.dart
+- frontend/lib/features/admin/shared/engine/events/admin_event_definition.dart
+- frontend/lib/features/admin/shared/engine/workspace/admin_view_definition.dart
+- frontend/lib/features/admin/shared/engine/exports.dart
+- frontend/lib/features/admin/shared/controllers/admin_navigation_controller.dart
+- frontend/lib/features/admin/shared/controllers/admin_workspace_controller.dart
+- frontend/lib/features/admin/presentation/screens/admin_portal_workspace.dart
+- frontend/lib/features/admin/shared/exports.dart
+- frontend/test/admin_engine_foundation_test.dart
+- log.md
+**Backend Files (Modified)**:
+- None.
+### Verification
+- cd frontend && flutter test test/admin_engine_foundation_test.dart test/admin_engine_runtime_test.dart --reporter expanded ✅
+- cd frontend && flutter analyze --no-pub lib/features/admin/shared/engine lib/features/admin/shared/controllers/admin_navigation_controller.dart lib/features/admin/shared/controllers/admin_workspace_controller.dart lib/features/admin/presentation/registry/admin_workspace_catalog.dart lib/features/admin/presentation/screens/admin_portal_workspace.dart lib/features/admin/customers/domain lib/features/admin/customers/data/repositories/mock_admin_customer_repository.dart test/admin_engine_foundation_test.dart test/admin_engine_runtime_test.dart ✅
+- cd frontend && flutter test test/agent_portal_accessibility_test.dart --reporter expanded ✅
+### Timestamp
+- 2026-07-04 19:29:01 IST
