@@ -30,6 +30,35 @@ Implement the Admin Portal as a complete V1 frontend workspace inside the existi
   - tables
   - empty and health panels
 
+### Phase 2A: Admin platform extraction
+
+- move shared admin primitives into `frontend/lib/features/admin/shared/`
+- keep `admin_portal_workspace.dart` as composition-only routing and module assembly
+- standardize module packages under:
+  - `dashboard`
+  - `customers`
+  - `agents`
+  - `crm`
+  - `providers`
+  - `visits`
+  - `documents`
+  - `memberships`
+  - `wallet`
+  - `rewards`
+  - `referrals`
+  - `reports`
+  - `organization`
+  - `audit`
+  - `settings`
+- introduce reusable controller ownership for:
+  - navigation
+  - filters
+  - search
+  - selection
+  - workspace state
+  - permissions
+- treat `AdminDataTable<T>` and shared workspace layouts as the default enterprise pattern instead of module-local table or panel implementations
+
 ### Phase 3: Core command-center modules
 
 - dashboard
@@ -84,6 +113,8 @@ Implement the Admin Portal as a complete V1 frontend workspace inside the existi
 ### New frontend module
 
 - `frontend/lib/features/admin/presentation/screens/admin_portal_workspace.dart`
+- `frontend/lib/features/admin/shared/...`
+- `frontend/lib/features/admin/*/presentation/screens/...`
 
 ### Existing frontend files to update
 
@@ -119,7 +150,15 @@ Mitigation:
 
 Mitigation:
 
-- centralize admin UI patterns in one dedicated file and shared helper widgets
+- centralize admin UI patterns in `features/admin/shared`
+
+### Risk: half-refactored module ownership
+
+Mitigation:
+
+- keep workspace routing intact while extracting modules one by one
+- allow only shared exports and module entrypoints to be imported by the workspace
+- avoid leaving business UI inside `admin_portal_workspace.dart`
 
 ### Risk: giant one-off mockup instead of usable app structure
 
@@ -138,4 +177,6 @@ Mitigation:
 - the docs and app reflect the same Admin Portal IA
 - super-admin navigation is grouped and complete
 - all top-level modules are rendered in the app
+- `admin_portal_workspace.dart` contains composition only
+- shared admin primitives live under `features/admin/shared`
 - no existing portal experiences are broken
