@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../../app/theme/app_colors.dart';
 import '../../../../../app/theme/app_typography.dart';
 import '../../../../../shared/services/auth_error_messages.dart';
+import '../../../../../shared/services/portal_resolver.dart';
 import '../../data/internal_auth_repository.dart';
 
 class InternalLoginScreen extends StatefulWidget {
@@ -42,7 +43,9 @@ class _InternalLoginScreenState extends State<InternalLoginScreen> {
           _statusMessage =
               'Use your provisioned Google account to open the provider, CRM, and operational screens.';
         });
+        return;
       }
+      _navigateToResolvedHome();
     } catch (error) {
       if (!mounted) {
         return;
@@ -79,7 +82,9 @@ class _InternalLoginScreenState extends State<InternalLoginScreen> {
         setState(() {
           _statusMessage = 'Redirecting to Google for secure SHIELD sign-in...';
         });
+        return;
       }
+      _navigateToResolvedHome();
     } catch (error) {
       if (!mounted) {
         return;
@@ -99,6 +104,13 @@ class _InternalLoginScreenState extends State<InternalLoginScreen> {
         });
       }
     }
+  }
+
+  void _navigateToResolvedHome() {
+    if (!mounted) {
+      return;
+    }
+    context.go(PortalResolver.resolvedHomeRoute());
   }
 
   @override

@@ -128,28 +128,7 @@ class InternalAuthSession extends ChangeNotifier {
     ApiService.setActiveCustomerId(null);
     _trace('api access token configured for internal session');
 
-    await _storage.write(key: _accessTokenKey, value: _accessToken);
-    if (_refreshToken != null && _refreshToken!.isNotEmpty) {
-      await _storage.write(key: _refreshTokenKey, value: _refreshToken);
-    }
-    if (_userId != null && _userId!.isNotEmpty) {
-      await _storage.write(key: _userIdKey, value: _userId);
-    }
-    if (_roleCode != null && _roleCode!.isNotEmpty) {
-      await _storage.write(key: _roleCodeKey, value: _roleCode);
-    }
-    if (_email != null && _email!.isNotEmpty) {
-      await _storage.write(key: _emailKey, value: _email);
-    }
-    if (_displayName != null && _displayName!.isNotEmpty) {
-      await _storage.write(key: _displayNameKey, value: _displayName);
-    }
-    if (_branchBusinessId != null && _branchBusinessId!.isNotEmpty) {
-      await _storage.write(
-        key: _branchBusinessIdKey,
-        value: _branchBusinessId,
-      );
-    }
+    await _persistSessionSnapshot();
 
     _trace('token stored and session persistence completed');
     notifyListeners();
@@ -241,23 +220,7 @@ class InternalAuthSession extends ChangeNotifier {
       _isAuthenticated = true;
       _trace('refreshAccessToken completed and ApiService token updated');
 
-      await _storage.write(key: _accessTokenKey, value: _accessToken);
-      await _storage.write(key: _refreshTokenKey, value: _refreshToken);
-      if (_userId != null && _userId!.isNotEmpty) {
-        await _storage.write(key: _userIdKey, value: _userId);
-      }
-      if (_roleCode != null && _roleCode!.isNotEmpty) {
-        await _storage.write(key: _roleCodeKey, value: _roleCode);
-      }
-      if (_email != null && _email!.isNotEmpty) {
-        await _storage.write(key: _emailKey, value: _email);
-      }
-      if (_branchBusinessId != null && _branchBusinessId!.isNotEmpty) {
-        await _storage.write(
-          key: _branchBusinessIdKey,
-          value: _branchBusinessId,
-        );
-      }
+      await _persistSessionSnapshot();
 
       notifyListeners();
       return _accessToken;
@@ -327,6 +290,35 @@ class InternalAuthSession extends ChangeNotifier {
 
     if (notify) {
       notifyListeners();
+    }
+  }
+
+  Future<void> _persistSessionSnapshot() async {
+    try {
+      await _storage.write(key: _accessTokenKey, value: _accessToken);
+      if (_refreshToken != null && _refreshToken!.isNotEmpty) {
+        await _storage.write(key: _refreshTokenKey, value: _refreshToken);
+      }
+      if (_userId != null && _userId!.isNotEmpty) {
+        await _storage.write(key: _userIdKey, value: _userId);
+      }
+      if (_roleCode != null && _roleCode!.isNotEmpty) {
+        await _storage.write(key: _roleCodeKey, value: _roleCode);
+      }
+      if (_email != null && _email!.isNotEmpty) {
+        await _storage.write(key: _emailKey, value: _email);
+      }
+      if (_displayName != null && _displayName!.isNotEmpty) {
+        await _storage.write(key: _displayNameKey, value: _displayName);
+      }
+      if (_branchBusinessId != null && _branchBusinessId!.isNotEmpty) {
+        await _storage.write(
+          key: _branchBusinessIdKey,
+          value: _branchBusinessId,
+        );
+      }
+    } catch (error) {
+      _trace('session persistence degraded to in-memory only: $error');
     }
   }
 }

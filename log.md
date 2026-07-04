@@ -8209,3 +8209,24 @@ est build, ackend/vercel.json, ackend/src/auth/auth.service.ts, and uth_devic
 - `cd backend && npm run build` ✅
 ### Timestamp
 - 2026-07-04 09:02:17 IST
+
+## 224. Internal Google Sign-In Web Crash Hardening: Session Persistence + Explicit Portal Handoff
+**High-level desc**: Investigated the post-Google-auth crash path for internal users and hardened the exact handoff window between successful Firebase/backend authentication and portal navigation, where an exception could leave the login screen visible even though Google sign-in had already completed.
+- Traced the internal login flow through `internal_auth_repository.dart`, `internal_auth_session.dart`, `portal_resolver.dart`, `internal_login_screen.dart`, and the router redirect path, and confirmed the most fragile window was after backend auth succeeded but before the session handoff finished cleanly.
+- Hardened `InternalAuthSession.completeLogin()` and refresh persistence so secure-storage write failures no longer abort a valid in-memory internal session on web; the login can now proceed even if browser-backed storage degrades temporarily.
+- Updated `InternalLoginScreen` to navigate explicitly to `PortalResolver.resolvedHomeRoute()` after a successful internal login or redirect-resume completion instead of relying only on the router refresh side effect.
+- Preserved the existing router-based auth guard behavior while making the post-auth transition more deterministic for web OAuth redirect flows.
+
+### Files Modified/Created
+**Frontend Files (Modified)**:
+- frontend/lib/features/provider/auth/presentation/screens/internal_login_screen.dart
+- frontend/lib/shared/services/internal_auth_session.dart
+- log.md
+**Backend Files (Modified)**:
+- None.
+### Verification
+- `cd frontend && flutter analyze --no-pub lib/features/provider/auth/presentation/screens/internal_login_screen.dart lib/shared/services/internal_auth_session.dart lib/shared/services/portal_resolver.dart lib/features/provider/auth/data/internal_auth_repository.dart lib/app/routes/app_router.dart` ✅
+- `cd frontend && flutter test` ✅
+- `cd backend && npm run build` ✅
+### Timestamp
+- 2026-07-04 09:09:37 IST
