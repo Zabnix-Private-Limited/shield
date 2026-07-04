@@ -180,3 +180,15 @@ Mitigation:
 - `admin_portal_workspace.dart` contains composition only
 - shared admin primitives live under `features/admin/shared`
 - no existing portal experiences are broken
+
+## Phase 3 Activation
+
+- the Admin shell, grouped IA, routing, portal integration, and workspace composition are now frozen infrastructure
+- Phase 3 work should move vertically one module at a time instead of horizontally polishing placeholder surfaces
+- the first live slice in this phase is the Admin Dashboard using:
+  - `api`
+  - `data`
+  - `domain`
+  - `application`
+  - `presentation/providers`
+- future module work should follow the same feature contract documented in `docs/superpowers/specs/2026-07-04-shield-admin-platform-roadmap-phase-3.md`
