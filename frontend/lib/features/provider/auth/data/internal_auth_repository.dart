@@ -5,6 +5,7 @@ import 'package:google_sign_in/google_sign_in.dart';
 
 import '../../../../../shared/services/api_service.dart';
 import '../../../../../shared/services/device_identity_service.dart';
+import '../../../../../shared/services/internal_auth_redirect_state.dart';
 import '../../../../../shared/services/internal_auth_session.dart';
 
 enum InternalAuthSignInResult { completed, redirecting }
@@ -46,7 +47,8 @@ class InternalAuthRepository {
             error.code == 'popup_closed_by_user' ||
             error.code == 'popup-closed-by-user' ||
             error.code == 'cancelled-popup-request' ||
-            error.code == 'web-storage-unsupported';
+            error.code == 'web-storage-unsupported' ||
+            error.code == 'web-context-cancelled';
         _trace(
           'web popup sign-in failed code=${error.code} message=${error.message}',
         );
@@ -58,6 +60,7 @@ class InternalAuthRepository {
           rethrow;
         }
         _trace('falling back to Firebase redirect flow');
+        markPendingInternalAuthRedirect();
         await _firebaseAuth.signInWithRedirect(googleProvider);
         _trace('Firebase redirect initiated; browser should leave SHIELD now');
         return InternalAuthSignInResult.redirecting;
@@ -80,6 +83,10 @@ class InternalAuthRepository {
     if (!kIsWeb) {
       return false;
     }
+    if (!hasPendingInternalAuthRedirect()) {
+      _trace('redirect resume skipped because SHIELD did not initiate redirect fallback');
+      return false;
+    }
     _trace('redirect resume started');
     try {
       final userCredential = await _firebaseAuth.getRedirectResult();
@@ -87,12 +94,15 @@ class InternalAuthRepository {
       final firebaseUser = userCredential.user ?? _firebaseAuth.currentUser;
       if (firebaseUser == null) {
         _trace('redirect resume finished without a Firebase user');
+        clearPendingInternalAuthRedirect();
         return false;
       }
       _trace('2. Firebase user received from redirect: ${firebaseUser.uid}');
       await _completeFirebaseLogin(firebaseUser);
+      clearPendingInternalAuthRedirect();
       return true;
     } catch (error, stackTrace) {
+      clearPendingInternalAuthRedirect();
       _trace('redirect resume threw: $error');
       debugPrintStack(
         label: '[ProviderAuthLogin] redirect resume stack',

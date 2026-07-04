@@ -8367,3 +8367,29 @@ est build, ackend/vercel.json, ackend/src/auth/auth.service.ts, and uth_devic
 ### Timestamp
 - 2026-07-04 13:52:00 IST
 
+
+
+## 231. Redirect Resume Guard for Internal Web Google Login
+**High-level desc**: Prevented SHIELD from calling Firebase redirect-resume on every fresh internal login page load by introducing a web-only pending-redirect marker, so the popup-first auth flow no longer trips Firebase redirect internals when no redirect fallback was actually initiated.
+- The live production trace was finally specific enough to separate two problems: popup-first auth was deployed, but the login page still auto-called `getRedirectResult()` on every cold visit, producing a web runtime `Null check operator used on a null value` before any real redirect fallback had occurred.
+- Added a small conditional web storage helper that marks when SHIELD explicitly initiates redirect fallback and clears that marker once resume is consumed or fails.
+- `InternalAuthRepository.resumeRedirectSignIn()` now exits early unless that marker exists, which removes the startup redirect-resume crash path and keeps Firebase redirect handling scoped only to real popup-fallback flows.
+- Also broadened popup fallback handling to include `web-context-cancelled`, which can appear in browser-interrupted popup flows.
+
+### Files Modified/Created
+**Frontend Files (Modified)**:
+- frontend/lib/features/provider/auth/data/internal_auth_repository.dart
+- log.md
+**Frontend Files (Created)**:
+- frontend/lib/shared/services/internal_auth_redirect_state.dart
+- frontend/lib/shared/services/internal_auth_redirect_state_stub.dart
+- frontend/lib/shared/services/internal_auth_redirect_state_web.dart
+**Backend Files (Modified)**:
+- None.
+### Verification
+- `cd frontend && flutter analyze --no-pub lib/features/provider/auth/data/internal_auth_repository.dart lib/shared/services/internal_auth_redirect_state.dart lib/shared/services/internal_auth_redirect_state_stub.dart lib/shared/services/internal_auth_redirect_state_web.dart lib/features/provider/auth/presentation/screens/internal_login_screen.dart lib/main.dart lib/shared/services/web_runtime_error_probe.dart lib/shared/services/web_runtime_error_probe_stub.dart lib/shared/services/web_runtime_error_probe_web.dart lib/shared/services/internal_auth_session.dart lib/shared/services/portal_resolver.dart lib/app/routes/app_router.dart lib/features/portal/presentation/portal_role_data.dart` ✅
+- `cd frontend && flutter test` ✅
+- `cd backend && npm run build` ✅
+### Timestamp
+- 2026-07-04 14:17:00 IST
+
