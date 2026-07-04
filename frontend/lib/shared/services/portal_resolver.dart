@@ -22,9 +22,7 @@ class PortalResolver {
   const PortalResolver._();
 
   static void _trace(String message) {
-    if (kDebugMode) {
-      debugPrint('[PortalResolver] $message');
-    }
+    debugPrint('[PortalResolver] $message');
   }
 
   static PortalResolution? get current {

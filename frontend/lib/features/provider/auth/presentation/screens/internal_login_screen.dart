@@ -53,8 +53,12 @@ class _InternalLoginScreenState extends State<InternalLoginScreen> {
       }
       _trace('redirect resume completed; proceeding to resolved portal');
       _navigateToResolvedHome();
-    } catch (error) {
+    } catch (error, stackTrace) {
       _trace('redirect resume failed: $error');
+      debugPrintStack(
+        label: '[InternalLoginScreen] redirect resume stack',
+        stackTrace: stackTrace,
+      );
       if (!mounted) {
         return;
       }
@@ -96,8 +100,12 @@ class _InternalLoginScreenState extends State<InternalLoginScreen> {
       }
       _trace('Google Sign-In completed inline; proceeding to resolved portal');
       _navigateToResolvedHome();
-    } catch (error) {
+    } catch (error, stackTrace) {
       _trace('inline Google Sign-In failed: $error');
+      debugPrintStack(
+        label: '[InternalLoginScreen] inline login stack',
+        stackTrace: stackTrace,
+      );
       if (!mounted) {
         return;
       }

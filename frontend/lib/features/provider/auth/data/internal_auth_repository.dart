@@ -19,16 +19,16 @@ class InternalAuthRepository {
   );
 
   void _trace(String message) {
-    if (kDebugMode) {
-      debugPrint('[ProviderAuthLogin] $message');
-    }
+    debugPrint('[ProviderAuthLogin] $message');
   }
 
   Future<InternalAuthSignInResult> signInWithGoogle() async {
     _trace('1. Google Sign-In started');
     final googleProvider = GoogleAuthProvider();
     if (kIsWeb) {
+      _trace('web sign-in using Firebase redirect flow');
       await _firebaseAuth.signInWithRedirect(googleProvider);
+      _trace('Firebase redirect initiated; browser should leave SHIELD now');
       return InternalAuthSignInResult.redirecting;
     }
     final userCredential = await _signInWithNativeGoogleOrProvider(
@@ -48,15 +48,26 @@ class InternalAuthRepository {
     if (!kIsWeb) {
       return false;
     }
-    final userCredential = await _firebaseAuth.getRedirectResult();
-    final firebaseUser = userCredential.user ?? _firebaseAuth.currentUser;
-    if (firebaseUser == null) {
-      _trace('redirect resume finished without a Firebase user');
-      return false;
+    _trace('redirect resume started');
+    try {
+      final userCredential = await _firebaseAuth.getRedirectResult();
+      _trace('redirect result received from Firebase');
+      final firebaseUser = userCredential.user ?? _firebaseAuth.currentUser;
+      if (firebaseUser == null) {
+        _trace('redirect resume finished without a Firebase user');
+        return false;
+      }
+      _trace('2. Firebase user received from redirect: ${firebaseUser.uid}');
+      await _completeFirebaseLogin(firebaseUser);
+      return true;
+    } catch (error, stackTrace) {
+      _trace('redirect resume threw: $error');
+      debugPrintStack(
+        label: '[ProviderAuthLogin] redirect resume stack',
+        stackTrace: stackTrace,
+      );
+      rethrow;
     }
-    _trace('2. Firebase user received from redirect: ${firebaseUser.uid}');
-    await _completeFirebaseLogin(firebaseUser);
-    return true;
   }
 
   Future<UserCredential> _signInWithNativeGoogleOrProvider(
@@ -130,11 +141,18 @@ class InternalAuthRepository {
       _trace('7. Saving session');
       await InternalAuthSession.instance.completeLogin(tokenPayload: payload);
       _trace('session saved; internal auth session completeLogin finished');
-    } on DioException catch (error) {
+    } on DioException catch (error, stackTrace) {
       final data = error.response?.data;
       final message = data is Map
           ? (data['message'] ?? data['msg'] ?? '').toString()
           : '';
+      _trace(
+        'backend auth request failed status=${error.response?.statusCode} message=${error.message}',
+      );
+      debugPrintStack(
+        label: '[ProviderAuthLogin] backend auth stack',
+        stackTrace: stackTrace,
+      );
       try {
         await _firebaseAuth.signOut();
       } catch (_) {}
@@ -147,7 +165,12 @@ class InternalAuthRepository {
         throw StateError(message);
       }
       throw StateError('Internal sign-in failed right now. Please try again.');
-    } catch (_) {
+    } catch (error, stackTrace) {
+      _trace('completeFirebaseLogin crashed: $error');
+      debugPrintStack(
+        label: '[ProviderAuthLogin] completeFirebaseLogin stack',
+        stackTrace: stackTrace,
+      );
       ApiService.clearAccessToken();
       ApiService.setActiveCustomerId(null);
       rethrow;

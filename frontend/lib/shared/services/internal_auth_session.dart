@@ -33,9 +33,7 @@ class InternalAuthSession extends ChangeNotifier {
   String? _branchBusinessId;
 
   void _trace(String message) {
-    if (kDebugMode) {
-      debugPrint('[InternalAuthSession] $message');
-    }
+    debugPrint('[InternalAuthSession] $message');
   }
 
   bool get isInitialized => _initialized;

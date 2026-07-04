@@ -8255,3 +8255,27 @@ est build, ackend/vercel.json, ackend/src/auth/auth.service.ts, and uth_devic
 - `cd backend && npm run build` ✅
 ### Timestamp
 - 2026-07-04 10:03:48 IST
+
+## 226. Internal Login Release-Build Observability Upgrade
+**High-level desc**: Closed the remaining blind spot in the internal Google login investigation by making repository/session/resolver traces visible in release web builds and by adding stack logging around the redirect-resume boundary that was still collapsing into minified `main.dart.js` errors in the browser console.
+- Confirmed the previous console gap was partly observational rather than architectural: `InternalAuthRepository`, `InternalAuthSession`, and `PortalResolver` traces were still gated behind `kDebugMode`, so production web builds could never show the deeper auth/session steps even when the latest code was deployed.
+- Removed the debug-only guard from those auth tracing helpers so release browser sessions now log repository, session, and portal-resolution milestones alongside the existing router and login-screen traces.
+- Added explicit before/after/error tracing plus stack printing around `FirebaseAuth.getRedirectResult()` and backend auth completion so redirect-resume failures now surface as SHIELD-owned log lines instead of only a generic minified `Uncaught Error` in `main.dart.js`.
+- Rechecked the app-level architecture while tracing this issue: there is still only one root `ProviderScope` in `main.dart` and one shared `GoRouter` instance in `app_router.dart`, so the current evidence does not support a nested-provider or second-router auth-state split.
+- Verified the web reCAPTCHA warmup warning comes from `FirebaseBootstrapService.initialize()` and is a best-effort bootstrap diagnostic rather than the primary internal-login handoff path.
+
+### Files Modified/Created
+**Frontend Files (Modified)**:
+- frontend/lib/features/provider/auth/data/internal_auth_repository.dart
+- frontend/lib/features/provider/auth/presentation/screens/internal_login_screen.dart
+- frontend/lib/shared/services/internal_auth_session.dart
+- frontend/lib/shared/services/portal_resolver.dart
+- log.md
+**Backend Files (Modified)**:
+- None.
+### Verification
+- `cd frontend && flutter analyze --no-pub lib/features/provider/auth/data/internal_auth_repository.dart lib/features/provider/auth/presentation/screens/internal_login_screen.dart lib/shared/services/internal_auth_session.dart lib/shared/services/portal_resolver.dart lib/app/routes/app_router.dart lib/features/portal/presentation/portal_role_data.dart` ✅
+- `cd frontend && flutter test` ✅
+- `cd backend && npm run build` ✅
+### Timestamp
+- 2026-07-04 12:42:27 IST
