@@ -8,13 +8,11 @@ import 'app/theme/app_theme.dart';
 import 'app/routes/app_router.dart';
 import 'shared/config/app_config.dart';
 import 'shared/services/customer_auth_session.dart';
-import 'shared/services/firebase_auth_web_registration.dart';
 import 'shared/services/firebase_bootstrap_service.dart';
 import 'shared/services/internal_auth_session.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await ensureFirebaseAuthWebRegistration();
   await FirebaseBootstrapService.initialize();
   await Hive.initFlutter();
   await CustomerAuthSession.instance.initialize();

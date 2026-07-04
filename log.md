@@ -8279,3 +8279,23 @@ est build, ackend/vercel.json, ackend/src/auth/auth.service.ts, and uth_devic
 - `cd backend && npm run build` ✅
 ### Timestamp
 - 2026-07-04 12:42:27 IST
+
+## 227. Internal Google Redirect Fix: Remove Duplicate Firebase Auth Web Registration
+**High-level desc**: Fixed the strongest repo-local root-cause candidate behind the internal Google redirect crash by removing SHIELD's manual `FirebaseAuthWeb.registerWith(...)` startup call after confirming Flutter web already auto-registers `firebase_auth_web` through the generated web plugin registrant.
+- The production logs showed the crash occurring during Firebase Web redirect/auth-state bridging before SHIELD received a user object, and the generated `web_plugin_registrant.dart` confirmed `FirebaseAuthWeb.registerWith(registrar)` already runs automatically on web.
+- SHIELD was also manually calling `ensureFirebaseAuthWebRegistration()` during `main()` startup, which duplicated web auth plugin registration and risked corrupting redirect-result and auth-state listener behavior during Google Sign-In resume.
+- Removed the manual startup registration path from `main.dart` so Firebase Auth Web now follows the standard Flutter-generated single-registration flow while preserving the existing SHIELD login tracing and session diagnostics added earlier.
+- Kept the rest of the auth observability in place so the next production login attempt can confirm whether redirect resume now yields a real Firebase user and continues into backend auth/session save.
+
+### Files Modified/Created
+**Frontend Files (Modified)**:
+- frontend/lib/main.dart
+- log.md
+**Backend Files (Modified)**:
+- None.
+### Verification
+- `cd frontend && flutter analyze --no-pub lib/main.dart lib/features/provider/auth/data/internal_auth_repository.dart lib/features/provider/auth/presentation/screens/internal_login_screen.dart lib/shared/services/internal_auth_session.dart lib/shared/services/portal_resolver.dart lib/app/routes/app_router.dart lib/features/portal/presentation/portal_role_data.dart` ✅
+- `cd frontend && flutter test` ✅
+- `cd backend && npm run build` ✅
+### Timestamp
+- 2026-07-04 13:13:45 IST
