@@ -3,6 +3,7 @@
 Date: 2026-07-03
 Linked spec: `docs/superpowers/specs/2026-07-03-shield-admin-portal-design-spec-v1.md`
 Linked architecture: `docs/superpowers/specs/2026-07-04-shield-admin-engine-architecture.md`
+Linked platform SDK: `docs/superpowers/specs/2026-07-04-shield-platform-sdk-architecture.md`
 
 ## Goal
 
@@ -86,6 +87,7 @@ Implement the Admin Portal as a backend-ready admin engine inside the existing S
 ### Phase 3B.1: Core Admin Engine Framework
 
 - build the shared admin platform primitives before more module-specific API work
+- treat this phase as the first implementation step of the wider SHIELD Platform SDK, not just a local admin refactor
 - add reusable engine surfaces for:
   - admin layout
   - page header
@@ -123,6 +125,22 @@ Implement the Admin Portal as a backend-ready admin engine inside the existing S
   - breakpoints
   - animations
   - loading states
+- build toward shared package ownership for:
+  - design system
+  - engine
+  - permissions
+  - api
+  - realtime
+  - forms
+  - tables
+  - actions
+  - workspace
+  - navigation
+  - search
+  - upload
+  - charts
+  - notifications
+  - logging
 
 ### Phase 3B.2: Workspace Contract
 
@@ -141,6 +159,12 @@ Implement the Admin Portal as a backend-ready admin engine inside the existing S
   - supported view modes
 - keep the engine responsible for rendering behavior while workspace definitions describe business-owned structure
 - add registry-driven ownership so the sidebar and route resolver read from workspace registry metadata instead of hardcoding module knowledge
+- prepare for parallel registries beyond workspace:
+  - navigation registry
+  - route registry
+  - action registry
+  - permission registry
+  - search registry
 
 ### Phase 3B.3: Backend Contracts
 
@@ -161,6 +185,7 @@ Implement the Admin Portal as a backend-ready admin engine inside the existing S
   - `permissions`
   - `links`
 - prefer event-driven mutation follow-up over isolated UI callbacks so audit, refresh, notifications, and cache invalidation can compose cleanly
+- introduce command-bus and event-bus expectations early so widgets do not become direct service callers as the platform grows
 
 ### Phase 3B.4: Module Migration
 
@@ -187,6 +212,13 @@ Implement the Admin Portal as a backend-ready admin engine inside the existing S
 - observability
 - testing
 - production hardening
+
+### Phase 4: Shared Platform Services
+
+- global search and command palette
+- workflow engine
+- background job framework
+- shared media and document service
 
 ### Phase 4: Commercial and growth modules
 

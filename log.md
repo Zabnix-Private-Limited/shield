@@ -8513,3 +8513,25 @@ est build, ackend/vercel.json, ackend/src/auth/auth.service.ts, and uth_devic
 - Reviewed spec and roadmap diffs for engine boundary, registry model, response contract, and roadmap consistency ✅
 ### Timestamp
 - 2026-07-04 17:27:47 IST
+## 237. Platform SDK Direction Above the Admin Engine
+**High-level desc**: Expanded the architecture docs so SHIELD now treats the admin engine as one subsystem inside a broader package-first Platform SDK, with explicit registries, buses, shared services, and a stricter build order that prioritizes system infrastructure before additional business modules.
+- Added a dedicated Platform SDK architecture spec that introduces the long-term `apps / packages / modules` split, shared package ownership for design system, engine, forms, tables, actions, search, uploads, notifications, and logging, plus the strict build order from design system through Settings reference implementation.
+- Updated the admin engine, reset, implementation plan, and roadmap docs so the repo now distinguishes between the admin engine and the wider platform SDK, and so future work expects registry-driven modules, command-bus and event-bus patterns, and shared services such as workflow, background jobs, and centralized media/documents.
+- Elevated global search, command palette, workflow engine, background jobs, and shared document/media service into formal post-foundation roadmap items instead of leaving them as optional future ideas.
+
+### Files Modified/Created
+**Docs Files (Created)**:
+- docs/superpowers/specs/2026-07-04-shield-platform-sdk-architecture.md
+**Docs Files (Modified)**:
+- docs/superpowers/specs/2026-07-04-shield-admin-engine-architecture.md
+- docs/superpowers/specs/2026-07-04-shield-super-admin-v2-reset.md
+- docs/superpowers/specs/2026-07-03-shield-admin-portal-implementation-plan.md
+- docs/superpowers/specs/2026-07-04-shield-admin-platform-roadmap-phase-3.md
+**Frontend Files (Modified)**:
+- log.md
+**Backend Files (Modified)**:
+- None.
+### Verification
+- Reviewed doc diffs for SDK layering, registry additions, bus patterns, and roadmap sequencing consistency ✅
+### Timestamp
+- 2026-07-04 18:11:46 IST

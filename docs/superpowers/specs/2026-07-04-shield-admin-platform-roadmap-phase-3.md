@@ -5,6 +5,7 @@ Prerequisite baseline:
 - `docs/superpowers/specs/2026-07-03-shield-admin-portal-design-spec-v1.md`
 - `docs/superpowers/specs/2026-07-03-shield-admin-portal-implementation-plan.md`
 - `docs/superpowers/specs/2026-07-04-shield-admin-engine-architecture.md`
+- `docs/superpowers/specs/2026-07-04-shield-platform-sdk-architecture.md`
 
 ## Status
 
@@ -39,6 +40,7 @@ Before more module-by-module API work, governance and system surfaces must drop 
 - centralized state handling for loading, empty, no-permission, offline, error, and success
 - shared action lifecycle hooks for permission, validation, confirmation, API execution, audit, refresh, and toast handling
 - design token ownership for spacing, typography, density, breakpoints, drawers, animations, and loading states
+- align the engine with the wider package-first Platform SDK direction
 
 ### Phase 3B.2: Workspace Contract
 
@@ -57,6 +59,7 @@ Before more module-by-module API work, governance and system surfaces must drop 
   - view modes
   - empty and error messaging
 - registry-driven module ownership so sidebar and routing resolve through workspace definitions instead of direct module knowledge
+- prepare complementary registries for navigation, search, permissions, actions, and routes
 
 ### Phase 3B.3: Backend Contracts
 
@@ -72,6 +75,7 @@ Before more module-by-module API work, governance and system surfaces must drop 
   - permissions
 - standardize response envelopes with `success`, `message`, `data`, `meta`, `filters`, `permissions`, and `links`
 - prefer event-driven follow-up after mutations so audit, notifications, refresh, and cache invalidation remain composable
+- steer widgets toward command-bus dispatch instead of direct service coupling
 
 ### Phase 3B.4: Module Migration
 
@@ -240,6 +244,15 @@ Then focus on:
 - observability
 - testing
 - production hardening
+
+## Phase 4
+
+After the first production module wave, expand shared platform services:
+
+- global search and command palette
+- workflow engine
+- background job framework
+- shared media and document service
 
 ## Current Phase 3 Slice
 

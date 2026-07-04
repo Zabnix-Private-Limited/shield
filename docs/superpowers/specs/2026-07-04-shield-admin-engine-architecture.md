@@ -7,6 +7,7 @@ Linked docs:
 - `docs/superpowers/specs/2026-07-03-shield-admin-portal-implementation-plan.md`
 - `docs/superpowers/specs/2026-07-04-shield-admin-platform-roadmap-phase-3.md`
 - `docs/superpowers/specs/2026-07-04-shield-super-admin-v2-reset.md`
+- `docs/superpowers/specs/2026-07-04-shield-platform-sdk-architecture.md`
 
 ## Purpose
 
@@ -25,6 +26,16 @@ The admin engine must stay framework-like:
 - it enforces presentation-level consistency
 
 It must not become the place where business rules, module-specific workflows, or domain policy live.
+
+## Relationship to the Platform SDK
+
+The admin engine should be treated as one major subsystem inside the broader SHIELD Platform SDK.
+
+That means:
+
+- the admin engine is not the final top-level boundary
+- packages should eventually own shared capabilities such as forms, tables, actions, search, uploads, notifications, and logging
+- business modules should depend on those platform capabilities instead of reinventing them inside admin feature folders
 
 ## Six engine subsystems
 
@@ -305,6 +316,10 @@ frontend/lib/features/admin/
 ```
 
 This structure may evolve, but the subsystem split should remain visible.
+
+For the broader package direction, refer to:
+
+- `docs/superpowers/specs/2026-07-04-shield-platform-sdk-architecture.md`
 
 ## Success condition
 

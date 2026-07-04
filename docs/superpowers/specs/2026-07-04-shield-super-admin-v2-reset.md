@@ -6,6 +6,7 @@ Linked docs:
 - `docs/superpowers/specs/2026-07-03-shield-admin-portal-design-spec-v1.md`
 - `docs/superpowers/specs/2026-07-03-shield-admin-portal-implementation-plan.md`
 - `docs/superpowers/specs/2026-07-04-shield-admin-platform-roadmap-phase-3.md`
+- `docs/superpowers/specs/2026-07-04-shield-platform-sdk-architecture.md`
 
 ## Why this reset exists
 
@@ -36,6 +37,8 @@ Position it as the foundation of the admin platform, for example:
 - Portal Engine
 
 Inside that foundation, workspace definitions, layout systems, registries, permissions, actions, renderers, and data sources should be separate concerns.
+
+The broader package-first direction for SHIELD is documented separately in the Platform SDK architecture spec.
 
 ## Modules in scope first
 
