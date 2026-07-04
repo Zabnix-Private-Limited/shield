@@ -8393,3 +8393,22 @@ est build, ackend/vercel.json, ackend/src/auth/auth.service.ts, and uth_devic
 ### Timestamp
 - 2026-07-04 14:17:00 IST
 
+
+
+## 232. Internal Google Login Provisioning Match Normalized for Existing Employees
+**High-level desc**: Fixed the backend internal Google login lookup so an already-provisioned active employee can be matched by email regardless of case on first Firebase sign-in, then linked to that Firebase identity instead of being incorrectly rejected as unprovisioned.
+- The production auth trace proved the frontend popup flow was working end-to-end through Firebase and that the remaining failure was a backend `401` from `/auth/internal/login` with `Internal user is not provisioned.`
+- The supplied database row showed the employee existed but still had `firebase_uid` and `auth_provider` as null, while the stored email casing did not necessarily match the normalized lowercase email returned by Google/Firebase.
+- Updated `AuthService.loginInternalUser()` to match existing internal users by email case-insensitively during first-time Google sign-in and to normalize the stored email to lowercase when linking the Firebase account.
+- This preserves the existing provisioning model while removing a fragile case-sensitive mismatch that blocked legitimate first-time internal logins for already-created employee records.
+
+### Files Modified/Created
+**Frontend Files (Modified)**:
+- log.md
+**Backend Files (Modified)**:
+- backend/src/auth/auth.service.ts
+### Verification
+- `cd backend && npm run build` ✅
+### Timestamp
+- 2026-07-04 14:32:00 IST
+

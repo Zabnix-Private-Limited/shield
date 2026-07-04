@@ -210,7 +210,10 @@ export class AuthService {
     const user = await this.prisma.user.findFirst({
       where: {
         deletedAt: null,
-        OR: [{ firebaseUid: decoded.uid }, { email }],
+        OR: [
+          { firebaseUid: decoded.uid },
+          { email: { equals: email, mode: 'insensitive' } },
+        ],
       },
       include: {
         role: {
@@ -246,6 +249,7 @@ export class AuthService {
 
     await this.prisma.user.update({
       data: {
+        email,
         firebaseUid: decoded.uid,
         authProvider: provider,
         userType: this.toUserType(user.userType ?? user.role.userType),
