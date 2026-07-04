@@ -10,9 +10,31 @@ import 'shared/config/app_config.dart';
 import 'shared/services/customer_auth_session.dart';
 import 'shared/services/firebase_bootstrap_service.dart';
 import 'shared/services/internal_auth_session.dart';
+import 'shared/services/web_runtime_error_probe.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  FlutterError.onError = (details) {
+    FlutterError.presentError(details);
+    debugPrint(
+      '[FlutterError] exception=${details.exceptionAsString()} library=${details.library ?? 'unknown'} context=${details.context}',
+    );
+    if (details.stack != null) {
+      debugPrintStack(
+        label: '[FlutterError] stack',
+        stackTrace: details.stack,
+      );
+    }
+  };
+  PlatformDispatcher.instance.onError = (error, stack) {
+    debugPrint('[PlatformDispatcher] uncaught error=$error');
+    debugPrintStack(
+      label: '[PlatformDispatcher] stack',
+      stackTrace: stack,
+    );
+    return false;
+  };
+  await ensureWebRuntimeErrorProbe();
   await FirebaseBootstrapService.initialize();
   await Hive.initFlutter();
   await CustomerAuthSession.instance.initialize();

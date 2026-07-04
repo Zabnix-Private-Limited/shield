@@ -8299,3 +8299,26 @@ est build, ackend/vercel.json, ackend/src/auth/auth.service.ts, and uth_devic
 - `cd backend && npm run build` ✅
 ### Timestamp
 - 2026-07-04 13:13:45 IST
+
+## 228. Web Runtime Probe for Raw Firebase Redirect Failures
+**High-level desc**: Added a browser/runtime error probe around SHIELD startup so production web auth failures that happen inside Firebase Web before Dart receives a usable user object now emit raw browser, Flutter, and platform uncaught-error details instead of only a minified `main.dart.js` stack.
+- The latest production login trace showed `getRedirectResult()` returning after an internal Firebase Web error path, but the real thrown object was still being swallowed into a generic minified browser stack before SHIELD auth could report a specific failure reason.
+- Verified the repo-side Firebase web configuration remains internally consistent: `firebase_options.dart` and `firebase-messaging-sw.js` both target the `shield-zabnix` Firebase project, and both `https://shield-zabnix.vercel.app/__/auth/handler` and `https://shield-zabnix.firebaseapp.com/__/auth/handler` respond successfully.
+- Added startup probes for `FlutterError.onError`, `PlatformDispatcher.instance.onError`, browser `window.error`, and browser `unhandledrejection` so the next production redirect attempt can reveal the raw Firebase/JS failure text if the redirect bridge still aborts before a user object exists.
+- Kept the earlier auth tracing and duplicate-registration fix intact; this pass improves the visibility of remaining Firebase Web runtime failures rather than changing SHIELD auth semantics.
+
+### Files Modified/Created
+**Frontend Files (Modified)**:
+- frontend/lib/main.dart
+- frontend/lib/shared/services/web_runtime_error_probe.dart
+- frontend/lib/shared/services/web_runtime_error_probe_stub.dart
+- frontend/lib/shared/services/web_runtime_error_probe_web.dart
+- log.md
+**Backend Files (Modified)**:
+- None.
+### Verification
+- `cd frontend && flutter analyze --no-pub lib/main.dart lib/shared/services/web_runtime_error_probe.dart lib/shared/services/web_runtime_error_probe_stub.dart lib/shared/services/web_runtime_error_probe_web.dart lib/features/provider/auth/data/internal_auth_repository.dart lib/features/provider/auth/presentation/screens/internal_login_screen.dart lib/shared/services/internal_auth_session.dart lib/shared/services/portal_resolver.dart lib/app/routes/app_router.dart lib/features/portal/presentation/portal_role_data.dart` ✅
+- `cd frontend && flutter test` ✅
+- `cd backend && npm run build` ✅
+### Timestamp
+- 2026-07-04 13:24:34 IST
