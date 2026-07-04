@@ -8412,3 +8412,32 @@ est build, ackend/vercel.json, ackend/src/auth/auth.service.ts, and uth_devic
 ### Timestamp
 - 2026-07-04 14:32:00 IST
 
+
+
+## 233. Authentication Hardening Baseline and Regression Checklist
+**High-level desc**: Converted the now-working internal authentication flow into a maintained hardening baseline by reducing production auth log noise, removing unnecessary web reCAPTCHA warmup from global startup, and documenting a release-grade authentication regression checklist before more admin module work continues.
+- Removed the eager Firebase web `initializeRecaptchaConfig()` warmup from shared startup because it was emitting `recaptchaKey undefined` during every web boot without being required for the active internal Google popup flow.
+- Reduced production auth observability noise by removing per-call resolver and router tracing while preserving milestone logs such as login start, backend session creation, profile bootstrap, session save, token refresh success, session restore, and session expiry handling.
+- Added a dedicated authentication hardening checklist spec covering internal login, refresh persistence, deep-link survival, logout behavior, multi-tab behavior, and known non-blocking web warnings such as Firebase popup COOP cleanup messages.
+- Updated the admin implementation plan so authentication is explicitly treated as a Phase 3A hardening gate before more feature work proceeds.
+
+### Files Modified/Created
+**Frontend Files (Modified)**:
+- frontend/lib/shared/services/firebase_bootstrap_service.dart
+- frontend/lib/shared/services/portal_resolver.dart
+- frontend/lib/app/routes/app_router.dart
+- frontend/lib/shared/services/internal_auth_session.dart
+- log.md
+**Docs Files (Modified)**:
+- docs/superpowers/specs/2026-07-03-shield-admin-portal-implementation-plan.md
+**Docs Files (Created)**:
+- docs/superpowers/specs/2026-07-04-authentication-hardening-checklist.md
+**Backend Files (Modified)**:
+- None.
+### Verification
+- `cd frontend && flutter analyze --no-pub lib/shared/services/firebase_bootstrap_service.dart lib/shared/services/portal_resolver.dart lib/app/routes/app_router.dart lib/shared/services/internal_auth_session.dart lib/features/provider/auth/data/internal_auth_repository.dart lib/features/provider/auth/presentation/screens/internal_login_screen.dart lib/shared/services/internal_auth_redirect_state.dart lib/shared/services/internal_auth_redirect_state_stub.dart lib/shared/services/internal_auth_redirect_state_web.dart` ✅
+- `cd frontend && flutter test` ✅
+- `cd backend && npm run build` ✅
+### Timestamp
+- 2026-07-04 14:48:00 IST
+

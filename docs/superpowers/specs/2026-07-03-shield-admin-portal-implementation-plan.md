@@ -192,3 +192,21 @@ Mitigation:
   - `application`
   - `presentation/providers`
 - future module work should follow the same feature contract documented in `docs/superpowers/specs/2026-07-04-shield-admin-platform-roadmap-phase-3.md`
+
+## Phase 3A: Authentication Hardening
+
+- freeze the now-working internal Google login architecture before expanding more admin modules
+- keep authentication changes limited to hardening, cleanup, and regression prevention unless a fresh auth bug appears
+- maintain `docs/superpowers/specs/2026-07-04-authentication-hardening-checklist.md` as the release contract for:
+  - Google login
+  - session restore
+  - refresh persistence
+  - logout and relogin
+  - multi-tab behavior
+  - role-based routing
+  - deep-link survival
+- prefer concise production observability:
+  - keep milestone auth logs
+  - avoid noisy per-route and per-resolver tracing
+- treat Firebase popup COOP warnings as documented non-blocking behavior unless hosting/header changes provide a verified elimination path
+- keep Firebase web startup clean by avoiding unnecessary global reCAPTCHA warmup when the active auth flow does not require it

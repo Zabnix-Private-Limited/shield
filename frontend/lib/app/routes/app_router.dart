@@ -52,10 +52,6 @@ final GoRouter router = GoRouter(
       '/session-expired',
     };
     final isPublicLocation = publicLocations.contains(location);
-    _traceRouter(
-      'redirect check location=$location customerAuth=$isCustomerAuthenticated internalAuth=$isInternalAuthenticated resolvedRole=${resolvedPortal?.role.routeKey ?? 'none'}',
-    );
-
     if (authNotice.hasNotice && location != '/session-expired') {
       final kind =
           authNotice.sessionKind == ShieldSessionKind.internal
@@ -89,7 +85,6 @@ final GoRouter router = GoRouter(
         _traceRouter('customer auth redirecting to requested next=$next');
         return next;
       }
-      _traceRouter('customer auth redirecting to resolved home');
       return PortalResolver.resolvedHomeRoute();
     }
 
@@ -99,7 +94,6 @@ final GoRouter router = GoRouter(
         _traceRouter('internal auth redirecting to requested next=$next');
         return next;
       }
-      _traceRouter('internal auth redirecting to resolved home');
       return PortalResolver.resolvedHomeRoute();
     }
 
@@ -136,9 +130,6 @@ final GoRouter router = GoRouter(
           sectionKey: sectionKey,
         );
         if (guardedRoute != null) {
-          _traceRouter(
-            'portal guard rerouted requestedRole=$requestedRoleKey section=$sectionKey -> $guardedRoute',
-          );
           return guardedRoute;
         }
       }

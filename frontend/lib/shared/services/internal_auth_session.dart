@@ -47,11 +47,8 @@ class InternalAuthSession extends ChangeNotifier {
 
   Future<void> initialize() async {
     if (_initialized) {
-      _trace('initialize skipped; already initialized');
       return;
     }
-
-    _trace('initialize started');
 
     final values = await _storage.readAll();
     _accessToken = values[_accessTokenKey]?.trim();
@@ -61,10 +58,6 @@ class InternalAuthSession extends ChangeNotifier {
     _email = values[_emailKey]?.trim();
     _displayName = values[_displayNameKey]?.trim();
     _branchBusinessId = values[_branchBusinessIdKey]?.trim();
-    _trace(
-      'token loaded: hasAccessToken=${_accessToken != null && _accessToken!.isNotEmpty}',
-    );
-
     final activeKind = await ActiveAuthSession.getActiveKind();
     final canRestore =
         activeKind == null || activeKind == ShieldSessionKind.internal;
@@ -75,7 +68,6 @@ class InternalAuthSession extends ChangeNotifier {
       );
       ApiService.setAccessToken(_accessToken!);
       final validated = await _validateOrRefreshSession();
-      _trace('auth bootstrap completed; validated=$validated');
       if (!validated) {
         await _clearSessionStorage(notify: false);
       } else if (activeKind == null) {
@@ -84,7 +76,6 @@ class InternalAuthSession extends ChangeNotifier {
     }
 
     _initialized = true;
-    _trace('initialize completed');
     notifyListeners();
   }
 
@@ -157,23 +148,22 @@ class InternalAuthSession extends ChangeNotifier {
       final payload = await ApiService.getAuthenticatedProfile();
       _hydrateProfile(payload);
       _isAuthenticated = true;
-      _trace('validateOrRefreshSession succeeded with existing token');
+      _trace('session restored using existing token');
       return true;
     } catch (_) {
-      _trace('validateOrRefreshSession failed; attempting refresh');
       final refreshed = await _refreshAccessToken();
       if (refreshed == null || refreshed.isEmpty) {
-        _trace('refresh access token failed');
+        _trace('session restore failed because token refresh did not complete');
         return false;
       }
       try {
         final payload = await ApiService.getAuthenticatedProfile();
         _hydrateProfile(payload);
         _isAuthenticated = true;
-        _trace('validateOrRefreshSession succeeded after refresh');
+        _trace('session restored after token refresh');
         return true;
       } catch (_) {
-        _trace('validateOrRefreshSession still failed after refresh');
+        _trace('session restore failed after token refresh');
         return false;
       }
     }
@@ -216,7 +206,7 @@ class InternalAuthSession extends ChangeNotifier {
       ApiService.setAccessToken(_accessToken!);
       ApiService.setActiveCustomerId(null);
       _isAuthenticated = true;
-      _trace('refreshAccessToken completed and ApiService token updated');
+      _trace('access token refreshed successfully');
 
       await _persistSessionSnapshot();
 
@@ -261,7 +251,6 @@ class InternalAuthSession extends ChangeNotifier {
   }
 
   Future<void> _clearSessionStorage({bool notify = true}) async {
-    _trace('clearing session storage');
     _isAuthenticated = false;
     _accessToken = null;
     _refreshToken = null;
