@@ -41,6 +41,7 @@ Before more module-by-module API work, governance and system surfaces must drop 
 - shared action lifecycle hooks for permission, validation, confirmation, API execution, audit, refresh, and toast handling
 - design token ownership for spacing, typography, density, breakpoints, drawers, animations, and loading states
 - align the engine with the wider package-first Platform SDK direction
+- keep the future `domains/` layer in scope so reusable business rules do not drift into modules
 
 ### Phase 3B.2: Workspace Contract
 
@@ -59,6 +60,7 @@ Before more module-by-module API work, governance and system surfaces must drop 
   - view modes
   - empty and error messaging
 - registry-driven module ownership so sidebar and routing resolve through workspace definitions instead of direct module knowledge
+- treat capability registration as a future companion to workspace registration
 - prepare complementary registries for navigation, search, permissions, actions, and routes
 
 ### Phase 3B.3: Backend Contracts
@@ -76,6 +78,13 @@ Before more module-by-module API work, governance and system surfaces must drop 
 - standardize response envelopes with `success`, `message`, `data`, `meta`, `filters`, `permissions`, and `links`
 - prefer event-driven follow-up after mutations so audit, notifications, refresh, and cache invalidation remain composable
 - steer widgets toward command-bus dispatch instead of direct service coupling
+- lay the groundwork for:
+  - feature flags
+  - configuration service
+  - versioned event contracts
+  - centralized ID generation
+  - policy evaluation
+  - platform test harness
 
 ### Phase 3B.4: Module Migration
 
@@ -253,6 +262,8 @@ After the first production module wave, expand shared platform services:
 - workflow engine
 - background job framework
 - shared media and document service
+- AI capability package
+- integration framework and connectors
 
 ## Current Phase 3 Slice
 

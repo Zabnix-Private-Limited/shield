@@ -39,6 +39,44 @@ Business modules should own:
 - domain-specific configuration
 - module-specific business rules
 
+## Domain layer
+
+Insert a domain layer between packages and modules.
+
+Target direction:
+
+```text
+apps/
+packages/
+domains/
+modules/
+```
+
+Suggested domain families:
+
+- `identity`
+- `customer`
+- `wallet`
+- `provider`
+- `laboratory`
+- `pharmacy`
+- `inventory`
+- `referral`
+- `billing`
+- `notification`
+- `audit`
+
+Each domain should own:
+
+- business rules
+- entities
+- services
+- events
+- repositories
+- contracts
+
+Modules should sit on top of domains rather than re-implement domain logic independently in each portal.
+
 ## Target repository direction
 
 ```text
@@ -66,6 +104,18 @@ shield/
     shield_charts/
     shield_notifications/
     shield_logging/
+  domains/
+    identity/
+    customer/
+    wallet/
+    provider/
+    laboratory/
+    pharmacy/
+    inventory/
+    referral/
+    billing/
+    notification/
+    audit/
   modules/
     customer/
     wallet/
@@ -82,6 +132,30 @@ shield/
 
 This is a target architecture and does not require an immediate repository-wide folder migration, but all new Phase 3B work should move toward this separation.
 
+## Capability registry model
+
+In addition to specialized engines, the platform should think in terms of capabilities.
+
+Examples:
+
+- navigation
+- forms
+- tables
+- charts
+- search
+- files
+- notifications
+- realtime
+- export
+- import
+- workflow
+- analytics
+- permissions
+- AI
+- reporting
+
+Modules should increasingly declare required capabilities rather than wiring those systems manually.
+
 ## Build order
 
 The strict platform-first order should be:
@@ -94,8 +168,9 @@ The strict platform-first order should be:
 6. Schema-driven table and form engines
 7. Global search and command palette
 8. Workflow engine and background job framework
-9. Settings reference implementation
-10. Remaining governance and operational modules
+9. Feature flag and configuration services
+10. Settings reference implementation
+11. Remaining governance and operational modules
 
 ## Design system package
 
@@ -177,6 +252,7 @@ Core registries should include:
 - `SearchRegistry`
 - `ActionRegistry`
 - `RouteRegistry`
+- `CapabilityRegistry`
 
 Preferred flow:
 
@@ -194,6 +270,41 @@ Preferred flow:
 
 This keeps platform policies centralized and UI components simpler.
 
+## Feature flag system
+
+Feature rollout should be a first-class platform service, not a late-stage patch.
+
+Flags should be enforceable by:
+
+- environment
+- tenant
+- organization
+- branch
+- role
+- user
+
+This is especially important for staged delivery of wallet changes, AI features, provider integrations, and operational tooling.
+
+## Configuration service
+
+Avoid hardcoded runtime configuration values in modules.
+
+The platform should expose a configuration service with layered overrides:
+
+`Global -> Tenant -> Organization -> Branch -> User`
+
+Configuration examples:
+
+- currency
+- date format
+- timezone
+- branch settings
+- password policies
+- OTP timeout
+- upload limits
+- invoice numbering
+- dashboard preferences
+
 ## Event bus
 
 Cross-module refresh behavior should be event-driven.
@@ -203,6 +314,12 @@ Preferred flow:
 `Mutation -> Domain Event -> Event Bus -> listeners -> refresh / notify / audit / invalidate cache`
 
 This avoids brittle manual refresh chains.
+
+Events should be versioned, for example:
+
+- `CustomerRegistered.v1`
+- `WalletCredited.v2`
+- `BranchCreated.v1`
 
 ## Metadata layer
 
@@ -223,6 +340,25 @@ WorkspaceDefinition(
 ```
 
 The engine renders the definition.
+
+## AI as a platform capability
+
+AI should be treated as another platform package rather than a special one-off module.
+
+Suggested package direction:
+
+- `shield_ai`
+
+Potential capabilities:
+
+- summarization
+- semantic search
+- OCR
+- document extraction
+- chatbot
+- recommendations
+- anomaly detection
+- report generation
 
 ## Schema-driven form engine
 
@@ -313,6 +449,23 @@ The workflow engine should eventually support sequences such as:
 
 This enables future visual workflow tooling without forcing code rewrites.
 
+## Integration framework
+
+Third-party integrations should be modeled through connector contracts rather than embedded directly in domains.
+
+Examples:
+
+- payment connectors
+- SMS connectors
+- email connectors
+- WhatsApp connectors
+- printer connectors
+- barcode connectors
+- lab equipment connectors
+- government API connectors
+
+Domains should remain provider-agnostic wherever possible.
+
 ## Background job framework
 
 The platform should treat asynchronous work as first-class infrastructure.
@@ -336,6 +489,37 @@ Every background job should support:
 - logs
 - scheduling
 
+## Centralized ID generation
+
+The platform should provide a shared identifier service for human-readable business IDs.
+
+Examples:
+
+- `CUS-000001`
+- `WAL-000001`
+- `LAB-000001`
+- `REF-000001`
+- `ORD-000001`
+
+ID strategy should be centrally configurable rather than invented table by table.
+
+## Policy engine
+
+Permissions answer whether a user may attempt an action.
+
+Policies answer whether the action is allowed under current business conditions.
+
+Example policy dimensions:
+
+- time window
+- amount limit
+- branch match
+- invoice state
+- membership state
+- provider compatibility
+
+This keeps authorization separate from business constraints.
+
 ## Media and document service
 
 Uploads should be centralized, not module-specific.
@@ -353,6 +537,22 @@ The shared document service should support:
 - virus scanning later
 
 This becomes the common backbone for KYC, prescriptions, invoices, reports, and certificates.
+
+## Platform test harness
+
+The SDK should provide reusable testing primitives instead of forcing each module to invent its own harness.
+
+Examples:
+
+- mock workspace
+- mock registry
+- mock permissions
+- mock API
+- mock events
+- mock navigation
+- mock storage
+
+This lowers the cost of testing new modules built on the platform.
 
 ## Success condition
 

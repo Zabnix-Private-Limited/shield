@@ -8535,3 +8535,56 @@ est build, ackend/vercel.json, ackend/src/auth/auth.service.ts, and uth_devic
 - Reviewed doc diffs for SDK layering, registry additions, bus patterns, and roadmap sequencing consistency ✅
 ### Timestamp
 - 2026-07-04 18:11:46 IST
+## 238. Domain Layer and Foundational Capability Architecture
+**High-level desc**: Expanded the SHIELD platform architecture docs to add the final foundational capabilities needed before the shared platform can be considered complete: a domain layer, capability-registry thinking, feature/config/policy services, versioned events, centralized ID strategy, AI as a package capability, connector framework, and a platform test harness.
+- Updated the Platform SDK architecture so the target structure now includes a `domains/` layer between packages and modules, with explicit ownership of business rules, entities, services, repositories, contracts, and events in shared domains such as identity, customer, wallet, provider, billing, referral, notification, and audit.
+- Added capability-registry direction and early platform services including feature flags, configuration layering, versioned event contracts, centralized ID generation, policy evaluation, and a reusable platform test harness.
+- Extended the admin-facing design, implementation, and roadmap docs so they now acknowledge the domain and capability direction, configuration-aware backend contracts, AI as a platform capability, and connector-based integrations as part of the long-term SHIELD architecture rather than optional future ideas.
+
+### Files Modified/Created
+**Docs Files (Modified)**:
+- docs/superpowers/specs/2026-07-04-shield-platform-sdk-architecture.md
+- docs/superpowers/specs/2026-07-04-shield-admin-engine-architecture.md
+- docs/superpowers/specs/2026-07-03-shield-admin-portal-design-spec-v1.md
+- docs/superpowers/specs/2026-07-03-shield-admin-portal-implementation-plan.md
+- docs/superpowers/specs/2026-07-04-shield-admin-platform-roadmap-phase-3.md
+**Frontend Files (Modified)**:
+- log.md
+**Backend Files (Modified)**:
+- None.
+### Verification
+- Reviewed architecture and roadmap diffs for consistency across domain layer, capability registry, platform services, and roadmap priorities ✅
+### Timestamp
+- 2026-07-04 18:26:28 IST
+## 239. Phase 3B.1 Engine Foundation in Code
+**High-level desc**: Started the real Admin Engine implementation by adding tested shared primitives for workspace definitions, registry ownership, capability binding, workspace state transitions, and command/event bus foundations instead of expanding more module-level UI.
+- Added a new shared admin engine layer under `frontend/lib/features/admin/shared/engine/` with immutable workspace/data-source/view definitions, a workspace registry, a capability registry, a version-ready event model and bus, and a middleware-capable command bus.
+- Added focused engine tests first to verify duplicate workspace protection, capability resolution, workspace state transitions, command middleware flow, and event publication before implementation code was written.
+- Exported the new engine primitives through the shared admin exports so future platform work can build on one canonical shared surface instead of ad hoc local helpers.
+- Kept integration intentionally light because the older `AdminWorkspaceController` is not yet used anywhere in the portal, so forcing it into the new engine would add coupling without unlocking real behavior yet.
+
+### Files Modified/Created
+**Frontend Files (Created)**:
+- frontend/lib/features/admin/shared/engine/actions/admin_command_definition.dart
+- frontend/lib/features/admin/shared/engine/actions/admin_command_bus.dart
+- frontend/lib/features/admin/shared/engine/events/admin_event_definition.dart
+- frontend/lib/features/admin/shared/engine/events/admin_event_bus.dart
+- frontend/lib/features/admin/shared/engine/registry/admin_capability_registry.dart
+- frontend/lib/features/admin/shared/engine/workspace/admin_data_source_definition.dart
+- frontend/lib/features/admin/shared/engine/workspace/admin_view_definition.dart
+- frontend/lib/features/admin/shared/engine/workspace/admin_workspace_definition.dart
+- frontend/lib/features/admin/shared/engine/workspace/admin_workspace_registry.dart
+- frontend/lib/features/admin/shared/engine/workspace/admin_workspace_state.dart
+- frontend/lib/features/admin/shared/engine/exports.dart
+- frontend/test/admin_engine_foundation_test.dart
+**Frontend Files (Modified)**:
+- frontend/lib/features/admin/shared/exports.dart
+- log.md
+**Backend Files (Modified)**:
+- None.
+### Verification
+- `cd frontend && flutter test test/admin_engine_foundation_test.dart --reporter expanded` ✅
+- `cd frontend && flutter analyze --no-pub lib/features/admin/shared/engine lib/features/admin/shared/exports.dart test/admin_engine_foundation_test.dart` ✅
+- `cd frontend && flutter test test/agent_portal_accessibility_test.dart --reporter expanded` ✅
+### Timestamp
+- 2026-07-04 18:50:35 IST

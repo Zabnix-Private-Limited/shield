@@ -53,6 +53,8 @@ The directional shift is:
 
 The old direction of screen-first placeholders and later backend wiring should be treated as deprecated.
 
+The longer-term platform direction also assumes a shared domain layer and capability registry above individual modules.
+
 ## Core Principles
 
 1. The Admin Portal is one workspace, not a loose collection of pages.
@@ -89,6 +91,8 @@ The admin platform should be registry-driven.
 - new modules should behave like plugins instead of requiring direct sidebar rewrites
 - workspace definitions should describe module structure, actions, forms, filters, and view modes
 - the engine should render those definitions consistently
+- domains should provide shared business rules across admin, CRM, provider, agent, and customer apps
+- capabilities such as forms, tables, search, files, realtime, reporting, and AI should be platform services rather than module-local inventions
 
 This keeps SHIELD extensible for future modules such as diagnostics, pharmacy, insurance, claims, and specialized provider operations.
 
@@ -592,6 +596,8 @@ Rules:
 - expose permission metadata where a workspace needs action or field gating
 - avoid controller-specific response drift across admin modules
 
+Over time these contracts should align with versioned events, shared configuration service behavior, centralized ID generation, and policy-engine evaluation where business conditions matter.
+
 ## Database Entity Mapping
 
 ### Core operational entities
@@ -650,21 +656,22 @@ Rules:
 
 1. Freeze authentication, routing, session, and portal resolution
 2. Build the Admin Engine foundation and design token system
-3. Define workspace, table, form, filter, and action contracts
-4. Standardize backend DTOs, pagination, filtering, permissions, and audit events
-5. Deliver production modules in this order:
+3. Introduce shared domain and capability direction in the platform foundation
+4. Define workspace, table, form, filter, and action contracts
+5. Standardize backend DTOs, pagination, filtering, permissions, audit events, and configuration behavior
+6. Deliver production modules in this order:
    - Settings
    - Platform
    - Audit
    - Notifications
-6. Expand into core operational modules:
+7. Expand into core operational modules:
    - Customers
    - Agents
    - CRM
    - Wallet
    - Providers
    - Documents
-7. Move into performance, observability, caching, testing, and production hardening
+8. Move into performance, observability, caching, testing, and production hardening
 
 ## V1 Delivery Boundary
 

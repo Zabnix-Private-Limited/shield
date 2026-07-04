@@ -5,6 +5,7 @@ export 'controllers/admin_permissions_controller.dart';
 export 'controllers/admin_search_controller.dart';
 export 'controllers/admin_selection_controller.dart';
 export 'controllers/admin_workspace_controller.dart';
+export 'engine/exports.dart';
 export 'layout/admin_content_area.dart';
 export 'layout/admin_console_page.dart';
 export 'layout/admin_page.dart';

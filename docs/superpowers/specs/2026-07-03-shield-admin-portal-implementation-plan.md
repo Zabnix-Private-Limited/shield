@@ -141,6 +141,7 @@ Implement the Admin Portal as a backend-ready admin engine inside the existing S
   - charts
   - notifications
   - logging
+- establish the direction for shared domains so cross-app business logic is not reimplemented separately in admin, CRM, agent, provider, and customer modules
 
 ### Phase 3B.2: Workspace Contract
 
@@ -165,6 +166,7 @@ Implement the Admin Portal as a backend-ready admin engine inside the existing S
   - action registry
   - permission registry
   - search registry
+  - capability registry
 
 ### Phase 3B.3: Backend Contracts
 
@@ -185,6 +187,13 @@ Implement the Admin Portal as a backend-ready admin engine inside the existing S
   - `permissions`
   - `links`
 - prefer event-driven mutation follow-up over isolated UI callbacks so audit, refresh, notifications, and cache invalidation can compose cleanly
+- introduce foundational platform services early:
+  - feature flags
+  - configuration service
+  - versioned events
+  - ID generation
+  - policy evaluation
+  - platform test harness
 - introduce command-bus and event-bus expectations early so widgets do not become direct service callers as the platform grows
 
 ### Phase 3B.4: Module Migration
@@ -219,6 +228,8 @@ Implement the Admin Portal as a backend-ready admin engine inside the existing S
 - workflow engine
 - background job framework
 - shared media and document service
+- AI capability package
+- integration framework and connectors
 
 ### Phase 4: Commercial and growth modules
 

@@ -35,6 +35,7 @@ That means:
 
 - the admin engine is not the final top-level boundary
 - packages should eventually own shared capabilities such as forms, tables, actions, search, uploads, notifications, and logging
+- domains should own reusable business rules and entities that are shared across admin, CRM, agent, provider, and customer-facing modules
 - business modules should depend on those platform capabilities instead of reinventing them inside admin feature folders
 
 ## Six engine subsystems
@@ -152,6 +153,8 @@ Preferred flow:
 
 Each workspace should register itself through the registry so new modules feel like plugins instead of core rewrites.
 
+The registry model should eventually align with a broader capability registry exposed by the Platform SDK.
+
 ## Workspace interface direction
 
 Every module should implement one shared workspace contract.
@@ -268,6 +271,8 @@ Preferred pattern:
 `Mutation -> Domain Event -> Audit -> Workspace Refresh -> Notification -> Cache Invalidation`
 
 This makes cross-module behavior easier to scale as SHIELD grows.
+
+Event contracts should become versioned over time so consumers can evolve safely.
 
 ## Design token system
 
