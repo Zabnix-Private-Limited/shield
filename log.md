@@ -8322,3 +8322,48 @@ est build, ackend/vercel.json, ackend/src/auth/auth.service.ts, and uth_devic
 - `cd backend && npm run build` ✅
 ### Timestamp
 - 2026-07-04 13:24:34 IST
+
+## 229. Web Internal Login Shifted to Popup-First with Redirect Fallback
+**High-level desc**: Changed SHIELD's internal Google sign-in strategy on web from redirect-first to popup-first so the Vercel-hosted app stops depending on Firebase's failing redirect-resume path as the primary login mechanism, while preserving redirect as a fallback when popup flow is blocked by the browser.
+- The preserved production logs showed redirect sign-in successfully reaching Google and returning through Firebase, but failing before a Firebase user was established; `getRedirectResult()` resumed only to return no user, and both `shield-zabnix.firebaseapp.com/__/firebase/init.json` and `shield-zabnix.web.app/__/firebase/init.json` were externally verified as `404`.
+- For a non-Firebase-hosted app, popup-first is the safest immediate application-side mitigation because it avoids making the broken redirect-resume path the default control flow for internal web login.
+- Updated `InternalAuthRepository.signInWithGoogle()` so web now attempts `signInWithPopup()` first, completes the normal backend-session/bootstrap path on success, and falls back to `signInWithRedirect()` only for popup-specific browser failure cases such as blocked or closed popups.
+- Kept the release-visible auth tracing, runtime probe, and redirect-resume diagnostics intact so remaining infrastructure-side issues can still be observed if popup fallback is ever used.
+
+### Files Modified/Created
+**Frontend Files (Modified)**:
+- frontend/lib/features/provider/auth/data/internal_auth_repository.dart
+- log.md
+**Backend Files (Modified)**:
+- None.
+### Verification
+- `cd frontend && flutter analyze --no-pub lib/features/provider/auth/data/internal_auth_repository.dart lib/main.dart lib/shared/services/web_runtime_error_probe.dart lib/shared/services/web_runtime_error_probe_stub.dart lib/shared/services/web_runtime_error_probe_web.dart lib/features/provider/auth/presentation/screens/internal_login_screen.dart lib/shared/services/internal_auth_session.dart lib/shared/services/portal_resolver.dart lib/app/routes/app_router.dart lib/features/portal/presentation/portal_role_data.dart` ✅
+- `cd frontend && flutter test` ✅
+- `cd backend && npm run build` ✅
+### Timestamp
+- 2026-07-04 13:36:38 IST
+
+
+## 230. Popup-Fallback Auth Code Normalization + Dead Firebase Web Registration Cleanup
+**High-level desc**: Tightened the new popup-first internal Google login flow so browser popup cancellation falls back correctly when Firebase uses hyphenated web error codes, and removed the now-unused manual Firebase Auth web registration helpers to keep the auth bootstrap path single-owned and less error-prone.
+- Firebase web commonly emits popup-cancel/close errors with hyphenated codes such as `popup-closed-by-user`; the popup-first fallback path now recognizes both underscore and hyphen variants before deciding whether to fall back to redirect.
+- The earlier duplicate Firebase Auth web plugin registration bug was already fixed in startup, so the old conditional `firebase_auth_web_registration*` helper files no longer served any runtime purpose and risked future accidental reintroduction of duplicate registration.
+- This keeps SHIELD's repo-side auth flow aligned around one supported startup path, while leaving the remaining redirect-specific Firebase-hosting/domain issues clearly separated as infrastructure configuration work.
+
+### Files Modified/Created
+**Frontend Files (Modified)**:
+- frontend/lib/features/provider/auth/data/internal_auth_repository.dart
+- log.md
+**Frontend Files (Deleted)**:
+- frontend/lib/shared/services/firebase_auth_web_registration.dart
+- frontend/lib/shared/services/firebase_auth_web_registration_stub.dart
+- frontend/lib/shared/services/firebase_auth_web_registration_web.dart
+**Backend Files (Modified)**:
+- None.
+### Verification
+- `cd frontend && flutter analyze --no-pub lib/features/provider/auth/data/internal_auth_repository.dart lib/shared/services/firebase_bootstrap_service.dart lib/main.dart lib/shared/services/web_runtime_error_probe.dart lib/shared/services/web_runtime_error_probe_stub.dart lib/shared/services/web_runtime_error_probe_web.dart lib/features/provider/auth/presentation/screens/internal_login_screen.dart lib/shared/services/internal_auth_session.dart lib/shared/services/portal_resolver.dart lib/app/routes/app_router.dart lib/features/portal/presentation/portal_role_data.dart` ✅
+- `cd frontend && flutter test` ✅
+- `cd backend && npm run build` ✅
+### Timestamp
+- 2026-07-04 13:52:00 IST
+

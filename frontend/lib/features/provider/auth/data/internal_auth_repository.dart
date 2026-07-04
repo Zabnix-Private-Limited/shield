@@ -26,10 +26,42 @@ class InternalAuthRepository {
     _trace('1. Google Sign-In started');
     final googleProvider = GoogleAuthProvider();
     if (kIsWeb) {
-      _trace('web sign-in using Firebase redirect flow');
-      await _firebaseAuth.signInWithRedirect(googleProvider);
-      _trace('Firebase redirect initiated; browser should leave SHIELD now');
-      return InternalAuthSignInResult.redirecting;
+      try {
+        _trace('web sign-in using Firebase popup flow');
+        final userCredential = await _firebaseAuth.signInWithPopup(
+          googleProvider,
+        );
+        _trace('Firebase popup completed');
+        final firebaseUser = userCredential.user ?? _firebaseAuth.currentUser;
+        if (firebaseUser == null) {
+          throw StateError(
+            'Google sign-in popup completed without a Firebase user.',
+          );
+        }
+        await _completeFirebaseLogin(firebaseUser);
+        return InternalAuthSignInResult.completed;
+      } on FirebaseAuthException catch (error, stackTrace) {
+        final shouldFallbackToRedirect =
+            error.code == 'popup-blocked' ||
+            error.code == 'popup_closed_by_user' ||
+            error.code == 'popup-closed-by-user' ||
+            error.code == 'cancelled-popup-request' ||
+            error.code == 'web-storage-unsupported';
+        _trace(
+          'web popup sign-in failed code=${error.code} message=${error.message}',
+        );
+        debugPrintStack(
+          label: '[ProviderAuthLogin] popup sign-in stack',
+          stackTrace: stackTrace,
+        );
+        if (!shouldFallbackToRedirect) {
+          rethrow;
+        }
+        _trace('falling back to Firebase redirect flow');
+        await _firebaseAuth.signInWithRedirect(googleProvider);
+        _trace('Firebase redirect initiated; browser should leave SHIELD now');
+        return InternalAuthSignInResult.redirecting;
+      }
     }
     final userCredential = await _signInWithNativeGoogleOrProvider(
       googleProvider,
