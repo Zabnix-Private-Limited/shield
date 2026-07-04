@@ -40,6 +40,19 @@ The result must still feel like SHIELD:
 - centralized document verification
 - branch and provider network oversight
 
+## Platform Direction
+
+The Admin Portal is no longer a UI-first collection of screens. It is now a platform-first internal application framework.
+
+The directional shift is:
+
+- freeze infrastructure
+- build the admin engine
+- define contracts
+- implement modules
+
+The old direction of screen-first placeholders and later backend wiring should be treated as deprecated.
+
 ## Core Principles
 
 1. The Admin Portal is one workspace, not a loose collection of pages.
@@ -50,6 +63,34 @@ The result must still feel like SHIELD:
 6. Timeline, activity, auditability, and status semantics should be visible everywhere.
 7. Dense enterprise layouts are preferred over airy consumer spacing.
 8. The portal is desktop-first and optimized for 1280px to 1440px operations use.
+9. Shared engine infrastructure should own rendering, state, and action patterns; business rules stay in modules and backend services.
+10. No production-facing admin module should depend on fake analytics, fake telemetry, or placeholder operational datasets.
+
+## Admin Engine Architecture
+
+The frontend foundation should be treated as an admin engine composed of six subsystems:
+
+1. Layout Engine
+2. Workspace Engine
+3. Data Engine
+4. Action Engine
+5. Form Engine
+6. Permission Engine
+
+The detailed subsystem contract lives in:
+
+- `docs/superpowers/specs/2026-07-04-shield-admin-engine-architecture.md`
+
+## Registry and Plugin Model
+
+The admin platform should be registry-driven.
+
+- navigation should resolve workspaces through a registry
+- new modules should behave like plugins instead of requiring direct sidebar rewrites
+- workspace definitions should describe module structure, actions, forms, filters, and view modes
+- the engine should render those definitions consistently
+
+This keeps SHIELD extensible for future modules such as diagnostics, pharmacy, insurance, claims, and specialized provider operations.
 
 ## Primary User Roles
 
@@ -107,7 +148,7 @@ System
 
 - Sidebar groups are always visible in expanded mode.
 - Collapsed mode keeps icons and tooltips only.
-- Each top-level module owns its own internal sub-navigation and workspace layout.
+- Each top-level module contributes its internal structure through workspace definitions and registry metadata.
 - Cross-linking between modules should preserve context where possible, especially customer, provider, and agent references.
 
 ## Screen Inventory
@@ -295,13 +336,14 @@ System
 ### Layout Patterns
 
 - persistent grouped left sidebar
-- universal top workspace header
+- compact page headers instead of large hero banners
 - sticky filter and command bars for data-heavy modules
 - master-detail split workspaces
 - right-side detail and approval panels
 - timeline-first history areas
 - command strips for high-frequency actions
 - data tables only where tabular comparison matters
+- right-side drawers for detail, editing, and workflow follow-up where possible
 
 ### Density
 
@@ -334,10 +376,29 @@ System
 - heavy workflows prefer panels and split workspaces over stacked cards
 - avoid nested rounded rectangles unless hierarchy truly requires it
 - use whitespace, subtle dividers, and horizontal structure before adding more borders
+- avoid marketing-style hero cards and decorative placeholder dashboards in governance and system modules
+
+### Design Tokens
+
+The admin engine should consume shared tokens for:
+
+- spacing
+- elevation
+- radius
+- typography
+- icons
+- table density
+- toolbar heights
+- drawer widths
+- breakpoints
+- animations
+- loading states
 
 ## Reusable Component Library
 
-- Admin Workspace Header
+- Admin Console Page
+- Admin Sidebar
+- Global Command Toolbar
 - Global Search Trigger
 - Command Bar
 - Stat Card
@@ -367,6 +428,11 @@ System
 - Empty State
 - Error State
 - Loading Skeleton
+- Detail Drawer
+- Filter Drawer
+- Form Renderer
+- Workspace Registry
+- Workspace State Container
 
 ## State Patterns
 
@@ -389,12 +455,25 @@ System
 - show what failed: fetch, permission, dependency, upload, save, approval
 - preserve surrounding context where possible instead of blanking the whole page
 
+### Shared Workspace State
+
+Every admin workspace should inherit one shared state model:
+
+- loading
+- refreshing
+- empty
+- error
+- permission denied
+- offline
+- ready
+
 ### CRUD Patterns
 
 - create flows use drawers or modal wizards for focused entities
 - edit flows preserve the current workspace context
 - destructive actions require confirmation with concise impact copy
 - detail workspaces should show activity history and author attribution when relevant
+- CRUD forms should be definition-driven where possible rather than screen-local handwritten implementations
 
 ### Search Patterns
 
@@ -422,6 +501,14 @@ System
 - approval notes
 - audit trail
 - next-item progression
+
+### Action Lifecycle Patterns
+
+High-trust actions should follow one shared lifecycle:
+
+`Action -> Permission -> Validation -> Confirmation -> Event -> API -> Audit -> Refresh -> Toast`
+
+This keeps destructive and compliance-sensitive workflows consistent.
 
 ## RBAC Visibility Matrix
 
@@ -477,6 +564,33 @@ V1 frontend scope centers on `super-admin`, but structure should prepare delegat
 | Notifications | `notification` |
 | Settings | `platform-metadata`, `pricing`, `master-data`, notification config |
 | Platform | `platform-metadata`, `platform-capabilities`, infra status surfaces |
+
+## Backend Contract Standards
+
+Admin endpoints should align on one shared response envelope:
+
+```json
+{
+  "success": true,
+  "message": "",
+  "data": [],
+  "meta": {
+    "page": 1,
+    "pageSize": 25,
+    "total": 214
+  },
+  "filters": {},
+  "permissions": {},
+  "links": {}
+}
+```
+
+Rules:
+
+- use consistent pagination metadata
+- expose filter metadata in predictable structure
+- expose permission metadata where a workspace needs action or field gating
+- avoid controller-specific response drift across admin modules
 
 ## Database Entity Mapping
 
@@ -534,21 +648,23 @@ V1 frontend scope centers on `super-admin`, but structure should prepare delegat
 
 ## Implementation Order
 
-1. Shared Admin shell and grouped navigation
-2. Shared Admin design system and reusable surfaces
-3. Dashboard
-4. Customers
-5. Agents
-6. Providers
-7. Visits
-8. Documents
-9. Memberships
-10. Wallet and Rewards
-11. Referral Network
-12. Reports and Insights
-13. Organization modules
-14. Audit
-15. Settings and Platform
+1. Freeze authentication, routing, session, and portal resolution
+2. Build the Admin Engine foundation and design token system
+3. Define workspace, table, form, filter, and action contracts
+4. Standardize backend DTOs, pagination, filtering, permissions, and audit events
+5. Deliver production modules in this order:
+   - Settings
+   - Platform
+   - Audit
+   - Notifications
+6. Expand into core operational modules:
+   - Customers
+   - Agents
+   - CRM
+   - Wallet
+   - Providers
+   - Documents
+7. Move into performance, observability, caching, testing, and production hardening
 
 ## V1 Delivery Boundary
 
@@ -563,7 +679,7 @@ V1 must deliver:
 V1 does not require:
 
 - final production analytics engines
-- full live CRUD wiring for every admin control
+- full live CRUD wiring for every admin control outside the first production module wave
 - final delegated non-admin access setup
 
 ## Definition of Done

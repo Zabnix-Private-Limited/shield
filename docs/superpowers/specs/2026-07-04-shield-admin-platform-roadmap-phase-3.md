@@ -4,6 +4,7 @@ Date: 2026-07-04
 Prerequisite baseline:
 - `docs/superpowers/specs/2026-07-03-shield-admin-portal-design-spec-v1.md`
 - `docs/superpowers/specs/2026-07-03-shield-admin-portal-implementation-plan.md`
+- `docs/superpowers/specs/2026-07-04-shield-admin-engine-architecture.md`
 
 ## Status
 
@@ -15,14 +16,81 @@ Prerequisite baseline:
 ### In Progress
 
 - Phase 3: Feature Implementation
+- Phase 3B: Super Admin v2 reset
 
 ## Phase 3 Goal
 
-Replace every admin mock surface with a production-ready module using one consistent vertical architecture:
+Replace every admin mock surface with a production-ready module using one consistent admin engine architecture:
 
 `presentation -> application -> domain -> data -> api -> backend`
 
 The shell, grouped IA, routing, workspace composition, portal integration, and RBAC entrypoints are now frozen platform infrastructure and should not be reworked during feature implementation.
+
+Before more module-by-module API work, governance and system surfaces must drop their landing-page placeholders and adopt one compact console pattern.
+
+## Phase 3B Milestones
+
+### Phase 3B.1: Core Admin Engine Framework
+
+- shared layout and shell primitives
+- explicit subsystem boundaries for layout, workspace, data, action, form, and permission engines
+- reusable toolbar and filter system
+- view containers for table, form, metric, timeline, calendar, card, split, and tree surfaces
+- centralized state handling for loading, empty, no-permission, offline, error, and success
+- shared action lifecycle hooks for permission, validation, confirmation, API execution, audit, refresh, and toast handling
+- design token ownership for spacing, typography, density, breakpoints, drawers, animations, and loading states
+
+### Phase 3B.2: Workspace Contract
+
+- metadata-driven workspace definitions become the source of truth for module rendering
+- the contract should describe:
+  - id
+  - title
+  - datasource
+  - layout
+  - columns
+  - forms
+  - filters
+  - tabs
+  - actions
+  - permissions
+  - view modes
+  - empty and error messaging
+- registry-driven module ownership so sidebar and routing resolve through workspace definitions instead of direct module knowledge
+
+### Phase 3B.3: Backend Contracts
+
+- define REST endpoints and DTOs before building production CRUD
+- keep module stacks consistent:
+  - controller
+  - dto
+  - service
+  - repository
+  - prisma
+  - events
+  - audit
+  - permissions
+- standardize response envelopes with `success`, `message`, `data`, `meta`, `filters`, `permissions`, and `links`
+- prefer event-driven follow-up after mutations so audit, notifications, refresh, and cache invalidation remain composable
+
+### Phase 3B.4: Module Migration
+
+- migrate modules into the engine one by one after the framework and contracts are stable
+- recommended first sequence:
+  1. Settings
+  2. Platform
+  3. Audit
+  4. Notifications
+
+## Phase 3B Reset Rules
+
+- No fake activity feeds
+- No fake health percentages
+- No navigation-only setting tiles
+- No page-local dummy KPI cards
+- No module-specific layout inventions when a shared table, form, toolbar, or split workspace can be used
+- Use explicit empty states until live endpoints exist
+- Keep backend ownership for labels, actions, tabs, filters, and status semantics
 
 ## Delivery Order
 
@@ -46,6 +114,15 @@ The shell, grouped IA, routing, workspace composition, portal integration, and R
 18. Insights
 19. Platform
 20. Settings
+
+## First Migration Slice
+
+These modules move first because they most strongly exposed the placeholder-pattern drift:
+
+1. Settings
+2. Platform
+3. Audit
+4. Notifications
 
 ## Required Feature Structure
 
@@ -77,6 +154,8 @@ feature/
 - Loading state
 - Empty state
 - Error state
+- No fake business or operational data
+- No hand-built page logic when the workspace contract can describe the behavior
 - Desktop responsive behavior
 - Tablet-safe responsive behavior
 - Search
@@ -140,6 +219,27 @@ After core feature implementation, move to Admin Platform Hardening:
 - File Manager
 - Analytics and BI
 - System Health
+
+## Phase 3C
+
+After the first governance wave, expand into production operational modules:
+
+- Customers
+- Agents
+- CRM
+- Wallet
+- Providers
+- Documents
+
+## Phase 3D
+
+Then focus on:
+
+- performance
+- caching
+- observability
+- testing
+- production hardening
 
 ## Current Phase 3 Slice
 

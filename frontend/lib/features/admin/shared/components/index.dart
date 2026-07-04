@@ -1,4 +1,5 @@
 export 'admin_activity_feed.dart';
+export 'admin_console_toolbar.dart';
 export 'admin_data_table.dart';
 export 'admin_decision_card.dart';
 export 'admin_detail_panel.dart';

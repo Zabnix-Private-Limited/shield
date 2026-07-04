@@ -6,6 +6,7 @@ export 'controllers/admin_search_controller.dart';
 export 'controllers/admin_selection_controller.dart';
 export 'controllers/admin_workspace_controller.dart';
 export 'layout/admin_content_area.dart';
+export 'layout/admin_console_page.dart';
 export 'layout/admin_page.dart';
 export 'layout/admin_sidebar_section.dart';
 export 'layout/admin_split_workspace.dart';

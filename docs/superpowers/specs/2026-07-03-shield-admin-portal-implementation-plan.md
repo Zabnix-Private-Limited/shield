@@ -2,10 +2,11 @@
 
 Date: 2026-07-03
 Linked spec: `docs/superpowers/specs/2026-07-03-shield-admin-portal-design-spec-v1.md`
+Linked architecture: `docs/superpowers/specs/2026-07-04-shield-admin-engine-architecture.md`
 
 ## Goal
 
-Implement the Admin Portal as a complete V1 frontend workspace inside the existing SHIELD portal shell while preserving the current agent, provider, and customer portal behavior.
+Implement the Admin Portal as a backend-ready admin engine inside the existing SHIELD portal shell while preserving the current agent, provider, and customer portal behavior.
 
 ## Phase Breakdown
 
@@ -20,15 +21,14 @@ Implement the Admin Portal as a complete V1 frontend workspace inside the existi
 
 - add reusable admin workspace file structure
 - define shared admin surfaces for:
-  - module headers
-  - stat cards
-  - command bars
+  - compact console headers
+  - toolbars
   - split workspaces
   - status badges
-  - activity feeds
-  - timelines
   - tables
-  - empty and health panels
+  - form sections
+  - empty and error panels
+  - backend-ready configuration and log surfaces
 
 ### Phase 2A: Admin platform extraction
 
@@ -68,6 +68,126 @@ Implement the Admin Portal as a complete V1 frontend workspace inside the existi
 - documents
 - visits
 
+### Phase 3B: Super Admin v2 reset
+
+- stop extending showcase-style module screens
+- remove dummy operational data from governance and system modules
+- add one compact admin engine pattern for:
+  - title and actions
+  - search
+  - tabs
+  - filters
+  - split content panels
+  - table-first operational surfaces
+  - empty states that point to missing backend contracts
+- migrate Settings, Notifications, Audit, and Platform first because they are the strongest examples of page-local placeholder design
+- treat all future admin modules as backend-driven workspaces rather than bespoke mock screens
+
+### Phase 3B.1: Core Admin Engine Framework
+
+- build the shared admin platform primitives before more module-specific API work
+- add reusable engine surfaces for:
+  - admin layout
+  - page header
+  - toolbar
+  - search
+  - filters
+  - tabs
+  - sidebar
+  - drawer
+  - dialog
+  - table
+  - detail panel
+  - form renderer
+  - metric cards
+  - status badges
+  - pagination
+  - bulk actions
+  - permissions
+- add explicit subsystem boundaries for:
+  - layout engine
+  - workspace engine
+  - data engine
+  - action engine
+  - form engine
+  - permission engine
+- add design token ownership for:
+  - spacing
+  - elevation
+  - radius
+  - typography
+  - icons
+  - table density
+  - toolbar heights
+  - drawer widths
+  - breakpoints
+  - animations
+  - loading states
+
+### Phase 3B.2: Workspace Contract
+
+- define the metadata contract that tells the admin engine what to render instead of hardcoding page behavior
+- design definitions for:
+  - workspace id
+  - datasource id
+  - layout mode
+  - columns
+  - forms
+  - filters
+  - tabs
+  - actions
+  - permissions
+  - empty states
+  - supported view modes
+- keep the engine responsible for rendering behavior while workspace definitions describe business-owned structure
+- add registry-driven ownership so the sidebar and route resolver read from workspace registry metadata instead of hardcoding module knowledge
+
+### Phase 3B.3: Backend Contracts
+
+- define DTOs and REST contracts before expanding frontend CRUD
+- require each migrated admin workspace to have:
+  - repository contract
+  - service contract
+  - controller endpoints
+  - DTOs
+  - permission handling
+  - audit integration
+- standardize controller response envelopes for admin workspaces:
+  - `success`
+  - `message`
+  - `data`
+  - `meta`
+  - `filters`
+  - `permissions`
+  - `links`
+- prefer event-driven mutation follow-up over isolated UI callbacks so audit, refresh, notifications, and cache invalidation can compose cleanly
+
+### Phase 3B.4: Module Migration
+
+- migrate modules only after the shared framework and contracts are in place
+- recommended first order:
+  - Settings
+  - Platform
+  - Audit
+  - Notifications
+
+### Phase 3C: Operational Module Expansion
+
+- Customers
+- Agents
+- CRM
+- Wallet
+- Providers
+- Documents
+
+### Phase 3D: Production Hardening
+
+- performance
+- caching
+- observability
+- testing
+- production hardening
+
 ### Phase 4: Commercial and growth modules
 
 - memberships
@@ -99,9 +219,10 @@ Implement the Admin Portal as a complete V1 frontend workspace inside the existi
 3. Treat the first implementation pass as a complete design-realization build:
    - strong visual hierarchy
    - consistent semantic colors
-   - structured empty and health messaging
-   - timeline-first entity workspaces
-4. Use realistic seed content and enterprise layouts so later backend wiring becomes binding work instead of redesign work.
+   - structured empty and error messaging
+   - dense enterprise layouts
+4. Do not use dummy business data or fake operational telemetry in production-facing admin modules.
+5. When a backend contract is not ready, prefer a table or form shell with an explicit empty state over placeholder metrics, feed items, or hero cards.
 
 ## File Plan
 
@@ -165,6 +286,7 @@ Mitigation:
 Mitigation:
 
 - build each module as a reusable workspace pattern instead of static artboards
+- reject dummy operational data in governance and system modules
 
 ### Risk: future backend mismatch
 
@@ -179,6 +301,7 @@ Mitigation:
 - all top-level modules are rendered in the app
 - `admin_portal_workspace.dart` contains composition only
 - shared admin primitives live under `features/admin/shared`
+- governance modules do not rely on fake activity feeds, fake uptime metrics, or navigation-only cards
 - no existing portal experiences are broken
 
 ## Phase 3 Activation
@@ -210,3 +333,15 @@ Mitigation:
   - avoid noisy per-route and per-resolver tracing
 - treat Firebase popup COOP warnings as documented non-blocking behavior unless hosting/header changes provide a verified elimination path
 - keep Firebase web startup clean by avoiding unnecessary global reCAPTCHA warmup when the active auth flow does not require it
+
+## Phase 3B Activation
+
+- Settings, Notifications, Audit, and Platform must move from landing-page-style placeholders to backend-ready console workspaces before more governance feature expansion
+- use compact page headers and toolbar-first layouts for system and governance modules
+- prefer tables, forms, filters, and empty states over hero banners, fake activity feeds, and showcase cards
+- treat backend contracts as the source of truth for:
+  - settings sections
+  - notification tabs and actions
+  - audit columns and filters
+  - platform dependency labels and health semantics
+- treat the next milestone as admin-engine infrastructure, not page delivery

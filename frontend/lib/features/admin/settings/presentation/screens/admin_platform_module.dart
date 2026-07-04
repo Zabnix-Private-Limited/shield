@@ -7,30 +7,125 @@ class AdminPlatformModule extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const TwoPanelModule(
-      eyebrow: 'System / Platform',
-      title: 'Platform runtime and integration health',
-      description:
-          'A central health board for runtime, queues, integrations, storage, and background workflows that affect operator trust.',
-      primaryAction: AdminActionItem(label: 'Open health report', icon: Icons.monitor_heart_outlined),
-      secondaryAction: AdminActionItem(label: 'Check integrations', icon: Icons.hub_outlined),
-      leftTitle: 'Runtime health',
-      leftSubtitle: 'Core platform availability and operational dependencies.',
-      leftChild: Column(
-        children: [
-          AdminHealthRow(item: AdminHealthItem(label: 'Frontend availability', value: '99.94%', meta: 'last 30 days', color: AdminColors.success)),
-          AdminHealthRow(item: AdminHealthItem(label: 'Backend API', value: 'Healthy', meta: 'p95 latency within target', color: AdminColors.success)),
-          AdminHealthRow(item: AdminHealthItem(label: 'Storage signing', value: 'Watch', meta: '2 transient failures this morning', color: AdminColors.warning)),
-          AdminHealthRow(item: AdminHealthItem(label: 'Background queues', value: 'Lagging', meta: 'document extraction backlog rising', color: AdminColors.danger)),
-        ],
+    return AdminConsolePage(
+      title: 'Platform',
+      subtitle:
+          'System health should render as a live dependency dashboard for infrastructure, queues, storage, and integration status instead of fake uptime tiles.',
+      actions: const [
+        AdminActionItem(label: 'Check integrations', icon: Icons.hub_outlined),
+        AdminActionItem(label: 'Open health report', icon: Icons.monitor_heart_outlined),
+      ],
+      toolbar: const AdminConsoleToolbar(
+        searchHint: 'Search services, queues, storage, or integration dependencies',
+        tabs: ['Overview', 'Dependencies', 'Queues', 'Storage', 'Cron'],
+        filters: ['Critical', 'Watch', 'Healthy', 'Jobs', 'Integrations'],
       ),
-      rightTitle: 'Integration and queue board',
-      rightSubtitle: 'The hidden systems operators still depend on every day.',
-      rightChild: Column(
+      child: AdminSplitWorkspace(
+        left: AdminStatCard(
+          title: 'Dependency map',
+          subtitle: 'The backend health service should own labels, statuses, and severity.',
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: const [
+              AdminDetailRows(
+                rows: [
+                  AdminDetailItem(label: 'Database', value: 'Live health endpoint pending'),
+                  AdminDetailItem(label: 'Redis / Valkey', value: 'Live health endpoint pending'),
+                  AdminDetailItem(label: 'Firebase', value: 'Live health endpoint pending'),
+                  AdminDetailItem(label: 'R2 storage', value: 'Live health endpoint pending'),
+                  AdminDetailItem(label: 'Email / SMS / Push', value: 'Live health endpoint pending'),
+                  AdminDetailItem(label: 'Cron / queues', value: 'Live health endpoint pending'),
+                ],
+              ),
+              SizedBox(height: 18),
+              AdminEmptyState(
+                title: 'No platform health payload connected yet',
+                description:
+                    'This module should bind to one backend health contract for status, latency, last sync, error counts, and queue pressure.',
+                actionLabel: 'Bind `/admin/system/health` before showing dependency health.',
+              ),
+            ],
+          ),
+        ),
+        center: AdminStatCard(
+          title: 'System health',
+          subtitle: 'A live operator table for platform trust and incident visibility.',
+          child: Column(
+            children: const [
+              AdminDataTable<_PlatformHealthRow>(
+                columns: [
+                  AdminDataTableColumn<_PlatformHealthRow>(label: 'Dependency', valueBuilder: _platformDependency),
+                  AdminDataTableColumn<_PlatformHealthRow>(label: 'Status', valueBuilder: _platformStatus),
+                  AdminDataTableColumn<_PlatformHealthRow>(label: 'Latency', valueBuilder: _platformLatency),
+                  AdminDataTableColumn<_PlatformHealthRow>(label: 'Last sync', valueBuilder: _platformLastSync),
+                ],
+                rows: [],
+              ),
+              SizedBox(height: 16),
+              AdminEmptyState(
+                title: 'No live health checks available yet',
+                description:
+                    'Replace static percentages and health adjectives with backend-reported dependency state, queue load, and storage utilization.',
+                actionLabel: 'Wire the platform health service and dependency probes.',
+              ),
+            ],
+          ),
+        ),
+        right: AdminStatCard(
+          title: 'Operational follow-up',
+          subtitle: 'Platform should expose incident actions and queue drill-downs once endpoints exist.',
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: const [
+              _ChecklistLine(label: 'Dependency-specific drill-down routes'),
+              _ChecklistLine(label: 'Background job and queue detail views'),
+              _ChecklistLine(label: 'Storage usage and retention dashboards'),
+              _ChecklistLine(label: 'Incident export and escalation hooks'),
+              _ChecklistLine(label: 'Version, release, and last deploy visibility'),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _PlatformHealthRow {
+  const _PlatformHealthRow();
+}
+
+String _platformDependency(_PlatformHealthRow value) => '';
+String _platformStatus(_PlatformHealthRow value) => '';
+String _platformLatency(_PlatformHealthRow value) => '';
+String _platformLastSync(_PlatformHealthRow value) => '';
+
+class _ChecklistLine extends StatelessWidget {
+  const _ChecklistLine({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          AdminQueueTile(title: 'Firebase messaging', subtitle: 'Healthy token registration and push send path', status: 'Healthy', color: AdminColors.success),
-          AdminQueueTile(title: 'Cloudflare R2 signed URLs', subtitle: 'One burst of retry behavior during peak hour', status: 'Watch', color: AdminColors.warning),
-          AdminQueueTile(title: 'Document extraction service', subtitle: 'OCR queue length up after bulk uploads', status: 'Backlog', color: AdminColors.danger),
+          const Padding(
+            padding: EdgeInsets.only(top: 3),
+            child: Icon(Icons.circle, size: 8, color: AdminColors.secondary),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              label,
+              style: AdminTypography.small.copyWith(
+                color: AdminColors.subtext,
+                height: 1.4,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
         ],
       ),
     );
