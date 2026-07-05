@@ -21,6 +21,8 @@ class ApiService {
   static String? _activeCustomerId;
   static final Map<String, Map<String, dynamic>>
   _providerPlatformWorkspaceCache = <String, Map<String, dynamic>>{};
+  static final Map<String, Map<String, dynamic>>
+  _adminGovernanceWorkspaceCache = <String, Map<String, dynamic>>{};
   static Future<String?> Function()? _onRefreshToken;
   static Future<void> Function()? _onSessionExpired;
   static Future<String?>? _refreshInFlight;
@@ -84,11 +86,13 @@ class ApiService {
   static void setAccessToken(String accessToken) {
     _accessToken = accessToken.trim();
     _providerPlatformWorkspaceCache.clear();
+    _adminGovernanceWorkspaceCache.clear();
   }
 
   static void clearAccessToken() {
     _accessToken = null;
     _providerPlatformWorkspaceCache.clear();
+    _adminGovernanceWorkspaceCache.clear();
   }
 
   static void setActiveCustomerId(String? customerId) {
@@ -701,7 +705,10 @@ class ApiService {
   }
 
   static Future<Map<String, dynamic>> getAgentPreferences() async {
-    final response = await _getWithRetry('/agents/me/preferences', maxAttempts: 3);
+    final response = await _getWithRetry(
+      '/agents/me/preferences',
+      maxAttempts: 3,
+    );
     return _readEnvelope(response);
   }
 
@@ -1333,10 +1340,7 @@ class ApiService {
   }
 
   static Future<List<Map<String, dynamic>>> getProviders() async {
-    final response = await _getWithRetry(
-      '/service-providers',
-      maxAttempts: 3,
-    );
+    final response = await _getWithRetry('/service-providers', maxAttempts: 3);
     final data = _readEnvelopeList(response);
     return List<Map<String, dynamic>>.from(
       data.map((item) => Map<String, dynamic>.from(item as Map)),
@@ -1418,6 +1422,28 @@ class ApiService {
     );
     final data = _readEnvelope(response);
     _providerPlatformWorkspaceCache[cacheKey] = Map<String, dynamic>.from(data);
+    return Map<String, dynamic>.from(data);
+  }
+
+  static Future<Map<String, dynamic>> getAdminGovernanceWorkspace(
+    String workspaceId, {
+    bool forceRefresh = false,
+  }) async {
+    final normalizedWorkspaceId = workspaceId.trim().toLowerCase();
+    if (!forceRefresh &&
+        _adminGovernanceWorkspaceCache.containsKey(normalizedWorkspaceId)) {
+      return Map<String, dynamic>.from(
+        _adminGovernanceWorkspaceCache[normalizedWorkspaceId]!,
+      );
+    }
+
+    final response = await _getWithRetry(
+      '/admin/workspaces/$normalizedWorkspaceId',
+      maxAttempts: 3,
+    );
+    final data = _readEnvelope(response);
+    _adminGovernanceWorkspaceCache[normalizedWorkspaceId] =
+        Map<String, dynamic>.from(data);
     return Map<String, dynamic>.from(data);
   }
 

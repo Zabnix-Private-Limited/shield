@@ -22,6 +22,9 @@ import '../../rewards/presentation/screens/admin_rewards_module.dart';
 import '../../services/presentation/screens/admin_services_module.dart';
 import '../../settings/presentation/screens/admin_platform_module.dart';
 import '../../settings/presentation/screens/admin_settings_module.dart';
+import '../../governance/data/admin_governance_remote_data_source.dart';
+import '../../governance/data/admin_governance_workspace_repository.dart';
+import '../../governance/data/admin_governance_workspace_schema_repository.dart';
 import '../../shared/engine/exports.dart';
 import '../../visits/presentation/screens/admin_visits_module.dart';
 import '../../wallet/presentation/screens/admin_wallet_module.dart';
@@ -29,6 +32,13 @@ import 'admin_platform_runtime.dart';
 
 class AdminWorkspaceCatalog {
   AdminWorkspaceCatalog._();
+
+  static const Set<String> governanceWorkspaceIds = <String>{
+    'settings',
+    'platform',
+    'audit',
+    'notifications',
+  };
 
   static final List<AdminWorkspaceRegistration> registrations =
       _buildRegistrations();
@@ -39,8 +49,23 @@ class AdminWorkspaceCatalog {
           registration.workspace.id: registration,
       };
 
+  static final AdminGovernanceRemoteDataSource _governanceRemoteDataSource =
+      AdminGovernanceRemoteDataSource();
+
+  static final AdminWorkspaceSchemaRepository _schemaRepository =
+      AdminGovernanceWorkspaceSchemaRepository(
+        remoteDataSource: _governanceRemoteDataSource,
+        fallbackSchemas: <String, AdminWorkspaceSchemaDefinition>{
+          for (final registration in registrations)
+            registration.workspace.id: registration.schema,
+        },
+        governanceWorkspaceIds: governanceWorkspaceIds,
+      );
+
   static final AdminPlatformRuntime runtime = AdminPlatformRuntime.bootstrap(
     registrations: registrations,
+    schemaRepository: _schemaRepository,
+    repositoryResolver: _repositoryResolver,
   );
 
   static AdminWorkspaceRegistration? registrationFor(String workspaceId) {
@@ -209,7 +234,10 @@ class _AdminWorkspaceSeed {
 
   AdminWorkspaceRegistration toRegistration(PortalSectionData? section) {
     final title = section?.title ?? _humanizeKey(id);
-    final permissionKey = section?.permission ?? 'admin.$id.read';
+    final permissionKey =
+        section?.permission ??
+        _workspacePermissionOverrides[id] ??
+        'admin.$id.read';
     final route = section?.route ?? '/portal/super-admin/$id';
     final iconKey = section?.iconKey ?? id;
     final schema = _buildSchema(title);
@@ -218,10 +246,7 @@ class _AdminWorkspaceSeed {
       title: title,
       iconKey: iconKey,
       permissionKey: permissionKey,
-      dataSource: AdminDataSourceDefinition(
-        scope: id,
-        endpoint: '/admin/$id',
-      ),
+      dataSource: AdminDataSourceDefinition(scope: id, endpoint: '/admin/$id'),
       views: schema.views,
     );
 
@@ -288,10 +313,7 @@ class _AdminWorkspaceSeed {
                     ),
                   ],
                   sorting: const [
-                    AdminSortDefinition(
-                      key: 'updatedAt',
-                      label: 'Updated',
-                    ),
+                    AdminSortDefinition(key: 'updatedAt', label: 'Updated'),
                   ],
                   actions: [
                     AdminActionDefinition(
@@ -342,6 +364,33 @@ class _AdminWorkspaceSeed {
         ),
       ],
     );
+  }
+}
+
+AdminWorkspaceRepository _repositoryResolver(
+  AdminWorkspaceDefinition workspace,
+) {
+  if (AdminWorkspaceCatalog.governanceWorkspaceIds.contains(workspace.id)) {
+    return AdminGovernanceWorkspaceRepository(
+      remoteDataSource: AdminWorkspaceCatalog._governanceRemoteDataSource,
+    );
+  }
+  return const _CatalogNoopAdminWorkspaceRepository();
+}
+
+const Map<String, String> _workspacePermissionOverrides = <String, String>{
+  'settings': 'settings.view',
+  'platform': 'platform.view',
+  'audit': 'audit.view',
+  'notifications': 'notifications.view',
+};
+
+class _CatalogNoopAdminWorkspaceRepository implements AdminWorkspaceRepository {
+  const _CatalogNoopAdminWorkspaceRepository();
+
+  @override
+  Future<Object?> loadWorkspaceData(AdminWorkspaceDefinition workspace) async {
+    return null;
   }
 }
 
@@ -446,19 +495,19 @@ Widget _buildInsightsWorkspace(
 Widget _buildAuditWorkspace(
   BuildContext context,
   AdminWorkspaceSnapshot snapshot,
-) => const AdminAuditModule();
+) => AdminAuditModule(snapshot: snapshot);
 
 Widget _buildNotificationsWorkspace(
   BuildContext context,
   AdminWorkspaceSnapshot snapshot,
-) => const AdminNotificationsModule();
+) => AdminNotificationsModule(snapshot: snapshot);
 
 Widget _buildSettingsWorkspace(
   BuildContext context,
   AdminWorkspaceSnapshot snapshot,
-) => const AdminSettingsModule();
+) => AdminSettingsModule(snapshot: snapshot);
 
 Widget _buildPlatformWorkspace(
   BuildContext context,
   AdminWorkspaceSnapshot snapshot,
-) => const AdminPlatformModule();
+) => AdminPlatformModule(snapshot: snapshot);

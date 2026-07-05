@@ -1,0 +1,23 @@
+import { Module } from '@nestjs/common';
+import { NotificationModule } from '../notification/notification.module';
+import { PlatformCapabilitiesModule } from '../platform-capabilities/platform-capabilities.module';
+import { PricingModule } from '../pricing/pricing.module';
+import { PrismaModule } from '../prisma/prisma.module';
+import { RedisModule } from '../redis/redis.module';
+import { TimelineModule } from '../timeline/timeline.module';
+import { AdminGovernanceController } from './admin-governance.controller';
+import { AdminGovernanceService } from './admin-governance.service';
+
+@Module({
+  imports: [
+    PrismaModule,
+    PricingModule,
+    NotificationModule,
+    PlatformCapabilitiesModule,
+    TimelineModule,
+    RedisModule,
+  ],
+  controllers: [AdminGovernanceController],
+  providers: [AdminGovernanceService],
+})
+export class AdminGovernanceModule {}

@@ -38,8 +38,9 @@ The repo has now crossed the first live runtime threshold for the admin portion 
 
 - shared workspace, navigation, capability, command, and event primitives are implemented and tested
 - the Super Admin shell now enters through a platform runtime bootstrap instead of resolving modules from a page-local switch
-- workspace registration currently ships with default schema metadata and no-op data repositories so the engine can own lifecycle and metadata without inventing fake backend payloads
-- the next milestone remains backend-owned workspace metadata, real repositories, and contract-driven governance modules
+- governance workspaces now consume backend-owned payloads and injected schema metadata through one shared admin-governance contract layer
+- `settings` is now the reference backend-first governance slice, with `platform`, `audit`, and `notifications` following the same contract and renderer path
+- the next milestone remains expanding this contract-driven pattern to deeper mutation flows, richer permission-aware UX, and the remaining business modules
 
 Business modules should own:
 

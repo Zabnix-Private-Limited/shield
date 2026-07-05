@@ -27,6 +27,7 @@ import { PlatformMetadataModule } from './platform-metadata/platform-metadata.mo
 import { ServiceProviderModule } from './service-provider/service-provider.module';
 import { TimelineModule } from './timeline/timeline.module';
 import { PlatformCapabilitiesModule } from './platform-capabilities/platform-capabilities.module';
+import { AdminGovernanceModule } from './admin-governance/admin-governance.module';
 
 @Module({
   imports: [
@@ -35,6 +36,7 @@ import { PlatformCapabilitiesModule } from './platform-capabilities/platform-cap
     MasterDataModule,
     PlatformMetadataModule,
     PlatformCapabilitiesModule,
+    AdminGovernanceModule,
     OperationsQueueModule,
     ServiceProviderModule,
     TimelineModule,

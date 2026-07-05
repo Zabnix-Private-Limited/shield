@@ -30,7 +30,9 @@ class AdminPlatformRuntime {
     required this.eventBus,
     required this.schemaRepository,
     required this.permissionGateway,
-    required AdminWorkspaceRepository Function(AdminWorkspaceDefinition workspace)
+    required AdminWorkspaceRepository Function(
+      AdminWorkspaceDefinition workspace,
+    )
     repositoryResolver,
     required Map<String, AdminWorkspaceRegistration> registrations,
     required Map<String, AdminWorkspaceSchemaDefinition> schemas,
@@ -41,6 +43,7 @@ class AdminPlatformRuntime {
   factory AdminPlatformRuntime.bootstrap({
     required List<AdminWorkspaceRegistration> registrations,
     AdminEventBus? eventBus,
+    AdminWorkspaceSchemaRepository? schemaRepository,
     AdminWorkspacePermissionGateway? permissionGateway,
     AdminWorkspaceRepository Function(AdminWorkspaceDefinition workspace)?
     repositoryResolver,
@@ -69,7 +72,8 @@ class AdminPlatformRuntime {
       navigationRegistry: navigationRegistry,
       capabilityRegistry: capabilityRegistry,
       eventBus: eventBus ?? AdminEventBus(),
-      schemaRepository: _StaticAdminWorkspaceSchemaRepository(schemas),
+      schemaRepository:
+          schemaRepository ?? _StaticAdminWorkspaceSchemaRepository(schemas),
       permissionGateway:
           permissionGateway ?? const _AllowAllAdminWorkspacePermissionGateway(),
       repositoryResolver: repositoryResolver ?? _noopRepositoryResolver,

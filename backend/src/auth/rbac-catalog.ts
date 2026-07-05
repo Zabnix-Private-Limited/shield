@@ -22,7 +22,9 @@ type PermissionResource =
   | 'referrals'
   | 'analytics'
   | 'settings'
-  | 'notifications';
+  | 'notifications'
+  | 'platform'
+  | 'audit';
 
 type PermissionDefinition = {
   code: string;
@@ -55,6 +57,8 @@ const RESOURCE_ACTIONS: Record<PermissionResource, PermissionAction[]> = {
   analytics: ['view', 'create', 'update', 'delete', 'approve', 'export'],
   settings: ['view', 'create', 'update', 'delete', 'approve', 'export'],
   notifications: ['view', 'create', 'update', 'delete', 'approve', 'export'],
+  platform: ['view', 'create', 'update', 'delete', 'approve', 'export'],
+  audit: ['view', 'create', 'update', 'delete', 'approve', 'export'],
 };
 
 const RESOURCES = Object.keys(RESOURCE_ACTIONS) as PermissionResource[];
@@ -145,8 +149,7 @@ const AGENT_PORTAL_PERMISSIONS: PermissionDefinition[] = [
 ];
 
 export const RBAC_PERMISSIONS: PermissionDefinition[] = [
-  ...RESOURCES.flatMap(
-  (resource) =>
+  ...RESOURCES.flatMap((resource) =>
     RESOURCE_ACTIONS[resource].map((action) => ({
       code: makePermissionCode(resource, action),
       name: `${action.toUpperCase()} ${resource.replace(/_/g, ' ')}`,
@@ -264,7 +267,10 @@ export const RBAC_ROLES: RoleDefinition[] = [
       ...permissionsFor(['customers'], ['view']),
       ...permissionsFor(['appointments'], ['view', 'update', 'approve']),
       ...permissionsFor(['documents'], ['view', 'create']),
-      ...permissionsFor(['medical_records'], ['view', 'create', 'update', 'approve']),
+      ...permissionsFor(
+        ['medical_records'],
+        ['view', 'create', 'update', 'approve'],
+      ),
       ...permissionsFor(['providers'], ['view']),
       ...permissionsFor(['settings'], ['view', 'update']),
       ...permissionsFor(['notifications'], ['view']),
@@ -393,7 +399,10 @@ export const RBAC_ROLES: RoleDefinition[] = [
     userType: 'SYSTEM',
     defaultScope: 'GLOBAL',
     isSystemRole: true,
-    permissions: permissionsFor(['notifications'], ['view', 'create', 'update']),
+    permissions: permissionsFor(
+      ['notifications'],
+      ['view', 'create', 'update'],
+    ),
   },
   {
     code: 'WEBHOOK_SERVICE',

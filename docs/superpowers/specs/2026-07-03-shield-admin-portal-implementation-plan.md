@@ -171,6 +171,10 @@ Implement the Admin Portal as a backend-ready admin engine inside the existing S
   - permission registry
   - search registry
   - capability registry
+- current repo checkpoint:
+  - `settings`, `platform`, `audit`, and `notifications` now load through backend-owned workspace payloads under `/admin/workspaces/*`
+  - the admin runtime now accepts an injected schema repository so those governance workspaces can replace static schema defaults with backend metadata without forking the runtime
+  - the shared governance renderer now consumes one backend payload shape for header, toolbar, metrics, and split-panel content instead of four separate placeholder screens
 
 ### Phase 3B.3: Backend Contracts
 
@@ -188,6 +192,9 @@ Implement the Admin Portal as a backend-ready admin engine inside the existing S
   - `data`
   - `meta`
   - `filters`
+- current repo checkpoint:
+  - `settings` is the first reference contract with a live `PATCH /admin/workspaces/settings/:code` mutation path that writes through the existing pricing/commercial settings service and records audit evidence
+  - `platform`, `audit`, and `notifications` now expose live read contracts backed by existing backend tables and services instead of frontend-owned placeholder data
   - `permissions`
   - `links`
 - prefer event-driven mutation follow-up over isolated UI callbacks so audit, refresh, notifications, and cache invalidation can compose cleanly
