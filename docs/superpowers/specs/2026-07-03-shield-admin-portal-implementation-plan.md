@@ -86,6 +86,10 @@ Implement the Admin Portal as a backend-ready admin engine inside the existing S
 
 ### Phase 3B.1: Core Admin Engine Framework
 
+- Current status as of 2026-07-04:
+  - shared engine primitives, navigation registry, capability registry, command bus, event bus, schema definitions, and action pipeline exist in code with focused tests
+  - the live `AdminPortalWorkspace` now boots through a shared platform runtime that registers workspace, navigation, schema, and capability metadata before rendering a workspace
+  - the old hardcoded builder switch has been replaced by runtime-backed registrations, but backend-owned section metadata and real repository implementations are still pending
 - build the shared admin platform primitives before more module-specific API work
 - treat this phase as the first implementation step of the wider SHIELD Platform SDK, not just a local admin refactor
 - add reusable engine surfaces for:

@@ -38,6 +38,15 @@ That means:
 - domains should own reusable business rules and entities that are shared across admin, CRM, agent, provider, and customer-facing modules
 - business modules should depend on those platform capabilities instead of reinventing them inside admin feature folders
 
+## Current implementation status
+
+The current repository now has a live runtime bootstrap layer for the Super Admin shell:
+
+- workspace, navigation, schema, and capability metadata are registered through one shared runtime bundle
+- `AdminPortalWorkspace` mounts workspaces through that runtime and the shared workspace controller instead of a local hardcoded builder switch
+- default schema and no-op repository ownership are temporary platform scaffolds until backend-owned workspace contracts replace them in Phase 3B.2 and 3B.3
+- module screens still render their existing surfaces, so the runtime now owns mounting and metadata while module-by-module schema-driven rendering remains future work
+
 ## Six engine subsystems
 
 ### 1. Layout Engine

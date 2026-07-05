@@ -2,11 +2,125 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shield/features/admin/customers/data/repositories/mock_admin_customer_repository.dart';
 import 'package:shield/features/admin/customers/domain/entities/admin_customer_summary.dart';
 import 'package:shield/features/admin/customers/domain/repositories/admin_customer_repository.dart';
+import 'package:shield/features/admin/presentation/registry/admin_platform_runtime.dart';
+import 'package:shield/features/admin/presentation/registry/admin_workspace_catalog.dart';
+import 'package:shield/features/admin/presentation/screens/admin_portal_workspace.dart';
 import 'package:shield/features/admin/shared/controllers/admin_navigation_controller.dart';
 import 'package:shield/features/admin/shared/controllers/admin_workspace_controller.dart';
 import 'package:shield/features/admin/shared/engine/exports.dart';
+import 'package:shield/features/portal/presentation/portal_role_data.dart';
+import 'package:shield/shared/models/shield_role.dart';
+import 'package:flutter/material.dart';
 
 void main() {
+  group('AdminPlatformRuntime', () {
+    test('bootstraps workspace, navigation, capability, and schema registries from the shared catalog', () {
+      final runtime = AdminPlatformRuntime.bootstrap(
+        registrations: AdminWorkspaceCatalog.registrations,
+      );
+
+      expect(runtime.registrationFor('settings')?.workspace.title, 'Settings');
+      expect(
+        runtime.workspaceRegistry.findById('platform')?.permissionKey,
+        'admin.platform.read',
+      );
+      expect(
+        runtime.navigationRegistry.findByWorkspaceId('notifications')?.route,
+        '/portal/super-admin/notifications',
+      );
+      expect(runtime.capabilityRegistry.supports('settings', 'forms'), isTrue);
+      expect(runtime.capabilityRegistry.supports('platform', 'tables'), isTrue);
+      expect(
+        runtime.schemaFor('audit')?.defaultViewId,
+        'table',
+      );
+    });
+
+    testWidgets('AdminPortalWorkspace renders through an injected runtime registration', (tester) async {
+      final runtime = AdminPlatformRuntime.bootstrap(
+        registrations: [
+          AdminWorkspaceRegistration(
+            workspace: const AdminWorkspaceDefinition(
+              id: 'runtime-test',
+              title: 'Runtime Test',
+              iconKey: 'runtime-test',
+              permissionKey: 'admin.runtime-test.read',
+              dataSource: AdminDataSourceDefinition(
+                scope: 'runtime-test',
+                endpoint: '/admin/runtime-test',
+              ),
+              views: [
+                AdminViewDefinition(
+                  id: 'overview',
+                  type: AdminViewType.detail,
+                  title: 'Runtime Test',
+                ),
+              ],
+            ),
+            navigation: const AdminNavigationDefinition(
+              workspaceId: 'runtime-test',
+              route: '/portal/super-admin/runtime-test',
+              title: 'Runtime Test',
+              iconKey: 'runtime-test',
+              permissionKey: 'admin.runtime-test.read',
+              breadcrumbs: ['Super Admin', 'Runtime Test'],
+              defaultViewId: 'overview',
+            ),
+            schema: const AdminWorkspaceSchemaDefinition(
+              workspaceId: 'runtime-test',
+              defaultViewId: 'overview',
+              views: [
+                AdminViewDefinition(
+                  id: 'overview',
+                  type: AdminViewType.detail,
+                  title: 'Runtime Test',
+                ),
+              ],
+            ),
+            capabilities: const {'detail'},
+            builder: _runtimeTestBuilder,
+          ),
+        ],
+      );
+
+      const section = PortalSectionData(
+        key: 'runtime-test',
+        title: 'Runtime Test',
+        summary: 'Runtime registered section.',
+        actions: <String>[],
+        metrics: <PortalMetric>[],
+        queueItems: <PortalListItem>[],
+        recentItems: <PortalListItem>[],
+        insightItems: <PortalListItem>[],
+      );
+      const portal = PortalRoleData(
+        role: SHIELDRole.superAdmin,
+        operatorName: 'Admin',
+        headline: 'Platform runtime',
+        regionLabel: 'System-wide administrative workspace',
+        icon: Icons.security_outlined,
+        accentColor: Colors.blue,
+        sections: [section],
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: AdminPortalWorkspace(
+              portal: portal,
+              section: section,
+              runtime: runtime,
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      expect(find.text('Registry runtime renderer'), findsOneWidget);
+      expect(find.textContaining('module is reserved'), findsNothing);
+    });
+  });
+
   group('Admin navigation platform', () {
     test('resolves navigation definitions by route and keeps active workspace in sync', () {
       final registry = AdminNavigationRegistry()
@@ -324,6 +438,15 @@ void main() {
       expect(after.last.status, 'ACTIVE');
     });
   });
+}
+
+Widget _runtimeTestBuilder(
+  BuildContext context,
+  AdminWorkspaceSnapshot snapshot,
+) {
+  return Text(snapshot.workspace.title == 'Runtime Test'
+      ? 'Registry runtime renderer'
+      : 'Unexpected workspace');
 }
 
 class _FakeWorkspaceRepository implements AdminWorkspaceRepository {

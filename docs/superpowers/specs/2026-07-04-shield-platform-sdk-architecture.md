@@ -32,6 +32,15 @@ The platform should own:
 - notifications
 - logging
 
+## Current 3B.1 checkpoint
+
+The repo has now crossed the first live runtime threshold for the admin portion of the SDK:
+
+- shared workspace, navigation, capability, command, and event primitives are implemented and tested
+- the Super Admin shell now enters through a platform runtime bootstrap instead of resolving modules from a page-local switch
+- workspace registration currently ships with default schema metadata and no-op data repositories so the engine can own lifecycle and metadata without inventing fake backend payloads
+- the next milestone remains backend-owned workspace metadata, real repositories, and contract-driven governance modules
+
 Business modules should own:
 
 - definitions
