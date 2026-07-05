@@ -19,8 +19,9 @@
 ### Current State
 - Visible
 - Shared owner
-- Empty callbacks in `admin_workspace_header.dart`
-- Affects all `AdminPage` / backend-rendered modules
+- Buttons now render only when a real callback is resolved
+- Refresh and some tab/filter-targeted actions execute through `AdminWorkspaceController`
+- Affects all backend-rendered modules
 
 ### Expected Behaviour
 - Dispatch real workspace action metadata
@@ -34,7 +35,7 @@
 Critical
 
 ### Status
-Not Implemented
+Partial
 
 ### Component
 Toolbar search
@@ -42,9 +43,9 @@ Toolbar search
 ### Current State
 - Visible
 - Shared owner
-- Rendered as styled text, not input, in `admin_search_bar.dart`
-- No debounce
-- No repository reload
+- Real text input in `admin_search_bar.dart`
+- Debounced workspace reload through controller
+- Clear action supported
 
 ### Expected Behaviour
 - Editable search input
@@ -60,7 +61,7 @@ Toolbar search
 Critical
 
 ### Status
-Not Implemented
+Completed
 
 ### Component
 Toolbar tabs
@@ -68,8 +69,9 @@ Toolbar tabs
 ### Current State
 - Visible
 - Shared owner
-- First tab styled active, but no selection behavior
-- No data reload
+- Real tab selection
+- Active tab state stored in workspace controller
+- Repository reload executes through runtime
 
 ### Expected Behaviour
 - Select tab
@@ -85,7 +87,7 @@ Toolbar tabs
 Critical
 
 ### Status
-Not Implemented
+Completed
 
 ### Component
 Filter chips
@@ -93,8 +95,9 @@ Filter chips
 ### Current State
 - Visible
 - Shared owner
-- Decorative only in `admin_filter_bar.dart`
-- No selection or clear behavior
+- Real selection in `admin_filter_bar.dart`
+- Filter state stored in workspace controller
+- Repository reload executes through runtime
 
 ### Expected Behaviour
 - Toggle filter
@@ -110,7 +113,7 @@ Filter chips
 Critical
 
 ### Status
-Not Implemented
+Completed
 
 ### Component
 Entity cards, KPI cards, timeline rows, empty-state actions, data-table headers/rows
@@ -144,7 +147,8 @@ Header actions
 ### Current State
 - Backend data exists
 - Buttons render from backend labels
-- Shared empty callbacks
+- Refresh and inferred tab/filter actions execute
+- No explicit backend action descriptor contract yet
 
 ### Expected Behaviour
 - `Refresh workspace`
@@ -157,7 +161,7 @@ Header actions
 Critical
 
 ### Status
-Not Implemented
+Partial
 
 ### Component
 Search, tabs, filters
@@ -178,7 +182,7 @@ Search, tabs, filters
 Critical
 
 ### Status
-Partial
+Completed
 
 ### Component
 KPI cards
@@ -227,7 +231,8 @@ Header actions
 
 ### Current State
 - Backend labels exist
-- Shared empty callbacks
+- Refresh and inferred tab/filter actions execute
+- Explicit create/approval command metadata is still missing
 
 ### Expected Behaviour
 - `Create customer`
@@ -240,7 +245,7 @@ Header actions
 Critical
 
 ### Status
-Not Implemented
+Partial
 
 ### Component
 Search, tabs, filters
@@ -261,7 +266,7 @@ Search, tabs, filters
 Critical
 
 ### Status
-Partial
+Completed
 
 ### Component
 Customer list cards
@@ -309,29 +314,31 @@ Blocked
 Header actions
 
 ### Current State
-- Visible
-- Local prototype screen
-- No runtime/repository/backend path
+- Backend workspace contract exists
+- Shared runtime renderer is active
+- Refresh and inferred tab/filter actions execute
+- Explicit create/renewal command metadata is still missing
 
 ### Expected Behaviour
 - Create plan
 - Review renewals
 
 ### Backend Needed
-- Workspace contract and repository integration
+- Action descriptors and mutation commands
 
 ### Priority
 Critical
 
 ### Status
-Blocked
+Partial
 
 ### Component
 Plan cards and health rows
 
 ### Current State
-- Decorative
-- Static data
+- Backend data renders through shared runtime
+- Search, filters, refresh, and tab switching are live
+- No plan/detail row navigation or mutation contract yet
 
 ### Expected Behaviour
 - Open plan detail
@@ -339,13 +346,13 @@ Plan cards and health rows
 - Open expiry/audit queues
 
 ### Backend Needed
-- Membership workspace endpoint
+- Row action metadata and mutation commands
 
 ### Priority
 Critical
 
 ### Status
-Blocked
+Partial
 
 ## Agents
 
@@ -353,48 +360,49 @@ Blocked
 Header actions
 
 ### Current State
-- Visible
-- Local prototype screen
-- No runtime wiring
+- Backend workspace contract exists
+- Shared runtime renderer is active
+- Refresh and inferred tab/filter actions execute
+- Explicit add/assign command metadata is still missing
 
 ### Expected Behaviour
 - Add agent
 - Assign branch
 
 ### Backend Needed
-- Agent workspace contract
+- Action descriptors and mutation commands
 
 ### Priority
 Critical
 
 ### Status
-Blocked
+Partial
 
 ### Component
 Section tabs
 
 ### Current State
-- Visible
-- Decorative
+- Backend-driven shared tabs
+- Selection reloads repository through runtime
 
 ### Expected Behaviour
 - Switch overview, customers, performance, follow-ups, visits, attendance, documents, timeline
 
 ### Backend Needed
-- Agent tab contract
+- Already exists
 
 ### Priority
 Critical
 
 ### Status
-Blocked
+Completed
 
 ### Component
 Agent cards, KPI strip, detail rows, timeline
 
 ### Current State
-- Static mock data
-- No selection, drilldown, or navigation
+- Backend data renders through shared runtime
+- No selection, drilldown, or navigation metadata yet
 
 ### Expected Behaviour
 - Open agent workspace
@@ -407,7 +415,7 @@ Agent cards, KPI strip, detail rows, timeline
 Critical
 
 ### Status
-Blocked
+Partial
 
 ## Providers
 
@@ -415,47 +423,48 @@ Blocked
 Header actions
 
 ### Current State
-- Visible
-- Local prototype screen
-- No runtime wiring
+- Backend workspace contract exists
+- Shared runtime renderer is active
+- Refresh and inferred tab/filter actions execute
 
 ### Expected Behaviour
 - Add provider
 - Map branch
 
 ### Backend Needed
-- Provider workspace contract
+- Action descriptors and mutation commands
 
 ### Priority
 Critical
 
 ### Status
-Blocked
+Partial
 
 ### Component
 Section tabs
 
 ### Current State
-- Decorative
+- Backend-driven shared tabs
+- Selection reloads repository through runtime
 
 ### Expected Behaviour
 - Switch profile, availability, services, bookings, reviews, documents, timeline, payments
 
 ### Backend Needed
-- Provider tab contract
+- Already exists
 
 ### Priority
 Critical
 
 ### Status
-Blocked
+Completed
 
 ### Component
 Provider cards, KPI strip, timeline
 
 ### Current State
-- Static mock data
-- No detail or navigation
+- Backend data renders through shared runtime
+- No detail or navigation metadata yet
 
 ### Expected Behaviour
 - Open provider workspace
@@ -468,7 +477,7 @@ Provider cards, KPI strip, timeline
 Critical
 
 ### Status
-Blocked
+Partial
 
 ## Wallet
 
@@ -476,29 +485,30 @@ Blocked
 Header actions
 
 ### Current State
-- Visible
-- Local prototype screen
-- No runtime wiring
+- Backend workspace contract exists
+- Shared runtime renderer is active
+- Refresh and inferred tab/filter actions execute
 
 ### Expected Behaviour
 - Post adjustment
 - Review audits
 
 ### Backend Needed
-- Wallet workspace contract
+- Action descriptors and mutation commands
 
 ### Priority
 Critical
 
 ### Status
-Blocked
+Partial
 
 ### Component
 Ledger summary rows and transaction timeline
 
 ### Current State
-- Static mock data
-- No transaction drilldown, search, filters, or export
+- Backend data renders through shared runtime
+- Search, filters, refresh, and tab switching are live
+- No transaction drilldown or export action metadata yet
 
 ### Expected Behaviour
 - Open ledger detail
@@ -512,7 +522,7 @@ Ledger summary rows and transaction timeline
 Critical
 
 ### Status
-Blocked
+Partial
 
 ## Documents
 
@@ -520,47 +530,48 @@ Blocked
 Header actions
 
 ### Current State
-- Visible
-- Local prototype screen
-- No runtime wiring
+- Backend workspace contract exists
+- Shared runtime renderer is active
+- Refresh and inferred tab/filter actions execute
 
 ### Expected Behaviour
 - Approve selected
 - Request resubmission
 
 ### Backend Needed
-- Document queue workspace contract
+- Action descriptors and mutation commands
 
 ### Priority
 Critical
 
 ### Status
-Blocked
+Partial
 
 ### Component
 Section tabs
 
 ### Current State
-- Decorative
+- Backend-driven shared tabs
+- Selection reloads repository through runtime
 
 ### Expected Behaviour
 - Switch pending, approved, rejected, expired, resubmission
 
 ### Backend Needed
-- Document status-tab contract
+- Already exists
 
 ### Priority
 Critical
 
 ### Status
-Blocked
+Completed
 
 ### Component
 Queue cards, preview actions, decision cards, audit timeline
 
 ### Current State
-- Static mock data
-- No queue selection, preview loading, mutation, or audit navigation
+- Backend queue, extraction, and processing data render through shared runtime
+- No preview selection, mutation, or audit navigation metadata yet
 
 ### Expected Behaviour
 - Select document
@@ -575,7 +586,7 @@ Queue cards, preview actions, decision cards, audit timeline
 Critical
 
 ### Status
-Blocked
+Partial
 
 ## CRM
 
@@ -583,29 +594,30 @@ Blocked
 Header actions
 
 ### Current State
-- Visible
-- Local prototype screen
-- No runtime wiring
+- Backend workspace contract exists
+- Shared runtime renderer is active
+- Refresh and inferred tab/filter actions execute
 
 ### Expected Behaviour
 - Open escalations
 - Assign campaign
 
 ### Backend Needed
-- CRM workspace contract
+- Action descriptors and mutation commands
 
 ### Priority
 Critical
 
 ### Status
-Blocked
+Partial
 
 ### Component
 Queue tiles and performance rows
 
 ### Current State
-- Static mock data
-- No navigation, filtering, or queue ownership actions
+- Backend queue and activity data render through shared runtime
+- Filtering is live
+- Queue navigation and ownership actions are still missing
 
 ### Expected Behaviour
 - Open queue detail
@@ -619,7 +631,7 @@ Queue tiles and performance rows
 Critical
 
 ### Status
-Blocked
+Partial
 
 ## Reports
 
@@ -627,29 +639,30 @@ Blocked
 Header actions
 
 ### Current State
-- Visible
-- Local prototype screen
-- No runtime wiring
+- Backend workspace contract exists
+- Shared runtime renderer is active
+- Refresh and inferred tab/filter actions execute
 
 ### Expected Behaviour
 - Run report
 - Save template
 
 ### Backend Needed
-- Reports workspace contract
+- Action descriptors and export/schedule commands
 
 ### Priority
 Critical
 
 ### Status
-Blocked
+Partial
 
 ### Component
 Builder steps and saved report queue tiles
 
 ### Current State
-- Visual workflow only
-- No dataset selection, filters, preview, export, or schedule action
+- Backend report catalog and history render through shared runtime
+- Search and refresh are live
+- Builder, preview, export, and schedule workflows are still missing
 
 ### Expected Behaviour
 - Choose dataset
@@ -666,7 +679,7 @@ Builder steps and saved report queue tiles
 Critical
 
 ### Status
-Blocked
+Partial
 
 ## Settings
 
@@ -675,7 +688,8 @@ Header actions
 
 ### Current State
 - Backend labels exist
-- Shared empty callbacks
+- Refresh and inferred tab/filter actions execute
+- Explicit reset/session/configuration command metadata is still missing
 
 ### Expected Behaviour
 - Open reset/session/configuration workflows through runtime
@@ -687,7 +701,7 @@ Header actions
 Critical
 
 ### Status
-Not Implemented
+Partial
 
 ### Component
 Search, tabs, filters
@@ -708,7 +722,7 @@ Search, tabs, filters
 Critical
 
 ### Status
-Partial
+Completed
 
 ### Component
 Settings rows and detail panels
@@ -738,7 +752,8 @@ Header actions
 
 ### Current State
 - Backend labels exist
-- Shared empty callbacks
+- Refresh and inferred tab/filter actions execute
+- Explicit integration/runtime command metadata is still missing
 
 ### Expected Behaviour
 - Inspect report engine
@@ -751,7 +766,7 @@ Header actions
 Critical
 
 ### Status
-Not Implemented
+Partial
 
 ### Component
 Search, tabs, filters
@@ -772,7 +787,7 @@ Search, tabs, filters
 Critical
 
 ### Status
-Partial
+Completed
 
 ### Component
 Platform rows and health widgets
@@ -802,7 +817,8 @@ Header actions
 
 ### Current State
 - Backend labels exist
-- Shared empty callbacks
+- Refresh and inferred tab/filter actions execute
+- Explicit export/auth-inspection action metadata is still missing
 
 ### Expected Behaviour
 - Export current view
@@ -815,7 +831,7 @@ Header actions
 Critical
 
 ### Status
-Not Implemented
+Partial
 
 ### Component
 Search, tabs, filters
@@ -836,7 +852,7 @@ Search, tabs, filters
 Critical
 
 ### Status
-Partial
+Completed
 
 ### Component
 Audit table and rows
@@ -866,7 +882,8 @@ Header actions
 
 ### Current State
 - Backend labels exist
-- Shared empty callbacks
+- Refresh and inferred tab/filter actions execute
+- Explicit send/review action metadata is still missing
 
 ### Expected Behaviour
 - Send in-app alert
@@ -879,7 +896,7 @@ Header actions
 Critical
 
 ### Status
-Not Implemented
+Partial
 
 ### Component
 Search, tabs, filters
@@ -900,7 +917,7 @@ Search, tabs, filters
 Critical
 
 ### Status
-Partial
+Completed
 
 ### Component
 Notification rows and timeline/detail content
@@ -929,31 +946,25 @@ Blocked
 Branch, employee, and role controls
 
 ### Current State
-- Additional admin organization screens exist in repo
-- Same prototype pattern as unmigrated business modules
-- No backend-owned interactive behavior confirmed
+- Branches, employees, and roles now load through backend workspace contracts
+- Shared runtime search, filters, tabs, and refresh are live
+- Row drilldown and mutation metadata are still missing
 
 ### Expected Behaviour
 - Search, filters, detail workspace, assignment, audit, and branch drilldowns
 
 ### Backend Needed
-- Organization workspace contracts
+- Row action metadata and mutation commands
 
 ### Priority
 High
 
 ### Status
-Blocked
+Partial
 
 ## Immediate Execution Queue
 
-1. Fix shared runtime chrome for backend-driven modules:
-   - header actions
-   - search
-   - tabs
-   - filters
-   - refresh
-2. Add request-aware workspace reload path through controller, repository, remote data source, and backend query params.
-3. Add backend action metadata for backend-driven modules so visible buttons stop using empty callbacks.
-4. Add drilldown metadata for KPI/cards/tables/timeline in backend-driven modules.
-5. Replace or remove remaining dead controls in prototype-only modules until their backend workspace contracts exist.
+1. Add explicit backend action metadata for header buttons, row actions, KPI drilldowns, and timeline navigation.
+2. Extend the shared workspace contract with row targets, bulk actions, pagination metadata, and mutation descriptors.
+3. Replace inference-based header actions with backend-authored commands.
+4. Add reports builder/export/schedule workflow contracts to move reports from catalog-only to operational workflow.

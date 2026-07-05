@@ -2,32 +2,17 @@ import 'package:flutter/material.dart';
 
 import '../../../portal/presentation/portal_role_data.dart';
 import '../../../../shared/models/shield_role.dart';
-import '../../agents/presentation/screens/admin_agents_module.dart';
-import '../../analytics/presentation/screens/admin_insights_module.dart';
 import '../../audit/presentation/screens/admin_audit_module.dart';
-import '../../availability/presentation/screens/admin_availability_module.dart';
-import '../../crm/presentation/screens/admin_crm_module.dart';
 import '../../customers/presentation/screens/admin_customers_module.dart';
 import '../../dashboard/presentation/screens/admin_dashboard_module.dart';
-import '../../documents/presentation/screens/admin_documents_module.dart';
-import '../../memberships/presentation/screens/admin_memberships_module.dart';
 import '../../notifications/presentation/screens/admin_notifications_module.dart';
-import '../../organization/presentation/screens/admin_branches_module.dart';
-import '../../organization/presentation/screens/admin_employees_module.dart';
-import '../../organization/presentation/screens/admin_roles_module.dart';
-import '../../providers/presentation/screens/admin_providers_module.dart';
-import '../../referrals/presentation/screens/admin_referrals_module.dart';
-import '../../reports/presentation/screens/admin_reports_module.dart';
-import '../../rewards/presentation/screens/admin_rewards_module.dart';
-import '../../services/presentation/screens/admin_services_module.dart';
 import '../../settings/presentation/screens/admin_platform_module.dart';
 import '../../settings/presentation/screens/admin_settings_module.dart';
 import '../../governance/data/admin_governance_remote_data_source.dart';
 import '../../governance/data/admin_governance_workspace_repository.dart';
 import '../../governance/data/admin_governance_workspace_schema_repository.dart';
+import '../../shared/presentation/widgets/admin_backend_workspace_module.dart';
 import '../../shared/engine/exports.dart';
-import '../../visits/presentation/screens/admin_visits_module.dart';
-import '../../wallet/presentation/screens/admin_wallet_module.dart';
 import 'admin_platform_runtime.dart';
 
 class AdminWorkspaceCatalog {
@@ -36,6 +21,22 @@ class AdminWorkspaceCatalog {
   static const Set<String> backendWorkspaceIds = <String>{
     'dashboard',
     'customers',
+    'agents',
+    'crm',
+    'visits',
+    'documents',
+    'memberships',
+    'wallet',
+    'rewards',
+    'referrals',
+    'providers',
+    'services',
+    'availability',
+    'branches',
+    'employees',
+    'roles',
+    'reports',
+    'insights',
     'settings',
     'platform',
     'audit',
@@ -372,12 +373,9 @@ class _AdminWorkspaceSeed {
 AdminWorkspaceRepository _repositoryResolver(
   AdminWorkspaceDefinition workspace,
 ) {
-  if (AdminWorkspaceCatalog.backendWorkspaceIds.contains(workspace.id)) {
-    return AdminGovernanceWorkspaceRepository(
-      remoteDataSource: AdminWorkspaceCatalog._governanceRemoteDataSource,
-    );
-  }
-  return const _CatalogNoopAdminWorkspaceRepository();
+  return AdminGovernanceWorkspaceRepository(
+    remoteDataSource: AdminWorkspaceCatalog._governanceRemoteDataSource,
+  );
 }
 
 const Map<String, String> _workspacePermissionOverrides = <String, String>{
@@ -388,19 +386,6 @@ const Map<String, String> _workspacePermissionOverrides = <String, String>{
   'audit': 'audit.view',
   'notifications': 'notifications.view',
 };
-
-class _CatalogNoopAdminWorkspaceRepository implements AdminWorkspaceRepository {
-  const _CatalogNoopAdminWorkspaceRepository();
-
-  @override
-  Future<Object?> loadWorkspaceData(
-    AdminWorkspaceDefinition workspace, {
-    AdminWorkspaceQuery query = const AdminWorkspaceQuery(),
-    bool forceRefresh = false,
-  }) async {
-    return null;
-  }
-}
 
 String _humanizeKey(String value) {
   return value
@@ -423,82 +408,82 @@ Widget _buildCustomersWorkspace(
 Widget _buildAgentsWorkspace(
   BuildContext context,
   AdminWorkspaceSnapshot snapshot,
-) => const AdminAgentsModule();
+) => AdminBackendWorkspaceModule(snapshot: snapshot);
 
 Widget _buildCrmWorkspace(
   BuildContext context,
   AdminWorkspaceSnapshot snapshot,
-) => const AdminCrmModule();
+) => AdminBackendWorkspaceModule(snapshot: snapshot);
 
 Widget _buildVisitsWorkspace(
   BuildContext context,
   AdminWorkspaceSnapshot snapshot,
-) => const AdminVisitsModule();
+) => AdminBackendWorkspaceModule(snapshot: snapshot);
 
 Widget _buildDocumentsWorkspace(
   BuildContext context,
   AdminWorkspaceSnapshot snapshot,
-) => const AdminDocumentsModule();
+) => AdminBackendWorkspaceModule(snapshot: snapshot);
 
 Widget _buildMembershipsWorkspace(
   BuildContext context,
   AdminWorkspaceSnapshot snapshot,
-) => const AdminMembershipsModule();
+) => AdminBackendWorkspaceModule(snapshot: snapshot);
 
 Widget _buildWalletWorkspace(
   BuildContext context,
   AdminWorkspaceSnapshot snapshot,
-) => const AdminWalletModule();
+) => AdminBackendWorkspaceModule(snapshot: snapshot);
 
 Widget _buildRewardsWorkspace(
   BuildContext context,
   AdminWorkspaceSnapshot snapshot,
-) => const AdminRewardsModule();
+) => AdminBackendWorkspaceModule(snapshot: snapshot);
 
 Widget _buildReferralsWorkspace(
   BuildContext context,
   AdminWorkspaceSnapshot snapshot,
-) => const AdminReferralsModule();
+) => AdminBackendWorkspaceModule(snapshot: snapshot);
 
 Widget _buildProvidersWorkspace(
   BuildContext context,
   AdminWorkspaceSnapshot snapshot,
-) => const AdminProvidersModule();
+) => AdminBackendWorkspaceModule(snapshot: snapshot);
 
 Widget _buildServicesWorkspace(
   BuildContext context,
   AdminWorkspaceSnapshot snapshot,
-) => const AdminServicesModule();
+) => AdminBackendWorkspaceModule(snapshot: snapshot);
 
 Widget _buildAvailabilityWorkspace(
   BuildContext context,
   AdminWorkspaceSnapshot snapshot,
-) => const AdminAvailabilityModule();
+) => AdminBackendWorkspaceModule(snapshot: snapshot);
 
 Widget _buildBranchesWorkspace(
   BuildContext context,
   AdminWorkspaceSnapshot snapshot,
-) => const AdminBranchesModule();
+) => AdminBackendWorkspaceModule(snapshot: snapshot);
 
 Widget _buildEmployeesWorkspace(
   BuildContext context,
   AdminWorkspaceSnapshot snapshot,
-) => const AdminEmployeesModule();
+) => AdminBackendWorkspaceModule(snapshot: snapshot);
 
 Widget _buildRolesWorkspace(
   BuildContext context,
   AdminWorkspaceSnapshot snapshot,
-) => const AdminRolesModule();
+) => AdminBackendWorkspaceModule(snapshot: snapshot);
 
 Widget _buildReportsWorkspace(
   BuildContext context,
   AdminWorkspaceSnapshot snapshot,
-) => const AdminReportsModule();
+) => AdminBackendWorkspaceModule(snapshot: snapshot);
 
 Widget _buildInsightsWorkspace(
   BuildContext context,
   AdminWorkspaceSnapshot snapshot,
-) => const AdminInsightsModule();
+) => AdminBackendWorkspaceModule(snapshot: snapshot);
 
 Widget _buildAuditWorkspace(
   BuildContext context,

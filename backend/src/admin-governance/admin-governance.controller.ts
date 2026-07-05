@@ -90,6 +90,220 @@ export class AdminGovernanceController {
     };
   }
 
+  @RequirePermissions('agents.view')
+  @Get('agents')
+  async getAgentsWorkspace(@Query() query: Record<string, string | undefined>) {
+    return {
+      success: true,
+      message: 'Admin agents workspace retrieved successfully.',
+      data: await this.adminGovernanceService.getAgentsWorkspace(
+        this.parseQuery(query),
+      ),
+    };
+  }
+
+  @RequirePermissions('crm.view')
+  @Get('crm')
+  async getCrmWorkspace(@Query() query: Record<string, string | undefined>) {
+    return {
+      success: true,
+      message: 'Admin CRM workspace retrieved successfully.',
+      data: await this.adminGovernanceService.getCrmWorkspace(
+        this.parseQuery(query),
+      ),
+    };
+  }
+
+  @RequirePermissions('visits.view')
+  @Get('visits')
+  async getVisitsWorkspace(@Query() query: Record<string, string | undefined>) {
+    return {
+      success: true,
+      message: 'Admin visits workspace retrieved successfully.',
+      data: await this.adminGovernanceService.getVisitsWorkspace(
+        this.parseQuery(query),
+      ),
+    };
+  }
+
+  @RequirePermissions('documents.view')
+  @Get('documents')
+  async getDocumentsWorkspace(
+    @Query() query: Record<string, string | undefined>,
+  ) {
+    return {
+      success: true,
+      message: 'Admin documents workspace retrieved successfully.',
+      data: await this.adminGovernanceService.getDocumentsWorkspace(
+        this.parseQuery(query),
+      ),
+    };
+  }
+
+  @RequirePermissions('memberships.view')
+  @Get('memberships')
+  async getMembershipsWorkspace(
+    @Query() query: Record<string, string | undefined>,
+  ) {
+    return {
+      success: true,
+      message: 'Admin memberships workspace retrieved successfully.',
+      data: await this.adminGovernanceService.getMembershipsWorkspace(
+        this.parseQuery(query),
+      ),
+    };
+  }
+
+  @RequirePermissions('wallet.view')
+  @Get('wallet')
+  async getWalletWorkspace(@Query() query: Record<string, string | undefined>) {
+    return {
+      success: true,
+      message: 'Admin wallet workspace retrieved successfully.',
+      data: await this.adminGovernanceService.getWalletWorkspace(
+        this.parseQuery(query),
+      ),
+    };
+  }
+
+  @RequirePermissions('rewards.view')
+  @Get('rewards')
+  async getRewardsWorkspace(
+    @Query() query: Record<string, string | undefined>,
+  ) {
+    return {
+      success: true,
+      message: 'Admin rewards workspace retrieved successfully.',
+      data: await this.adminGovernanceService.getRewardsWorkspace(
+        this.parseQuery(query),
+      ),
+    };
+  }
+
+  @RequirePermissions('referrals.view')
+  @Get('referrals')
+  async getReferralsWorkspace(
+    @Query() query: Record<string, string | undefined>,
+  ) {
+    return {
+      success: true,
+      message: 'Admin referrals workspace retrieved successfully.',
+      data: await this.adminGovernanceService.getReferralsWorkspace(
+        this.parseQuery(query),
+      ),
+    };
+  }
+
+  @RequirePermissions('providers.view')
+  @Get('providers')
+  async getProvidersWorkspace(
+    @Query() query: Record<string, string | undefined>,
+  ) {
+    return {
+      success: true,
+      message: 'Admin providers workspace retrieved successfully.',
+      data: await this.adminGovernanceService.getProvidersWorkspace(
+        this.parseQuery(query),
+      ),
+    };
+  }
+
+  @RequirePermissions('services.view')
+  @Get('services')
+  async getServicesWorkspace(
+    @Query() query: Record<string, string | undefined>,
+  ) {
+    return {
+      success: true,
+      message: 'Admin services workspace retrieved successfully.',
+      data: await this.adminGovernanceService.getServicesWorkspace(
+        this.parseQuery(query),
+      ),
+    };
+  }
+
+  @RequirePermissions('availability.view')
+  @Get('availability')
+  async getAvailabilityWorkspace(
+    @Query() query: Record<string, string | undefined>,
+  ) {
+    return {
+      success: true,
+      message: 'Admin availability workspace retrieved successfully.',
+      data: await this.adminGovernanceService.getAvailabilityWorkspace(
+        this.parseQuery(query),
+      ),
+    };
+  }
+
+  @RequirePermissions('branches.view')
+  @Get('branches')
+  async getBranchesWorkspace(
+    @Query() query: Record<string, string | undefined>,
+  ) {
+    return {
+      success: true,
+      message: 'Admin branches workspace retrieved successfully.',
+      data: await this.adminGovernanceService.getBranchesWorkspace(
+        this.parseQuery(query),
+      ),
+    };
+  }
+
+  @RequirePermissions('employees.view')
+  @Get('employees')
+  async getEmployeesWorkspace(
+    @Query() query: Record<string, string | undefined>,
+  ) {
+    return {
+      success: true,
+      message: 'Admin employees workspace retrieved successfully.',
+      data: await this.adminGovernanceService.getEmployeesWorkspace(
+        this.parseQuery(query),
+      ),
+    };
+  }
+
+  @RequirePermissions('roles.view')
+  @Get('roles')
+  async getRolesWorkspace(@Query() query: Record<string, string | undefined>) {
+    return {
+      success: true,
+      message: 'Admin roles workspace retrieved successfully.',
+      data: await this.adminGovernanceService.getRolesWorkspace(
+        this.parseQuery(query),
+      ),
+    };
+  }
+
+  @RequirePermissions('reports.view')
+  @Get('reports')
+  async getReportsWorkspace(
+    @Query() query: Record<string, string | undefined>,
+  ) {
+    return {
+      success: true,
+      message: 'Admin reports workspace retrieved successfully.',
+      data: await this.adminGovernanceService.getReportsWorkspace(
+        this.parseQuery(query),
+      ),
+    };
+  }
+
+  @RequirePermissions('analytics.view')
+  @Get('insights')
+  async getInsightsWorkspace(
+    @Query() query: Record<string, string | undefined>,
+  ) {
+    return {
+      success: true,
+      message: 'Admin insights workspace retrieved successfully.',
+      data: await this.adminGovernanceService.getInsightsWorkspace(
+        this.parseQuery(query),
+      ),
+    };
+  }
+
   @RequirePermissions('audit.view')
   @Get('audit')
   async getAuditWorkspace(@Query() query: Record<string, string | undefined>) {

@@ -845,6 +845,2477 @@ export class AdminGovernanceService {
     );
   }
 
+  async getAgentsWorkspace(query: AdminGovernanceWorkspaceQuery) {
+    const agentWhere: any = {
+      deletedAt: null,
+      OR: [{ userType: 'SHIELD_AGENT' }, { role: { code: 'SHIELD_AGENT' } }],
+    };
+    const selectedTab = (query.tab ?? 'Overview').trim();
+    const [agentCount, assignmentCount, activeSessions, agentUsers, customerRows, followUpRows, visitRows, sessionRows, documentRows, auditRows] =
+      await Promise.all([
+        this.prisma.user.count({ where: agentWhere }),
+        this.prisma.agentBranchAssignment.count(),
+        this.prisma.authSession.count({
+          where: {
+            revokedAt: null,
+            user: agentWhere,
+          },
+        }),
+        this.prisma.user.findMany({
+          where: agentWhere,
+          include: {
+            branchBusiness: { select: { name: true } },
+            role: { select: { code: true, name: true } },
+          },
+          orderBy: [{ updatedAt: 'desc' }],
+          take: Math.min(query.pageSize, 25),
+          skip: (query.page - 1) * query.pageSize,
+        }),
+        this.prisma.customer.findMany({
+          where: { deletedAt: null },
+          orderBy: [{ createdAt: 'desc' }],
+          take: 25,
+        }),
+        this.prisma.crmTask.findMany({
+          orderBy: [{ dueDate: 'asc' }, { id: 'desc' }],
+          take: 25,
+          include: {
+            customer: { select: { customerCode: true, firstName: true, lastName: true } },
+            assignedToUser: { select: { firstName: true, lastName: true, employeeCode: true } },
+          },
+        }),
+        this.prisma.appointment.findMany({
+          orderBy: [{ appointmentDate: 'desc' }],
+          take: 25,
+          include: {
+            customer: { select: { customerCode: true, firstName: true, lastName: true } },
+          },
+        }),
+        this.prisma.authSession.findMany({
+          where: { user: agentWhere },
+          orderBy: [{ lastSeenAt: 'desc' }],
+          take: 25,
+          include: {
+            user: { select: { firstName: true, lastName: true, employeeCode: true } },
+            authDevice: { select: { deviceName: true, platform: true } },
+          },
+        }),
+        this.prisma.document.findMany({
+          where: { uploadedByUser: agentWhere },
+          orderBy: [{ createdAt: 'desc' }],
+          take: 25,
+          include: {
+            customer: { select: { customerCode: true, firstName: true, lastName: true } },
+            uploadedByUser: { select: { firstName: true, lastName: true, employeeCode: true } },
+          },
+        }),
+        this.prisma.auditLog.findMany({
+          where: { entityType: { in: ['users', 'agent_branch_assignments'] } },
+          orderBy: [{ createdAt: 'desc' }],
+          take: 25,
+          include: { user: { select: { firstName: true, lastName: true, email: true } } },
+        }),
+      ]);
+
+    const agentTableRows = this.filterRowsBySearch(
+      agentUsers.map((agent) => ({
+        name: this.resolveUserDisplayName(agent as any),
+        code: agent.employeeCode?.trim() || 'N/A',
+        role:
+          (agent as any).role?.code?.trim() ||
+          agent.userType?.trim() ||
+          'AGENT',
+        branch: (agent as any).branchBusiness?.name?.trim() || 'Unassigned',
+        status: agent.status?.trim() || 'UNKNOWN',
+        updatedAt: this.formatDateTime(agent.updatedAt),
+      })),
+      query.search,
+    );
+    const assignedCustomersRows = this.filterRowsBySearch(
+      customerRows.map((customer) => ({
+        name: this.resolveCustomerLabel(customer),
+        code: customer.customerCode?.trim() || 'N/A',
+        agent: customer.agentCode?.trim() || 'N/A',
+        status: customer.status?.trim() || 'UNKNOWN',
+        updatedAt: this.formatDateTime(customer.createdAt),
+      })),
+      query.search,
+    );
+    const followUpsTableRows = this.filterRowsBySearch(
+      followUpRows.map((task) => ({
+        due: this.formatDateTime(task.dueDate),
+        customer: this.resolveCustomerLabel(task.customer),
+        assignee: this.resolveUserDisplayName(task.assignedToUser as any),
+        status: task.status?.trim() || 'UNKNOWN',
+        notes: task.notes?.trim() || 'N/A',
+      })),
+      query.search,
+    );
+    const visitTableRows = this.filterRowsBySearch(
+      visitRows.map((visit) => ({
+        date: this.formatDateTime(visit.appointmentDate),
+        customer: this.resolveCustomerLabel(visit.customer),
+        type: visit.appointmentType?.trim() || 'GENERAL',
+        status: visit.status?.trim() || 'UNKNOWN',
+        remarks: visit.remarks?.trim() || 'N/A',
+      })),
+      query.search,
+    );
+    const attendanceTableRows = this.filterRowsBySearch(
+      sessionRows.map((session) => ({
+        user: this.resolveUserDisplayName((session as any).user),
+        device:
+          (session as any).authDevice?.deviceName?.trim() || 'Unknown device',
+        platform: (session as any).authDevice?.platform?.trim() || 'UNKNOWN',
+        status: session.revokedAt == null ? 'ACTIVE' : 'REVOKED',
+        lastSeen: this.formatDateTime(session.lastSeenAt),
+      })),
+      query.search,
+    );
+    const documentTableRows = this.filterRowsBySearch(
+      documentRows.map((document) => ({
+        createdAt: this.formatDateTime(document.createdAt),
+        customer: this.resolveCustomerLabel((document as any).customer),
+        uploadedBy: this.resolveUserDisplayName(
+          (document as any).uploadedByUser,
+        ),
+        type: document.documentType?.trim() || 'DOCUMENT',
+        status: document.status?.trim() || 'UNKNOWN',
+      })),
+      query.search,
+    );
+    const timelineRows = this.filterRowsBySearch(
+      auditRows.map((row) => ({
+        time: this.formatDateTime(row.createdAt),
+        event: row.action?.trim() || 'AUDIT_EVENT',
+        status: row.entityType?.trim() || 'users',
+      })),
+      query.search,
+    );
+
+    const selectedRows =
+      selectedTab == 'Customers'
+        ? assignedCustomersRows
+        : selectedTab == 'Follow-Ups'
+          ? followUpsTableRows
+          : selectedTab == 'Visits'
+            ? visitTableRows
+            : selectedTab == 'Attendance'
+              ? attendanceTableRows
+              : selectedTab == 'Documents'
+                ? documentTableRows
+                : selectedTab == 'Timeline'
+                  ? timelineRows
+                  : agentTableRows;
+    const selectedColumns =
+      selectedTab == 'Customers'
+        ? [
+            { key: 'name', label: 'Customer' },
+            { key: 'code', label: 'Code' },
+            { key: 'agent', label: 'Agent' },
+            { key: 'status', label: 'Status' },
+            { key: 'updatedAt', label: 'Created' },
+          ]
+        : selectedTab == 'Follow-Ups'
+          ? [
+              { key: 'due', label: 'Due' },
+              { key: 'customer', label: 'Customer' },
+              { key: 'assignee', label: 'Assignee' },
+              { key: 'status', label: 'Status' },
+              { key: 'notes', label: 'Notes' },
+            ]
+          : selectedTab == 'Visits'
+            ? [
+                { key: 'date', label: 'Visit date' },
+                { key: 'customer', label: 'Customer' },
+                { key: 'type', label: 'Type' },
+                { key: 'status', label: 'Status' },
+                { key: 'remarks', label: 'Remarks' },
+              ]
+            : selectedTab == 'Attendance'
+              ? [
+                  { key: 'user', label: 'Agent' },
+                  { key: 'device', label: 'Device' },
+                  { key: 'platform', label: 'Platform' },
+                  { key: 'status', label: 'Status' },
+                  { key: 'lastSeen', label: 'Last seen' },
+                ]
+              : selectedTab == 'Documents'
+                ? [
+                    { key: 'createdAt', label: 'Uploaded' },
+                    { key: 'customer', label: 'Customer' },
+                    { key: 'uploadedBy', label: 'Uploaded by' },
+                    { key: 'type', label: 'Type' },
+                    { key: 'status', label: 'Status' },
+                  ]
+                : selectedTab == 'Timeline'
+                  ? [
+                      { key: 'time', label: 'Time' },
+                      { key: 'event', label: 'Event' },
+                      { key: 'status', label: 'Entity' },
+                    ]
+                  : [
+                      { key: 'name', label: 'Agent' },
+                      { key: 'code', label: 'Code' },
+                      { key: 'role', label: 'Role' },
+                      { key: 'branch', label: 'Branch' },
+                      { key: 'status', label: 'Status' },
+                      { key: 'updatedAt', label: 'Updated' },
+                    ];
+
+    return this.buildWorkspacePayload(
+      'agents',
+      {
+        eyebrow: 'Operations / Agents',
+        title: 'Agents',
+        description:
+          'Backend-owned agent operations across assignment, customers, follow-ups, visits, attendance, and uploaded records.',
+        primaryActionLabel: 'Refresh workspace',
+        secondaryActionLabel: 'Attendance',
+      },
+      {
+        searchHint: 'Search agents, assigned customers, follow-ups, visits, and uploads',
+        tabs: ['Overview', 'Customers', 'Follow-Ups', 'Visits', 'Attendance', 'Documents', 'Timeline'],
+        filters: ['ACTIVE', 'PENDING', 'INACTIVE'],
+      },
+      [
+        this.metric('Agents', agentCount, 'Internal users with agent ownership'),
+        this.metric('Assignments', assignmentCount, 'agent_branch_assignments rows'),
+        this.metric('Live sessions', activeSessions, 'Active agent auth sessions'),
+        this.metric('Follow-ups', followUpsTableRows.length, 'Current CRM tasks in scope'),
+      ],
+      {
+        left: {
+          title: 'Assignment posture',
+          subtitle: 'Agent and branch coverage from current records.',
+          type: 'list',
+          items: agentTableRows.slice(0, 8).map((row) => ({
+            title: row['name'] ?? 'Agent',
+            subtitle: `${row['branch'] ?? 'Unassigned'} • ${row['role'] ?? 'AGENT'}`,
+            meta: row['code'] ?? 'N/A',
+            status: row['status'] ?? 'UNKNOWN',
+          })),
+          emptyState: {
+            title: 'No agents matched this query',
+            description: 'No agent users matched the current search or filter.',
+            actionLabel: 'Refresh workspace',
+          },
+        },
+        center: {
+          title: selectedTab == 'Overview' ? 'Agent registry' : '$selectedTab queue',
+          subtitle: 'The active tab drives the dataset returned by the backend workspace contract.',
+          type: 'table',
+          columns: selectedColumns,
+          rows: selectedRows,
+          emptyState: {
+            title: 'No agent records matched this view',
+            description: 'The selected tab completed successfully but returned no rows for the current query.',
+            actionLabel: 'Refresh workspace',
+          },
+        },
+        right: {
+          title: 'Recent agent timeline',
+          subtitle: 'Live audit evidence tied to user and assignment entities.',
+          type: 'table',
+          columns: [
+            { key: 'time', label: 'Time' },
+            { key: 'event', label: 'Event' },
+            { key: 'status', label: 'Entity' },
+          ],
+          rows: timelineRows,
+          emptyState: {
+            title: 'No agent timeline rows',
+            description: 'No recent audit evidence matched the current search.',
+            actionLabel: 'Refresh workspace',
+          },
+        },
+      },
+    );
+  }
+
+  async getCrmWorkspace(query: AdminGovernanceWorkspaceQuery) {
+    const selectedTab = (query.tab ?? 'Queues').trim();
+    const [taskCount, activityCount, complaintCount, tasks, activities, complaints, customers] =
+      await Promise.all([
+        this.prisma.crmTask.count(),
+        this.prisma.crmActivity.count(),
+        this.prisma.complaint.count(),
+        this.prisma.crmTask.findMany({
+          orderBy: [{ dueDate: 'asc' }, { id: 'desc' }],
+          take: 50,
+          include: {
+            customer: { select: { customerCode: true, firstName: true, lastName: true, status: true } },
+            assignedToUser: { select: { firstName: true, lastName: true, employeeCode: true } },
+          },
+        }),
+        this.prisma.crmActivity.findMany({
+          orderBy: [{ createdAt: 'desc' }],
+          take: 50,
+          include: {
+            customer: { select: { customerCode: true, firstName: true, lastName: true } },
+            createdByUser: { select: { firstName: true, lastName: true, employeeCode: true } },
+          },
+        }),
+        this.prisma.complaint.findMany({
+          orderBy: [{ createdAt: 'desc' }],
+          take: 50,
+          include: {
+            customer: { select: { customerCode: true, firstName: true, lastName: true } },
+          },
+        }),
+        this.prisma.customer.findMany({
+          where: { deletedAt: null },
+          orderBy: [{ updatedAt: 'desc' }],
+          take: 50,
+        }),
+      ]);
+    const queueRows = this.filterRowsBySearch(
+      tasks.map((task) => ({
+        dueDate: this.formatDateTime(task.dueDate),
+        customer: this.resolveCustomerLabel(task.customer),
+        assignee: this.resolveUserDisplayName(task.assignedToUser as any),
+        status: task.status?.trim() || 'UNKNOWN',
+        notes: task.notes?.trim() || 'N/A',
+      })),
+      query.search,
+    );
+    const activityRows = this.filterRowsBySearch(
+      activities.map((activity) => ({
+        createdAt: this.formatDateTime(activity.createdAt),
+        customer: this.resolveCustomerLabel(activity.customer),
+        type: activity.activityType?.trim() || 'ACTIVITY',
+        actor: this.resolveUserDisplayName(activity.createdByUser as any),
+        notes: activity.notes?.trim() || 'N/A',
+      })),
+      query.search,
+    );
+    const complaintRows = this.filterRowsBySearch(
+      complaints.map((complaint) => ({
+        createdAt: this.formatDateTime(complaint.createdAt),
+        customer: this.resolveCustomerLabel(complaint.customer),
+        type: complaint.complaintType?.trim() || 'COMPLAINT',
+        status: complaint.status?.trim() || 'UNKNOWN',
+        description: complaint.description?.trim() || 'N/A',
+      })),
+      query.search,
+    );
+    const customerRows = this.filterRowsBySearch(
+      customers.map((customer) => ({
+        customer: this.resolveCustomerLabel(customer),
+        status: customer.status?.trim() || 'UNKNOWN',
+        agent: customer.agentCode?.trim() || 'N/A',
+        updatedAt: this.formatDateTime(customer.updatedAt),
+      })),
+      query.search,
+    );
+    const selectedRows =
+      selectedTab == 'Activity'
+        ? activityRows
+        : selectedTab == 'Escalations'
+          ? complaintRows
+          : selectedTab == 'Customers'
+            ? customerRows
+            : queueRows;
+    const selectedColumns =
+      selectedTab == 'Activity'
+        ? [
+            { key: 'createdAt', label: 'Time' },
+            { key: 'customer', label: 'Customer' },
+            { key: 'type', label: 'Type' },
+            { key: 'actor', label: 'Actor' },
+            { key: 'notes', label: 'Notes' },
+          ]
+        : selectedTab == 'Escalations'
+          ? [
+              { key: 'createdAt', label: 'Created' },
+              { key: 'customer', label: 'Customer' },
+              { key: 'type', label: 'Complaint' },
+              { key: 'status', label: 'Status' },
+              { key: 'description', label: 'Description' },
+            ]
+          : selectedTab == 'Customers'
+            ? [
+                { key: 'customer', label: 'Customer' },
+                { key: 'status', label: 'Status' },
+                { key: 'agent', label: 'Agent code' },
+                { key: 'updatedAt', label: 'Updated' },
+              ]
+            : [
+                { key: 'dueDate', label: 'Due' },
+                { key: 'customer', label: 'Customer' },
+                { key: 'assignee', label: 'Assignee' },
+                { key: 'status', label: 'Status' },
+                { key: 'notes', label: 'Notes' },
+              ];
+    return this.buildWorkspacePayload(
+      'crm',
+      {
+        eyebrow: 'Operations / CRM',
+        title: 'CRM',
+        description:
+          'Backend-owned CRM queues, activities, escalations, and customer follow-up evidence.',
+        primaryActionLabel: 'Refresh workspace',
+        secondaryActionLabel: 'Escalations',
+      },
+      {
+        searchHint: 'Search CRM tasks, activities, complaints, and customers',
+        tabs: ['Queues', 'Activity', 'Escalations', 'Customers'],
+        filters: ['OPEN', 'PENDING', 'COMPLETED', 'CLOSED'],
+      },
+      [
+        this.metric('Tasks', taskCount, 'crm_tasks rows'),
+        this.metric('Activities', activityCount, 'crm_activities rows'),
+        this.metric('Complaints', complaintCount, 'complaints rows'),
+        this.metric('Open queue', queueRows.length, 'Current CRM tasks in result'),
+      ],
+      {
+        left: {
+          title: 'CRM workload signals',
+          subtitle: 'Queue posture across tasks, activities, and escalations.',
+          type: 'details',
+          details: [
+            { label: 'Selected tab', value: selectedTab },
+            { label: 'Tasks', value: `${taskCount}` },
+            { label: 'Activities', value: `${activityCount}` },
+            { label: 'Complaints', value: `${complaintCount}` },
+            {
+              label: 'Search',
+              value:
+                (query.search?.trim().length ?? 0) > 0
+                  ? query.search!.trim()
+                  : 'No search applied',
+            },
+          ],
+        },
+        center: {
+          title: selectedTab,
+          subtitle: 'Current backend dataset for the selected CRM view.',
+          type: 'table',
+          columns: selectedColumns,
+          rows: selectedRows,
+          emptyState: {
+            title: 'No CRM records matched this view',
+            description: 'The CRM workspace is live, but the selected tab and filters returned no rows.',
+            actionLabel: 'Refresh workspace',
+          },
+        },
+        right: {
+          title: 'Recent CRM activity',
+          subtitle: 'Latest recorded CRM activity items.',
+          type: 'list',
+          items: activityRows.slice(0, 8).map((row) => ({
+            title: row['type'] ?? 'ACTIVITY',
+            subtitle: row['customer'] ?? 'Customer',
+            meta: row['actor'] ?? 'System',
+            status: 'RECORDED',
+          })),
+          emptyState: {
+            title: 'No CRM activity available',
+            description: 'No CRM activity rows matched the current search.',
+            actionLabel: 'Refresh workspace',
+          },
+        },
+      },
+    );
+  }
+
+  async getVisitsWorkspace(query: AdminGovernanceWorkspaceQuery) {
+    const selectedTab = (query.tab ?? 'Visits').trim();
+    const [appointmentsCount, consultationsCount, purchasesCount, labReportsCount, dentalCount, visits, consultations, purchases, labReports, dentalRecords] =
+      await Promise.all([
+        this.prisma.appointment.count(),
+        this.prisma.consultation.count(),
+        this.prisma.purchase.count(),
+        this.prisma.labReport.count(),
+        this.prisma.dentalRecord.count(),
+        this.prisma.appointment.findMany({
+          orderBy: [{ appointmentDate: 'desc' }],
+          take: 50,
+          include: {
+            customer: { select: { customerCode: true, firstName: true, lastName: true } },
+            provider: { select: { providerName: true, providerType: true } },
+          },
+        }),
+        this.prisma.consultation.findMany({
+          orderBy: [{ id: 'desc' }],
+          take: 50,
+          include: {
+            customer: { select: { customerCode: true, firstName: true, lastName: true } },
+            appointment: { select: { appointmentDate: true, status: true } },
+          },
+        }),
+        this.prisma.purchase.findMany({
+          orderBy: [{ purchaseDate: 'desc' }],
+          take: 50,
+          include: {
+            customer: { select: { customerCode: true, firstName: true, lastName: true } },
+            provider: { select: { providerName: true, providerType: true } },
+          },
+        }),
+        this.prisma.labReport.findMany({
+          orderBy: [{ reportDate: 'desc' }],
+          take: 50,
+          include: {
+            customer: { select: { customerCode: true, firstName: true, lastName: true } },
+            appointment: { select: { appointmentDate: true, status: true } },
+            document: { select: { status: true, fileName: true } },
+          },
+        }),
+        this.prisma.dentalRecord.findMany({
+          orderBy: [{ id: 'desc' }],
+          take: 50,
+          include: {
+            customer: { select: { customerCode: true, firstName: true, lastName: true } },
+            appointment: { select: { appointmentDate: true, status: true } },
+          },
+        }),
+      ]);
+    const visitRows = this.filterRowsBySearch(
+      visits.map((visit) => ({
+        date: this.formatDateTime(visit.appointmentDate),
+        customer: this.resolveCustomerLabel(visit.customer),
+        provider: visit.provider?.providerName?.trim() || 'Unassigned provider',
+        type: visit.appointmentType?.trim() || 'GENERAL',
+        status: visit.status?.trim() || 'UNKNOWN',
+      })),
+      query.search,
+    );
+    const consultationRows = this.filterRowsBySearch(
+      consultations.map((consultation) => ({
+        customer: this.resolveCustomerLabel(consultation.customer),
+        doctor: consultation.doctorName?.trim() || 'Unknown',
+        diagnosis: consultation.diagnosis?.trim() || 'N/A',
+        visitDate: this.formatDateTime(consultation.appointment?.appointmentDate),
+        status: consultation.appointment?.status?.trim() || 'RECORDED',
+      })),
+      query.search,
+    );
+    const purchaseRows = this.filterRowsBySearch(
+      purchases.map((purchase) => ({
+        purchaseDate: this.formatDateTime(purchase.purchaseDate),
+        customer: this.resolveCustomerLabel(purchase.customer),
+        provider: purchase.provider?.providerName?.trim() || 'N/A',
+        payable: this.formatMoney(purchase.payableAmount),
+        status: purchase.paymentStatus?.trim() || 'UNKNOWN',
+      })),
+      query.search,
+    );
+    const labRows = this.filterRowsBySearch(
+      labReports.map((report) => ({
+        reportDate: this.formatDateTime(report.reportDate),
+        customer: this.resolveCustomerLabel(report.customer),
+        visitDate: this.formatDateTime(report.appointment?.appointmentDate),
+        document: report.document?.fileName?.trim() || 'No document',
+        status: report.document?.status?.trim() || report.appointment?.status?.trim() || 'RECORDED',
+      })),
+      query.search,
+    );
+    const dentalRows = this.filterRowsBySearch(
+      dentalRecords.map((record) => ({
+        customer: this.resolveCustomerLabel(record.customer),
+        treatment: record.treatmentName?.trim() || 'Treatment',
+        visitDate: this.formatDateTime(record.appointment?.appointmentDate),
+        status: record.appointment?.status?.trim() || 'RECORDED',
+        notes: record.notes?.trim() || 'N/A',
+      })),
+      query.search,
+    );
+    const selectedRows =
+      selectedTab == 'Consultations'
+        ? consultationRows
+        : selectedTab == 'Purchases'
+          ? purchaseRows
+          : selectedTab == 'Labs'
+            ? labRows
+            : selectedTab == 'Dental'
+              ? dentalRows
+              : visitRows;
+    const selectedColumns =
+      selectedTab == 'Consultations'
+        ? [
+            { key: 'customer', label: 'Customer' },
+            { key: 'doctor', label: 'Doctor' },
+            { key: 'diagnosis', label: 'Diagnosis' },
+            { key: 'visitDate', label: 'Visit date' },
+            { key: 'status', label: 'Status' },
+          ]
+        : selectedTab == 'Purchases'
+          ? [
+              { key: 'purchaseDate', label: 'Purchase date' },
+              { key: 'customer', label: 'Customer' },
+              { key: 'provider', label: 'Provider' },
+              { key: 'payable', label: 'Payable' },
+              { key: 'status', label: 'Payment' },
+            ]
+          : selectedTab == 'Labs'
+            ? [
+                { key: 'reportDate', label: 'Report date' },
+                { key: 'customer', label: 'Customer' },
+                { key: 'visitDate', label: 'Visit date' },
+                { key: 'document', label: 'Document' },
+                { key: 'status', label: 'Status' },
+              ]
+            : selectedTab == 'Dental'
+              ? [
+                  { key: 'customer', label: 'Customer' },
+                  { key: 'treatment', label: 'Treatment' },
+                  { key: 'visitDate', label: 'Visit date' },
+                  { key: 'status', label: 'Status' },
+                  { key: 'notes', label: 'Notes' },
+                ]
+              : [
+                  { key: 'date', label: 'Visit date' },
+                  { key: 'customer', label: 'Customer' },
+                  { key: 'provider', label: 'Provider' },
+                  { key: 'type', label: 'Type' },
+                  { key: 'status', label: 'Status' },
+                ];
+    return this.buildWorkspacePayload(
+      'visits',
+      {
+        eyebrow: 'Operations / Visits',
+        title: 'Visits',
+        description:
+          'Backend-owned visit, consultation, purchase, lab, and dental activity across the care journey.',
+        primaryActionLabel: 'Refresh workspace',
+        secondaryActionLabel: 'Consultations',
+      },
+      {
+        searchHint: 'Search appointments, consultations, purchases, and records',
+        tabs: ['Visits', 'Consultations', 'Purchases', 'Labs', 'Dental'],
+        filters: ['SCHEDULED', 'COMPLETED', 'CANCELLED', 'PENDING'],
+      },
+      [
+        this.metric('Appointments', appointmentsCount, 'appointments rows'),
+        this.metric('Consultations', consultationsCount, 'consultations rows'),
+        this.metric('Purchases', purchasesCount, 'purchases rows'),
+        this.metric('Lab reports', labReportsCount + dentalCount, 'diagnostic and dental records'),
+      ],
+      {
+        left: {
+          title: 'Visit coverage',
+          subtitle: 'Current workload composition across visit-linked tables.',
+          type: 'details',
+          details: [
+            { label: 'Selected tab', value: selectedTab },
+            { label: 'Appointments', value: `${appointmentsCount}` },
+            { label: 'Consultations', value: `${consultationsCount}` },
+            { label: 'Purchases', value: `${purchasesCount}` },
+            { label: 'Diagnostics', value: `${labReportsCount + dentalCount}` },
+          ],
+        },
+        center: {
+          title: selectedTab,
+          subtitle: 'Current visit dataset returned by the backend contract.',
+          type: 'table',
+          columns: selectedColumns,
+          rows: selectedRows,
+          emptyState: {
+            title: 'No visit rows matched this view',
+            description: 'The selected visit tab completed successfully but returned no rows for the current query.',
+            actionLabel: 'Refresh workspace',
+          },
+        },
+        right: {
+          title: 'Recent purchases and records',
+          subtitle: 'Cross-linked operational evidence from visit-linked entities.',
+          type: 'list',
+          items: purchaseRows.slice(0, 8).map((row) => ({
+            title: row['customer'] ?? 'Customer',
+            subtitle: row['provider'] ?? 'Provider',
+            meta: row['payable'] ?? '0',
+            status: row['status'] ?? 'UNKNOWN',
+          })),
+          emptyState: {
+            title: 'No visit-linked activity',
+            description: 'No purchase or downstream record rows matched the current search.',
+            actionLabel: 'Refresh workspace',
+          },
+        },
+      },
+    );
+  }
+
+  async getDocumentsWorkspace(query: AdminGovernanceWorkspaceQuery) {
+    const selectedTab = (query.tab ?? 'Pending').trim();
+    const statusFilter =
+      selectedTab == 'Pending'
+        ? { notIn: ['APPROVED', 'VALIDATED', 'REJECTED'] }
+        : { equals: selectedTab.toUpperCase() };
+    const [documentCount, documents, classifications, extractions, processingLogs] =
+      await Promise.all([
+        this.prisma.document.count(),
+        this.prisma.document.findMany({
+          where: {
+            ...(selectedTab == 'Pending'
+              ? { status: statusFilter as { notIn: string[] } }
+              : { status: statusFilter as { equals: string } }),
+          },
+          orderBy: [{ createdAt: 'desc' }],
+          take: 50,
+          include: {
+            customer: { select: { customerCode: true, firstName: true, lastName: true } },
+            uploadedByUser: { select: { firstName: true, lastName: true, employeeCode: true } },
+          },
+        }),
+        this.prisma.documentClassification.findMany({
+          orderBy: [{ id: 'desc' }],
+          take: 50,
+          include: { document: { select: { fileName: true, status: true } } },
+        }),
+        this.prisma.documentExtraction.findMany({
+          orderBy: [{ createdAt: 'desc' }],
+          take: 50,
+          include: { document: { select: { fileName: true, status: true } } },
+        }),
+        this.prisma.documentProcessingLog.findMany({
+          orderBy: [{ processedAt: 'desc' }, { id: 'desc' }],
+          take: 50,
+          include: { document: { select: { fileName: true, status: true } } },
+        }),
+      ]);
+    const documentRows = this.filterRowsBySearch(
+      documents.map((document) => ({
+        createdAt: this.formatDateTime(document.createdAt),
+        customer: this.resolveCustomerLabel(document.customer),
+        fileName: document.fileName?.trim() || 'Document',
+        type: document.documentType?.trim() || 'DOCUMENT',
+        status: document.status?.trim() || 'UNKNOWN',
+        uploadedBy: this.resolveUserDisplayName(
+          (document as any).uploadedByUser,
+        ),
+      })),
+      query.search,
+    );
+    const extractionRows = this.filterRowsBySearch(
+      extractions.map((row) => ({
+        createdAt: this.formatDateTime(row.createdAt),
+        document: row.document?.fileName?.trim() || 'Document',
+        status: row.extractionStatus?.trim() || 'UNKNOWN',
+        confidence: this.formatDecimal(row.confidenceScore),
+      })),
+      query.search,
+    );
+    const processingRows = this.filterRowsBySearch(
+      processingLogs.map((row) => ({
+        processedAt: this.formatDateTime(row.processedAt),
+        document: row.document?.fileName?.trim() || 'Document',
+        stage: row.stage?.trim() || 'PROCESSING',
+        status: row.status?.trim() || 'UNKNOWN',
+        remarks: row.remarks?.trim() || 'N/A',
+      })),
+      query.search,
+    );
+    return this.buildWorkspacePayload(
+      'documents',
+      {
+        eyebrow: 'Operations / Documents',
+        title: 'Documents',
+        description:
+          'Backend-owned document queue, extraction evidence, and processing lifecycle across stored uploads.',
+        primaryActionLabel: 'Refresh workspace',
+        secondaryActionLabel: 'Approved',
+      },
+      {
+        searchHint: 'Search documents, extracted files, and processing status',
+        tabs: ['Pending', 'Approved', 'Rejected', 'Extractions', 'Processing'],
+        filters: ['PENDING', 'APPROVED', 'REJECTED', 'VALIDATED'],
+      },
+      [
+        this.metric('Documents', documentCount, 'documents rows'),
+        this.metric('Classifications', classifications.length, 'document_classifications rows in current sample'),
+        this.metric('Extractions', extractionRows.length, 'document_extractions rows in current sample'),
+        this.metric('Processing logs', processingRows.length, 'document_processing_logs rows in current sample'),
+      ],
+      {
+        left: {
+          title: 'Verification posture',
+          subtitle: 'Current document and pipeline coverage.',
+          type: 'details',
+          details: [
+            { label: 'Selected tab', value: selectedTab },
+            { label: 'Returned documents', value: `${documentRows.length}` },
+            { label: 'Returned extractions', value: `${extractionRows.length}` },
+            { label: 'Returned logs', value: `${processingRows.length}` },
+            {
+              label: 'Search',
+              value:
+                (query.search?.trim().length ?? 0) > 0
+                  ? query.search!.trim()
+                  : 'No search applied',
+            },
+          ],
+        },
+        center: {
+          title: selectedTab,
+          subtitle: 'Current backend dataset for the selected documents view.',
+          type: 'table',
+          columns:
+            selectedTab == 'Extractions'
+              ? [
+                  { key: 'createdAt', label: 'Created' },
+                  { key: 'document', label: 'Document' },
+                  { key: 'status', label: 'Status' },
+                  { key: 'confidence', label: 'Confidence' },
+                ]
+              : selectedTab == 'Processing'
+                ? [
+                    { key: 'processedAt', label: 'Processed' },
+                    { key: 'document', label: 'Document' },
+                    { key: 'stage', label: 'Stage' },
+                    { key: 'status', label: 'Status' },
+                    { key: 'remarks', label: 'Remarks' },
+                  ]
+                : [
+                    { key: 'createdAt', label: 'Uploaded' },
+                    { key: 'customer', label: 'Customer' },
+                    { key: 'fileName', label: 'File' },
+                    { key: 'type', label: 'Type' },
+                    { key: 'status', label: 'Status' },
+                    { key: 'uploadedBy', label: 'Uploaded by' },
+                  ],
+          rows:
+            selectedTab == 'Extractions'
+              ? extractionRows
+              : selectedTab == 'Processing'
+                ? processingRows
+                : documentRows,
+          emptyState: {
+            title: 'No document rows matched this view',
+            description: 'The selected document tab completed successfully but returned no rows for the current query.',
+            actionLabel: 'Refresh workspace',
+          },
+        },
+        right: {
+          title: 'Recent classification labels',
+          subtitle: 'Latest classification outputs attached to documents.',
+          type: 'list',
+          items: this.filterRowsBySearch(
+            classifications.map((row) => ({
+              title: row.classification?.trim() || 'Classification',
+              subtitle: row.document?.fileName?.trim() || 'Document',
+              meta: this.formatDecimal(row.confidence),
+              status: row.document?.status?.trim() || 'RECORDED',
+            })),
+            query.search,
+          ).slice(0, 10),
+          emptyState: {
+            title: 'No classification evidence',
+            description: 'No document classification rows matched the current search.',
+            actionLabel: 'Refresh workspace',
+          },
+        },
+      },
+    );
+  }
+
+  async getMembershipsWorkspace(query: AdminGovernanceWorkspaceQuery) {
+    const selectedTab = (query.tab ?? 'Plans').trim();
+    const [planCount, membershipCount, cardCount, membershipTypes, memberships, cards, statusHistory] =
+      await Promise.all([
+        this.prisma.membershipType.count(),
+        this.prisma.membership.count(),
+        this.prisma.shieldCard.count(),
+        this.prisma.membershipType.findMany({
+          orderBy: [{ name: 'asc' }],
+          take: 50,
+        }),
+        this.prisma.membership.findMany({
+          orderBy: [{ updatedAt: 'desc' }],
+          take: 50,
+          include: {
+            customer: { select: { customerCode: true, firstName: true, lastName: true, status: true } },
+            membershipType: { select: { name: true, code: true } },
+          },
+        }),
+        this.prisma.shieldCard.findMany({
+          orderBy: [{ issuedAt: 'desc' }],
+          take: 50,
+          include: {
+            customer: { select: { customerCode: true, firstName: true, lastName: true } },
+            issuedBusiness: { select: { name: true } },
+          },
+        }),
+        this.prisma.customerStatusHistory.findMany({
+          orderBy: [{ createdAt: 'desc' }],
+          take: 50,
+          include: { customer: { select: { customerCode: true, firstName: true, lastName: true } } },
+        }),
+      ]);
+    const planRows = this.filterRowsBySearch(
+      membershipTypes.map((plan) => ({
+        code: plan.code?.trim() || 'N/A',
+        name: plan.name?.trim() || 'Plan',
+        joiningFee: this.formatMoney(plan.joiningFee),
+        discount: this.formatDecimal(plan.discountPercentage),
+        status: plan.status?.trim() || 'UNKNOWN',
+      })),
+      query.search,
+    );
+    const membershipRows = this.filterRowsBySearch(
+      memberships.map((membership) => ({
+        customer: this.resolveCustomerLabel(membership.customer),
+        plan: membership.membershipType?.name?.trim() || membership.membershipType?.code?.trim() || 'Plan',
+        number: membership.membershipNumber?.trim() || 'N/A',
+        expiry: this.formatDateTime(membership.expiryDate),
+        status: membership.status?.trim() || 'UNKNOWN',
+      })),
+      query.search,
+    );
+    const cardRows = this.filterRowsBySearch(
+      cards.map((card) => ({
+        customer: this.resolveCustomerLabel(card.customer),
+        card: card.cardNumber?.trim() || 'N/A',
+        branch: card.issuedBusiness?.name?.trim() || 'Unassigned',
+        issuedAt: this.formatDateTime(card.issuedAt),
+        status: card.status?.trim() || 'UNKNOWN',
+      })),
+      query.search,
+    );
+    const historyRows = this.filterRowsBySearch(
+      statusHistory.map((history) => ({
+        createdAt: this.formatDateTime(history.createdAt),
+        customer: this.resolveCustomerLabel(history.customer),
+        from: history.oldStatus?.trim() || 'N/A',
+        to: history.newStatus?.trim() || 'N/A',
+        remarks: history.remarks?.trim() || 'N/A',
+      })),
+      query.search,
+    );
+    return this.buildWorkspacePayload(
+      'memberships',
+      {
+        eyebrow: 'Business / Memberships',
+        title: 'Memberships',
+        description:
+          'Backend-owned plan, active membership, card issuance, and lifecycle history workspace.',
+        primaryActionLabel: 'Refresh workspace',
+        secondaryActionLabel: 'Renewals',
+      },
+      {
+        searchHint: 'Search plans, memberships, cards, and lifecycle history',
+        tabs: ['Plans', 'Renewals', 'Cards', 'History'],
+        filters: ['ACTIVE', 'EXPIRED', 'PENDING', 'SUSPENDED'],
+      },
+      [
+        this.metric('Plans', planCount, 'membership_types rows'),
+        this.metric('Memberships', membershipCount, 'memberships rows'),
+        this.metric('Cards', cardCount, 'shield_cards rows'),
+        this.metric('Renewals', membershipRows.filter((row) => row['status'] == 'ACTIVE').length, 'Active memberships in current sample'),
+      ],
+      {
+        left: {
+          title: 'Membership posture',
+          subtitle: 'Plan and card coverage from live records.',
+          type: 'details',
+          details: [
+            { label: 'Selected tab', value: selectedTab },
+            { label: 'Plans', value: `${planCount}` },
+            { label: 'Memberships', value: `${membershipCount}` },
+            { label: 'Cards', value: `${cardCount}` },
+            { label: 'History rows', value: `${historyRows.length}` },
+          ],
+        },
+        center: {
+          title: selectedTab,
+          subtitle: 'Current backend dataset for the selected memberships view.',
+          type: 'table',
+          columns:
+            selectedTab == 'Cards'
+              ? [
+                  { key: 'customer', label: 'Customer' },
+                  { key: 'card', label: 'Card' },
+                  { key: 'branch', label: 'Issued branch' },
+                  { key: 'issuedAt', label: 'Issued' },
+                  { key: 'status', label: 'Status' },
+                ]
+              : selectedTab == 'History'
+                ? [
+                    { key: 'createdAt', label: 'Created' },
+                    { key: 'customer', label: 'Customer' },
+                    { key: 'from', label: 'From' },
+                    { key: 'to', label: 'To' },
+                    { key: 'remarks', label: 'Remarks' },
+                  ]
+                : selectedTab == 'Renewals'
+                  ? [
+                      { key: 'customer', label: 'Customer' },
+                      { key: 'plan', label: 'Plan' },
+                      { key: 'number', label: 'Membership no.' },
+                      { key: 'expiry', label: 'Expiry' },
+                      { key: 'status', label: 'Status' },
+                    ]
+                  : [
+                      { key: 'code', label: 'Code' },
+                      { key: 'name', label: 'Plan' },
+                      { key: 'joiningFee', label: 'Joining fee' },
+                      { key: 'discount', label: 'Discount' },
+                      { key: 'status', label: 'Status' },
+                    ],
+          rows:
+            selectedTab == 'Cards'
+              ? cardRows
+              : selectedTab == 'History'
+                ? historyRows
+                : selectedTab == 'Renewals'
+                  ? membershipRows
+                  : planRows,
+          emptyState: {
+            title: 'No membership rows matched this view',
+            description: 'The selected membership tab completed successfully but returned no rows for the current query.',
+            actionLabel: 'Refresh workspace',
+          },
+        },
+        right: {
+          title: 'Active memberships',
+          subtitle: 'Current live memberships in scope.',
+          type: 'list',
+          items: membershipRows.slice(0, 10).map((row) => ({
+            title: row['customer'] ?? 'Customer',
+            subtitle: row['plan'] ?? 'Plan',
+            meta: row['expiry'] ?? 'N/A',
+            status: row['status'] ?? 'UNKNOWN',
+          })),
+          emptyState: {
+            title: 'No active memberships',
+            description: 'No membership rows matched the current search.',
+            actionLabel: 'Refresh workspace',
+          },
+        },
+      },
+    );
+  }
+
+  async getWalletWorkspace(query: AdminGovernanceWorkspaceQuery) {
+    const selectedTab = (query.tab ?? 'Ledger').trim();
+    const [walletCount, walletTxCount, pricingAuditCount, rewardTxCount, wallets, walletTransactions, pricingAudits, rewardTransactions] =
+      await Promise.all([
+        this.prisma.wallet.count(),
+        this.prisma.walletTransaction.count(),
+        this.prisma.pricingRuleAudit.count(),
+        this.prisma.rewardPointTransaction.count(),
+        this.prisma.wallet.findMany({
+          orderBy: [{ createdAt: 'desc' }],
+          take: 50,
+          include: { customer: { select: { customerCode: true, firstName: true, lastName: true, status: true } } },
+        }),
+        this.prisma.walletTransaction.findMany({
+          orderBy: [{ createdAt: 'desc' }],
+          take: 50,
+          include: {
+            wallet: { include: { customer: { select: { customerCode: true, firstName: true, lastName: true } } } },
+            createdByUser: { select: { firstName: true, lastName: true, employeeCode: true } },
+          },
+        }),
+        this.prisma.pricingRuleAudit.findMany({
+          orderBy: [{ createdAt: 'desc' }],
+          take: 50,
+          include: { customer: { select: { customerCode: true, firstName: true, lastName: true } } },
+        }),
+        this.prisma.rewardPointTransaction.findMany({
+          orderBy: [{ createdAt: 'desc' }],
+          take: 50,
+          include: { wallet: { include: { customer: { select: { customerCode: true, firstName: true, lastName: true } } } } },
+        }),
+      ]);
+    const walletRows = this.filterRowsBySearch(
+      wallets.map((wallet) => ({
+        customer: this.resolveCustomerLabel(wallet.customer),
+        walletStatus: wallet.status?.trim() || 'UNKNOWN',
+        createdAt: this.formatDateTime(wallet.createdAt),
+      })),
+      query.search,
+    );
+    const ledgerRows = this.filterRowsBySearch(
+      walletTransactions.map((tx) => ({
+        createdAt: this.formatDateTime(tx.createdAt),
+        customer: this.resolveCustomerLabel(tx.wallet?.customer),
+        subLedger: tx.subLedgerType?.trim() || 'CASH',
+        amount: this.formatMoney(tx.amount),
+        type: tx.transactionType?.trim() || 'TRANSACTION',
+        actor: this.resolveUserDisplayName(tx.createdByUser),
+      })),
+      query.search,
+    );
+    const pricingRows = this.filterRowsBySearch(
+      pricingAudits.map((audit) => ({
+        createdAt: this.formatDateTime(audit.createdAt),
+        customer: this.resolveCustomerLabel(audit.customer),
+        service: audit.serviceType,
+        finalPayable: this.formatMoney(audit.finalPayableAmount),
+        rule: audit.matchedRuleCode?.trim() || 'N/A',
+      })),
+      query.search,
+    );
+    const rewardRows = this.filterRowsBySearch(
+      rewardTransactions.map((tx) => ({
+        createdAt: this.formatDateTime(tx.createdAt),
+        customer: this.resolveCustomerLabel(tx.wallet?.customer),
+        action: tx.actionCode?.trim() || 'REWARD',
+        points: this.formatMoney(tx.points),
+        status: tx.status?.trim() || 'UNKNOWN',
+      })),
+      query.search,
+    );
+    return this.buildWorkspacePayload(
+      'wallet',
+      {
+        eyebrow: 'Business / Wallet',
+        title: 'Wallet',
+        description:
+          'Backend-owned wallet ledger, reward movement, and pricing audit evidence across all customer wallets.',
+        primaryActionLabel: 'Refresh workspace',
+        secondaryActionLabel: 'Rewards',
+      },
+      {
+        searchHint: 'Search wallets, ledger transactions, rewards, and pricing audits',
+        tabs: ['Ledger', 'Wallets', 'Rewards', 'Audits'],
+        filters: ['CASH', 'REWARD_POINTS', 'SHIELD_BENEFIT', 'ACTIVE'],
+      },
+      [
+        this.metric('Wallets', walletCount, 'wallets rows'),
+        this.metric('Ledger rows', walletTxCount, 'wallet_transactions rows'),
+        this.metric('Pricing audits', pricingAuditCount, 'pricing_rule_audits rows'),
+        this.metric('Reward rows', rewardTxCount, 'reward_point_transactions rows'),
+      ],
+      {
+        left: {
+          title: 'Wallet posture',
+          subtitle: 'Ledger and wallet coverage from live records.',
+          type: 'details',
+          details: [
+            { label: 'Selected tab', value: selectedTab },
+            { label: 'Wallets', value: `${walletCount}` },
+            { label: 'Ledger rows', value: `${walletTxCount}` },
+            { label: 'Pricing audits', value: `${pricingAuditCount}` },
+            { label: 'Reward rows', value: `${rewardTxCount}` },
+          ],
+        },
+        center: {
+          title: selectedTab,
+          subtitle: 'Current backend dataset for the selected wallet view.',
+          type: 'table',
+          columns:
+            selectedTab == 'Wallets'
+              ? [
+                  { key: 'customer', label: 'Customer' },
+                  { key: 'walletStatus', label: 'Status' },
+                  { key: 'createdAt', label: 'Created' },
+                ]
+              : selectedTab == 'Rewards'
+                ? [
+                    { key: 'createdAt', label: 'Created' },
+                    { key: 'customer', label: 'Customer' },
+                    { key: 'action', label: 'Action' },
+                    { key: 'points', label: 'Points' },
+                    { key: 'status', label: 'Status' },
+                  ]
+                : selectedTab == 'Audits'
+                  ? [
+                      { key: 'createdAt', label: 'Created' },
+                      { key: 'customer', label: 'Customer' },
+                      { key: 'service', label: 'Service' },
+                      { key: 'finalPayable', label: 'Final payable' },
+                      { key: 'rule', label: 'Rule' },
+                    ]
+                  : [
+                      { key: 'createdAt', label: 'Created' },
+                      { key: 'customer', label: 'Customer' },
+                      { key: 'subLedger', label: 'Sub-ledger' },
+                      { key: 'amount', label: 'Amount' },
+                      { key: 'type', label: 'Type' },
+                      { key: 'actor', label: 'Actor' },
+                    ],
+          rows:
+            selectedTab == 'Wallets'
+              ? walletRows
+              : selectedTab == 'Rewards'
+                ? rewardRows
+                : selectedTab == 'Audits'
+                  ? pricingRows
+                  : ledgerRows,
+          emptyState: {
+            title: 'No wallet rows matched this view',
+            description: 'The selected wallet tab completed successfully but returned no rows for the current query.',
+            actionLabel: 'Refresh workspace',
+          },
+        },
+        right: {
+          title: 'Recent ledger trail',
+          subtitle: 'Latest wallet transaction evidence.',
+          type: 'list',
+          items: ledgerRows.slice(0, 10).map((row) => ({
+            title: row['customer'] ?? 'Customer',
+            subtitle: row['subLedger'] ?? 'CASH',
+            meta: row['amount'] ?? '0',
+            status: row['type'] ?? 'TRANSACTION',
+          })),
+          emptyState: {
+            title: 'No ledger trail',
+            description: 'No wallet transaction rows matched the current search.',
+            actionLabel: 'Refresh workspace',
+          },
+        },
+      },
+    );
+  }
+
+  async getRewardsWorkspace(query: AdminGovernanceWorkspaceQuery) {
+    const selectedTab = (query.tab ?? 'Rules').trim();
+    const [ruleCount, redemptionCount, txCount, referralCount, pointRules, redemptionRules, pointTx, referralEvents] =
+      await Promise.all([
+        this.prisma.rewardPointRule.count(),
+        this.prisma.rewardRedemptionRule.count(),
+        this.prisma.rewardPointTransaction.count(),
+        this.prisma.referralRewardEvent.count(),
+        this.prisma.rewardPointRule.findMany({ orderBy: [{ updatedAt: 'desc' }], take: 50 }),
+        this.prisma.rewardRedemptionRule.findMany({ orderBy: [{ updatedAt: 'desc' }], take: 50 }),
+        this.prisma.rewardPointTransaction.findMany({
+          orderBy: [{ createdAt: 'desc' }],
+          take: 50,
+          include: { wallet: { include: { customer: { select: { customerCode: true, firstName: true, lastName: true } } } } },
+        }),
+        this.prisma.referralRewardEvent.findMany({
+          orderBy: [{ createdAt: 'desc' }],
+          take: 50,
+          include: {
+            referrerCustomer: { select: { customerCode: true, firstName: true, lastName: true } },
+            referredCustomer: { select: { customerCode: true, firstName: true, lastName: true } },
+          },
+        }),
+      ]);
+    const rulesRows = this.filterRowsBySearch(
+      pointRules.map((rule) => ({
+        action: rule.actionCode,
+        displayName: rule.displayName,
+        points: this.formatMoney(rule.points),
+        approval: rule.requiresApproval ? 'REQUIRES_APPROVAL' : 'AUTO',
+        status: rule.status,
+      })),
+      query.search,
+    );
+    const redemptionRows = this.filterRowsBySearch(
+      redemptionRules.map((rule) => ({
+        code: rule.code,
+        pointsRequired: this.formatMoney(rule.pointsRequired),
+        cashCredit: this.formatMoney(rule.cashCreditAmount),
+        ledger: rule.creditLedgerType,
+        status: rule.status,
+      })),
+      query.search,
+    );
+    const txRows = this.filterRowsBySearch(
+      pointTx.map((tx) => ({
+        createdAt: this.formatDateTime(tx.createdAt),
+        customer: this.resolveCustomerLabel(tx.wallet?.customer),
+        action: tx.actionCode?.trim() || 'REWARD',
+        points: this.formatMoney(tx.points),
+        status: tx.status,
+      })),
+      query.search,
+    );
+    const referralRows = this.filterRowsBySearch(
+      referralEvents.map((event) => ({
+        createdAt: this.formatDateTime(event.createdAt),
+        referrer: this.resolveCustomerLabel(event.referrerCustomer),
+        referred: this.resolveCustomerLabel(event.referredCustomer),
+        points: this.formatMoney(event.rewardPoints),
+        status: event.status,
+      })),
+      query.search,
+    );
+    return this.buildWorkspacePayload(
+      'rewards',
+      {
+        eyebrow: 'Business / Rewards',
+        title: 'Rewards',
+        description:
+          'Backend-owned reward rules, redemption rules, reward transactions, and referral reward evidence.',
+        primaryActionLabel: 'Refresh workspace',
+        secondaryActionLabel: 'Transactions',
+      },
+      {
+        searchHint: 'Search reward rules, redemptions, transactions, and referral rewards',
+        tabs: ['Rules', 'Redemptions', 'Transactions', 'Referrals'],
+        filters: ['ACTIVE', 'APPROVED', 'PENDING', 'REJECTED'],
+      },
+      [
+        this.metric('Reward rules', ruleCount, 'reward_point_rules rows'),
+        this.metric('Redemption rules', redemptionCount, 'reward_redemption_rules rows'),
+        this.metric('Reward rows', txCount, 'reward_point_transactions rows'),
+        this.metric('Referral rewards', referralCount, 'referral_reward_events rows'),
+      ],
+      {
+        left: {
+          title: 'Rewards posture',
+          subtitle: 'Rules and transactions from live rewards tables.',
+          type: 'details',
+          details: [
+            { label: 'Selected tab', value: selectedTab },
+            { label: 'Rules', value: `${ruleCount}` },
+            { label: 'Redemptions', value: `${redemptionCount}` },
+            { label: 'Transactions', value: `${txCount}` },
+            { label: 'Referrals', value: `${referralCount}` },
+          ],
+        },
+        center: {
+          title: selectedTab,
+          subtitle: 'Current backend dataset for the selected rewards view.',
+          type: 'table',
+          columns:
+            selectedTab == 'Redemptions'
+              ? [
+                  { key: 'code', label: 'Code' },
+                  { key: 'pointsRequired', label: 'Points required' },
+                  { key: 'cashCredit', label: 'Cash credit' },
+                  { key: 'ledger', label: 'Ledger' },
+                  { key: 'status', label: 'Status' },
+                ]
+              : selectedTab == 'Transactions'
+                ? [
+                    { key: 'createdAt', label: 'Created' },
+                    { key: 'customer', label: 'Customer' },
+                    { key: 'action', label: 'Action' },
+                    { key: 'points', label: 'Points' },
+                    { key: 'status', label: 'Status' },
+                  ]
+                : selectedTab == 'Referrals'
+                  ? [
+                      { key: 'createdAt', label: 'Created' },
+                      { key: 'referrer', label: 'Referrer' },
+                      { key: 'referred', label: 'Referred' },
+                      { key: 'points', label: 'Points' },
+                      { key: 'status', label: 'Status' },
+                    ]
+                  : [
+                      { key: 'action', label: 'Action code' },
+                      { key: 'displayName', label: 'Display name' },
+                      { key: 'points', label: 'Points' },
+                      { key: 'approval', label: 'Approval' },
+                      { key: 'status', label: 'Status' },
+                    ],
+          rows:
+            selectedTab == 'Redemptions'
+              ? redemptionRows
+              : selectedTab == 'Transactions'
+                ? txRows
+                : selectedTab == 'Referrals'
+                  ? referralRows
+                  : rulesRows,
+          emptyState: {
+            title: 'No reward rows matched this view',
+            description: 'The selected rewards tab completed successfully but returned no rows for the current query.',
+            actionLabel: 'Refresh workspace',
+          },
+        },
+        right: {
+          title: 'Recent referral rewards',
+          subtitle: 'Latest referral reward events in scope.',
+          type: 'list',
+          items: referralRows.slice(0, 10).map((row) => ({
+            title: row['referrer'] ?? 'Referrer',
+            subtitle: row['referred'] ?? 'Referred',
+            meta: row['points'] ?? '0',
+            status: row['status'] ?? 'UNKNOWN',
+          })),
+          emptyState: {
+            title: 'No referral reward events',
+            description: 'No referral reward events matched the current search.',
+            actionLabel: 'Refresh workspace',
+          },
+        },
+      },
+    );
+  }
+
+  async getReferralsWorkspace(query: AdminGovernanceWorkspaceQuery) {
+    const referrals = await this.prisma.referralRewardEvent.findMany({
+      orderBy: [{ createdAt: 'desc' }],
+      take: 50,
+      include: {
+        referrerCustomer: { select: { customerCode: true, firstName: true, lastName: true } },
+        referredCustomer: { select: { customerCode: true, firstName: true, lastName: true, status: true } },
+      },
+    });
+    const referralRows = this.filterRowsBySearch(
+      referrals.map((event) => ({
+        createdAt: this.formatDateTime(event.createdAt),
+        referrer: this.resolveCustomerLabel(event.referrerCustomer),
+        referred: this.resolveCustomerLabel(event.referredCustomer),
+        code: event.referralCode?.trim() || 'N/A',
+        status: event.status,
+        points: this.formatMoney(event.rewardPoints),
+      })),
+      query.search,
+    );
+    return this.buildWorkspacePayload(
+      'referrals',
+      {
+        eyebrow: 'Business / Referrals',
+        title: 'Referrals',
+        description:
+          'Backend-owned referral tree and reward qualification evidence from referral reward events and customer records.',
+        primaryActionLabel: 'Refresh workspace',
+        secondaryActionLabel: 'Qualified',
+      },
+      {
+        searchHint: 'Search referrers, referred customers, codes, and reward status',
+        tabs: ['Pipeline', 'Qualified', 'Rewarded', 'Rejected'],
+        filters: ['PENDING', 'VERIFIED', 'QUALIFIED', 'REWARDED', 'REJECTED'],
+      },
+      [
+        this.metric('Referral events', referralRows.length, 'Current referral_reward_events result size'),
+        this.metric('Qualified', referralRows.filter((row) => row['status'] == 'QUALIFIED').length, 'Qualified referrals in result'),
+        this.metric('Rewarded', referralRows.filter((row) => row['status'] == 'REWARDED').length, 'Rewarded referrals in result'),
+        this.metric('Rejected', referralRows.filter((row) => row['status'] == 'REJECTED').length, 'Rejected referrals in result'),
+      ],
+      {
+        left: {
+          title: 'Referral status breakdown',
+          subtitle: 'Live referral progression from the rewards pipeline.',
+          type: 'list',
+          items: this.buildStatusSummaryItems(referralRows, 'status'),
+        },
+        center: {
+          title: 'Referral pipeline',
+          subtitle: 'Current backend dataset for referral qualification and reward status.',
+          type: 'table',
+          columns: [
+            { key: 'createdAt', label: 'Created' },
+            { key: 'referrer', label: 'Referrer' },
+            { key: 'referred', label: 'Referred' },
+            { key: 'code', label: 'Code' },
+            { key: 'status', label: 'Status' },
+            { key: 'points', label: 'Points' },
+          ],
+          rows: this.filterRowsByRequestedStatus(referralRows, query.status),
+          emptyState: {
+            title: 'No referral rows matched this view',
+            description: 'The referrals workspace is live, but the current filters returned no rows.',
+            actionLabel: 'Refresh workspace',
+          },
+        },
+        right: {
+          title: 'Recent referral trail',
+          subtitle: 'Most recent referral events in scope.',
+          type: 'list',
+          items: referralRows.slice(0, 10).map((row) => ({
+            title: row['referrer'] ?? 'Referrer',
+            subtitle: row['referred'] ?? 'Referred',
+            meta: row['code'] ?? 'N/A',
+            status: row['status'] ?? 'UNKNOWN',
+          })),
+          emptyState: {
+            title: 'No referral trail',
+            description: 'No referral events matched the current search.',
+            actionLabel: 'Refresh workspace',
+          },
+        },
+      },
+    );
+  }
+
+  async getProvidersWorkspace(query: AdminGovernanceWorkspaceQuery) {
+    const selectedTab = (query.tab ?? 'Profile').trim();
+    const [providerCount, profileCount, assignmentCount, providers, profiles, assignments, appointments] =
+      await Promise.all([
+        this.prisma.serviceProvider.count(),
+        this.prisma.providerProfile.count({ where: { deletedAt: null } }),
+        this.prisma.providerProfileBranchAssignment.count(),
+        this.prisma.serviceProvider.findMany({
+          orderBy: [{ providerName: 'asc' }],
+          take: 50,
+          include: { business: { select: { name: true } } },
+        }),
+        this.prisma.providerProfile.findMany({
+          where: { deletedAt: null },
+          orderBy: [{ updatedAt: 'desc' }],
+          take: 50,
+          include: {
+            user: { select: { firstName: true, lastName: true, email: true, status: true } },
+          },
+        }),
+        this.prisma.providerProfileBranchAssignment.findMany({
+          orderBy: [{ assignedAt: 'desc' }],
+          take: 50,
+          include: {
+            providerProfile: {
+              include: { user: { select: { firstName: true, lastName: true } } },
+            },
+            business: { select: { name: true } },
+          },
+        }),
+        this.prisma.appointment.findMany({
+          orderBy: [{ appointmentDate: 'desc' }],
+          take: 50,
+          include: {
+            provider: { select: { providerName: true, providerType: true } },
+            customer: { select: { customerCode: true, firstName: true, lastName: true } },
+          },
+        }),
+      ]);
+    const providerRows = this.filterRowsBySearch(
+      providers.map((provider) => ({
+        provider: provider.providerName?.trim() || 'Provider',
+        type: provider.providerType?.trim() || 'GENERAL',
+        branch: provider.business?.name?.trim() || 'Unassigned',
+        status: provider.status?.trim() || 'UNKNOWN',
+      })),
+      query.search,
+    );
+    const profileRows = this.filterRowsBySearch(
+      profiles.map((profile) => ({
+        profile:
+          profile.displayName?.trim() ||
+          this.resolveUserDisplayName(profile.user as any),
+        specialization: profile.specialization?.trim() || 'N/A',
+        contact: profile.contactPhone?.trim() || profile.contactEmail?.trim() || 'N/A',
+        status: (profile.user as any)?.status?.trim() || 'UNKNOWN',
+        updatedAt: this.formatDateTime(profile.updatedAt),
+      })),
+      query.search,
+    );
+    const assignmentRows = this.filterRowsBySearch(
+      assignments.map((assignment) => ({
+        profile:
+          assignment.providerProfile.displayName?.trim() ||
+          this.resolveUserDisplayName(
+            (assignment.providerProfile as any).user,
+          ),
+        branch: assignment.business.name?.trim() || 'Branch',
+        primary: assignment.isPrimary ? 'PRIMARY' : 'SECONDARY',
+        assignedAt: this.formatDateTime(assignment.assignedAt),
+      })),
+      query.search,
+    );
+    const bookingRows = this.filterRowsBySearch(
+      appointments.map((appointment) => ({
+        date: this.formatDateTime(appointment.appointmentDate),
+        provider: appointment.provider?.providerName?.trim() || 'Provider',
+        customer: this.resolveCustomerLabel(appointment.customer),
+        type: appointment.appointmentType?.trim() || 'GENERAL',
+        status: appointment.status?.trim() || 'UNKNOWN',
+      })),
+      query.search,
+    );
+    return this.buildWorkspacePayload(
+      'providers',
+      {
+        eyebrow: 'Providers / Network',
+        title: 'Providers',
+        description:
+          'Backend-owned provider registry, profile, branch assignment, and booking visibility.',
+        primaryActionLabel: 'Refresh workspace',
+        secondaryActionLabel: 'Bookings',
+      },
+      {
+        searchHint: 'Search provider registry, profiles, assignments, and bookings',
+        tabs: ['Profile', 'Availability', 'Bookings', 'Assignments'],
+        filters: ['ACTIVE', 'PENDING', 'INACTIVE'],
+      },
+      [
+        this.metric('Providers', providerCount, 'service_providers rows'),
+        this.metric('Profiles', profileCount, 'provider_profiles rows'),
+        this.metric('Assignments', assignmentCount, 'provider_profile_branch_assignments rows'),
+        this.metric('Bookings', bookingRows.length, 'Current appointment sample'),
+      ],
+      {
+        left: {
+          title: 'Provider registry',
+          subtitle: 'Branch-linked provider entities.',
+          type: 'list',
+          items: providerRows.slice(0, 10).map((row) => ({
+            title: row['provider'] ?? 'Provider',
+            subtitle: `${row['type'] ?? 'GENERAL'} • ${row['branch'] ?? 'Unassigned'}`,
+            meta: row['status'] ?? 'UNKNOWN',
+            status: row['status'] ?? 'UNKNOWN',
+          })),
+          emptyState: {
+            title: 'No providers matched this search',
+            description: 'No provider rows matched the current query.',
+            actionLabel: 'Refresh workspace',
+          },
+        },
+        center: {
+          title: selectedTab,
+          subtitle: 'Current backend dataset for the selected providers view.',
+          type: 'table',
+          columns:
+            selectedTab == 'Assignments'
+              ? [
+                  { key: 'profile', label: 'Profile' },
+                  { key: 'branch', label: 'Branch' },
+                  { key: 'primary', label: 'Mapping' },
+                  { key: 'assignedAt', label: 'Assigned' },
+                ]
+              : selectedTab == 'Bookings'
+                ? [
+                    { key: 'date', label: 'Date' },
+                    { key: 'provider', label: 'Provider' },
+                    { key: 'customer', label: 'Customer' },
+                    { key: 'type', label: 'Type' },
+                    { key: 'status', label: 'Status' },
+                  ]
+                : [
+                    { key: 'profile', label: 'Profile' },
+                    { key: 'specialization', label: 'Specialization' },
+                    { key: 'contact', label: 'Contact' },
+                    { key: 'status', label: 'Status' },
+                    { key: 'updatedAt', label: 'Updated' },
+                  ],
+          rows:
+            selectedTab == 'Assignments'
+              ? assignmentRows
+              : selectedTab == 'Bookings'
+                ? bookingRows
+                : profileRows,
+          emptyState: {
+            title: 'No provider rows matched this view',
+            description: 'The selected providers tab completed successfully but returned no rows.',
+            actionLabel: 'Refresh workspace',
+          },
+        },
+        right: {
+          title: 'Recent bookings',
+          subtitle: 'Latest appointment evidence tied to providers.',
+          type: 'list',
+          items: bookingRows.slice(0, 10).map((row) => ({
+            title: row['provider'] ?? 'Provider',
+            subtitle: row['customer'] ?? 'Customer',
+            meta: row['date'] ?? 'N/A',
+            status: row['status'] ?? 'UNKNOWN',
+          })),
+          emptyState: {
+            title: 'No provider booking trail',
+            description: 'No provider booking rows matched the current search.',
+            actionLabel: 'Refresh workspace',
+          },
+        },
+      },
+    );
+  }
+
+  async getServicesWorkspace(query: AdminGovernanceWorkspaceQuery) {
+    const [serviceProviderTypes, serviceRules, pricingAudits] = await Promise.all([
+      this.prisma.serviceProvider.findMany({
+        orderBy: [{ providerType: 'asc' }],
+        take: 100,
+      }),
+      this.prisma.serviceBenefitRule.findMany({
+        orderBy: [{ updatedAt: 'desc' }],
+        take: 50,
+      }),
+      this.prisma.pricingRuleAudit.findMany({
+        orderBy: [{ createdAt: 'desc' }],
+        take: 50,
+      }),
+    ]);
+    const typeCounts = new Map<string, number>();
+    for (const provider of serviceProviderTypes) {
+      const type = provider.providerType?.trim() || 'GENERAL';
+      typeCounts.set(type, (typeCounts.get(type) ?? 0) + 1);
+    }
+    const serviceRows = this.filterRowsBySearch(
+      serviceRules.map((rule) => ({
+        serviceType: rule.serviceType,
+        benefitEligible: rule.isBenefitEligible ? 'YES' : 'NO',
+        rewardPoints: this.formatMoney(rule.rewardPointsOnService),
+        walletsAllowed: rule.walletsAllowed?.trim() || 'CASH',
+        status: rule.status,
+      })),
+      query.search,
+    );
+    const typeRows = this.filterRowsBySearch(
+      Array.from(typeCounts.entries()).map(([serviceType, count]) => ({
+        serviceType,
+        providers: `${count}`,
+        status: 'ACTIVE',
+      })),
+      query.search,
+    );
+    const auditRows = this.filterRowsBySearch(
+      pricingAudits.map((audit) => ({
+        createdAt: this.formatDateTime(audit.createdAt),
+        serviceType: audit.serviceType,
+        matchedRule: audit.matchedRuleCode?.trim() || 'N/A',
+        finalPayable: this.formatMoney(audit.finalPayableAmount),
+        status: audit.preloadingUsed ? 'PRELOADED' : 'STANDARD',
+      })),
+      query.search,
+    );
+    return this.buildWorkspacePayload(
+      'services',
+      {
+        eyebrow: 'Providers / Services',
+        title: 'Services',
+        description:
+          'Backend-owned service types, benefit eligibility rules, and pricing outcomes.',
+        primaryActionLabel: 'Refresh workspace',
+        secondaryActionLabel: 'Rules',
+      },
+      {
+        searchHint: 'Search service types, benefit rules, and pricing outcomes',
+        tabs: ['Catalog', 'Rules', 'Pricing audits'],
+        filters: ['ACTIVE', 'INACTIVE', 'YES', 'NO'],
+      },
+      [
+        this.metric('Service types', typeRows.length, 'Distinct provider types in current sample'),
+        this.metric('Service rules', serviceRows.length, 'service_benefit_rules rows in current sample'),
+        this.metric('Pricing audits', auditRows.length, 'pricing_rule_audits rows in current sample'),
+      ],
+      {
+        left: {
+          title: 'Service catalog',
+          subtitle: 'Distinct provider service types and counts.',
+          type: 'table',
+          columns: [
+            { key: 'serviceType', label: 'Service type' },
+            { key: 'providers', label: 'Providers' },
+            { key: 'status', label: 'Status' },
+          ],
+          rows: typeRows,
+        },
+        center: {
+          title: 'Benefit rules',
+          subtitle: 'Current benefit-rule coverage across service types.',
+          type: 'table',
+          columns: [
+            { key: 'serviceType', label: 'Service type' },
+            { key: 'benefitEligible', label: 'Benefit eligible' },
+            { key: 'rewardPoints', label: 'Reward points' },
+            { key: 'walletsAllowed', label: 'Wallets allowed' },
+            { key: 'status', label: 'Status' },
+          ],
+          rows: serviceRows,
+          emptyState: {
+            title: 'No service rules matched this search',
+            description: 'No service benefit rules matched the current query.',
+            actionLabel: 'Refresh workspace',
+          },
+        },
+        right: {
+          title: 'Recent pricing outcomes',
+          subtitle: 'Latest pricing rule audits tied to service types.',
+          type: 'table',
+          columns: [
+            { key: 'createdAt', label: 'Created' },
+            { key: 'serviceType', label: 'Service type' },
+            { key: 'matchedRule', label: 'Matched rule' },
+            { key: 'finalPayable', label: 'Final payable' },
+            { key: 'status', label: 'Mode' },
+          ],
+          rows: auditRows,
+          emptyState: {
+            title: 'No pricing audits matched this search',
+            description: 'No pricing rule audits matched the current query.',
+            actionLabel: 'Refresh workspace',
+          },
+        },
+      },
+    );
+  }
+
+  async getAvailabilityWorkspace(query: AdminGovernanceWorkspaceQuery) {
+    const [profiles, upcomingAppointments, businesses] = await Promise.all([
+      this.prisma.providerProfile.findMany({
+        where: { deletedAt: null },
+        orderBy: [{ updatedAt: 'desc' }],
+        take: 50,
+        include: {
+          user: { select: { firstName: true, lastName: true, status: true } },
+          branchAssignments: { include: { business: { select: { name: true } } } },
+        },
+      }),
+      this.prisma.appointment.findMany({
+        orderBy: [{ appointmentDate: 'asc' }],
+        take: 50,
+        include: { provider: { select: { providerName: true, providerType: true } } },
+      }),
+      this.prisma.business.findMany({
+        orderBy: [{ updatedAt: 'desc' }],
+        take: 25,
+      }),
+    ]);
+    const profileRows = this.filterRowsBySearch(
+      profiles.map((profile) => ({
+        provider:
+          profile.displayName?.trim() ||
+          this.resolveUserDisplayName(profile.user as any),
+        specialization: profile.specialization?.trim() || 'N/A',
+        branches: `${profile.branchAssignments.length}`,
+        status: (profile.user as any)?.status?.trim() || 'UNKNOWN',
+        updatedAt: this.formatDateTime(profile.updatedAt),
+      })),
+      query.search,
+    );
+    const bookingRows = this.filterRowsBySearch(
+      upcomingAppointments.map((appointment) => ({
+        date: this.formatDateTime(appointment.appointmentDate),
+        provider: appointment.provider?.providerName?.trim() || 'Provider',
+        type: appointment.provider?.providerType?.trim() || appointment.appointmentType?.trim() || 'GENERAL',
+        status: appointment.status?.trim() || 'UNKNOWN',
+      })),
+      query.search,
+    );
+    const branchRows = this.filterRowsBySearch(
+      businesses.map((business) => ({
+        branch: business.name,
+        status: business.status?.trim() || 'UNKNOWN',
+        updatedAt: this.formatDateTime(business.updatedAt),
+      })),
+      query.search,
+    );
+    return this.buildWorkspacePayload(
+      'availability',
+      {
+        eyebrow: 'Providers / Availability',
+        title: 'Availability',
+        description:
+          'Backend-owned provider profile availability and booking pressure across active branches.',
+        primaryActionLabel: 'Refresh workspace',
+        secondaryActionLabel: 'Bookings',
+      },
+      {
+        searchHint: 'Search provider availability, bookings, and branch load',
+        tabs: ['Profiles', 'Bookings', 'Branches'],
+        filters: ['ACTIVE', 'PENDING', 'INACTIVE'],
+      },
+      [
+        this.metric('Provider profiles', profileRows.length, 'Current provider profile sample'),
+        this.metric('Upcoming bookings', bookingRows.length, 'Current appointment sample'),
+        this.metric('Branches', branchRows.length, 'Current business sample'),
+      ],
+      {
+        left: {
+          title: 'Provider availability profiles',
+          subtitle: 'Current provider profile coverage and branch mappings.',
+          type: 'table',
+          columns: [
+            { key: 'provider', label: 'Provider' },
+            { key: 'specialization', label: 'Specialization' },
+            { key: 'branches', label: 'Branches' },
+            { key: 'status', label: 'Status' },
+            { key: 'updatedAt', label: 'Updated' },
+          ],
+          rows: profileRows,
+          emptyState: {
+            title: 'No provider profiles matched this search',
+            description: 'No provider profile rows matched the current query.',
+            actionLabel: 'Refresh workspace',
+          },
+        },
+        center: {
+          title: 'Upcoming bookings',
+          subtitle: 'Booking demand that currently consumes provider availability.',
+          type: 'table',
+          columns: [
+            { key: 'date', label: 'Date' },
+            { key: 'provider', label: 'Provider' },
+            { key: 'type', label: 'Type' },
+            { key: 'status', label: 'Status' },
+          ],
+          rows: bookingRows,
+          emptyState: {
+            title: 'No bookings matched this search',
+            description: 'No appointment rows matched the current query.',
+            actionLabel: 'Refresh workspace',
+          },
+        },
+        right: {
+          title: 'Branch load context',
+          subtitle: 'Current branches linked to provider availability coverage.',
+          type: 'table',
+          columns: [
+            { key: 'branch', label: 'Branch' },
+            { key: 'status', label: 'Status' },
+            { key: 'updatedAt', label: 'Updated' },
+          ],
+          rows: branchRows,
+          emptyState: {
+            title: 'No branches matched this search',
+            description: 'No branch rows matched the current query.',
+            actionLabel: 'Refresh workspace',
+          },
+        },
+      },
+    );
+  }
+
+  async getBranchesWorkspace(query: AdminGovernanceWorkspaceQuery) {
+    const [businesses, users, providers, customers, purchases] = await Promise.all([
+      this.prisma.business.findMany({
+        orderBy: [{ updatedAt: 'desc' }],
+        take: 50,
+      }),
+      this.prisma.user.findMany({
+        where: { deletedAt: null, branchBusinessId: { not: null } },
+        orderBy: [{ updatedAt: 'desc' }],
+        take: 100,
+      }),
+      this.prisma.serviceProvider.findMany({
+        orderBy: [{ providerName: 'asc' }],
+        take: 100,
+      }),
+      this.prisma.customer.findMany({
+        where: { deletedAt: null },
+        orderBy: [{ updatedAt: 'desc' }],
+        take: 100,
+      }),
+      this.prisma.purchase.findMany({
+        orderBy: [{ purchaseDate: 'desc' }],
+        take: 100,
+        include: { provider: { select: { businessId: true } } },
+      }),
+    ]);
+    const branchRows = this.filterRowsBySearch(
+      businesses.map((business) => {
+        const employeeCount = users.filter(
+          (user) => `${user.branchBusinessId ?? ''}` == `${business.id}`,
+        ).length;
+        const providerCount = providers.filter(
+          (provider) => `${provider.businessId ?? ''}` == `${business.id}`,
+        ).length;
+        const revenue = purchases
+          .filter((purchase) => `${purchase.provider?.businessId ?? ''}` == `${business.id}`)
+          .reduce((sum, purchase) => sum + Number(purchase.payableAmount ?? 0), 0);
+        return {
+          branch: business.name,
+          employees: `${employeeCount}`,
+          providers: `${providerCount}`,
+          customers: `${customers.length}`,
+          revenue: this.formatMoneyValue(revenue),
+          status: business.status?.trim() || 'UNKNOWN',
+        };
+      }),
+      query.search,
+    );
+    return this.buildWorkspacePayload(
+      'branches',
+      {
+        eyebrow: 'Organization / Branches',
+        title: 'Branches',
+        description:
+          'Backend-owned branch profile, staffing, provider mapping, and purchase-linked revenue signals.',
+        primaryActionLabel: 'Refresh workspace',
+        secondaryActionLabel: 'Performance',
+      },
+      {
+        searchHint: 'Search branch name, staffing, provider coverage, and revenue',
+        tabs: ['Overview', 'Performance', 'Employees', 'Providers', 'Reports'],
+        filters: ['ACTIVE', 'INACTIVE'],
+      },
+      [
+        this.metric('Branches', branchRows.length, 'Current business rows in result'),
+        this.metric('Employees', users.length, 'Branch-scoped users in sample'),
+        this.metric('Providers', providers.length, 'Providers in sample'),
+        this.metric('Purchases', purchases.length, 'Purchase rows in sample'),
+      ],
+      {
+        left: {
+          title: 'Branch registry',
+          subtitle: 'Live business entities in the branch scope.',
+          type: 'table',
+          columns: [
+            { key: 'branch', label: 'Branch' },
+            { key: 'employees', label: 'Employees' },
+            { key: 'providers', label: 'Providers' },
+            { key: 'customers', label: 'Customers sampled' },
+            { key: 'revenue', label: 'Revenue sampled' },
+            { key: 'status', label: 'Status' },
+          ],
+          rows: branchRows,
+          emptyState: {
+            title: 'No branches matched this search',
+            description: 'No business rows matched the current query.',
+            actionLabel: 'Refresh workspace',
+          },
+        },
+        center: {
+          title: 'Branch staffing',
+          subtitle: 'Recent branch-scoped internal users.',
+          type: 'table',
+          columns: [
+            { key: 'employee', label: 'Employee' },
+            { key: 'code', label: 'Code' },
+            { key: 'scope', label: 'Access scope' },
+            { key: 'status', label: 'Status' },
+            { key: 'updatedAt', label: 'Updated' },
+          ],
+          rows: this.filterRowsBySearch(
+            users.map((user) => ({
+              employee: this.resolveUserDisplayName(user as any),
+              code: user.employeeCode?.trim() || 'N/A',
+              scope: user.accessScope?.trim() || 'N/A',
+              status: user.status?.trim() || 'UNKNOWN',
+              updatedAt: this.formatDateTime(user.updatedAt),
+            })),
+            query.search,
+          ),
+          emptyState: {
+            title: 'No employees matched this search',
+            description: 'No branch-scoped employee rows matched the current query.',
+            actionLabel: 'Refresh workspace',
+          },
+        },
+        right: {
+          title: 'Branch provider mapping',
+          subtitle: 'Recent providers linked to branches.',
+          type: 'table',
+          columns: [
+            { key: 'provider', label: 'Provider' },
+            { key: 'type', label: 'Type' },
+            { key: 'status', label: 'Status' },
+          ],
+          rows: this.filterRowsBySearch(
+            providers.map((provider) => ({
+              provider: provider.providerName?.trim() || 'Provider',
+              type: provider.providerType?.trim() || 'GENERAL',
+              status: provider.status?.trim() || 'UNKNOWN',
+            })),
+            query.search,
+          ),
+          emptyState: {
+            title: 'No providers matched this search',
+            description: 'No provider rows matched the current query.',
+            actionLabel: 'Refresh workspace',
+          },
+        },
+      },
+    );
+  }
+
+  async getEmployeesWorkspace(query: AdminGovernanceWorkspaceQuery) {
+    const [userCount, sessionCount, deviceCount, users, sessions, devices] =
+      await Promise.all([
+        this.prisma.user.count({ where: { deletedAt: null } }),
+        this.prisma.authSession.count(),
+        this.prisma.authDevice.count(),
+        this.prisma.user.findMany({
+          where: { deletedAt: null },
+          orderBy: [{ updatedAt: 'desc' }],
+          take: 50,
+          include: {
+            role: { select: { code: true, name: true } },
+            branchBusiness: { select: { name: true } },
+          },
+        }),
+        this.prisma.authSession.findMany({
+          orderBy: [{ lastSeenAt: 'desc' }],
+          take: 50,
+          include: {
+            user: { select: { firstName: true, lastName: true, employeeCode: true } },
+            authDevice: { select: { deviceName: true, platform: true } },
+          },
+        }),
+        this.prisma.authDevice.findMany({
+          orderBy: [{ lastSeenAt: 'desc' }],
+          take: 50,
+          include: {
+            user: { select: { firstName: true, lastName: true, employeeCode: true } },
+          },
+        }),
+      ]);
+    const userRows = this.filterRowsBySearch(
+      users.map((user) => ({
+        employee: this.resolveUserDisplayName(user as any),
+        code: user.employeeCode?.trim() || 'N/A',
+        role: (user as any).role?.code?.trim() || 'N/A',
+        branch: (user as any).branchBusiness?.name?.trim() || 'Unassigned',
+        status: user.status?.trim() || 'UNKNOWN',
+      })),
+      query.search,
+    );
+    const sessionRows = this.filterRowsBySearch(
+      sessions.map((session) => ({
+        employee: this.resolveUserDisplayName((session as any).user),
+        device: (session as any).authDevice?.deviceName?.trim() || 'Unknown device',
+        platform: (session as any).authDevice?.platform?.trim() || 'UNKNOWN',
+        status: session.revokedAt == null ? 'ACTIVE' : 'REVOKED',
+        lastSeen: this.formatDateTime(session.lastSeenAt),
+      })),
+      query.search,
+    );
+    const deviceRows = this.filterRowsBySearch(
+      devices.map((device) => ({
+        employee: this.resolveUserDisplayName((device as any).user),
+        device: device.deviceName?.trim() || 'Unknown device',
+        platform: device.platform?.trim() || 'UNKNOWN',
+        trusted: device.isTrusted ? 'TRUSTED' : 'UNTRUSTED',
+        lastSeen: this.formatDateTime(device.lastSeenAt),
+      })),
+      query.search,
+    );
+    return this.buildWorkspacePayload(
+      'employees',
+      {
+        eyebrow: 'Organization / Employees',
+        title: 'Employees',
+        description:
+          'Backend-owned employee identity, session, and trusted-device visibility from users, auth sessions, and devices.',
+        primaryActionLabel: 'Refresh workspace',
+        secondaryActionLabel: 'Sessions',
+      },
+      {
+        searchHint: 'Search employees, roles, sessions, and devices',
+        tabs: ['Users', 'Sessions', 'Devices'],
+        filters: ['ACTIVE', 'INACTIVE', 'TRUSTED', 'UNTRUSTED'],
+      },
+      [
+        this.metric('Users', userCount, 'users rows'),
+        this.metric('Sessions', sessionCount, 'auth_sessions rows'),
+        this.metric('Devices', deviceCount, 'auth_devices rows'),
+      ],
+      {
+        left: {
+          title: 'Employee registry',
+          subtitle: 'Internal users and branch scope.',
+          type: 'table',
+          columns: [
+            { key: 'employee', label: 'Employee' },
+            { key: 'code', label: 'Code' },
+            { key: 'role', label: 'Role' },
+            { key: 'branch', label: 'Branch' },
+            { key: 'status', label: 'Status' },
+          ],
+          rows: userRows,
+        },
+        center: {
+          title: 'Active sessions',
+          subtitle: 'Recent auth session evidence for internal users.',
+          type: 'table',
+          columns: [
+            { key: 'employee', label: 'Employee' },
+            { key: 'device', label: 'Device' },
+            { key: 'platform', label: 'Platform' },
+            { key: 'status', label: 'Status' },
+            { key: 'lastSeen', label: 'Last seen' },
+          ],
+          rows: sessionRows,
+          emptyState: {
+            title: 'No sessions matched this search',
+            description: 'No auth session rows matched the current query.',
+            actionLabel: 'Refresh workspace',
+          },
+        },
+        right: {
+          title: 'Trusted devices',
+          subtitle: 'Recent auth-device evidence for internal users.',
+          type: 'table',
+          columns: [
+            { key: 'employee', label: 'Employee' },
+            { key: 'device', label: 'Device' },
+            { key: 'platform', label: 'Platform' },
+            { key: 'trusted', label: 'Trust' },
+            { key: 'lastSeen', label: 'Last seen' },
+          ],
+          rows: deviceRows,
+          emptyState: {
+            title: 'No devices matched this search',
+            description: 'No auth device rows matched the current query.',
+            actionLabel: 'Refresh workspace',
+          },
+        },
+      },
+    );
+  }
+
+  async getRolesWorkspace(query: AdminGovernanceWorkspaceQuery) {
+    const [roleCount, permissionCount, roles, rolePermissions, permissions] =
+      await Promise.all([
+        this.prisma.role.count(),
+        this.prisma.permission.count(),
+        this.prisma.role.findMany({
+          orderBy: [{ code: 'asc' }],
+          take: 50,
+          include: {
+            _count: { select: { users: true, rolePermissions: true } },
+          },
+        }),
+        this.prisma.rolePermission.findMany({
+          take: 200,
+          include: {
+            role: { select: { code: true } },
+            permission: { select: { code: true, name: true } },
+          },
+        }),
+        this.prisma.permission.findMany({
+          orderBy: [{ code: 'asc' }],
+          take: 100,
+        }),
+      ]);
+    const roleRows = this.filterRowsBySearch(
+      roles.map((role) => ({
+        code: role.code?.trim() || 'N/A',
+        name: role.name?.trim() || 'Role',
+        scope: role.defaultScope?.trim() || 'N/A',
+        users: `${role._count.users}`,
+        permissions: `${role._count.rolePermissions}`,
+        status: role.isSystemRole ? 'SYSTEM' : 'CUSTOM',
+      })),
+      query.search,
+    );
+    const permissionRows = this.filterRowsBySearch(
+      permissions.map((permission) => ({
+        code: permission.code?.trim() || 'N/A',
+        name: permission.name?.trim() || 'Permission',
+        description: permission.description?.trim() || 'N/A',
+      })),
+      query.search,
+    );
+    const mappingRows = this.filterRowsBySearch(
+      rolePermissions.map((mapping) => ({
+        role: mapping.role.code?.trim() || 'Role',
+        permission: mapping.permission.code?.trim() || 'Permission',
+        name: mapping.permission.name?.trim() || 'Permission',
+      })),
+      query.search,
+    );
+    return this.buildWorkspacePayload(
+      'roles',
+      {
+        eyebrow: 'Organization / Roles',
+        title: 'Roles',
+        description:
+          'Backend-owned role catalog, permission registry, and role-permission mappings.',
+        primaryActionLabel: 'Refresh workspace',
+        secondaryActionLabel: 'Mappings',
+      },
+      {
+        searchHint: 'Search roles, permissions, and role-permission mappings',
+        tabs: ['Roles', 'Permissions', 'Mappings'],
+        filters: ['SYSTEM', 'CUSTOM'],
+      },
+      [
+        this.metric('Roles', roleCount, 'roles rows'),
+        this.metric('Permissions', permissionCount, 'permissions rows'),
+        this.metric('Mappings', mappingRows.length, 'role_permissions rows in current sample'),
+      ],
+      {
+        left: {
+          title: 'Role catalog',
+          subtitle: 'Current roles and user coverage.',
+          type: 'table',
+          columns: [
+            { key: 'code', label: 'Code' },
+            { key: 'name', label: 'Name' },
+            { key: 'scope', label: 'Default scope' },
+            { key: 'users', label: 'Users' },
+            { key: 'permissions', label: 'Permissions' },
+            { key: 'status', label: 'Type' },
+          ],
+          rows: roleRows,
+        },
+        center: {
+          title: 'Permission registry',
+          subtitle: 'Current backend permission definitions.',
+          type: 'table',
+          columns: [
+            { key: 'code', label: 'Code' },
+            { key: 'name', label: 'Name' },
+            { key: 'description', label: 'Description' },
+          ],
+          rows: permissionRows,
+          emptyState: {
+            title: 'No permissions matched this search',
+            description: 'No permission rows matched the current query.',
+            actionLabel: 'Refresh workspace',
+          },
+        },
+        right: {
+          title: 'Role-permission mappings',
+          subtitle: 'Current backend RBAC graph edges.',
+          type: 'table',
+          columns: [
+            { key: 'role', label: 'Role' },
+            { key: 'permission', label: 'Permission code' },
+            { key: 'name', label: 'Permission name' },
+          ],
+          rows: mappingRows,
+          emptyState: {
+            title: 'No mappings matched this search',
+            description: 'No role-permission rows matched the current query.',
+            actionLabel: 'Refresh workspace',
+          },
+        },
+      },
+    );
+  }
+
+  async getReportsWorkspace(query: AdminGovernanceWorkspaceQuery) {
+    const reportMetadata = this.platformReportService.listMetadata('provider');
+    const auditRows = await this.prisma.auditLog.findMany({
+      orderBy: [{ createdAt: 'desc' }],
+      take: 50,
+    });
+    const reportsRows = this.filterRowsBySearch(
+      reportMetadata.reports.map((report) => ({
+        id: report.id?.toString() || 'report',
+        title: report.title?.toString() || 'Report',
+        workspace: report.workspace?.toString() || 'shared',
+        formats: Array.isArray(report.availableFormats)
+          ? report.availableFormats.join(', ')
+          : 'PDF',
+        status: 'CONFIGURED',
+      })),
+      query.search,
+    );
+    const historyRows = this.filterRowsBySearch(
+      auditRows.map((row) => ({
+        createdAt: this.formatDateTime(row.createdAt),
+        action: row.action?.trim() || 'AUDIT_EVENT',
+        entity: row.entityType?.trim() || 'UNKNOWN',
+        entityId: row.entityId?.toString() || 'N/A',
+      })),
+      query.search,
+    );
+    return this.buildWorkspacePayload(
+      'reports',
+      {
+        eyebrow: 'Analytics / Reports',
+        title: 'Reports',
+        description:
+          'Backend-owned report catalog and recent operational audit history related to report-capable workflows.',
+        primaryActionLabel: 'Refresh workspace',
+        secondaryActionLabel: 'History',
+      },
+      {
+        searchHint: 'Search report metadata and recent operational export history',
+        tabs: ['Catalog', 'History'],
+        filters: ['CONFIGURED', 'PDF', 'CSV', 'XLSX'],
+      },
+      [
+        this.metric('Configured reports', reportsRows.length, 'platform report metadata'),
+        this.metric('History rows', historyRows.length, 'recent audit rows in sample'),
+      ],
+      {
+        left: {
+          title: 'Report catalog',
+          subtitle: 'Configured platform report definitions.',
+          type: 'table',
+          columns: [
+            { key: 'id', label: 'Report ID' },
+            { key: 'title', label: 'Title' },
+            { key: 'workspace', label: 'Workspace' },
+            { key: 'formats', label: 'Formats' },
+            { key: 'status', label: 'Status' },
+          ],
+          rows: reportsRows,
+          emptyState: {
+            title: 'No reports matched this search',
+            description: 'No configured report metadata matched the current query.',
+            actionLabel: 'Refresh workspace',
+          },
+        },
+        center: {
+          title: 'Recent operational history',
+          subtitle: 'Recent audit rows that support report history visibility.',
+          type: 'table',
+          columns: [
+            { key: 'createdAt', label: 'Created' },
+            { key: 'action', label: 'Action' },
+            { key: 'entity', label: 'Entity' },
+            { key: 'entityId', label: 'Entity ID' },
+          ],
+          rows: historyRows,
+          emptyState: {
+            title: 'No report history matched this search',
+            description: 'No recent audit rows matched the current query.',
+            actionLabel: 'Refresh workspace',
+          },
+        },
+        right: {
+          title: 'Report engine summary',
+          subtitle: 'Current report-engine posture from configured metadata.',
+          type: 'details',
+          details: [
+            { label: 'Workspace', value: 'provider' },
+            { label: 'Reports configured', value: `${reportsRows.length}` },
+            {
+              label: 'Available formats',
+              value: Array.from(
+                new Set(
+                  reportsRows
+                    .map((row) => row['formats'])
+                    .filter(
+                      (value): value is string =>
+                        typeof value === 'string' && value.trim().length > 0,
+                    ),
+                ),
+              ).join(', '),
+            },
+            { label: 'Recent history rows', value: `${historyRows.length}` },
+          ],
+        },
+      },
+    );
+  }
+
+  async getInsightsWorkspace(query: AdminGovernanceWorkspaceQuery) {
+    const [customers, memberships, appointments, referrals, documents] =
+      await Promise.all([
+        this.prisma.customer.count({ where: { deletedAt: null } }),
+        this.prisma.membership.count(),
+        this.prisma.appointment.count(),
+        this.prisma.referralRewardEvent.count(),
+        this.prisma.document.count(),
+      ]);
+    return this.buildWorkspacePayload(
+      'insights',
+      {
+        eyebrow: 'Analytics / Insights',
+        title: 'Insights',
+        description:
+          'Backend-owned high-level insight metrics assembled from live customer, membership, appointment, referral, and document records.',
+        primaryActionLabel: 'Refresh workspace',
+        secondaryActionLabel: 'Dashboard',
+      },
+      {
+        searchHint: 'Search insight labels and operational summaries',
+        tabs: ['Overview', 'Growth', 'Retention', 'Compliance'],
+        filters: ['LIVE', 'HEALTHY', 'REVIEW'],
+      },
+      [
+        this.metric('Customers', customers, 'Live customer count'),
+        this.metric('Memberships', memberships, 'Live membership count'),
+        this.metric('Appointments', appointments, 'Live visit count'),
+        this.metric('Referrals', referrals + documents, 'Referral and document signal volume'),
+      ],
+      {
+        left: {
+          title: 'Growth signals',
+          subtitle: 'High-level backend-owned metrics only.',
+          type: 'list',
+          items: [
+            { title: 'Customer growth', subtitle: `${customers} live customers`, meta: 'customers', status: 'LIVE' },
+            { title: 'Membership base', subtitle: `${memberships} live memberships`, meta: 'memberships', status: 'LIVE' },
+            { title: 'Visit throughput', subtitle: `${appointments} appointments`, meta: 'appointments', status: 'LIVE' },
+          ],
+        },
+        center: {
+          title: 'Compliance and retention',
+          subtitle: 'Combined compliance and retention signals from live tables.',
+          type: 'details',
+          details: [
+            { label: 'Documents', value: `${documents}` },
+            { label: 'Referrals', value: `${referrals}` },
+            { label: 'Membership retention base', value: `${memberships}` },
+            { label: 'Visit activity', value: `${appointments}` },
+          ],
+        },
+        right: {
+          title: 'Insight summary',
+          subtitle: 'Current backend-derived metric posture.',
+          type: 'list',
+          items: [
+            { title: 'Growth', subtitle: `${customers} customers`, meta: 'customer growth baseline', status: 'HEALTHY' },
+            { title: 'Retention', subtitle: `${memberships} memberships`, meta: 'membership base', status: 'LIVE' },
+            { title: 'Compliance', subtitle: `${documents} documents`, meta: 'document pipeline', status: documents > 0 ? 'LIVE' : 'REVIEW' },
+          ],
+        },
+      },
+    );
+  }
+
   async getAuditWorkspace(query: AdminGovernanceWorkspaceQuery) {
     const search = query.search?.trim();
     const entityFilter = query.status?.trim();
@@ -1371,6 +3842,92 @@ export class AdminGovernanceService {
         value.toLowerCase().includes(normalized),
       ),
     );
+  }
+
+  private filterRowsByRequestedStatus(
+    rows: Array<Record<string, string>>,
+    status?: string | null,
+  ) {
+    const normalized = status?.trim().toUpperCase();
+    if (!normalized) {
+      return rows;
+    }
+    return rows.filter(
+      (row) => (row.status ?? row.Status ?? '').trim().toUpperCase() === normalized,
+    );
+  }
+
+  private buildStatusSummaryItems(
+    rows: Array<Record<string, string>>,
+    key: string,
+  ) {
+    const counts = new Map<string, number>();
+    for (const row of rows) {
+      const value = row[key]?.trim() || 'UNKNOWN';
+      counts.set(value, (counts.get(value) ?? 0) + 1);
+    }
+    return Array.from(counts.entries())
+      .sort(([left], [right]) => left.localeCompare(right))
+      .map(([status, count]) => ({
+        title: status,
+        subtitle: `${count} rows`,
+        meta: key,
+        status,
+      }));
+  }
+
+  private resolveUserDisplayName(user: any) {
+    if (user == null || typeof user !== 'object') {
+      return 'Unknown user';
+    }
+    const name = [user.firstName, user.lastName]
+      .filter((value): value is string => Boolean(value?.trim().length))
+      .join(' ')
+      .trim();
+    if (name.length > 0 && typeof user.employeeCode === 'string' && user.employeeCode.trim().length > 0) {
+      return `${name} (${user.employeeCode.trim()})`;
+    }
+    if (name.length > 0 && typeof user.email === 'string' && user.email.trim().length > 0) {
+      return `${name} (${user.email.trim()})`;
+    }
+    if (name.length > 0) {
+      return name;
+    }
+    if (typeof user.employeeCode === 'string' && user.employeeCode.trim().length > 0) {
+      return user.employeeCode.trim();
+    }
+    if (typeof user.email === 'string' && user.email.trim().length > 0) {
+      return user.email.trim();
+    }
+    return 'Unknown user';
+  }
+
+  private formatMoney(value: any) {
+    const amount =
+      value == null
+        ? 0
+        : typeof value === 'number'
+          ? value
+          : typeof value?.toNumber === 'function'
+            ? value.toNumber()
+            : Number(value);
+    return Number.isFinite(amount) ? amount.toFixed(2) : '0.00';
+  }
+
+  private formatMoneyValue(value: number) {
+    return this.formatMoney(value);
+  }
+
+  private formatDecimal(value: any) {
+    const numeric =
+      value == null
+        ? NaN
+        : typeof value === 'number'
+          ? value
+          : typeof value?.toNumber === 'function'
+            ? value.toNumber()
+            : Number(value);
+    return Number.isFinite(numeric) ? numeric.toFixed(2) : 'N/A';
   }
 
   private resolveActorLabel(

@@ -1,5 +1,4 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:shield/features/admin/customers/data/repositories/mock_admin_customer_repository.dart';
 import 'package:shield/features/admin/customers/domain/entities/admin_customer_summary.dart';
 import 'package:shield/features/admin/customers/domain/repositories/admin_customer_repository.dart';
 import 'package:shield/features/admin/presentation/registry/admin_platform_runtime.dart';
@@ -92,6 +91,9 @@ void main() {
               builder: _runtimeTestBuilder,
             ),
           ],
+          repositoryResolver: (_) => _FakeWorkspaceRepository(
+            result: const <String, Object?>{'status': 'ok'},
+          ),
         );
 
         const section = PortalSectionData(
@@ -506,6 +508,33 @@ void main() {
       },
     );
   });
+}
+
+class MockAdminCustomerRepository implements AdminCustomerRepository {
+  MockAdminCustomerRepository({
+    List<AdminCustomerSummary> seed = const <AdminCustomerSummary>[],
+  }) : _customers = List<AdminCustomerSummary>.from(seed);
+
+  final List<AdminCustomerSummary> _customers;
+
+  @override
+  Future<List<AdminCustomerSummary>> listCustomers() async {
+    return List<AdminCustomerSummary>.unmodifiable(_customers);
+  }
+
+  @override
+  Future<void> createCustomer(AdminCustomerSummary customer) async {
+    _customers.add(customer);
+  }
+
+  @override
+  Future<void> updateCustomerStatus(String customerId, String status) async {
+    final index = _customers.indexWhere((customer) => customer.id == customerId);
+    if (index < 0) {
+      throw StateError('Customer "$customerId" was not found in test storage.');
+    }
+    _customers[index] = _customers[index].copyWith(status: status);
+  }
 }
 
 Widget _runtimeTestBuilder(

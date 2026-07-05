@@ -8845,3 +8845,47 @@ Delivered the first shared-runtime interaction pass so backend-driven admin work
 - `flutter analyze --no-pub` on touched admin runtime files and tests
 - `flutter test test/admin_backend_workspace_module_test.dart test/admin_engine_runtime_test.dart`
 - `flutter test`
+## 247. Admin Portal Runtime Migration Completion Sweep
+**Timestamp:** 2026-07-05 15:31:49 IST
+
+Completed the remaining Super Admin module migration sweep onto the shared backend-owned workspace runtime so the catalog no longer routes through prototype business screens, mock customer repositories, no-op workspace repositories, or reserved-module fallback paths.
+
+**Frontend Files**
+- `docs/superpowers/audits/2026-07-05-admin-interaction-audit.md`
+- `frontend/lib/features/admin/agents/presentation/screens/admin_agents_module.dart`
+- `frontend/lib/features/admin/analytics/presentation/screens/admin_insights_module.dart`
+- `frontend/lib/features/admin/availability/presentation/screens/admin_availability_module.dart`
+- `frontend/lib/features/admin/crm/presentation/screens/admin_crm_module.dart`
+- `frontend/lib/features/admin/customers/data/repositories/mock_admin_customer_repository.dart`
+- `frontend/lib/features/admin/documents/presentation/screens/admin_documents_module.dart`
+- `frontend/lib/features/admin/memberships/presentation/screens/admin_memberships_module.dart`
+- `frontend/lib/features/admin/organization/presentation/screens/admin_branches_module.dart`
+- `frontend/lib/features/admin/organization/presentation/screens/admin_employees_module.dart`
+- `frontend/lib/features/admin/organization/presentation/screens/admin_roles_module.dart`
+- `frontend/lib/features/admin/presentation/registry/admin_platform_runtime.dart`
+- `frontend/lib/features/admin/presentation/registry/admin_workspace_catalog.dart`
+- `frontend/lib/features/admin/presentation/screens/admin_portal_workspace.dart`
+- `frontend/lib/features/admin/providers/presentation/screens/admin_providers_module.dart`
+- `frontend/lib/features/admin/referrals/presentation/screens/admin_referrals_module.dart`
+- `frontend/lib/features/admin/reports/presentation/screens/admin_reports_module.dart`
+- `frontend/lib/features/admin/rewards/presentation/screens/admin_rewards_module.dart`
+- `frontend/lib/features/admin/services/presentation/screens/admin_services_module.dart`
+- `frontend/lib/features/admin/visits/presentation/screens/admin_visits_module.dart`
+- `frontend/lib/features/admin/wallet/presentation/screens/admin_wallet_module.dart`
+- `frontend/test/admin_engine_runtime_test.dart`
+- `log.md`
+
+**Backend Files**
+- `backend/src/admin-governance/admin-governance.controller.ts`
+- `backend/src/admin-governance/admin-governance.service.ts`
+
+**Why**
+- The remaining admin modules still existed as visually rich but operationally separate prototype screens even after the runtime path and first backend workspaces were live.
+- This sweep makes the shared admin runtime authoritative for the remaining catalog modules, hardens repository resolution to fail loudly instead of silently falling back, and documents that the remaining gaps are backend action and drilldown metadata rather than missing module migration.
+
+**Verification**
+- `cd frontend && flutter analyze --no-pub` ✅
+- `cd frontend && flutter test test/admin_engine_runtime_test.dart test/admin_backend_workspace_module_test.dart` ✅
+- `cd frontend && flutter test` ✅
+- `cd backend && npm test -- --runInBand` ✅
+- `cd backend && npm run build` ✅

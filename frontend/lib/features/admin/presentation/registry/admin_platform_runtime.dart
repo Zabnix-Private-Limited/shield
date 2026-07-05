@@ -76,7 +76,7 @@ class AdminPlatformRuntime {
           schemaRepository ?? _StaticAdminWorkspaceSchemaRepository(schemas),
       permissionGateway:
           permissionGateway ?? const _AllowAllAdminWorkspacePermissionGateway(),
-      repositoryResolver: repositoryResolver ?? _noopRepositoryResolver,
+      repositoryResolver: repositoryResolver ?? _unregisteredRepositoryResolver,
       registrations: registrationMap,
       schemas: schemas,
     );
@@ -113,10 +113,12 @@ class AdminPlatformRuntime {
   }
 }
 
-AdminWorkspaceRepository _noopRepositoryResolver(
+AdminWorkspaceRepository _unregisteredRepositoryResolver(
   AdminWorkspaceDefinition workspace,
 ) {
-  return const _NoopAdminWorkspaceRepository();
+  throw UnsupportedError(
+    'Admin workspace repository for "${workspace.id}" was not registered.',
+  );
 }
 
 class _StaticAdminWorkspaceSchemaRepository
@@ -155,18 +157,5 @@ class _AllowAllAdminWorkspacePermissionGateway
     String? userId,
   }) async {
     return {workspace.permissionKey};
-  }
-}
-
-class _NoopAdminWorkspaceRepository implements AdminWorkspaceRepository {
-  const _NoopAdminWorkspaceRepository();
-
-  @override
-  Future<Object?> loadWorkspaceData(
-    AdminWorkspaceDefinition workspace, {
-    AdminWorkspaceQuery query = const AdminWorkspaceQuery(),
-    bool forceRefresh = false,
-  }) async {
-    return null;
   }
 }

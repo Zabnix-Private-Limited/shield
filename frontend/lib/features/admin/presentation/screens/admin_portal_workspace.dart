@@ -77,7 +77,11 @@ class _AdminRegisteredWorkspaceState extends State<_AdminRegisteredWorkspace> {
   Widget build(BuildContext context) {
     final registration = widget.runtime.registrationFor(widget.section.key);
     if (registration == null) {
-      return _FallbackModule(section: widget.section);
+      return _ErrorModule(
+        section: widget.section,
+        message:
+            'Workspace "${widget.section.key}" is not registered in the admin runtime.',
+      );
     }
 
     return AnimatedBuilder(
@@ -117,18 +121,37 @@ class _AdminRegisteredWorkspaceState extends State<_AdminRegisteredWorkspace> {
                   'Workspace runtime failed to load.',
             );
           case AdminWorkspaceStatus.empty:
+            return _StateModule(
+              section: widget.section,
+              title: 'No records matched this workspace',
+              message:
+                  _controller.state.message ??
+                  'The workspace loaded successfully, but the current filters returned no rows.',
+            );
           case AdminWorkspaceStatus.offline:
-            return _FallbackModule(section: widget.section);
+            return _StateModule(
+              section: widget.section,
+              title: 'Workspace offline',
+              message:
+                  _controller.state.message ??
+                  'The admin runtime is offline and could not refresh this workspace.',
+            );
         }
       },
     );
   }
 }
 
-class _FallbackModule extends StatelessWidget {
-  const _FallbackModule({required this.section});
+class _StateModule extends StatelessWidget {
+  const _StateModule({
+    required this.section,
+    required this.title,
+    required this.message,
+  });
 
   final PortalSectionData section;
+  final String title;
+  final String message;
 
   @override
   Widget build(BuildContext context) {
@@ -136,19 +159,10 @@ class _FallbackModule extends StatelessWidget {
       eyebrow: 'Admin / ${section.title}',
       title: section.title,
       description: section.summary,
-      primaryAction: const AdminActionItem(
-        label: 'Open dashboard',
-        icon: Icons.dashboard_customize_outlined,
-      ),
-      secondaryAction: const AdminActionItem(
-        label: 'Review navigation',
-        icon: Icons.account_tree_outlined,
-      ),
       child: AdminEmptyState(
-        title: '${section.title} module is reserved',
-        description:
-            'This section key is registered in the admin IA but does not yet have a dedicated module renderer.',
-        actionLabel: 'Use the shared admin module pattern',
+        title: title,
+        description: message,
+        actionLabel: 'Refresh or adjust the current workspace query.',
       ),
     );
   }
