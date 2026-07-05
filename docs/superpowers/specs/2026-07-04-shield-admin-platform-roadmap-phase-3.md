@@ -78,6 +78,9 @@ Before more module-by-module API work, governance and system surfaces must drop 
 - standardize response envelopes with `success`, `message`, `data`, `meta`, `filters`, `permissions`, and `links`
 - prefer event-driven follow-up after mutations so audit, notifications, refresh, and cache invalidation remain composable
 - steer widgets toward command-bus dispatch instead of direct service coupling
+- current checkpoint:
+  - `settings`, `platform`, `audit`, and `notifications` are already on `/admin/workspaces/*`
+  - `dashboard` and `customers` now also resolve through `/admin/workspaces/*` and the shared backend-workspace renderer instead of local placeholder composition
 - lay the groundwork for:
   - feature flags
   - configuration service
@@ -267,7 +270,7 @@ After the first production module wave, expand shared platform services:
 
 ## Current Phase 3 Slice
 
-This pass starts Phase 3 by converting the Admin Dashboard into a real vertical module with:
+This pass started Phase 3 by converting the Admin Dashboard into a real vertical module with:
 
 - `api`
 - `data`
@@ -278,3 +281,9 @@ This pass starts Phase 3 by converting the Admin Dashboard into a real vertical 
 - in-memory cache policy
 - Riverpod controller ownership
 - loading, empty, error, refresh, and stale-data fallback states
+
+The current backend-contract checkpoint is stronger than that original slice:
+
+- `dashboard` now resolves through `/admin/workspaces/dashboard`
+- `customers` now resolves through `/admin/workspaces/customers`
+- both modules now mount through the shared admin runtime and backend-workspace renderer instead of local placeholder compositions

@@ -33,7 +33,9 @@ import 'admin_platform_runtime.dart';
 class AdminWorkspaceCatalog {
   AdminWorkspaceCatalog._();
 
-  static const Set<String> governanceWorkspaceIds = <String>{
+  static const Set<String> backendWorkspaceIds = <String>{
+    'dashboard',
+    'customers',
     'settings',
     'platform',
     'audit',
@@ -59,7 +61,7 @@ class AdminWorkspaceCatalog {
           for (final registration in registrations)
             registration.workspace.id: registration.schema,
         },
-        governanceWorkspaceIds: governanceWorkspaceIds,
+        governanceWorkspaceIds: backendWorkspaceIds,
       );
 
   static final AdminPlatformRuntime runtime = AdminPlatformRuntime.bootstrap(
@@ -88,13 +90,13 @@ final List<_AdminWorkspaceSeed> _workspaceSeeds = <_AdminWorkspaceSeed>[
   _AdminWorkspaceSeed(
     id: 'dashboard',
     capabilities: {'metrics', 'timeline', 'activity'},
-    defaultViewType: AdminViewType.metrics,
+    defaultViewType: AdminViewType.split,
     builder: _buildDashboardWorkspace,
   ),
   _AdminWorkspaceSeed(
     id: 'customers',
     capabilities: {'tables', 'search', 'filters', 'timeline'},
-    defaultViewType: AdminViewType.table,
+    defaultViewType: AdminViewType.split,
     builder: _buildCustomersWorkspace,
   ),
   _AdminWorkspaceSeed(
@@ -370,7 +372,7 @@ class _AdminWorkspaceSeed {
 AdminWorkspaceRepository _repositoryResolver(
   AdminWorkspaceDefinition workspace,
 ) {
-  if (AdminWorkspaceCatalog.governanceWorkspaceIds.contains(workspace.id)) {
+  if (AdminWorkspaceCatalog.backendWorkspaceIds.contains(workspace.id)) {
     return AdminGovernanceWorkspaceRepository(
       remoteDataSource: AdminWorkspaceCatalog._governanceRemoteDataSource,
     );
@@ -379,6 +381,8 @@ AdminWorkspaceRepository _repositoryResolver(
 }
 
 const Map<String, String> _workspacePermissionOverrides = <String, String>{
+  'dashboard': 'analytics.view',
+  'customers': 'customers.view',
   'settings': 'settings.view',
   'platform': 'platform.view',
   'audit': 'audit.view',
@@ -389,7 +393,11 @@ class _CatalogNoopAdminWorkspaceRepository implements AdminWorkspaceRepository {
   const _CatalogNoopAdminWorkspaceRepository();
 
   @override
-  Future<Object?> loadWorkspaceData(AdminWorkspaceDefinition workspace) async {
+  Future<Object?> loadWorkspaceData(
+    AdminWorkspaceDefinition workspace, {
+    AdminWorkspaceQuery query = const AdminWorkspaceQuery(),
+    bool forceRefresh = false,
+  }) async {
     return null;
   }
 }
@@ -405,12 +413,12 @@ String _humanizeKey(String value) {
 Widget _buildDashboardWorkspace(
   BuildContext context,
   AdminWorkspaceSnapshot snapshot,
-) => const AdminDashboardModule();
+) => AdminDashboardModule(snapshot: snapshot);
 
 Widget _buildCustomersWorkspace(
   BuildContext context,
   AdminWorkspaceSnapshot snapshot,
-) => const AdminCustomersModule();
+) => AdminCustomersModule(snapshot: snapshot);
 
 Widget _buildAgentsWorkspace(
   BuildContext context,

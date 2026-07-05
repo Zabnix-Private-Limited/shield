@@ -5,6 +5,7 @@ import { PricingModule } from '../pricing/pricing.module';
 import { PrismaModule } from '../prisma/prisma.module';
 import { RedisModule } from '../redis/redis.module';
 import { TimelineModule } from '../timeline/timeline.module';
+import { WalletModule } from '../wallet/wallet.module';
 import { AdminGovernanceController } from './admin-governance.controller';
 import { AdminGovernanceService } from './admin-governance.service';
 
@@ -16,6 +17,7 @@ import { AdminGovernanceService } from './admin-governance.service';
     PlatformCapabilitiesModule,
     TimelineModule,
     RedisModule,
+    WalletModule,
   ],
   controllers: [AdminGovernanceController],
   providers: [AdminGovernanceService],

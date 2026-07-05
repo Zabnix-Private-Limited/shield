@@ -62,6 +62,34 @@ export class AdminGovernanceController {
     };
   }
 
+  @RequirePermissions('analytics.view')
+  @Get('dashboard')
+  async getDashboardWorkspace(
+    @Query() query: Record<string, string | undefined>,
+  ) {
+    return {
+      success: true,
+      message: 'Admin dashboard workspace retrieved successfully.',
+      data: await this.adminGovernanceService.getDashboardWorkspace(
+        this.parseQuery(query),
+      ),
+    };
+  }
+
+  @RequirePermissions('customers.view')
+  @Get('customers')
+  async getCustomersWorkspace(
+    @Query() query: Record<string, string | undefined>,
+  ) {
+    return {
+      success: true,
+      message: 'Admin customers workspace retrieved successfully.',
+      data: await this.adminGovernanceService.getCustomersWorkspace(
+        this.parseQuery(query),
+      ),
+    };
+  }
+
   @RequirePermissions('audit.view')
   @Get('audit')
   async getAuditWorkspace(@Query() query: Record<string, string | undefined>) {

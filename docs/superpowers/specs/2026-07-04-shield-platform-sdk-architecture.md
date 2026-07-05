@@ -40,6 +40,7 @@ The repo has now crossed the first live runtime threshold for the admin portion 
 - the Super Admin shell now enters through a platform runtime bootstrap instead of resolving modules from a page-local switch
 - governance workspaces now consume backend-owned payloads and injected schema metadata through one shared admin-governance contract layer
 - `settings` is now the reference backend-first governance slice, with `platform`, `audit`, and `notifications` following the same contract and renderer path
+- `dashboard` and `customers` have now moved onto that same backend contract path, which proves the shared renderer and runtime bundle can carry business modules without fallback mock composition
 - the next milestone remains expanding this contract-driven pattern to deeper mutation flows, richer permission-aware UX, and the remaining business modules
 
 Business modules should own:

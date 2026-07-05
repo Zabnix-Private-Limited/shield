@@ -9,7 +9,15 @@ class AdminGovernanceWorkspaceRepository implements AdminWorkspaceRepository {
   final AdminGovernanceRemoteDataSource _remoteDataSource;
 
   @override
-  Future<Object?> loadWorkspaceData(AdminWorkspaceDefinition workspace) async {
-    return _remoteDataSource.fetchWorkspace(workspace.id);
+  Future<Object?> loadWorkspaceData(
+    AdminWorkspaceDefinition workspace, {
+    AdminWorkspaceQuery query = const AdminWorkspaceQuery(),
+    bool forceRefresh = false,
+  }) async {
+    return _remoteDataSource.fetchWorkspace(
+      workspace.id,
+      query: query,
+      forceRefresh: forceRefresh,
+    );
   }
 }

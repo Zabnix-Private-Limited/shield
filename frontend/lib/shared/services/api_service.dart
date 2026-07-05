@@ -1427,23 +1427,41 @@ class ApiService {
 
   static Future<Map<String, dynamic>> getAdminGovernanceWorkspace(
     String workspaceId, {
+    String? search,
+    String? status,
+    String? tab,
+    int page = 1,
+    int pageSize = 25,
     bool forceRefresh = false,
   }) async {
     final normalizedWorkspaceId = workspaceId.trim().toLowerCase();
-    if (!forceRefresh &&
-        _adminGovernanceWorkspaceCache.containsKey(normalizedWorkspaceId)) {
+    final cacheKey = [
+      normalizedWorkspaceId,
+      search?.trim() ?? '',
+      status?.trim() ?? '',
+      tab?.trim() ?? '',
+      page,
+      pageSize,
+    ].join('|');
+    if (!forceRefresh && _adminGovernanceWorkspaceCache.containsKey(cacheKey)) {
       return Map<String, dynamic>.from(
-        _adminGovernanceWorkspaceCache[normalizedWorkspaceId]!,
+        _adminGovernanceWorkspaceCache[cacheKey]!,
       );
     }
 
     final response = await _getWithRetry(
       '/admin/workspaces/$normalizedWorkspaceId',
+      queryParameters: {
+        if (search != null && search.trim().isNotEmpty) 'search': search.trim(),
+        if (status != null && status.trim().isNotEmpty) 'status': status.trim(),
+        if (tab != null && tab.trim().isNotEmpty) 'tab': tab.trim(),
+        if (page != 1) 'page': page,
+        if (pageSize != 25) 'page_size': pageSize,
+      },
       maxAttempts: 3,
     );
     final data = _readEnvelope(response);
-    _adminGovernanceWorkspaceCache[normalizedWorkspaceId] =
-        Map<String, dynamic>.from(data);
+    _adminGovernanceWorkspaceCache[cacheKey] = Map<String, dynamic>.from(data);
     return Map<String, dynamic>.from(data);
   }
 

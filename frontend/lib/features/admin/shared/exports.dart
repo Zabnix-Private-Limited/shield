@@ -13,6 +13,7 @@ export 'layout/admin_sidebar_section.dart';
 export 'layout/admin_split_workspace.dart';
 export 'layout/responsive_breakpoints.dart';
 export 'presentation/widgets/admin_module_scaffolds.dart';
+export 'presentation/widgets/admin_workspace_controller_scope.dart';
 export 'models/admin_action_item.dart';
 export 'models/admin_detail_item.dart';
 export 'models/admin_entity_item.dart';

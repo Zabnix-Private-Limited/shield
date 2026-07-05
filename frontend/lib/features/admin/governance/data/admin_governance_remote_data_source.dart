@@ -1,3 +1,4 @@
+import '../../shared/engine/exports.dart';
 import '../../../../../shared/services/api_service.dart';
 
 class AdminGovernanceRemoteDataSource {
@@ -6,17 +7,31 @@ class AdminGovernanceRemoteDataSource {
 
   Future<Map<String, dynamic>> fetchWorkspace(
     String workspaceId, {
+    AdminWorkspaceQuery query = const AdminWorkspaceQuery(),
     bool forceRefresh = false,
   }) async {
-    if (!forceRefresh && _cache.containsKey(workspaceId)) {
-      return Map<String, dynamic>.from(_cache[workspaceId]!);
+    final cacheKey = [
+      workspaceId.trim().toLowerCase(),
+      query.search?.trim() ?? '',
+      query.status?.trim() ?? '',
+      query.tab?.trim() ?? '',
+      query.page,
+      query.pageSize,
+    ].join('|');
+    if (!forceRefresh && _cache.containsKey(cacheKey)) {
+      return Map<String, dynamic>.from(_cache[cacheKey]!);
     }
 
     final payload = await ApiService.getAdminGovernanceWorkspace(
       workspaceId,
+      search: query.search,
+      status: query.status,
+      tab: query.tab,
+      page: query.page,
+      pageSize: query.pageSize,
       forceRefresh: forceRefresh,
     );
-    _cache[workspaceId] = Map<String, dynamic>.from(payload);
+    _cache[cacheKey] = Map<String, dynamic>.from(payload);
     return Map<String, dynamic>.from(payload);
   }
 }

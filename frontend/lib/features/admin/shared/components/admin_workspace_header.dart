@@ -133,25 +133,33 @@ class _HeaderActions extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final visibleActions = [
+      if (secondaryAction?.onPressed != null) secondaryAction!,
+      if (primaryAction?.onPressed != null) primaryAction!,
+    ];
+    if (visibleActions.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
     return Wrap(
       spacing: 12,
       runSpacing: 12,
       children: [
-        if (secondaryAction != null)
+        if (secondaryAction?.onPressed != null)
           SizedBox(
             width: 176,
             child: AppButton(
               text: secondaryAction!.label,
-              onPressed: () {},
+              onPressed: secondaryAction!.onPressed!,
               type: AppButtonType.secondary,
             ),
           ),
-        if (primaryAction != null)
+        if (primaryAction?.onPressed != null)
           SizedBox(
             width: 176,
             child: AppButton(
               text: primaryAction!.label,
-              onPressed: () {},
+              onPressed: primaryAction!.onPressed!,
             ),
           ),
       ],

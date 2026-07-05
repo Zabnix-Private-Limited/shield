@@ -87,7 +87,10 @@ class _AdminRegisteredWorkspaceState extends State<_AdminRegisteredWorkspace> {
         switch (_controller.state.status) {
           case AdminWorkspaceStatus.loading:
             if (snapshot != null) {
-              return registration.builder(context, snapshot);
+              return AdminWorkspaceControllerScope(
+                controller: _controller,
+                child: registration.builder(context, snapshot),
+              );
             }
             return const AdminLoading();
           case AdminWorkspaceStatus.refreshing:
@@ -95,7 +98,10 @@ class _AdminRegisteredWorkspaceState extends State<_AdminRegisteredWorkspace> {
             if (snapshot == null) {
               return const AdminLoading();
             }
-            return registration.builder(context, snapshot);
+            return AdminWorkspaceControllerScope(
+              controller: _controller,
+              child: registration.builder(context, snapshot),
+            );
           case AdminWorkspaceStatus.permissionDenied:
             return _PermissionDeniedModule(
               section: widget.section,

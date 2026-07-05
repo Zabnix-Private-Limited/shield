@@ -162,7 +162,11 @@ class _NoopAdminWorkspaceRepository implements AdminWorkspaceRepository {
   const _NoopAdminWorkspaceRepository();
 
   @override
-  Future<Object?> loadWorkspaceData(AdminWorkspaceDefinition workspace) async {
+  Future<Object?> loadWorkspaceData(
+    AdminWorkspaceDefinition workspace, {
+    AdminWorkspaceQuery query = const AdminWorkspaceQuery(),
+    bool forceRefresh = false,
+  }) async {
     return null;
   }
 }

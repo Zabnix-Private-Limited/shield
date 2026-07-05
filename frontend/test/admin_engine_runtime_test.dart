@@ -300,7 +300,7 @@ void main() {
         expect(controller.snapshot?.data, const [
           {'id': 'CUS-000001', 'name': 'Zabnix', 'wallet': 1200},
         ]);
-        expect(repository.callLog, ['load:customers']);
+        expect(repository.callLog, ['load:customers::::false']);
         expect(events.map((event) => event.name), [
           'workspace.load.started',
           'workspace.load.completed',
@@ -349,6 +349,59 @@ void main() {
 
         expect(controller.state.status, AdminWorkspaceStatus.permissionDenied);
         expect(controller.state.message, contains('admin.audit.read'));
+      },
+    );
+
+    test(
+      'refreshes backend workspace data with updated query state',
+      () async {
+        final workspaceRegistry = AdminWorkspaceRegistry()
+          ..register(
+            const AdminWorkspaceDefinition(
+              id: 'notifications',
+              title: 'Notifications',
+              iconKey: 'notifications',
+              permissionKey: 'notifications.view',
+              dataSource: AdminDataSourceDefinition(
+                scope: 'notifications',
+                endpoint: '/admin/workspaces/notifications',
+              ),
+              views: [],
+            ),
+          );
+        final repository = _FakeWorkspaceRepository(result: const []);
+
+        final controller = AdminWorkspaceController(
+          workspaceRegistry: workspaceRegistry,
+          navigationRegistry: AdminNavigationRegistry(),
+          schemaRepository: _FakeSchemaRepository(
+            const AdminWorkspaceSchemaDefinition(
+              workspaceId: 'notifications',
+              defaultViewId: 'table',
+              views: [],
+            ),
+          ),
+          permissionGateway: _FakePermissionGateway(
+            granted: const {'notifications.view'},
+          ),
+          repositoryResolver: (_) => repository,
+          eventBus: AdminEventBus(),
+        );
+
+        await controller.loadWorkspace('notifications');
+        await controller.updateSearch('delivery');
+        await controller.selectTab('Devices');
+        await controller.toggleStatus('UNREAD');
+
+        expect(controller.query.search, 'delivery');
+        expect(controller.query.tab, 'Devices');
+        expect(controller.query.status, 'UNREAD');
+        expect(repository.callLog, [
+          'load:notifications::::false',
+          'load:notifications:delivery:::true',
+          'load:notifications:delivery::Devices:true',
+          'load:notifications:delivery:UNREAD:Devices:true',
+        ]);
       },
     );
   });
@@ -473,8 +526,14 @@ class _FakeWorkspaceRepository implements AdminWorkspaceRepository {
   final List<String> callLog = <String>[];
 
   @override
-  Future<Object?> loadWorkspaceData(AdminWorkspaceDefinition workspace) async {
-    callLog.add('load:${workspace.id}');
+  Future<Object?> loadWorkspaceData(
+    AdminWorkspaceDefinition workspace, {
+    AdminWorkspaceQuery query = const AdminWorkspaceQuery(),
+    bool forceRefresh = false,
+  }) async {
+    callLog.add(
+      'load:${workspace.id}:${query.search ?? ''}:${query.status ?? ''}:${query.tab ?? ''}:$forceRefresh',
+    );
     return result;
   }
 }

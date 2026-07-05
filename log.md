@@ -8762,3 +8762,86 @@ otifications, device_push_tokens, uth_sessions, and login_history instead of in
 - cd backend && npx prettier --write src/admin-governance/*.ts src/app.module.ts src/auth/rbac-catalog.ts ✅
 ### Timestamp
 - 2026-07-05 13:54:31 IST
+
+## 245. Phase 3B.3 Dashboard and Customers Backend Workspace Contracts
+**High-level desc**: Extended the existing `/admin/workspaces/*` contract path beyond governance modules so the Super Admin dashboard and customers modules now load through backend-owned workspace payloads, the shared admin runtime, and one reusable backend-workspace renderer instead of local placeholder compositions.
+- Added live backend workspace endpoints for `dashboard` and `customers` under the existing admin workspace controller, keeping the contract on the same runtime-aligned path already used by settings, platform, audit, and notifications.
+- Built the dashboard workspace from real `customers`, `appointments`, `documents`, `notifications`, `audit_logs`, and `businesses` records so the command center no longer depends on the older portal-section/Riverpod placeholder composition for the admin shell.
+- Built the customers workspace from live `customers`, `memberships`, `wallets`, `documents`, `appointments`, `crm_tasks`, `crm_activities`, `purchases`, `referral_reward_events`, and shared timeline data so the flagship customer surface now renders real master-detail payloads through the backend contract instead of static cards and fake timelines.
+- Replaced the frontend-local dashboard and customers screen ownership with a shared `AdminBackendWorkspaceModule`, then registered both workspaces as backend-owned runtime workspaces in the catalog so they follow the same repository -> runtime -> shared renderer path as the governance slice.
+- Updated the implementation and architecture docs to record that the contract-driven admin engine now covers both governance and the first two business modules, while leaving the remaining business modules for the next migration wave.
+
+### Files Modified/Created
+**Docs Files (Modified)**:
+- docs/superpowers/specs/2026-07-03-shield-admin-portal-implementation-plan.md
+- docs/superpowers/specs/2026-07-04-shield-admin-engine-architecture.md
+- docs/superpowers/specs/2026-07-04-shield-platform-sdk-architecture.md
+- docs/superpowers/specs/2026-07-04-shield-admin-platform-roadmap-phase-3.md
+
+**Frontend Files (Created)**:
+- frontend/lib/features/admin/shared/presentation/widgets/admin_backend_workspace_module.dart
+- frontend/test/admin_backend_workspace_module_test.dart
+
+**Frontend Files (Modified)**:
+- frontend/lib/features/admin/governance/presentation/widgets/admin_governance_workspace_module.dart
+- frontend/lib/features/admin/dashboard/presentation/screens/admin_dashboard_module.dart
+- frontend/lib/features/admin/customers/presentation/screens/admin_customers_module.dart
+- frontend/lib/features/admin/presentation/registry/admin_workspace_catalog.dart
+- log.md
+
+**Backend Files (Created)**:
+- backend/src/admin-governance/admin-governance.controller.spec.ts
+
+**Backend Files (Modified)**:
+- backend/src/admin-governance/admin-governance.controller.ts
+- backend/src/admin-governance/admin-governance.service.ts
+- backend/src/admin-governance/admin-governance.module.ts
+
+### Verification
+- `cd frontend && flutter analyze --no-pub lib/features/admin/shared/presentation/widgets/admin_backend_workspace_module.dart lib/features/admin/governance/presentation/widgets/admin_governance_workspace_module.dart lib/features/admin/dashboard/presentation/screens/admin_dashboard_module.dart lib/features/admin/customers/presentation/screens/admin_customers_module.dart lib/features/admin/presentation/registry/admin_workspace_catalog.dart test/admin_backend_workspace_module_test.dart test/admin_engine_runtime_test.dart` ✅
+- `cd frontend && flutter test test/admin_backend_workspace_module_test.dart test/admin_engine_runtime_test.dart` ✅
+- `cd frontend && flutter test` ✅
+- `cd backend && npm test -- --runInBand src/admin-governance/admin-governance.controller.spec.ts` ✅
+- `cd backend && npm test -- --runInBand` ✅
+- `cd backend && npm run build` ✅
+### Timestamp
+- 2026-07-05 14:32:38 IST## 246. Phase 3B.3A Interactive Admin Completion Slice 1
+**Timestamp:** 2026-07-05 14:53:00 IST
+
+Delivered the first shared-runtime interaction pass so backend-driven admin workspaces stop behaving like static chrome. This focused on the highest-leverage gap from the interaction audit: search, tab/filter state, refresh, sortable tables, actionable empty states, and removal of empty shared header callbacks.
+
+**Frontend Files**
+- `docs/superpowers/audits/2026-07-05-admin-interaction-audit.md`
+- `frontend/lib/features/admin/governance/data/admin_governance_remote_data_source.dart`
+- `frontend/lib/features/admin/governance/data/admin_governance_workspace_repository.dart`
+- `frontend/lib/features/admin/presentation/registry/admin_platform_runtime.dart`
+- `frontend/lib/features/admin/presentation/registry/admin_workspace_catalog.dart`
+- `frontend/lib/features/admin/presentation/screens/admin_portal_workspace.dart`
+- `frontend/lib/features/admin/shared/components/admin_console_toolbar.dart`
+- `frontend/lib/features/admin/shared/components/admin_data_table.dart`
+- `frontend/lib/features/admin/shared/components/admin_empty_state.dart`
+- `frontend/lib/features/admin/shared/components/admin_filter_bar.dart`
+- `frontend/lib/features/admin/shared/components/admin_search_bar.dart`
+- `frontend/lib/features/admin/shared/components/admin_workspace_header.dart`
+- `frontend/lib/features/admin/shared/controllers/admin_workspace_controller.dart`
+- `frontend/lib/features/admin/shared/engine/workspace/admin_workspace_repository.dart`
+- `frontend/lib/features/admin/shared/exports.dart`
+- `frontend/lib/features/admin/shared/models/admin_action_item.dart`
+- `frontend/lib/features/admin/shared/presentation/widgets/admin_backend_workspace_module.dart`
+- `frontend/lib/features/admin/shared/presentation/widgets/admin_workspace_controller_scope.dart`
+- `frontend/lib/features/admin/shared/widgets/admin_section_tabs.dart`
+- `frontend/lib/shared/services/api_service.dart`
+- `frontend/test/admin_backend_workspace_module_test.dart`
+- `frontend/test/admin_engine_runtime_test.dart`
+
+**Backend Files**
+- None
+
+**Why**
+- Shared backend-rendered workspaces already had live data contracts, but the visible controls were mostly decorative because the shared renderer was not carrying request state back through the workspace controller and repository path.
+- This pass keeps the existing Admin Runtime architecture intact and makes the current backend-driven modules operational without inventing a parallel module-local state system.
+
+**Verification**
+- `flutter analyze --no-pub` on touched admin runtime files and tests
+- `flutter test test/admin_backend_workspace_module_test.dart test/admin_engine_runtime_test.dart`
+- `flutter test`

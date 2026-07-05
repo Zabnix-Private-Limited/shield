@@ -9,6 +9,7 @@ import { PricingService } from '../pricing/pricing.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { RedisService } from '../redis/redis.service';
 import { TimelineService } from '../timeline/timeline.service';
+import { WalletService } from '../wallet/wallet.service';
 
 export type AdminGovernanceWorkspaceQuery = {
   search?: string | null;
@@ -59,6 +60,7 @@ export class AdminGovernanceService {
     private readonly platformReportService: PlatformReportService,
     private readonly timelineService: TimelineService,
     private readonly redisService: RedisService,
+    private readonly walletService: WalletService,
   ) {}
 
   async getSettingsWorkspace(
@@ -387,6 +389,457 @@ export class AdminGovernanceService {
           subtitle: 'Environment-backed service availability only.',
           type: 'list',
           items: this.buildIntegrationDetails(redis, notifications),
+        },
+      },
+    );
+  }
+
+  async getDashboardWorkspace(query: AdminGovernanceWorkspaceQuery) {
+    const today = new Date();
+    const startOfToday = new Date(today);
+    startOfToday.setHours(0, 0, 0, 0);
+    const endOfToday = new Date(today);
+    endOfToday.setHours(23, 59, 59, 999);
+
+    const [
+      totalCustomers,
+      activeCustomers,
+      pendingApprovals,
+      todaysAppointments,
+      pendingDocuments,
+      recentAuditLogs,
+      recentNotifications,
+      recentBusinesses,
+    ] = await Promise.all([
+      this.prisma.customer.count({ where: { deletedAt: null } }),
+      this.prisma.customer.count({
+        where: { deletedAt: null, status: 'ACTIVE' },
+      }),
+      this.prisma.customer.count({
+        where: {
+          deletedAt: null,
+          status: { in: ['PENDING', 'INCOMPLETE', 'REJECTED'] },
+        },
+      }),
+      this.prisma.appointment.count({
+        where: {
+          appointmentDate: { gte: startOfToday, lte: endOfToday },
+        },
+      }),
+      this.prisma.document.count({
+        where: {
+          NOT: { status: { in: ['APPROVED', 'VALIDATED'] } },
+        },
+      }),
+      this.prisma.auditLog.findMany({
+        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+        take: 8,
+        include: {
+          user: {
+            select: {
+              email: true,
+              firstName: true,
+              lastName: true,
+            },
+          },
+        },
+      }),
+      this.prisma.notification.findMany({
+        orderBy: [{ sentAt: 'desc' }, { id: 'desc' }],
+        take: 8,
+        include: {
+          customer: {
+            select: {
+              customerCode: true,
+              firstName: true,
+              lastName: true,
+            },
+          },
+        },
+      }),
+      this.prisma.business.findMany({
+        orderBy: [{ updatedAt: 'desc' }, { id: 'desc' }],
+        take: 8,
+      }),
+    ]);
+
+    return this.buildWorkspacePayload(
+      'dashboard',
+      {
+        eyebrow: 'Admin / Command center',
+        title: 'Dashboard',
+        description:
+          'This dashboard is backend-owned and assembled from live operational records instead of static portal-section placeholders.',
+        primaryActionLabel: 'Review approvals',
+        secondaryActionLabel: 'Inspect activity',
+      },
+      {
+        searchHint: 'Search alert labels, activity, and branch summaries',
+        tabs: ['Overview', 'Alerts', 'Activity', 'Branches'],
+        filters: ['Live', 'Review', 'Healthy'],
+      },
+      [
+        this.metric('Customers', totalCustomers, 'Live customer rows'),
+        this.metric('Active customers', activeCustomers, 'Currently ACTIVE'),
+        this.metric('Pending approvals', pendingApprovals, 'Needs admin action'),
+        this.metric('Today appointments', todaysAppointments, 'Scheduled today'),
+      ],
+      {
+        left: {
+          title: 'Operational alerts',
+          subtitle: 'Priority workloads the admin team should triage first.',
+          type: 'list',
+          items: this.filterRowsBySearch(
+            [
+              {
+                title: 'Pending approvals',
+                subtitle: `${pendingApprovals} customer records are awaiting approval or completion.`,
+                meta: 'customers + memberships onboarding',
+                status: pendingApprovals > 0 ? 'Review' : 'Healthy',
+              },
+              {
+                title: 'Pending documents',
+                subtitle: `${pendingDocuments} uploaded documents still require validation.`,
+                meta: 'documents + verification queues',
+                status: pendingDocuments > 0 ? 'Review' : 'Healthy',
+              },
+              {
+                title: 'Today workload',
+                subtitle: `${todaysAppointments} appointments are scheduled for today.`,
+                meta: 'appointments calendar',
+                status: todaysAppointments > 0 ? 'Live' : 'Quiet',
+              },
+            ],
+            query.search,
+          ),
+        },
+        center: {
+          title: 'Recent activity',
+          subtitle: 'Latest audit evidence recorded by the backend.',
+          type: 'table',
+          columns: [
+            { key: 'time', label: 'Time' },
+            { key: 'action', label: 'Action' },
+            { key: 'entity', label: 'Entity' },
+            { key: 'actor', label: 'Actor' },
+          ],
+          rows: this.filterRowsBySearch(
+            recentAuditLogs.map((log) => ({
+              time: this.formatDateTime(log.createdAt),
+              action: log.action ?? 'Unknown action',
+              entity: log.entityType ?? 'Unknown entity',
+              actor: this.resolveActorLabel(log.user),
+            })),
+            query.search,
+          ),
+          emptyState: {
+            title: 'No activity matched this search',
+            description:
+              'The dashboard workspace is live, but the current search returned no recent audit activity.',
+            actionLabel: 'Clear the search to review current audit evidence.',
+          },
+        },
+        right: {
+          title: 'Branch and delivery pulse',
+          subtitle: 'Recent business entities and outbound notifications.',
+          type: 'details',
+          details: [
+            {
+              label: 'Businesses',
+              value: `${recentBusinesses.length} recent entities in scope`,
+            },
+            {
+              label: 'Latest business',
+              value:
+                recentBusinesses.length === 0
+                  ? 'No business records available'
+                  : recentBusinesses[0].name,
+            },
+            {
+              label: 'Recent notifications',
+              value: `${recentNotifications.length} delivery rows loaded`,
+            },
+            {
+              label: 'Latest notification target',
+              value:
+                recentNotifications.length === 0
+                  ? 'No notifications recorded'
+                  : this.resolveCustomerLabel(recentNotifications[0].customer),
+            },
+          ],
+        },
+      },
+    );
+  }
+
+  async getCustomersWorkspace(query: AdminGovernanceWorkspaceQuery) {
+    const today = new Date();
+    const startOfToday = new Date(today);
+    startOfToday.setHours(0, 0, 0, 0);
+    const endOfToday = new Date(today);
+    endOfToday.setHours(23, 59, 59, 999);
+    const search = query.search?.trim();
+    const status = query.status?.trim().toUpperCase();
+
+    const [customers, totalCustomers, activeCustomers, pendingDocuments, todaysVisits] =
+      await Promise.all([
+        this.prisma.customer.findMany({
+          where: {
+            deletedAt: null,
+            ...(status != null && status.length > 0 ? { status } : {}),
+            ...(search == null || search.length === 0
+              ? {}
+              : {
+                  OR: [
+                    { firstName: { contains: search, mode: 'insensitive' } },
+                    { lastName: { contains: search, mode: 'insensitive' } },
+                    { customerCode: { contains: search, mode: 'insensitive' } },
+                    { mobile: { contains: search } },
+                  ],
+                }),
+          },
+          include: {
+            membership: {
+              include: {
+                membershipType: true,
+              },
+            },
+            wallet: true,
+            shieldCard: {
+              include: {
+                issuedBusiness: true,
+              },
+            },
+          },
+          orderBy: [{ updatedAt: 'desc' }, { id: 'desc' }],
+          take: Math.min(query.pageSize, 25),
+          skip: (query.page - 1) * query.pageSize,
+        }),
+        this.prisma.customer.count({ where: { deletedAt: null } }),
+        this.prisma.customer.count({
+          where: { deletedAt: null, status: 'ACTIVE' },
+        }),
+        this.prisma.document.count({
+          where: {
+            customer: { deletedAt: null },
+            NOT: { status: { in: ['APPROVED', 'VALIDATED'] } },
+          },
+        }),
+        this.prisma.appointment.count({
+          where: {
+            appointmentDate: { gte: startOfToday, lte: endOfToday },
+            customer: { deletedAt: null },
+          },
+        }),
+      ]);
+
+    const selectedCustomer = customers.length === 0 ? null : customers[0];
+    const selectedCustomerId = selectedCustomer?.id;
+    const [
+      selectedTimeline,
+      selectedDocuments,
+      selectedAppointments,
+      selectedTasks,
+      selectedActivities,
+      selectedPurchases,
+      selectedReferralEvents,
+      selectedWalletSummary,
+    ] = selectedCustomerId == null
+      ? [[], [], [], [], [], [], [], null]
+      : await Promise.all([
+          this.timelineService.getPatientTimeline(selectedCustomerId),
+          this.prisma.document.findMany({
+            where: { customerId: selectedCustomerId },
+            orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+            take: 12,
+          }),
+          this.prisma.appointment.findMany({
+            where: { customerId: selectedCustomerId },
+            include: { provider: true },
+            orderBy: [{ appointmentDate: 'desc' }, { id: 'desc' }],
+            take: 12,
+          }),
+          this.prisma.crmTask.findMany({
+            where: { customerId: selectedCustomerId },
+            orderBy: [{ dueDate: 'asc' }, { id: 'desc' }],
+            take: 12,
+          }),
+          this.prisma.crmActivity.findMany({
+            where: { customerId: selectedCustomerId },
+            include: { createdByUser: true },
+            orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+            take: 12,
+          }),
+          this.prisma.purchase.findMany({
+            where: { customerId: selectedCustomerId },
+            include: { provider: true },
+            orderBy: [{ purchaseDate: 'desc' }, { id: 'desc' }],
+            take: 12,
+          }),
+          this.prisma.referralRewardEvent.findMany({
+            where: {
+              OR: [
+                { referrerCustomerId: selectedCustomerId },
+                { referredCustomerId: selectedCustomerId },
+              ],
+            },
+            orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+            take: 12,
+          }),
+          selectedCustomer!.wallet == null
+            ? Promise.resolve(null)
+            : this.walletService.getWalletSummary(selectedCustomer!.wallet!.id),
+        ]);
+
+    return this.buildWorkspacePayload(
+      'customers',
+      {
+        eyebrow: 'Admin / Customer operations',
+        title: 'Customers',
+        description:
+          'Customer identity, membership, wallet, visits, documents, CRM follow-up, and timeline data now flow through one backend workspace contract.',
+        primaryActionLabel: 'Create customer',
+        secondaryActionLabel: 'Review approvals',
+      },
+      {
+        searchHint:
+          'Search customers by name, customer code, or mobile number',
+        tabs: [
+          'Overview',
+          'Timeline',
+          'CRM',
+          'Documents',
+          'Visits',
+          'Wallet',
+          'Membership',
+        ],
+        filters: ['ACTIVE', 'PENDING', 'SUSPENDED', 'REJECTED'],
+      },
+      [
+        this.metric('Customers', totalCustomers, 'Live customer rows'),
+        this.metric('Active', activeCustomers, 'ACTIVE lifecycle state'),
+        this.metric('Pending docs', pendingDocuments, 'Needs verification'),
+        this.metric('Today visits', todaysVisits, 'Scheduled for today'),
+      ],
+      {
+        left: {
+          title: 'Customer list',
+          subtitle: 'Search, status filtering, and latest lifecycle changes.',
+          type: 'list',
+          items: customers.map((customer) => {
+            const membershipName =
+              customer.membership?.membershipType?.name ??
+              customer.membership?.membershipNumber ??
+              'No membership';
+            const branch = customer.shieldCard?.issuedBusiness?.name?.trim();
+            return {
+              title: this.resolveCustomerLabel(customer),
+              subtitle: `${customer.customerCode?.trim().length ? customer.customerCode.trim() : 'No code'} • ${membershipName}`,
+              meta: `${customer.mobile}${branch != null && branch.length > 0 ? ` • ${branch}` : ''}`,
+              status: customer.status ?? 'PENDING',
+            };
+          }),
+          emptyState: {
+            title: 'No customers matched this query',
+            description:
+              'The customer workspace is live, but the current search and status filter returned no customer rows.',
+            actionLabel: 'Clear filters or create a new customer record.',
+          },
+        },
+        center: {
+          title: 'Selected customer workspace',
+          subtitle:
+            selectedCustomer == null
+              ? 'Select a customer from the live list to inspect identity, wallet, CRM, and documents.'
+              : 'Backend-owned summary for ${this.resolveCustomerLabel(selectedCustomer)}.',
+          type: 'details',
+          details:
+            selectedCustomer == null
+              ? []
+              : [
+                  {
+                    label: 'Customer',
+                    value: this.resolveCustomerLabel(selectedCustomer),
+                  },
+                  {
+                    label: 'Code',
+                    value: selectedCustomer.customerCode ?? 'Unavailable',
+                  },
+                  {
+                    label: 'Mobile',
+                    value: selectedCustomer.mobile,
+                  },
+                  {
+                    label: 'Membership',
+                    value:
+                      selectedCustomer.membership?.membershipType?.name ??
+                      selectedCustomer.membership?.membershipNumber ??
+                      'No active membership',
+                  },
+                  {
+                    label: 'Wallet',
+                    value:
+                      selectedWalletSummary == null
+                        ? 'Wallet unavailable'
+                        : 'Cash ₹${Number(selectedWalletSummary.cashWallet.available ?? 0).toFixed(2)} • Rewards ${selectedWalletSummary.rewardPoints.available ?? 0}',
+                  },
+                  {
+                    label: 'Documents',
+                    value: `${selectedDocuments.length} recent rows`,
+                  },
+                  {
+                    label: 'Appointments',
+                    value: `${selectedAppointments.length} recent rows`,
+                  },
+                  {
+                    label: 'CRM tasks',
+                    value: `${selectedTasks.length} open and recent rows`,
+                  },
+                  {
+                    label: 'Activities',
+                    value: `${selectedActivities.length} CRM activity rows`,
+                  },
+                  {
+                    label: 'Purchases',
+                    value: `${selectedPurchases.length} medicine or billing rows`,
+                  },
+                  {
+                    label: 'Referral events',
+                    value: `${selectedReferralEvents.length} related reward rows`,
+                  },
+                ],
+          emptyState: {
+            title: 'No customer selected',
+            description:
+              'The customers workspace needs at least one live customer record before the master-detail surface can render a selected customer.',
+            actionLabel: 'Create a customer or clear restrictive filters.',
+          },
+        },
+        right: {
+          title: 'Customer timeline',
+          subtitle:
+            selectedCustomer == null
+              ? 'Live timeline rows appear after a customer is selected.'
+              : 'Timeline events from the shared timeline service.',
+          type: 'table',
+          columns: [
+            { key: 'time', label: 'Time' },
+            { key: 'event', label: 'Event' },
+            { key: 'status', label: 'Status' },
+          ],
+          rows: (selectedTimeline as Array<Record<string, unknown>>)
+            .slice(0, 12)
+            .map((event) => ({
+              time: `${event['timestamp'] ?? ''}`,
+              event: `${event['displayTitle'] ?? 'Timeline event'}`,
+              status: `${event['status'] ?? 'RECORDED'}`,
+            })),
+          emptyState: {
+            title: 'No timeline events available',
+            description:
+              'The selected customer does not yet have timeline evidence recorded through the shared timeline service.',
+            actionLabel: 'Open a customer with visits, documents, or wallet history.',
+          },
         },
       },
     );

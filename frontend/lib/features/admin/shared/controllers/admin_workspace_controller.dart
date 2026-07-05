@@ -42,6 +42,10 @@ class AdminWorkspaceController extends ChangeNotifier {
   final AdminEventBus _eventBus;
   final DateTime Function() _clock;
   final String Function() _idGenerator;
+  String? _activeUserId;
+  String? _activeCorrelationId;
+  String? _activeWorkspaceId;
+  AdminWorkspaceQuery _query = const AdminWorkspaceQuery();
 
   AdminWorkspaceState _state = const AdminWorkspaceState.loading(
     workspaceId: 'dashboard',
@@ -54,6 +58,8 @@ class AdminWorkspaceController extends ChangeNotifier {
       _state.status == AdminWorkspaceStatus.refreshing;
 
   String? get error => _state.message;
+  AdminWorkspaceQuery get query => _query;
+  String? get activeWorkspaceId => _activeWorkspaceId;
 
   AdminWorkspaceSnapshot? get snapshot =>
       _state.payload as AdminWorkspaceSnapshot?;
@@ -62,7 +68,13 @@ class AdminWorkspaceController extends ChangeNotifier {
     String workspaceId, {
     String? userId,
     String? correlationId,
+    AdminWorkspaceQuery query = const AdminWorkspaceQuery(),
+    bool forceRefresh = false,
   }) async {
+    _activeWorkspaceId = workspaceId;
+    _activeUserId = userId;
+    _activeCorrelationId = correlationId;
+    _query = query;
     final workspace = _workspaceRegistry.findById(workspaceId);
     if (workspace == null) {
       _state = AdminWorkspaceState(
@@ -74,10 +86,17 @@ class AdminWorkspaceController extends ChangeNotifier {
       return;
     }
 
-    _state = AdminWorkspaceState.loading(
-      workspaceId: workspaceId,
-      payload: snapshot,
-    );
+    final existingSnapshot = snapshot;
+    _state =
+        existingSnapshot == null
+            ? AdminWorkspaceState.loading(
+                workspaceId: workspaceId,
+                payload: existingSnapshot,
+              )
+            : AdminWorkspaceState.ready(
+                workspaceId: workspaceId,
+                payload: existingSnapshot,
+              ).toRefreshing();
     notifyListeners();
 
     final navigation = _navigationRegistry.findByWorkspaceId(workspaceId);
@@ -120,6 +139,8 @@ class AdminWorkspaceController extends ChangeNotifier {
       final schema = await _schemaRepository.loadSchema(workspace);
       final data = await _repositoryResolver(workspace).loadWorkspaceData(
         workspace,
+        query: _query,
+        forceRefresh: forceRefresh,
       );
       final resolvedNavigation =
           navigation ??
@@ -164,6 +185,68 @@ class AdminWorkspaceController extends ChangeNotifier {
       _state = _state.toError(error.toString());
     }
     notifyListeners();
+  }
+
+  Future<void> refresh({bool forceRefresh = true}) async {
+    final workspaceId = _activeWorkspaceId;
+    if (workspaceId == null) {
+      return;
+    }
+    await loadWorkspace(
+      workspaceId,
+      userId: _activeUserId,
+      correlationId: _activeCorrelationId,
+      query: _query,
+      forceRefresh: forceRefresh,
+    );
+  }
+
+  Future<void> updateSearch(String value) {
+    return _reload(
+      _query.copyWith(
+        search: value.trim().isEmpty ? null : value.trim(),
+        clearSearch: value.trim().isEmpty,
+        page: 1,
+      ),
+    );
+  }
+
+  Future<void> selectTab(String? tab) {
+    final normalized = tab?.trim();
+    return _reload(
+      _query.copyWith(
+        tab: normalized?.isEmpty ?? true ? null : normalized,
+        clearTab: normalized?.isEmpty ?? true,
+        page: 1,
+      ),
+    );
+  }
+
+  Future<void> toggleStatus(String status) {
+    final normalized = status.trim();
+    final isSame =
+        _query.status?.trim().toLowerCase() == normalized.toLowerCase();
+    return _reload(
+      _query.copyWith(
+        status: isSame ? null : normalized,
+        clearStatus: isSame,
+        page: 1,
+      ),
+    );
+  }
+
+  Future<void> _reload(AdminWorkspaceQuery query) async {
+    final workspaceId = _activeWorkspaceId;
+    if (workspaceId == null) {
+      return;
+    }
+    await loadWorkspace(
+      workspaceId,
+      userId: _activeUserId,
+      correlationId: _activeCorrelationId,
+      query: query,
+      forceRefresh: true,
+    );
   }
 }
 

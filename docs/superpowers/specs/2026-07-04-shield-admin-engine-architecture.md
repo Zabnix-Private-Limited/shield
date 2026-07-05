@@ -46,7 +46,8 @@ The current repository now has a live runtime bootstrap layer for the Super Admi
 - `AdminPortalWorkspace` mounts workspaces through that runtime and the shared workspace controller instead of a local hardcoded builder switch
 - the runtime now accepts an injected schema repository, which is used by governance workspaces so backend payloads can replace static schema defaults without duplicating the runtime
 - `settings`, `platform`, `audit`, and `notifications` now resolve through one shared governance datasource and renderer instead of four independent placeholder shells
-- non-governance modules still depend on static schema and local module rendering, so broader schema-driven migration remains future work
+- `dashboard` and `customers` now resolve through that same backend workspace contract path and shared renderer, proving the non-governance migration can happen without bypassing the runtime
+- remaining business modules such as `memberships`, `wallet`, `providers`, `documents`, `branches`, `crm`, `agents`, and `reports` still depend on static schema or local module rendering, so broader schema-driven migration remains future work
 
 ## Six engine subsystems
 
