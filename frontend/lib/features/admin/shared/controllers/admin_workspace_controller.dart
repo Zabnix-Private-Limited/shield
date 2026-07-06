@@ -1,5 +1,8 @@
 import 'package:flutter/foundation.dart';
 
+import '../engine/actions/admin_action_definition.dart';
+import '../engine/actions/admin_action_pipeline.dart';
+import '../engine/actions/admin_command_bus.dart';
 import '../engine/events/admin_event_bus.dart';
 import '../engine/events/admin_event_definition.dart';
 import '../engine/events/admin_event_metadata.dart';
@@ -22,6 +25,8 @@ class AdminWorkspaceController extends ChangeNotifier {
     required AdminWorkspaceRepository Function(AdminWorkspaceDefinition workspace)
     repositoryResolver,
     required AdminEventBus eventBus,
+    required AdminCommandBus commandBus,
+    required AdminActionPipeline actionPipeline,
     DateTime Function()? clock,
     String Function()? idGenerator,
   }) : _workspaceRegistry = workspaceRegistry,
@@ -30,6 +35,8 @@ class AdminWorkspaceController extends ChangeNotifier {
        _permissionGateway = permissionGateway,
        _repositoryResolver = repositoryResolver,
        _eventBus = eventBus,
+       _commandBus = commandBus,
+       _actionPipeline = actionPipeline,
        _clock = clock ?? DateTime.now,
        _idGenerator = idGenerator ?? _defaultIdGenerator;
 
@@ -40,6 +47,8 @@ class AdminWorkspaceController extends ChangeNotifier {
   final AdminWorkspaceRepository Function(AdminWorkspaceDefinition workspace)
   _repositoryResolver;
   final AdminEventBus _eventBus;
+  final AdminCommandBus _commandBus;
+  final AdminActionPipeline _actionPipeline;
   final DateTime Function() _clock;
   final String Function() _idGenerator;
   String? _activeUserId;
@@ -272,6 +281,126 @@ class AdminWorkspaceController extends ChangeNotifier {
         page: 1,
       ),
     );
+  }
+
+  Future<Map<String, dynamic>> loadForm(
+    String formId, {
+    String? recordId,
+  }) async {
+    final workspaceId = _activeWorkspaceId;
+    if (workspaceId == null) {
+      throw StateError('No active admin workspace is loaded.');
+    }
+    final workspace = _workspaceRegistry.findById(workspaceId);
+    if (workspace == null) {
+      throw StateError('Workspace "$workspaceId" is not registered.');
+    }
+    return _repositoryResolver(
+      workspace,
+    ).loadWorkspaceForm(workspace, formId: formId, recordId: recordId);
+  }
+
+  Future<Map<String, dynamic>> executeWorkspaceAction(
+    AdminWorkspaceActionDescriptor action, {
+    String? recordId,
+    Map<String, Object?> payload = const <String, Object?>{},
+  }) async {
+    final workspaceId = _activeWorkspaceId;
+    if (workspaceId == null) {
+      throw StateError('No active admin workspace is loaded.');
+    }
+    final workspace = _workspaceRegistry.findById(workspaceId);
+    if (workspace == null) {
+      throw StateError('Workspace "$workspaceId" is not registered.');
+    }
+    _commandBus.registerHandler('workspace-action', (command) async {
+      final body = Map<String, Object?>.from(
+        command.payload['payload'] as Map<String, Object?>? ??
+            const <String, Object?>{},
+      );
+      final targetRecordId = command.payload['recordId']?.toString();
+      if (targetRecordId != null && targetRecordId.trim().isNotEmpty) {
+        body.putIfAbsent('record_id', () => targetRecordId.trim());
+      }
+      return _repositoryResolver(workspace).executeWorkspaceAction(
+        workspace,
+        actionId: command.payload['actionId']!.toString(),
+        payload: body,
+      );
+    });
+    final result = await _actionPipeline.execute(
+      AdminActionExecution(
+        workspaceId: workspaceId,
+        userId: _activeUserId ?? 'system',
+        action: AdminActionDefinition(
+          id: action.id,
+          type: AdminActionType.command,
+          label: action.label,
+          permissionKey: action.permission,
+        ),
+        payload: <String, Object?>{
+          'actionId': action.id,
+          'recordId': recordId,
+          'payload': payload,
+        },
+        correlationId: _activeCorrelationId,
+      ),
+    );
+    if (action.refreshAfterSuccess) {
+      await refresh();
+    }
+    return Map<String, dynamic>.from(result);
+  }
+
+  Future<Map<String, dynamic>> executeBulkWorkspaceAction(
+    AdminWorkspaceActionDescriptor action, {
+    required List<String> recordIds,
+    Map<String, Object?> payload = const <String, Object?>{},
+  }) async {
+    final workspaceId = _activeWorkspaceId;
+    if (workspaceId == null) {
+      throw StateError('No active admin workspace is loaded.');
+    }
+    final workspace = _workspaceRegistry.findById(workspaceId);
+    if (workspace == null) {
+      throw StateError('Workspace "$workspaceId" is not registered.');
+    }
+    _commandBus.registerHandler('workspace-action', (command) async {
+      final body = Map<String, Object?>.from(
+        command.payload['payload'] as Map<String, Object?>? ??
+            const <String, Object?>{},
+      );
+      return _repositoryResolver(workspace).executeBulkWorkspaceAction(
+        workspace,
+        actionId: command.payload['actionId']!.toString(),
+        recordIds: List<String>.from(
+          command.payload['recordIds'] as List? ?? const <String>[],
+        ),
+        payload: body,
+      );
+    });
+    final result = await _actionPipeline.execute(
+      AdminActionExecution(
+        workspaceId: workspaceId,
+        userId: _activeUserId ?? 'system',
+        action: AdminActionDefinition(
+          id: action.id,
+          type: AdminActionType.command,
+          label: action.label,
+          permissionKey: action.permission,
+        ),
+        payload: <String, Object?>{
+          'actionId': action.id,
+          'recordIds': recordIds,
+          'payload': payload,
+        },
+        correlationId: _activeCorrelationId,
+      ),
+    );
+    if (action.refreshAfterSuccess) {
+      await refresh();
+    }
+    return Map<String, dynamic>.from(result);
   }
 
   Future<void> _reload(AdminWorkspaceQuery query) async {

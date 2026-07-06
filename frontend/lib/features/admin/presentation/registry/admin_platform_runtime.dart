@@ -28,6 +28,8 @@ class AdminPlatformRuntime {
     required this.navigationRegistry,
     required this.capabilityRegistry,
     required this.eventBus,
+    required this.commandBus,
+    required this.actionPipeline,
     required this.schemaRepository,
     required this.permissionGateway,
     required AdminWorkspaceRepository Function(
@@ -51,6 +53,12 @@ class AdminPlatformRuntime {
     final workspaceRegistry = AdminWorkspaceRegistry();
     final navigationRegistry = AdminNavigationRegistry();
     final capabilityRegistry = AdminCapabilityRegistry();
+    final resolvedEventBus = eventBus ?? AdminEventBus();
+    final commandBus = AdminCommandBus();
+    final actionPipeline = AdminActionPipeline(
+      commandBus: commandBus,
+      eventBus: resolvedEventBus,
+    );
     final registrationMap = <String, AdminWorkspaceRegistration>{};
     final schemas = <String, AdminWorkspaceSchemaDefinition>{};
 
@@ -71,7 +79,9 @@ class AdminPlatformRuntime {
       workspaceRegistry: workspaceRegistry,
       navigationRegistry: navigationRegistry,
       capabilityRegistry: capabilityRegistry,
-      eventBus: eventBus ?? AdminEventBus(),
+      eventBus: resolvedEventBus,
+      commandBus: commandBus,
+      actionPipeline: actionPipeline,
       schemaRepository:
           schemaRepository ?? _StaticAdminWorkspaceSchemaRepository(schemas),
       permissionGateway:
@@ -86,6 +96,8 @@ class AdminPlatformRuntime {
   final AdminNavigationRegistry navigationRegistry;
   final AdminCapabilityRegistry capabilityRegistry;
   final AdminEventBus eventBus;
+  final AdminCommandBus commandBus;
+  final AdminActionPipeline actionPipeline;
   final AdminWorkspaceSchemaRepository schemaRepository;
   final AdminWorkspacePermissionGateway permissionGateway;
   final AdminWorkspaceRepository Function(AdminWorkspaceDefinition workspace)
@@ -109,6 +121,8 @@ class AdminPlatformRuntime {
       permissionGateway: permissionGateway,
       repositoryResolver: _repositoryResolver,
       eventBus: eventBus,
+      commandBus: commandBus,
+      actionPipeline: actionPipeline,
     );
   }
 }

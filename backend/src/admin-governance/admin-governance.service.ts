@@ -1,7 +1,9 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable } from '@nestjs/common';
 import type { CommercialSetting, Customer, User } from '@prisma/client';
 import type { ShieldPrincipal } from '../auth/auth.types';
 import { getAppEnv } from '../config/app-env';
+import { CustomerService } from '../customer/customer.service';
+import { NotificationService } from '../notification/notification.service';
 import { PlatformPrintService } from '../platform-capabilities/platform-print.service';
 import { PlatformRealtimeService } from '../platform-capabilities/platform-realtime.service';
 import { PlatformReportService } from '../platform-capabilities/platform-report.service';
@@ -61,6 +63,39 @@ type WorkspacePanel = {
   };
 };
 
+type WorkspaceActionDescriptor = {
+  id: string;
+  label: string;
+  icon: string;
+  color: string;
+  category: 'primary' | 'secondary' | 'danger';
+  permission: string;
+  endpoint: string;
+  method: 'GET' | 'POST' | 'PATCH' | 'DELETE';
+  requiresSelection?: boolean;
+  allowBulk?: boolean;
+  successMessage?: string;
+  confirmation?: {
+    title: string;
+    body: string;
+    confirmText: string;
+  };
+  dialog?: {
+    type: 'FORM' | 'CONFIRM' | 'WIZARD';
+    formId?: string;
+  };
+  refreshAfterSuccess: boolean;
+};
+
+type WorkspacePayloadOptions = {
+  actions?: WorkspaceActionDescriptor[];
+  bulkActions?: WorkspaceActionDescriptor[];
+  permissions?: Record<string, boolean>;
+  exports?: Array<Record<string, string>>;
+  forms?: Array<Record<string, unknown>>;
+  commands?: Array<Record<string, unknown>>;
+};
+
 @Injectable()
 export class AdminGovernanceService {
   private readonly env = getAppEnv();
@@ -68,6 +103,8 @@ export class AdminGovernanceService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly pricingService: PricingService,
+    private readonly customerService: CustomerService,
+    private readonly notificationService: NotificationService,
     private readonly platformPrintService: PlatformPrintService,
     private readonly platformRealtimeService: PlatformRealtimeService,
     private readonly platformReportService: PlatformReportService,
@@ -250,6 +287,324 @@ export class AdminGovernanceService {
         },
       },
     );
+  }
+
+  async getCustomerWorkspaceForm(
+    formId: string,
+    recordId?: string | null,
+    principal?: ShieldPrincipal,
+  ) {
+    const normalizedFormId = formId.trim().toLowerCase();
+    if (normalizedFormId !== 'edit') {
+      throw new BadRequestException(`Unsupported customer workspace form "${formId}".`);
+    }
+    this.assertPrincipalPermission(principal, 'customers.update');
+    if (!recordId?.trim().length) {
+      throw new BadRequestException('record_id is required for customer edit forms.');
+    }
+    const customer = await this.customerService.findOne(BigInt(recordId.trim()));
+    return {
+      id: 'edit',
+      entity: 'customer',
+      title: `Edit ${this.resolveCustomerLabel(customer as any)}`,
+      fields: [
+        {
+          key: 'first_name',
+          type: 'text',
+          label: 'First name',
+          required: true,
+          value: customer.firstName ?? '',
+        },
+        {
+          key: 'last_name',
+          type: 'text',
+          label: 'Last name',
+          required: false,
+          value: customer.lastName ?? '',
+        },
+        {
+          key: 'mobile',
+          type: 'phone',
+          label: 'Mobile',
+          required: true,
+          value: customer.mobile ?? '',
+        },
+        {
+          key: 'email',
+          type: 'email',
+          label: 'Email',
+          required: false,
+          value: customer.email ?? '',
+        },
+        {
+          key: 'gender',
+          type: 'select',
+          label: 'Gender',
+          required: false,
+          value: customer.gender ?? '',
+          options: ['MALE', 'FEMALE', 'OTHER'],
+        },
+        {
+          key: 'dob',
+          type: 'date',
+          label: 'Date of birth',
+          required: false,
+          value: customer.dob?.toISOString().split('T')[0] ?? '',
+        },
+        {
+          key: 'address_line1',
+          type: 'textarea',
+          label: 'Address line 1',
+          required: false,
+          value: customer.addressLine1 ?? '',
+        },
+        {
+          key: 'city',
+          type: 'text',
+          label: 'City',
+          required: false,
+          value: customer.city ?? '',
+        },
+        {
+          key: 'district',
+          type: 'text',
+          label: 'District',
+          required: false,
+          value: customer.district ?? '',
+        },
+        {
+          key: 'state',
+          type: 'text',
+          label: 'State',
+          required: false,
+          value: customer.state ?? '',
+        },
+        {
+          key: 'pincode',
+          type: 'text',
+          label: 'Pincode',
+          required: false,
+          value: customer.pincode ?? '',
+        },
+        {
+          key: 'blood_group',
+          type: 'text',
+          label: 'Blood group',
+          required: false,
+          value: customer.bloodGroup ?? '',
+        },
+      ],
+    };
+  }
+
+  async executeCustomerWorkspaceAction(
+    actionId: string,
+    body: Record<string, unknown>,
+    principal?: ShieldPrincipal,
+  ) {
+    const normalizedActionId = actionId.trim().toLowerCase();
+    const recordId = this.requireRecordId(body.record_id);
+    const userId = this.requirePrincipalUserId(principal);
+    switch (normalizedActionId) {
+      case 'edit': {
+        this.assertPrincipalPermission(principal, 'customers.update');
+        const before = await this.customerService.findOne(recordId);
+        const updated = await this.customerService.update(recordId, body);
+        await this.recordCustomerWorkspaceAudit({
+          principal,
+          action: 'ADMIN_CUSTOMER_UPDATED',
+          entityId: recordId,
+          oldData: before as any,
+          newData: updated as any,
+        });
+        await this.notificationService.send({
+          customerId: recordId,
+          title: 'Profile updated',
+          message: 'Your SHIELD customer profile was updated by an administrator.',
+        });
+        return {
+          actionId: normalizedActionId,
+          customerId: recordId.toString(),
+          status: 'success',
+        };
+      }
+      case 'suspend': {
+        this.assertPrincipalPermission(principal, 'customers.approve');
+        const before = await this.customerService.findOne(recordId);
+        const updated = await this.customerService.suspend(recordId, userId);
+        await this.recordCustomerWorkspaceAudit({
+          principal,
+          action: 'ADMIN_CUSTOMER_SUSPENDED',
+          entityId: recordId,
+          oldData: before as any,
+          newData: updated as any,
+        });
+        await this.notificationService.send({
+          customerId: recordId,
+          title: 'Account suspended',
+          message: 'Your SHIELD customer account has been suspended by an administrator.',
+        });
+        return {
+          actionId: normalizedActionId,
+          customerId: recordId.toString(),
+          status: 'success',
+        };
+      }
+      case 'activate': {
+        this.assertPrincipalPermission(principal, 'customers.approve');
+        const before = await this.customerService.findOne(recordId);
+        const updated = await this.customerService.activate(recordId, userId);
+        await this.recordCustomerWorkspaceAudit({
+          principal,
+          action: 'ADMIN_CUSTOMER_ACTIVATED',
+          entityId: recordId,
+          oldData: before as any,
+          newData: updated as any,
+        });
+        await this.notificationService.send({
+          customerId: recordId,
+          title: 'Account activated',
+          message: 'Your SHIELD customer account is active again.',
+        });
+        return {
+          actionId: normalizedActionId,
+          customerId: recordId.toString(),
+          status: 'success',
+        };
+      }
+      case 'delete': {
+        this.assertPrincipalPermission(principal, 'customers.delete');
+        const before = await this.customerService.findOne(recordId);
+        const deleted = await this.customerService.softDelete(recordId, userId);
+        await this.recordCustomerWorkspaceAudit({
+          principal,
+          action: 'ADMIN_CUSTOMER_DELETED',
+          entityId: recordId,
+          oldData: before as any,
+          newData: deleted as any,
+        });
+        return {
+          actionId: normalizedActionId,
+          customerId: recordId.toString(),
+          status: 'success',
+        };
+      }
+      case 'generate-card': {
+        this.assertPrincipalPermission(principal, 'customers.approve');
+        const card = await this.customerService.generateCard(recordId, userId);
+        await this.recordCustomerWorkspaceAudit({
+          principal,
+          action: 'ADMIN_CUSTOMER_CARD_GENERATED',
+          entityId: recordId,
+          newData: card as any,
+        });
+        await this.notificationService.send({
+          customerId: recordId,
+          title: 'SHIELD card ready',
+          message: 'A SHIELD card was generated for your customer account.',
+        });
+        return {
+          actionId: normalizedActionId,
+          customerId: recordId.toString(),
+          cardNumber: card.cardNumber,
+          status: 'success',
+        };
+      }
+      case 'print-profile': {
+        this.assertPrincipalPermission(principal, 'customers.export');
+        const customer = await this.customerService.findOne(recordId);
+        const print = await this.platformPrintService.generate('PATIENT_SUMMARY', {
+          patient: {
+            patientId: customer.customerCode,
+            name: this.resolveCustomerLabel(customer as any),
+            mobile: customer.mobile,
+            email: customer.email,
+            gender: customer.gender,
+            bloodGroup: customer.bloodGroup,
+          },
+        });
+        return {
+          actionId: normalizedActionId,
+          customerId: recordId.toString(),
+          ...print,
+          status: 'success',
+        };
+      }
+      default:
+        throw new BadRequestException(
+          `Unsupported customer workspace action "${actionId}".`,
+        );
+    }
+  }
+
+  async executeCustomerWorkspaceBulkAction(
+    actionId: string,
+    body: Record<string, unknown>,
+    principal?: ShieldPrincipal,
+  ) {
+    const normalizedActionId = actionId.trim().toLowerCase();
+    const recordIds = this.readRecordIds(body.record_ids);
+    const userId = this.requirePrincipalUserId(principal);
+    if (recordIds.length === 0) {
+      throw new BadRequestException('record_ids must contain at least one customer id.');
+    }
+    switch (normalizedActionId) {
+      case 'bulk-suspend':
+        this.assertPrincipalPermission(principal, 'customers.approve');
+        for (const recordId of recordIds) {
+          await this.customerService.suspend(BigInt(recordId), userId);
+        }
+        return {
+          actionId: normalizedActionId,
+          recordIds,
+          affected: recordIds.length,
+          status: 'success',
+        };
+      case 'bulk-activate':
+        this.assertPrincipalPermission(principal, 'customers.approve');
+        for (const recordId of recordIds) {
+          await this.customerService.activate(BigInt(recordId), userId);
+        }
+        return {
+          actionId: normalizedActionId,
+          recordIds,
+          affected: recordIds.length,
+          status: 'success',
+        };
+      case 'bulk-export-csv': {
+        this.assertPrincipalPermission(principal, 'customers.export');
+        const customers = await this.prisma.customer.findMany({
+          where: { id: { in: recordIds.map((id) => BigInt(id)) } },
+          orderBy: [{ updatedAt: 'desc' }],
+        });
+        const lines = [
+          'Customer Code,First Name,Last Name,Mobile,Status',
+          ...customers.map(
+            (customer) =>
+              [
+                customer.customerCode ?? '',
+                customer.firstName ?? '',
+                customer.lastName ?? '',
+                customer.mobile ?? '',
+                customer.status ?? '',
+              ]
+                .map((value) => `"${`${value}`.replace(/"/g, '""')}"`)
+                .join(','),
+          ),
+        ];
+        return {
+          actionId: normalizedActionId,
+          fileName: 'customers-export.csv',
+          mimeType: 'text/csv',
+          contentBase64: Buffer.from(lines.join('\n'), 'utf8').toString('base64'),
+          status: 'success',
+        };
+      }
+      default:
+        throw new BadRequestException(
+          `Unsupported customer workspace bulk action "${actionId}".`,
+        );
+    }
   }
 
   async updateSetting(
@@ -585,7 +940,10 @@ export class AdminGovernanceService {
     );
   }
 
-  async getCustomersWorkspace(query: AdminGovernanceWorkspaceQuery) {
+  async getCustomersWorkspace(
+    query: AdminGovernanceWorkspaceQuery,
+    principal?: ShieldPrincipal,
+  ) {
     const today = new Date();
     const startOfToday = new Date(today);
     startOfToday.setHours(0, 0, 0, 0);
@@ -854,6 +1212,9 @@ export class AdminGovernanceService {
       selectedAuditLogs,
       selectedLoginHistory,
     });
+    const customerPermissions = this.buildCustomerWorkspacePermissions(principal);
+    const customerActions = this.buildCustomerWorkspaceActions(selectedCustomer);
+    const customerBulkActions = this.buildCustomerWorkspaceBulkActions();
 
     return this.buildWorkspacePayload(
       'customers',
@@ -976,6 +1337,37 @@ export class AdminGovernanceService {
         },
         right: rightPanel,
       },
+      {
+        actions: customerActions,
+        bulkActions: customerBulkActions,
+        permissions: customerPermissions,
+        exports: [
+          {
+            id: 'customers-export-csv',
+            label: 'CSV',
+            format: 'CSV',
+          },
+        ],
+        forms: [
+          {
+            id: 'edit',
+            entity: 'customer',
+          },
+        ],
+        commands: customerActions
+          .map((action) => ({
+            id: `customer.${action.id}`,
+            permission: action.permission,
+            inputSchema: {
+              type: 'object',
+              properties: action.requiresSelection
+                ? {
+                    record_id: { type: 'string' },
+                  }
+                : {},
+            },
+          })),
+      },
     );
   }
 
@@ -1001,6 +1393,210 @@ export class AdminGovernanceService {
       default:
         return [{ updatedAt: direction }, { id: 'desc' as const }];
     }
+  }
+
+  private buildCustomerWorkspacePermissions(principal?: ShieldPrincipal) {
+    return {
+      canCreate: this.hasPrincipalPermission(principal, 'customers.create'),
+      canDelete: this.hasPrincipalPermission(principal, 'customers.delete'),
+      canSuspend: this.hasPrincipalPermission(principal, 'customers.approve'),
+      canEdit: this.hasPrincipalPermission(principal, 'customers.update'),
+      canAssign: false,
+      canMerge: false,
+      canExport: this.hasPrincipalPermission(principal, 'customers.export'),
+      canPrint: this.hasPrincipalPermission(principal, 'customers.export'),
+      canUpload: this.hasPrincipalPermission(principal, 'documents.create'),
+    };
+  }
+
+  private buildCustomerWorkspaceActions(selectedCustomer: any): WorkspaceActionDescriptor[] {
+    return [
+      {
+        id: 'edit',
+        label: 'Edit customer',
+        icon: 'edit',
+        color: 'primary',
+        category: 'primary',
+        permission: 'customers.update',
+        endpoint: '/admin/workspaces/customers/actions/edit',
+        method: 'POST',
+        requiresSelection: true,
+        dialog: { type: 'FORM', formId: 'edit' },
+        refreshAfterSuccess: true,
+        successMessage: 'Customer updated successfully.',
+      },
+      {
+        id: 'suspend',
+        label: 'Suspend customer',
+        icon: 'pause_circle',
+        color: 'warning',
+        category: 'secondary',
+        permission: 'customers.approve',
+        endpoint: '/admin/workspaces/customers/actions/suspend',
+        method: 'POST',
+        requiresSelection: true,
+        confirmation: {
+          title: 'Suspend customer',
+          body: 'This will suspend the selected customer account and linked membership/card lifecycle.',
+          confirmText: 'Suspend',
+        },
+        refreshAfterSuccess: true,
+        successMessage: 'Customer suspended successfully.',
+      },
+      {
+        id: 'activate',
+        label: 'Activate customer',
+        icon: 'check_circle',
+        color: 'success',
+        category: 'secondary',
+        permission: 'customers.approve',
+        endpoint: '/admin/workspaces/customers/actions/activate',
+        method: 'POST',
+        requiresSelection: true,
+        refreshAfterSuccess: true,
+        successMessage: 'Customer activated successfully.',
+      },
+      {
+        id: 'delete',
+        label: 'Delete customer',
+        icon: 'delete_forever',
+        color: 'danger',
+        category: 'danger',
+        permission: 'customers.delete',
+        endpoint: '/admin/workspaces/customers/actions/delete',
+        method: 'POST',
+        requiresSelection: true,
+        confirmation: {
+          title: 'Delete customer',
+          body: 'This performs a soft delete and removes the customer from active admin workspaces.',
+          confirmText: 'Delete',
+        },
+        refreshAfterSuccess: true,
+        successMessage: 'Customer deleted successfully.',
+      },
+      {
+        id: 'generate-card',
+        label: selectedCustomer?.shieldCard == null ? 'Generate card' : 'Replace card',
+        icon: 'badge',
+        color: 'primary',
+        category: 'secondary',
+        permission: 'customers.approve',
+        endpoint: '/admin/workspaces/customers/actions/generate-card',
+        method: 'POST',
+        requiresSelection: true,
+        refreshAfterSuccess: true,
+        successMessage: 'Customer card generated successfully.',
+      },
+      {
+        id: 'print-profile',
+        label: 'Print profile',
+        icon: 'print',
+        color: 'secondary',
+        category: 'secondary',
+        permission: 'customers.export',
+        endpoint: '/admin/workspaces/customers/actions/print-profile',
+        method: 'POST',
+        requiresSelection: true,
+        refreshAfterSuccess: false,
+      },
+    ];
+  }
+
+  private buildCustomerWorkspaceBulkActions(): WorkspaceActionDescriptor[] {
+    return [
+      {
+        id: 'bulk-suspend',
+        label: 'Suspend selected',
+        icon: 'pause_circle',
+        color: 'warning',
+        category: 'secondary',
+        permission: 'customers.approve',
+        endpoint: '/admin/workspaces/customers/bulk-actions/bulk-suspend',
+        method: 'POST',
+        allowBulk: true,
+        refreshAfterSuccess: true,
+      },
+      {
+        id: 'bulk-activate',
+        label: 'Activate selected',
+        icon: 'check_circle',
+        color: 'success',
+        category: 'secondary',
+        permission: 'customers.approve',
+        endpoint: '/admin/workspaces/customers/bulk-actions/bulk-activate',
+        method: 'POST',
+        allowBulk: true,
+        refreshAfterSuccess: true,
+      },
+      {
+        id: 'bulk-export-csv',
+        label: 'Export selected CSV',
+        icon: 'download',
+        color: 'primary',
+        category: 'secondary',
+        permission: 'customers.export',
+        endpoint: '/admin/workspaces/customers/bulk-actions/bulk-export-csv',
+        method: 'POST',
+        allowBulk: true,
+        refreshAfterSuccess: false,
+      },
+    ];
+  }
+
+  private hasPrincipalPermission(
+    principal: ShieldPrincipal | undefined,
+    permission: string,
+  ) {
+    return Boolean(principal?.permissions.includes(permission));
+  }
+
+  private assertPrincipalPermission(
+    principal: ShieldPrincipal | undefined,
+    permission: string,
+  ) {
+    if (!this.hasPrincipalPermission(principal, permission)) {
+      throw new ForbiddenException(`Missing required permission: ${permission}`);
+    }
+  }
+
+  private requirePrincipalUserId(principal?: ShieldPrincipal) {
+    if (!principal?.userId?.trim().length) {
+      throw new ForbiddenException('Authenticated admin user required.');
+    }
+    return BigInt(principal.userId.trim());
+  }
+
+  private requireRecordId(value: unknown) {
+    const normalized = `${value ?? ''}`.trim();
+    if (!normalized.length) {
+      throw new BadRequestException('record_id is required.');
+    }
+    return BigInt(normalized);
+  }
+
+  private readRecordIds(value: unknown) {
+    return Array.isArray(value)
+      ? value.map((item) => `${item ?? ''}`.trim()).filter((item) => item.length > 0)
+      : [];
+  }
+
+  private async recordCustomerWorkspaceAudit(input: {
+    principal?: ShieldPrincipal;
+    action: string;
+    entityId: bigint;
+    oldData?: Record<string, unknown> | null;
+    newData?: Record<string, unknown> | null;
+  }) {
+    await this.timelineService.recordAuditLog({
+      userId: input.principal?.userId?.trim()
+        ? BigInt(input.principal.userId.trim())
+        : undefined,
+      action: input.action,
+      entityType: 'customers',
+      entityId: input.entityId,
+      oldData: input.oldData ?? undefined,
+      newData: input.newData ?? undefined,
+    });
   }
 
   private buildCustomerWorkspaceRightPanel(input: {
@@ -4332,6 +4928,7 @@ export class AdminGovernanceService {
     toolbar: Record<string, unknown>,
     metrics: WorkspaceMetric[],
     panels: Record<string, WorkspacePanel>,
+    options: WorkspacePayloadOptions = {},
   ) {
     const defaultViewId = panels.center?.type === 'table' ? 'table' : 'detail';
     return {
@@ -4354,6 +4951,12 @@ export class AdminGovernanceService {
         value: metric.value,
         note: metric.note,
       })),
+      actions: options.actions ?? [],
+      bulkActions: options.bulkActions ?? [],
+      permissions: options.permissions ?? {},
+      exports: options.exports ?? [],
+      forms: options.forms ?? [],
+      commands: options.commands ?? [],
       panels: Object.fromEntries(
         Object.entries(panels).map(([key, panel]) => [
           key,

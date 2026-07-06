@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { CustomerModule } from '../customer/customer.module';
 import { NotificationModule } from '../notification/notification.module';
 import { PlatformCapabilitiesModule } from '../platform-capabilities/platform-capabilities.module';
 import { PricingModule } from '../pricing/pricing.module';
@@ -13,6 +14,7 @@ import { AdminGovernanceService } from './admin-governance.service';
   imports: [
     PrismaModule,
     PricingModule,
+    CustomerModule,
     NotificationModule,
     PlatformCapabilitiesModule,
     TimelineModule,

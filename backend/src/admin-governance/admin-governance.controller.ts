@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Query } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, Query } from '@nestjs/common';
 import type { ShieldPrincipal } from '../auth/auth.types';
 import { CurrentPrincipal } from '../auth/current-principal.decorator';
 import { RequirePermissions } from '../auth/permissions.decorator';
@@ -80,12 +80,68 @@ export class AdminGovernanceController {
   @Get('customers')
   async getCustomersWorkspace(
     @Query() query: Record<string, string | undefined>,
+    @CurrentPrincipal() principal?: ShieldPrincipal,
   ) {
     return {
       success: true,
       message: 'Admin customers workspace retrieved successfully.',
       data: await this.adminGovernanceService.getCustomersWorkspace(
         this.parseQuery(query),
+        principal,
+      ),
+    };
+  }
+
+  @RequirePermissions('customers.view')
+  @Get('customers/forms/:formId')
+  async getCustomerWorkspaceForm(
+    @Param('formId') formId: string,
+    @Query() query: Record<string, string | undefined>,
+    @CurrentPrincipal() principal?: ShieldPrincipal,
+  ) {
+    return {
+      success: true,
+      message: 'Admin customer workspace form retrieved successfully.',
+      data: await this.adminGovernanceService.getCustomerWorkspaceForm(
+        formId,
+        this.normalizeString(query.record_id),
+        principal,
+      ),
+    };
+  }
+
+  @RequirePermissions('customers.view')
+  @Post('customers/actions/:actionId')
+  async executeCustomerWorkspaceAction(
+    @Param('actionId') actionId: string,
+    @Body() body: Record<string, unknown>,
+    @CurrentPrincipal() principal?: ShieldPrincipal,
+  ) {
+    return {
+      success: true,
+      message: 'Admin customer workspace action executed successfully.',
+      data: await this.adminGovernanceService.executeCustomerWorkspaceAction(
+        actionId,
+        body,
+        principal,
+      ),
+    };
+  }
+
+  @RequirePermissions('customers.view')
+  @Post('customers/bulk-actions/:actionId')
+  async executeCustomerWorkspaceBulkAction(
+    @Param('actionId') actionId: string,
+    @Body() body: Record<string, unknown>,
+    @CurrentPrincipal() principal?: ShieldPrincipal,
+  ) {
+    return {
+      success: true,
+      message: 'Admin customer workspace bulk action executed successfully.',
+      data: await this.adminGovernanceService.executeCustomerWorkspaceBulkAction(
+        actionId,
+        body,
+        principal,
       ),
     };
   }

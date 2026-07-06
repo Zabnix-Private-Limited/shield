@@ -1488,6 +1488,53 @@ class ApiService {
     return _readEnvelope(response);
   }
 
+  static Future<Map<String, dynamic>> getAdminGovernanceWorkspaceForm(
+    String workspaceId, {
+    required String formId,
+    String? recordId,
+  }) async {
+    final normalizedWorkspaceId = workspaceId.trim().toLowerCase();
+    final response = await _getWithRetry(
+      '/admin/workspaces/$normalizedWorkspaceId/forms/$formId',
+      queryParameters: {
+        if (recordId != null && recordId.trim().isNotEmpty)
+          'record_id': recordId.trim(),
+      },
+      maxAttempts: 3,
+    );
+    return _readEnvelope(response);
+  }
+
+  static Future<Map<String, dynamic>> executeAdminGovernanceWorkspaceAction(
+    String workspaceId, {
+    required String actionId,
+    Map<String, Object?> payload = const <String, Object?>{},
+  }) async {
+    final normalizedWorkspaceId = workspaceId.trim().toLowerCase();
+    final response = await _dio.post(
+      '/admin/workspaces/$normalizedWorkspaceId/actions/$actionId',
+      data: payload,
+    );
+    return _readEnvelope(response);
+  }
+
+  static Future<Map<String, dynamic>> executeAdminGovernanceWorkspaceBulkAction(
+    String workspaceId, {
+    required String actionId,
+    required List<String> recordIds,
+    Map<String, Object?> payload = const <String, Object?>{},
+  }) async {
+    final normalizedWorkspaceId = workspaceId.trim().toLowerCase();
+    final response = await _dio.post(
+      '/admin/workspaces/$normalizedWorkspaceId/bulk-actions/$actionId',
+      data: <String, Object?>{
+        'record_ids': recordIds,
+        ...payload,
+      },
+    );
+    return _readEnvelope(response);
+  }
+
   static Future<Map<String, dynamic>> getPlatformReports({
     String? workspace,
   }) async {

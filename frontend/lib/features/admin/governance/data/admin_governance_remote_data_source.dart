@@ -40,4 +40,46 @@ class AdminGovernanceRemoteDataSource {
     _cache[cacheKey] = Map<String, dynamic>.from(payload);
     return Map<String, dynamic>.from(payload);
   }
+
+  Future<Map<String, dynamic>> fetchWorkspaceForm(
+    String workspaceId, {
+    required String formId,
+    String? recordId,
+  }) {
+    return ApiService.getAdminGovernanceWorkspaceForm(
+      workspaceId,
+      formId: formId,
+      recordId: recordId,
+    );
+  }
+
+  Future<Map<String, dynamic>> executeWorkspaceAction(
+    String workspaceId, {
+    required String actionId,
+    Map<String, Object?> payload = const <String, Object?>{},
+  }) async {
+    final response = await ApiService.executeAdminGovernanceWorkspaceAction(
+      workspaceId,
+      actionId: actionId,
+      payload: payload,
+    );
+    _cache.removeWhere((key, _) => key.startsWith('${workspaceId.trim().toLowerCase()}|'));
+    return response;
+  }
+
+  Future<Map<String, dynamic>> executeBulkWorkspaceAction(
+    String workspaceId, {
+    required String actionId,
+    required List<String> recordIds,
+    Map<String, Object?> payload = const <String, Object?>{},
+  }) async {
+    final response = await ApiService.executeAdminGovernanceWorkspaceBulkAction(
+      workspaceId,
+      actionId: actionId,
+      recordIds: recordIds,
+      payload: payload,
+    );
+    _cache.removeWhere((key, _) => key.startsWith('${workspaceId.trim().toLowerCase()}|'));
+    return response;
+  }
 }

@@ -266,6 +266,11 @@ void main() {
         );
         final schemaRepository = _FakeSchemaRepository(schema);
         final eventBus = AdminEventBus();
+        final commandBus = AdminCommandBus();
+        final actionPipeline = AdminActionPipeline(
+          commandBus: commandBus,
+          eventBus: eventBus,
+        );
         final events = <AdminEventDefinition>[];
         final subscription = eventBus.events.listen(events.add);
 
@@ -276,6 +281,8 @@ void main() {
           permissionGateway: permissionGateway,
           repositoryResolver: (_) => repository,
           eventBus: eventBus,
+          commandBus: commandBus,
+          actionPipeline: actionPipeline,
           clock: () => DateTime.utc(2026, 7, 4, 12),
           idGenerator: () => 'evt-001',
         );
@@ -332,6 +339,8 @@ void main() {
             ),
           );
 
+        final eventBus = AdminEventBus();
+        final commandBus = AdminCommandBus();
         final controller = AdminWorkspaceController(
           workspaceRegistry: workspaceRegistry,
           navigationRegistry: AdminNavigationRegistry(),
@@ -344,7 +353,12 @@ void main() {
           ),
           permissionGateway: _FakePermissionGateway(granted: const <String>{}),
           repositoryResolver: (_) => _FakeWorkspaceRepository(result: const []),
-          eventBus: AdminEventBus(),
+          eventBus: eventBus,
+          commandBus: commandBus,
+          actionPipeline: AdminActionPipeline(
+            commandBus: commandBus,
+            eventBus: eventBus,
+          ),
         );
 
         await controller.loadWorkspace('audit', userId: 'USR-2');
@@ -372,6 +386,8 @@ void main() {
             ),
           );
         final repository = _FakeWorkspaceRepository(result: const []);
+        final eventBus = AdminEventBus();
+        final commandBus = AdminCommandBus();
 
         final controller = AdminWorkspaceController(
           workspaceRegistry: workspaceRegistry,
@@ -387,7 +403,12 @@ void main() {
             granted: const {'notifications.view'},
           ),
           repositoryResolver: (_) => repository,
-          eventBus: AdminEventBus(),
+          eventBus: eventBus,
+          commandBus: commandBus,
+          actionPipeline: AdminActionPipeline(
+            commandBus: commandBus,
+            eventBus: eventBus,
+          ),
         );
 
         await controller.loadWorkspace('notifications');
@@ -564,6 +585,47 @@ class _FakeWorkspaceRepository implements AdminWorkspaceRepository {
       'load:${workspace.id}:${query.search ?? ''}:${query.status ?? ''}:${query.tab ?? ''}:$forceRefresh',
     );
     return result;
+  }
+
+  @override
+  Future<Map<String, dynamic>> loadWorkspaceForm(
+    AdminWorkspaceDefinition workspace, {
+    required String formId,
+    String? recordId,
+  }) async {
+    return <String, dynamic>{
+      'workspaceId': workspace.id,
+      'formId': formId,
+      'recordId': recordId,
+    };
+  }
+
+  @override
+  Future<Map<String, dynamic>> executeWorkspaceAction(
+    AdminWorkspaceDefinition workspace, {
+    required String actionId,
+    Map<String, Object?> payload = const <String, Object?>{},
+  }) async {
+    return <String, dynamic>{
+      'workspaceId': workspace.id,
+      'actionId': actionId,
+      'payload': payload,
+    };
+  }
+
+  @override
+  Future<Map<String, dynamic>> executeBulkWorkspaceAction(
+    AdminWorkspaceDefinition workspace, {
+    required String actionId,
+    required List<String> recordIds,
+    Map<String, Object?> payload = const <String, Object?>{},
+  }) async {
+    return <String, dynamic>{
+      'workspaceId': workspace.id,
+      'actionId': actionId,
+      'recordIds': recordIds,
+      'payload': payload,
+    };
   }
 }
 

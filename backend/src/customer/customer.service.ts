@@ -337,6 +337,98 @@ export class CustomerService {
     return suspendedCustomer;
   }
 
+  async activate(id: bigint, staffUserId: bigint) {
+    const customer = await this.findOne(id);
+
+    return this.prisma.$transaction(async (tx) => {
+      if (customer.membership) {
+        await tx.membership.update({
+          where: { id: customer.membership.id },
+          data: { status: 'ACTIVE' },
+        });
+      }
+
+      if (customer.shieldCard) {
+        await tx.shieldCard.update({
+          where: { id: customer.shieldCard.id },
+          data: { status: 'ACTIVE' },
+        });
+      }
+
+      await tx.customerStatusHistory.create({
+        data: {
+          uuid: randomUUID(),
+          customerId: customer.id,
+          oldStatus: customer.status,
+          newStatus: 'ACTIVE',
+          changedBy: staffUserId,
+          remarks: 'Customer reactivated by staff',
+        },
+      });
+
+      return tx.customer.update({
+        where: { id: customer.id },
+        data: { status: 'ACTIVE' },
+      });
+    });
+  }
+
+  async softDelete(id: bigint, staffUserId: bigint) {
+    const customer = await this.findOne(id);
+    return this.prisma.$transaction(async (tx) => {
+      await tx.customerStatusHistory.create({
+        data: {
+          uuid: randomUUID(),
+          customerId: customer.id,
+          oldStatus: customer.status,
+          newStatus: customer.status,
+          changedBy: staffUserId,
+          remarks: 'Customer soft deleted by staff',
+        },
+      });
+      return tx.customer.update({
+        where: { id: customer.id },
+        data: {
+          deletedAt: new Date(),
+        },
+      });
+    });
+  }
+
+  async generateCard(id: bigint, staffUserId: bigint) {
+    const customer = await this.findOne(id);
+    if (customer.shieldCard) {
+      return customer.shieldCard;
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      const staffUser = await tx.user.findUnique({
+        where: { id: staffUserId },
+        include: { department: true },
+      });
+      let issuedBusinessId = staffUser?.department?.businessId || null;
+      if (!issuedBusinessId) {
+        const defaultBiz = await tx.business.findFirst({
+          where: { status: 'ACTIVE' },
+          orderBy: { id: 'asc' },
+        });
+        issuedBusinessId = defaultBiz?.id ?? null;
+      }
+
+      return tx.shieldCard.create({
+        data: {
+          uuid: randomUUID(),
+          customerId: customer.id,
+          cardNumber: `SHLD-CARD-${customer.customerCode?.split('-')[1]}`,
+          qrCode: `SHLD-CARD-${customer.customerCode?.split('-')[1]}-TOKEN`,
+          status: 'ACTIVE',
+          issuedBusinessId,
+          issuedAt: new Date(),
+        },
+      });
+    });
+  }
+
   private async createCustomerAggregate(data: any, staffUserId?: bigint) {
     const customerUuid = randomUUID();
     const customerCode = `CUST-${Math.floor(100000 + Math.random() * 900000)}`;

@@ -21,6 +21,7 @@
 - Shared owner
 - Buttons now render only when a real callback is resolved
 - Refresh and some tab/filter-targeted actions execute through `AdminWorkspaceController`
+- Backend-authored action descriptors, form metadata, and bulk actions now execute for the customer workspace
 - Affects all backend-rendered modules
 
 ### Expected Behaviour
@@ -29,7 +30,8 @@
 - Hide when action contract is absent
 
 ### Backend Needed
-- Action descriptors, not just labels
+- Already exists for customers
+- Still needed for the remaining workspaces
 
 ### Priority
 Critical
@@ -232,10 +234,10 @@ Blocked
 Header actions
 
 ### Current State
-- Backend labels exist
+- Backend labels and explicit action descriptors exist
 - Refresh executes
-- Customer export is now available from the live table surface
-- Explicit create, approval, and mutation command metadata is still missing
+- Customer edit, suspend, activate, delete, card generation, print profile, and bulk suspend/activate/export now execute through workspace commands
+- Create, merge, assign, and communication workflows are still missing
 
 ### Expected Behaviour
 - `Create customer`
@@ -243,13 +245,38 @@ Header actions
 - `Export current view`
 
 ### Backend Needed
-- Action descriptors and command metadata
+- Additional action descriptors and command metadata for create, assignment, merge, and outreach workflows
 
 ### Priority
 Critical
 
 ### Status
 Partial
+
+### Component
+Customer command platform
+
+### Current State
+- Backend-owned action descriptors are returned in the workspace payload
+- Dynamic edit form metadata is returned from `/admin/workspaces/customers/forms/edit`
+- Single-record and bulk mutation commands execute through `/admin/workspaces/customers/actions/*` and `/admin/workspaces/customers/bulk-actions/*`
+- Shared Flutter renderer now opens confirmation dialogs, dynamic forms, and bulk action bars from backend metadata
+
+### Expected Behaviour
+- Render customer actions from backend metadata only
+- Load forms dynamically
+- Execute commands through the shared action pipeline
+- Refresh workspace after successful mutations
+
+### Backend Needed
+- Already exists for the current customer action set
+- Remaining customer workflows still need published command descriptors
+
+### Priority
+Critical
+
+### Status
+Completed
 
 ### Component
 Search, tabs, filters

@@ -1,18 +1,28 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../../exports.dart';
 import '../../../../../shared/services/platform_file_actions.dart';
 
-class AdminBackendWorkspaceModule extends StatelessWidget {
+class AdminBackendWorkspaceModule extends StatefulWidget {
   const AdminBackendWorkspaceModule({super.key, required this.snapshot});
 
   final AdminWorkspaceSnapshot snapshot;
 
   @override
+  State<AdminBackendWorkspaceModule> createState() =>
+      _AdminBackendWorkspaceModuleState();
+}
+
+class _AdminBackendWorkspaceModuleState extends State<AdminBackendWorkspaceModule> {
+  List<String> _selectedRowIds = const <String>[];
+  bool _actionInFlight = false;
+
+  @override
   Widget build(BuildContext context) {
-    final payload = snapshot.data;
+    final payload = widget.snapshot.data;
     if (payload is! Map<String, dynamic>) {
       return const AdminEmptyState(
         title: 'Workspace payload unavailable',
@@ -25,22 +35,35 @@ class AdminBackendWorkspaceModule extends StatelessWidget {
     final header = _HeaderData.fromMap(payload['header']);
     final toolbar = _ToolbarData.fromMap(payload['toolbar']);
     final metrics = _parseMetrics(payload['metrics']);
+    final actions = _parseWorkspaceActions(payload['actions']);
+    final bulkActions = _parseWorkspaceActions(payload['bulkActions']);
     final panels = Map<String, dynamic>.from(
       payload['panels'] as Map? ?? const <String, dynamic>{},
     );
     final controller = AdminWorkspaceControllerScope.maybeOf(context);
-    final resolvedPrimaryAction = _resolveHeaderAction(
-      label: header.primaryActionLabel,
-      icon: Icons.bolt_outlined,
-      toolbar: toolbar,
-      controller: controller,
-    );
-    final resolvedSecondaryAction = _resolveHeaderAction(
-      label: header.secondaryActionLabel,
-      icon: Icons.tune_outlined,
-      toolbar: toolbar,
-      controller: controller,
-    );
+    final workspaceActions = actions
+        .where((action) => !action.requiresSelection && !action.allowBulk)
+        .toList(growable: false);
+    final recordActions = actions
+        .where((action) => action.requiresSelection && !action.allowBulk)
+        .toList(growable: false);
+    final resolvedPrimaryAction = workspaceActions.isEmpty
+        ? _resolveHeaderAction(
+            label: header.primaryActionLabel,
+            icon: Icons.bolt_outlined,
+            toolbar: toolbar,
+            controller: controller,
+          )
+        : _toActionItem(workspaceActions.first, controller);
+    final resolvedSecondaryAction =
+        workspaceActions.length < 2
+            ? _resolveHeaderAction(
+                label: header.secondaryActionLabel,
+                icon: Icons.tune_outlined,
+                toolbar: toolbar,
+                controller: controller,
+              )
+            : _toActionItem(workspaceActions[1], controller);
 
     return AdminPage(
       eyebrow: header.eyebrow,
@@ -70,6 +93,35 @@ class AdminBackendWorkspaceModule extends StatelessWidget {
             ),
             const SizedBox(height: 18),
           ],
+          if (recordActions.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 16),
+              child: _WorkspaceActionBar(
+                title: 'Customer actions',
+                actions: recordActions,
+                actionInFlight: _actionInFlight,
+                onActionPressed: controller == null
+                    ? null
+                    : (action) => _handleAction(
+                          controller,
+                          action,
+                          recordId: controller.query.selectedId,
+                        ),
+              ),
+            ),
+          if (bulkActions.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 16),
+              child: _WorkspaceActionBar(
+                title: 'Bulk actions',
+                actions: bulkActions,
+                actionInFlight: _actionInFlight,
+                enabled: _selectedRowIds.isNotEmpty,
+                onActionPressed: controller == null
+                    ? null
+                    : (action) => _handleBulkAction(controller, action),
+              ),
+            ),
           AdminSplitWorkspace(
             left: _PanelView(
               panel: _PanelData.fromMap(panels['left']),
@@ -80,6 +132,7 @@ class AdminBackendWorkspaceModule extends StatelessWidget {
               panel: _PanelData.fromMap(panels['center']),
               onRefresh: controller?.refresh,
               controller: controller,
+              onSelectionChanged: _updateSelection,
             ),
             right: panels['right'] == null
                 ? null
@@ -93,6 +146,162 @@ class AdminBackendWorkspaceModule extends StatelessWidget {
       ),
     );
   }
+
+  AdminActionItem _toActionItem(
+    AdminWorkspaceActionDescriptor action,
+    AdminWorkspaceController? controller,
+  ) {
+    return AdminActionItem(
+      label: action.label,
+      icon: _iconForAction(action.icon),
+      onPressed: controller == null || _actionInFlight
+          ? null
+          : () => _handleAction(
+                controller,
+                action,
+                recordId: controller.query.selectedId,
+              ),
+    );
+  }
+
+  Future<void> _handleAction(
+    AdminWorkspaceController controller,
+    AdminWorkspaceActionDescriptor action, {
+    String? recordId,
+  }) async {
+    if (action.requiresSelection && (recordId == null || recordId.trim().isEmpty)) {
+      _showMessage('Select a customer first.');
+      return;
+    }
+    final confirmed = await _confirmIfNeeded(action);
+    if (!confirmed) {
+      return;
+    }
+    Map<String, Object?> payload = const <String, Object?>{};
+    if (action.dialog?.type == 'FORM') {
+      final form = await controller.loadForm(
+        action.dialog?.formId ?? action.id,
+        recordId: recordId,
+      );
+      final values = await _showWorkspaceFormDialog(form);
+      if (values == null) {
+        return;
+      }
+      payload = values;
+    }
+    setState(() => _actionInFlight = true);
+    try {
+      final result = await controller.executeWorkspaceAction(
+        action,
+        recordId: recordId,
+        payload: payload,
+      );
+      await _handleActionResult(action, result);
+    } finally {
+      if (mounted) {
+        setState(() => _actionInFlight = false);
+      }
+    }
+  }
+
+  Future<void> _handleBulkAction(
+    AdminWorkspaceController controller,
+    AdminWorkspaceActionDescriptor action,
+  ) async {
+    if (_selectedRowIds.isEmpty) {
+      _showMessage('Select one or more customers first.');
+      return;
+    }
+    final confirmed = await _confirmIfNeeded(action);
+    if (!confirmed) {
+      return;
+    }
+    setState(() => _actionInFlight = true);
+    try {
+      final result = await controller.executeBulkWorkspaceAction(
+        action,
+        recordIds: _selectedRowIds,
+      );
+      await _handleActionResult(action, result);
+      if (mounted) {
+        setState(() => _selectedRowIds = const <String>[]);
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _actionInFlight = false);
+      }
+    }
+  }
+
+  Future<void> _handleActionResult(
+    AdminWorkspaceActionDescriptor action,
+    Map<String, dynamic> result,
+  ) async {
+    if ((result['contentBase64'] ?? '').toString().isNotEmpty) {
+      await downloadPlatformFile(
+        fileName: result['fileName']?.toString() ?? '${action.id}.bin',
+        mimeType: result['mimeType']?.toString() ?? 'application/octet-stream',
+        contentBase64: result['contentBase64']!.toString(),
+      );
+    }
+    _showMessage(
+      action.successMessage ??
+          result['message']?.toString() ??
+          '${action.label} completed successfully.',
+    );
+  }
+
+  Future<bool> _confirmIfNeeded(AdminWorkspaceActionDescriptor action) async {
+    final confirmation = action.confirmation;
+    if (confirmation == null || !mounted) {
+      return true;
+    }
+    return await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: Text(confirmation.title),
+            content: Text(confirmation.body),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: const Text('Cancel'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                child: Text(confirmation.confirmText),
+              ),
+            ],
+          ),
+        ) ??
+        false;
+  }
+
+  Future<Map<String, Object?>?> _showWorkspaceFormDialog(
+    Map<String, dynamic> form,
+  ) {
+    return showDialog<Map<String, Object?>>(
+      context: context,
+      builder: (context) => _WorkspaceFormDialog(form: form),
+    );
+  }
+
+  void _updateSelection(List<String> ids) {
+    if (listEquals(ids, _selectedRowIds)) {
+      return;
+    }
+    setState(() {
+      _selectedRowIds = ids;
+    });
+  }
+
+  void _showMessage(String message) {
+    if (!mounted) {
+      return;
+    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
+  }
 }
 
 class _PanelView extends StatelessWidget {
@@ -100,11 +309,13 @@ class _PanelView extends StatelessWidget {
     required this.panel,
     this.onRefresh,
     this.controller,
+    this.onSelectionChanged,
   });
 
   final _PanelData panel;
   final VoidCallback? onRefresh;
   final AdminWorkspaceController? controller;
+  final ValueChanged<List<String>>? onSelectionChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -116,6 +327,7 @@ class _PanelView extends StatelessWidget {
           panel: panel,
           onRefresh: onRefresh,
           controller: controller,
+          onSelectionChanged: onSelectionChanged,
         ),
         _PanelType.details =>
           _DetailsPanel(panel: panel, onRefresh: onRefresh),
@@ -134,11 +346,13 @@ class _TablePanel extends StatelessWidget {
     required this.panel,
     this.onRefresh,
     this.controller,
+    this.onSelectionChanged,
   });
 
   final _PanelData panel;
   final VoidCallback? onRefresh;
   final AdminWorkspaceController? controller;
+  final ValueChanged<List<String>>? onSelectionChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -190,6 +404,7 @@ class _TablePanel extends StatelessWidget {
       onPageSizeChanged: controller == null
           ? null
           : (pageSize) => controller!.changePageSize(pageSize),
+      onSelectionChanged: onSelectionChanged,
       onExport: () => _exportTablePanel(context, panel),
     );
   }
@@ -529,6 +744,15 @@ String _escapeCsv(String value) {
   return '"$normalized"';
 }
 
+List<AdminWorkspaceActionDescriptor> _parseWorkspaceActions(Object? raw) {
+  return (raw as List? ?? const <dynamic>[])
+      .whereType<Map>()
+      .map((item) => Map<String, dynamic>.from(item))
+      .map(AdminWorkspaceActionDescriptor.fromMap)
+      .where((action) => action.id.trim().isNotEmpty)
+      .toList(growable: false);
+}
+
 AdminActionItem? _resolveHeaderAction({
   required String? label,
   required IconData icon,
@@ -697,4 +921,295 @@ Color _statusColor(String? status) {
     return AdminColors.success;
   }
   return AdminColors.secondary;
+}
+
+IconData _iconForAction(String iconKey) {
+  switch (iconKey.trim().toLowerCase()) {
+    case 'edit':
+      return Icons.edit_outlined;
+    case 'pause_circle':
+      return Icons.pause_circle_outline;
+    case 'check_circle':
+      return Icons.check_circle_outline;
+    case 'delete':
+      return Icons.delete_outline;
+    case 'credit_card':
+    case 'badge':
+      return Icons.credit_card_outlined;
+    case 'print':
+      return Icons.print_outlined;
+    case 'download':
+      return Icons.download_outlined;
+    case 'upload':
+      return Icons.upload_file_outlined;
+    case 'visibility':
+      return Icons.visibility_outlined;
+    default:
+      return Icons.bolt_outlined;
+  }
+}
+
+class _WorkspaceActionBar extends StatelessWidget {
+  const _WorkspaceActionBar({
+    required this.title,
+    required this.actions,
+    required this.actionInFlight,
+    required this.onActionPressed,
+    this.enabled = true,
+  });
+
+  final String title;
+  final List<AdminWorkspaceActionDescriptor> actions;
+  final bool actionInFlight;
+  final bool enabled;
+  final ValueChanged<AdminWorkspaceActionDescriptor>? onActionPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    if (actions.isEmpty) {
+      return const SizedBox.shrink();
+    }
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AdminColors.surface,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: AdminColors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: AdminTypography.body.copyWith(
+              color: AdminColors.text,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: actions
+                .map(
+                  (action) => FilledButton.icon(
+                    onPressed: !enabled || actionInFlight || onActionPressed == null
+                        ? null
+                        : () => onActionPressed!(action),
+                    icon: Icon(_iconForAction(action.icon), size: 18),
+                    label: Text(action.label),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: _actionColor(action),
+                      foregroundColor: Colors.white,
+                    ),
+                  ),
+                )
+                .toList(growable: false),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Color _actionColor(AdminWorkspaceActionDescriptor action) {
+    switch (action.category.trim().toLowerCase()) {
+      case 'danger':
+        return AdminColors.danger;
+      case 'primary':
+        return AdminColors.primary;
+      default:
+        return AdminColors.secondary;
+    }
+  }
+}
+
+class _WorkspaceFormDialog extends StatefulWidget {
+  const _WorkspaceFormDialog({required this.form});
+
+  final Map<String, dynamic> form;
+
+  @override
+  State<_WorkspaceFormDialog> createState() => _WorkspaceFormDialogState();
+}
+
+class _WorkspaceFormDialogState extends State<_WorkspaceFormDialog> {
+  late final List<_WorkspaceFieldData> _fields;
+  final Map<String, TextEditingController> _controllers =
+      <String, TextEditingController>{};
+  final Map<String, bool> _boolValues = <String, bool>{};
+  final Map<String, String> _selectedValues = <String, String>{};
+
+  @override
+  void initState() {
+    super.initState();
+    _fields = (widget.form['fields'] as List? ?? const <dynamic>[])
+        .whereType<Map>()
+        .map((field) => _WorkspaceFieldData.fromMap(Map<String, dynamic>.from(field)))
+        .toList(growable: false);
+    for (final field in _fields) {
+      switch (field.type) {
+        case 'checkbox':
+          _boolValues[field.key] = field.value.toLowerCase() == 'true';
+          break;
+        case 'select':
+          _selectedValues[field.key] = field.value.isNotEmpty
+              ? field.value
+              : (field.options.isNotEmpty ? field.options.first : '');
+          break;
+        default:
+          _controllers[field.key] = TextEditingController(text: field.value);
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    for (final controller in _controllers.values) {
+      controller.dispose();
+    }
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final title = widget.form['title']?.toString() ?? 'Workspace form';
+    return AlertDialog(
+      title: Text(title),
+      content: SizedBox(
+        width: 520,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: _fields.map(_buildField).toList(growable: false),
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.of(context).pop(_collectValues()),
+          child: const Text('Save'),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildField(_WorkspaceFieldData field) {
+    final label = field.required ? '${field.label} *' : field.label;
+    switch (field.type) {
+      case 'dropdown':
+      case 'select':
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 14),
+          child: DropdownButtonFormField<String>(
+            initialValue: _selectedValues[field.key]?.isEmpty ?? true
+                ? null
+                : _selectedValues[field.key],
+            items: field.options
+                .map(
+                  (option) => DropdownMenuItem<String>(
+                    value: option,
+                    child: Text(option),
+                  ),
+                )
+                .toList(growable: false),
+            onChanged: field.readOnly
+                ? null
+                : (value) => setState(() {
+                    _selectedValues[field.key] = value ?? '';
+                  }),
+            decoration: InputDecoration(labelText: label),
+          ),
+        );
+      case 'checkbox':
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 14),
+          child: CheckboxListTile(
+            contentPadding: EdgeInsets.zero,
+            value: _boolValues[field.key] ?? false,
+            onChanged: field.readOnly
+                ? null
+                : (value) => setState(() {
+                    _boolValues[field.key] = value ?? false;
+                  }),
+            title: Text(label),
+          ),
+        );
+      default:
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 14),
+          child: TextField(
+            controller: _controllers[field.key],
+            readOnly: field.readOnly,
+            maxLines: field.type == 'textarea' ? 4 : 1,
+            keyboardType: field.type == 'number'
+                ? TextInputType.number
+                : field.type == 'date'
+                    ? TextInputType.datetime
+                    : TextInputType.text,
+            decoration: InputDecoration(
+              labelText: label,
+              helperText: field.helperText,
+            ),
+          ),
+        );
+    }
+  }
+
+  Map<String, Object?> _collectValues() {
+    final values = <String, Object?>{};
+    for (final field in _fields) {
+      switch (field.type) {
+        case 'checkbox':
+          values[field.key] = _boolValues[field.key] ?? false;
+          break;
+        case 'select':
+          values[field.key] = _selectedValues[field.key] ?? '';
+          break;
+        default:
+          values[field.key] = _controllers[field.key]?.text.trim() ?? '';
+      }
+    }
+    return values;
+  }
+}
+
+class _WorkspaceFieldData {
+  const _WorkspaceFieldData({
+    required this.key,
+    required this.label,
+    required this.type,
+    required this.value,
+    required this.required,
+    required this.readOnly,
+    required this.options,
+    this.helperText,
+  });
+
+  factory _WorkspaceFieldData.fromMap(Map<String, dynamic> map) {
+    return _WorkspaceFieldData(
+      key: (map['key'] ?? map['name'] ?? '').toString(),
+      label: (map['label'] ?? 'Field').toString(),
+      type: (map['type'] ?? 'text').toString(),
+      value: (map['value'] ?? '').toString(),
+      required: map['required'] == true,
+      readOnly: map['readonly'] == true || map['readOnly'] == true,
+      options: (map['options'] as List? ?? const <dynamic>[])
+          .map((option) => option.toString())
+          .toList(growable: false),
+      helperText: map['helperText']?.toString(),
+    );
+  }
+
+  final String key;
+  final String label;
+  final String type;
+  final String value;
+  final bool required;
+  final bool readOnly;
+  final List<String> options;
+  final String? helperText;
 }

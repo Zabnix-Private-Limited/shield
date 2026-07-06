@@ -75,4 +75,23 @@ abstract class AdminWorkspaceRepository {
     AdminWorkspaceQuery query = const AdminWorkspaceQuery(),
     bool forceRefresh = false,
   });
+
+  Future<Map<String, dynamic>> loadWorkspaceForm(
+    AdminWorkspaceDefinition workspace, {
+    required String formId,
+    String? recordId,
+  });
+
+  Future<Map<String, dynamic>> executeWorkspaceAction(
+    AdminWorkspaceDefinition workspace, {
+    required String actionId,
+    Map<String, Object?> payload = const <String, Object?>{},
+  });
+
+  Future<Map<String, dynamic>> executeBulkWorkspaceAction(
+    AdminWorkspaceDefinition workspace, {
+    required String actionId,
+    required List<String> recordIds,
+    Map<String, Object?> payload = const <String, Object?>{},
+  });
 }

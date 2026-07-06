@@ -8920,3 +8920,40 @@ Completed a vertical customer-management interface pass through the existing Adm
 - `cd frontend && flutter test test/admin_data_table_test.dart test/admin_backend_workspace_module_test.dart` ✅
 - `cd backend && npm test -- --runInBand admin-governance.controller.spec.ts` ✅
 - `cd backend && npm run build` ✅
+
+## 249. Customer Workspace Contract V2 Command Metadata Foundation
+**Timestamp:** 2026-07-06 07:25:50 IST
+
+Completed the first command-side platform slice for the backend-driven Admin Runtime so the customer workspace is no longer limited to read-side metadata. The shared workspace contract now carries backend-authored action descriptors, bulk actions, permissions, export metadata, dynamic form metadata, and typed command manifests; the shared Flutter renderer now executes those contracts through the existing workspace controller, command bus, action pipeline, repository, and backend workspace endpoints instead of hardcoded customer buttons.
+
+**Frontend Files**
+- `docs/superpowers/audits/2026-07-05-admin-interaction-audit.md`
+- `frontend/lib/features/admin/governance/data/admin_governance_remote_data_source.dart`
+- `frontend/lib/features/admin/governance/data/admin_governance_workspace_repository.dart`
+- `frontend/lib/features/admin/presentation/registry/admin_platform_runtime.dart`
+- `frontend/lib/features/admin/shared/components/admin_data_table.dart`
+- `frontend/lib/features/admin/shared/controllers/admin_workspace_controller.dart`
+- `frontend/lib/features/admin/shared/engine/actions/admin_action_definition.dart`
+- `frontend/lib/features/admin/shared/engine/workspace/admin_workspace_repository.dart`
+- `frontend/lib/features/admin/shared/presentation/widgets/admin_backend_workspace_module.dart`
+- `frontend/lib/shared/services/api_service.dart`
+- `frontend/test/admin_engine_runtime_test.dart`
+
+**Backend Files**
+- `backend/src/admin-governance/admin-governance.controller.spec.ts`
+- `backend/src/admin-governance/admin-governance.controller.ts`
+- `backend/src/admin-governance/admin-governance.module.ts`
+- `backend/src/admin-governance/admin-governance.service.ts`
+- `backend/src/customer/customer.service.ts`
+
+**Why**
+- The customer workspace had already crossed the read-side threshold with real backend metrics, selection, sorting, pagination, export, and detail tabs, but the mutation side was still missing a reusable contract for actions and forms.
+- This pass creates the first reusable command foundation without bypassing the Admin Runtime architecture: backend workspaces now publish action/form/command metadata, and the shared renderer consumes it generically through the same repository and controller chain already used for query-side rendering.
+- The customer module now serves as the reference implementation for command metadata before the same contract is expanded to wallet, memberships, CRM, providers, and the rest of the admin platform.
+
+**Verification**
+- `cd frontend && flutter analyze --no-pub` ✅
+- `cd frontend && flutter test` ✅
+- `cd backend && npm test -- --runInBand` ✅
+- `cd backend && npm test -- --runInBand src/admin-governance/admin-governance.controller.spec.ts` ✅
+- `cd backend && npm run build` ✅

@@ -31,6 +31,7 @@ class AdminDataTable<T> extends StatefulWidget {
     this.sortAscending = true,
     this.onSortChanged,
     this.onRowTap,
+    this.onSelectionChanged,
     this.page,
     this.pageSize,
     this.totalRows,
@@ -48,6 +49,7 @@ class AdminDataTable<T> extends StatefulWidget {
   final bool sortAscending;
   final void Function(String columnKey, bool ascending)? onSortChanged;
   final void Function(T row)? onRowTap;
+  final ValueChanged<List<String>>? onSelectionChanged;
   final int? page;
   final int? pageSize;
   final int? totalRows;
@@ -248,6 +250,7 @@ class _AdminDataTableState<T> extends State<AdminDataTable<T>> {
       ..addAll(
         widget.selectedRowId == null ? const <String>[] : <String>[widget.selectedRowId!],
       );
+    _notifySelectionChanged();
   }
 
   void _handleSortTap(int index, AdminDataTableColumn<T> column) {
@@ -299,6 +302,7 @@ class _AdminDataTableState<T> extends State<AdminDataTable<T>> {
         }
       }
     });
+    _notifySelectionChanged();
   }
 
   void _toggleRowSelection(String rowId) {
@@ -309,6 +313,13 @@ class _AdminDataTableState<T> extends State<AdminDataTable<T>> {
         _selectedRowIds.add(rowId);
       }
     });
+    _notifySelectionChanged();
+  }
+
+  void _notifySelectionChanged() {
+    widget.onSelectionChanged?.call(
+      _selectedRowIds.toList(growable: false),
+    );
   }
 }
 
