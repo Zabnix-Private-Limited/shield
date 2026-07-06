@@ -7,10 +7,7 @@ import '../../../../shared/models/shield_role.dart';
 class CustomerBottomNavigation extends StatelessWidget {
   final String activeSectionKey;
 
-  const CustomerBottomNavigation({
-    super.key,
-    required this.activeSectionKey,
-  });
+  const CustomerBottomNavigation({super.key, required this.activeSectionKey});
 
   static const List<_CustomerBottomNavItem> _items = [
     _CustomerBottomNavItem(
@@ -57,7 +54,9 @@ class CustomerBottomNavigation extends StatelessWidget {
         if (item.sectionKey == activeSectionKey) {
           return;
         }
-        context.go('/portal/${SHIELDRole.customer.routeKey}/${item.sectionKey}');
+        context.go(
+          '/portal/${SHIELDRole.customer.routeKey}/${item.sectionKey}',
+        );
       },
       destinations: _items
           .map(

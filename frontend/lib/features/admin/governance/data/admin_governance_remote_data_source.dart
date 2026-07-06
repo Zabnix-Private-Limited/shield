@@ -63,7 +63,9 @@ class AdminGovernanceRemoteDataSource {
       actionId: actionId,
       payload: payload,
     );
-    _cache.removeWhere((key, _) => key.startsWith('${workspaceId.trim().toLowerCase()}|'));
+    _cache.removeWhere(
+      (key, _) => key.startsWith('${workspaceId.trim().toLowerCase()}|'),
+    );
     return response;
   }
 
@@ -79,7 +81,9 @@ class AdminGovernanceRemoteDataSource {
       recordIds: recordIds,
       payload: payload,
     );
-    _cache.removeWhere((key, _) => key.startsWith('${workspaceId.trim().toLowerCase()}|'));
+    _cache.removeWhere(
+      (key, _) => key.startsWith('${workspaceId.trim().toLowerCase()}|'),
+    );
     return response;
   }
 }

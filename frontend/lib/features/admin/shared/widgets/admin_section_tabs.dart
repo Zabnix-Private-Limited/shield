@@ -20,56 +20,45 @@ class AdminSectionTabs extends StatelessWidget {
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: Row(
-        children: tabs
-            .asMap()
-            .entries
-            .map(
-              (entry) {
-                final isSelected =
-                    selectedTab == null
-                        ? entry.key == 0
-                        : entry.value.trim().toLowerCase() ==
-                            selectedTab!.trim().toLowerCase();
-                return Padding(
-                  padding: EdgeInsets.only(
-                    right: entry.key == tabs.length - 1 ? 0 : 10,
+        children: tabs.asMap().entries.map((entry) {
+          final isSelected = selectedTab == null
+              ? entry.key == 0
+              : entry.value.trim().toLowerCase() ==
+                    selectedTab!.trim().toLowerCase();
+          return Padding(
+            padding: EdgeInsets.only(
+              right: entry.key == tabs.length - 1 ? 0 : 10,
+            ),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(999),
+              onTap: onSelected == null ? null : () => onSelected!(entry.value),
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 10,
+                ),
+                decoration: BoxDecoration(
+                  color: isSelected ? AdminColors.primary : AdminColors.surface,
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(
+                    color: isSelected
+                        ? AdminColors.primary
+                        : AdminColors.border,
                   ),
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(999),
-                    onTap: onSelected == null
-                        ? null
-                        : () => onSelected!(entry.value),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 14,
-                        vertical: 10,
-                      ),
-                      decoration: BoxDecoration(
-                        color: isSelected
-                            ? AdminColors.primary
-                            : AdminColors.surface,
-                        borderRadius: BorderRadius.circular(999),
-                        border: Border.all(
-                          color: isSelected
-                              ? AdminColors.primary
-                              : AdminColors.border,
-                        ),
-                      ),
-                      child: Text(
-                        entry.value,
-                        style: AdminTypography.small.copyWith(
-                          color: isSelected
-                              ? AdminColors.surface
-                              : AdminColors.subtext,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ),
+                ),
+                child: Text(
+                  entry.value,
+                  style: AdminTypography.small.copyWith(
+                    color: isSelected
+                        ? AdminColors.surface
+                        : AdminColors.subtext,
+                    fontWeight: FontWeight.w700,
                   ),
-                );
-              },
-            )
-            .toList(),
+                ),
+              ),
+            ),
+          );
+        }).toList(),
       ),
     );
   }

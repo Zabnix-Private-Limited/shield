@@ -17,10 +17,9 @@ Future<bool> downloadPlatformFile({
       html.window.open(url, '_blank');
       return true;
     }
-    final anchor =
-        html.AnchorElement(href: url)
-          ..download = fileName
-          ..style.display = 'none';
+    final anchor = html.AnchorElement(href: url)
+      ..download = fileName
+      ..style.display = 'none';
     html.document.body?.append(anchor);
     anchor.click();
     anchor.remove();
@@ -36,9 +35,7 @@ Future<bool> openPlatformUrl(String url) async {
 }
 
 Future<bool> downloadPlatformUrl(String url, {String? fileName}) async {
-  final anchor =
-      html.AnchorElement(href: url)
-        ..style.display = 'none';
+  final anchor = html.AnchorElement(href: url)..style.display = 'none';
   if ((fileName ?? '').trim().isNotEmpty) {
     anchor.download = fileName!;
   }

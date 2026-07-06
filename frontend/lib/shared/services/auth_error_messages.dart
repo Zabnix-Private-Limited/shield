@@ -11,10 +11,7 @@ enum AuthFlow {
 class AuthErrorMessages {
   const AuthErrorMessages._();
 
-  static String resolve(
-    Object error, {
-    required AuthFlow flow,
-  }) {
+  static String resolve(Object error, {required AuthFlow flow}) {
     if (error is FirebaseAuthException) {
       final code = error.code.trim().toLowerCase();
       switch (code) {

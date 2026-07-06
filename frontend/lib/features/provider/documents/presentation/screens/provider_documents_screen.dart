@@ -24,7 +24,9 @@ class ProviderDocumentsScreen extends StatelessWidget {
         Future<void> openDocument(dynamic document) async {
           final messenger = ScaffoldMessenger.of(context);
           try {
-            final url = await controller.getPatientDocumentDownloadUrl(document.id);
+            final url = await controller.getPatientDocumentDownloadUrl(
+              document.id,
+            );
             if (url.trim().isEmpty) {
               throw StateError('Document link unavailable');
             }
@@ -50,7 +52,9 @@ class ProviderDocumentsScreen extends StatelessWidget {
         Future<void> downloadDocument(dynamic document) async {
           final messenger = ScaffoldMessenger.of(context);
           try {
-            final url = await controller.getPatientDocumentDownloadUrl(document.id);
+            final url = await controller.getPatientDocumentDownloadUrl(
+              document.id,
+            );
             if (url.trim().isEmpty) {
               throw StateError('Document link unavailable');
             }
@@ -94,7 +98,8 @@ class ProviderDocumentsScreen extends StatelessWidget {
             const SizedBox(height: 16),
             _DocumentSection(
               title: 'Prescriptions',
-              emptyMessage: 'No prescription files are linked to this patient yet.',
+              emptyMessage:
+                  'No prescription files are linked to this patient yet.',
               documents: prescriptions,
               onOpen: openDocument,
               onDownload: downloadDocument,
@@ -121,7 +126,8 @@ class ProviderDocumentsScreen extends StatelessWidget {
             const SizedBox(height: 16),
             _DocumentSection(
               title: 'Other Records',
-              emptyMessage: 'No other records are available for this patient yet.',
+              emptyMessage:
+                  'No other records are available for this patient yet.',
               documents: otherDocuments,
               onOpen: openDocument,
               onDownload: downloadDocument,
@@ -170,10 +176,10 @@ class _DocumentSection extends StatelessWidget {
                 onTap: () => onOpen(document),
                 title: Text(document.fileName),
                 subtitle: Text(
-                  [
-                    document.typeLabel,
-                    document.extractionPreview,
-                  ].whereType<String>().where((value) => value.trim().isNotEmpty).join(' • '),
+                  [document.typeLabel, document.extractionPreview]
+                      .whereType<String>()
+                      .where((value) => value.trim().isNotEmpty)
+                      .join(' • '),
                 ),
                 trailing: Wrap(
                   spacing: 8,

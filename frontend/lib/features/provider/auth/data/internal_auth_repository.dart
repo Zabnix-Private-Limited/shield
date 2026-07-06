@@ -84,7 +84,9 @@ class InternalAuthRepository {
       return false;
     }
     if (!hasPendingInternalAuthRedirect()) {
-      _trace('redirect resume skipped because SHIELD did not initiate redirect fallback');
+      _trace(
+        'redirect resume skipped because SHIELD did not initiate redirect fallback',
+      );
       return false;
     }
     _trace('redirect resume started');

@@ -24,20 +24,22 @@ class NotificationsCard extends StatelessWidget {
               style: AppTypography.small.copyWith(color: AppColors.gray),
             )
           else
-            ...notifications.take(2).map(
-              (notification) => Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: Text(
-                  notification.title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppTypography.small.copyWith(
-                    color: AppColors.darkGray,
-                    fontWeight: FontWeight.w600,
+            ...notifications
+                .take(2)
+                .map(
+                  (notification) => Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Text(
+                      notification.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTypography.small.copyWith(
+                        color: AppColors.darkGray,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                   ),
                 ),
-              ),
-            ),
         ],
       ),
     );

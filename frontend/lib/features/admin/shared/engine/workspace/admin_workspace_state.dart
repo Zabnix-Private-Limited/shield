@@ -21,44 +21,44 @@ class AdminWorkspaceState {
     Object? payload,
     String? message,
   }) : this(
-          workspaceId: workspaceId,
-          status: AdminWorkspaceStatus.loading,
-          payload: payload,
-          message: message,
-        );
+         workspaceId: workspaceId,
+         status: AdminWorkspaceStatus.loading,
+         payload: payload,
+         message: message,
+       );
 
   const AdminWorkspaceState.ready({
     required String workspaceId,
     Object? payload,
     String? message,
   }) : this(
-          workspaceId: workspaceId,
-          status: AdminWorkspaceStatus.ready,
-          payload: payload,
-          message: message,
-        );
+         workspaceId: workspaceId,
+         status: AdminWorkspaceStatus.ready,
+         payload: payload,
+         message: message,
+       );
 
   const AdminWorkspaceState.empty({
     required String workspaceId,
     Object? payload,
     String? message,
   }) : this(
-          workspaceId: workspaceId,
-          status: AdminWorkspaceStatus.empty,
-          payload: payload,
-          message: message,
-        );
+         workspaceId: workspaceId,
+         status: AdminWorkspaceStatus.empty,
+         payload: payload,
+         message: message,
+       );
 
   const AdminWorkspaceState.permissionDenied({
     required String workspaceId,
     Object? payload,
     String? message,
   }) : this(
-          workspaceId: workspaceId,
-          status: AdminWorkspaceStatus.permissionDenied,
-          payload: payload,
-          message: message,
-        );
+         workspaceId: workspaceId,
+         status: AdminWorkspaceStatus.permissionDenied,
+         payload: payload,
+         message: message,
+       );
 
   final String workspaceId;
   final AdminWorkspaceStatus status;

@@ -8,8 +8,7 @@ import 'prescription_file_picker.dart';
 
 Future<PickedPrescriptionFile?> pickPrescriptionFile() async {
   final completer = Completer<PickedPrescriptionFile?>();
-  final input =
-      html.FileUploadInputElement()..accept = '.pdf,.png,.jpg,.jpeg';
+  final input = html.FileUploadInputElement()..accept = '.pdf,.png,.jpg,.jpeg';
 
   input.onChange.listen((_) async {
     final file = input.files?.isNotEmpty == true ? input.files!.first : null;

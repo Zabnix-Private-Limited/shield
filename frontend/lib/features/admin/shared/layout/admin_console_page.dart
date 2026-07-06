@@ -42,17 +42,16 @@ class AdminConsolePage extends StatelessWidget {
             : Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(child: _HeaderText(title: title, subtitle: subtitle)),
+                  Expanded(
+                    child: _HeaderText(title: title, subtitle: subtitle),
+                  ),
                   if (actions.isNotEmpty) ...[
                     const SizedBox(width: 20),
                     _HeaderActions(actions: actions),
                   ],
                 ],
               ),
-        if (toolbar != null) ...[
-          const SizedBox(height: 18),
-          toolbar!,
-        ],
+        if (toolbar != null) ...[const SizedBox(height: 18), toolbar!],
         const SizedBox(height: 18),
         child,
       ],
@@ -61,10 +60,7 @@ class AdminConsolePage extends StatelessWidget {
 }
 
 class _HeaderText extends StatelessWidget {
-  const _HeaderText({
-    required this.title,
-    required this.subtitle,
-  });
+  const _HeaderText({required this.title, required this.subtitle});
 
   final String title;
   final String subtitle;

@@ -40,9 +40,7 @@ class WalletEmptyState extends StatelessWidget {
                 const SizedBox(height: 3),
                 Text(
                   'Recent cash and points movements will appear here after ledger entries are available.',
-                  style: AppTypography.tiny.copyWith(
-                    color: AppColors.gray,
-                  ),
+                  style: AppTypography.tiny.copyWith(color: AppColors.gray),
                 ),
               ],
             ),

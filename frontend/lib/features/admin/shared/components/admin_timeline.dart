@@ -5,10 +5,7 @@ import '../theme/admin_colors.dart';
 import '../theme/admin_typography.dart';
 
 class AdminTimeline extends StatelessWidget {
-  const AdminTimeline({
-    super.key,
-    required this.items,
-  });
+  const AdminTimeline({super.key, required this.items});
 
   final List<AdminTimelineItem> items;
 

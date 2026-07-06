@@ -46,20 +46,20 @@ class Document extends Equatable {
   });
 
   factory Document.fromJson(Map<String, dynamic> json) {
-    final extractions = (json['documentExtractions'] as List<dynamic>? ??
-            const <dynamic>[])
-        .whereType<Map>()
-        .map((item) => Map<String, dynamic>.from(item))
-        .toList();
-    final processingLogs = (json['documentProcessingLogs'] as List<dynamic>? ??
-            const <dynamic>[])
-        .whereType<Map>()
-        .map((item) => Map<String, dynamic>.from(item))
-        .toList();
-    final latestExtraction =
-        extractions.isEmpty ? null : extractions.last;
-    final latestProcessingLog =
-        processingLogs.isEmpty ? null : processingLogs.last;
+    final extractions =
+        (json['documentExtractions'] as List<dynamic>? ?? const <dynamic>[])
+            .whereType<Map>()
+            .map((item) => Map<String, dynamic>.from(item))
+            .toList();
+    final processingLogs =
+        (json['documentProcessingLogs'] as List<dynamic>? ?? const <dynamic>[])
+            .whereType<Map>()
+            .map((item) => Map<String, dynamic>.from(item))
+            .toList();
+    final latestExtraction = extractions.isEmpty ? null : extractions.last;
+    final latestProcessingLog = processingLogs.isEmpty
+        ? null
+        : processingLogs.last;
 
     DocumentType parseType(String? value) {
       switch ((value ?? '').toUpperCase()) {
@@ -121,18 +121,18 @@ class Document extends Equatable {
             (json['createdAt'] ?? json['created_at']).toString(),
           ) ??
           DateTime.now(),
-      processedAt:
-          DateTime.tryParse(
-            (json['processedAt'] ??
-                    json['processed_at'] ??
-                    latestProcessingLog?['processedAt'] ??
-                    latestProcessingLog?['processed_at'] ??
-                    '')
-                .toString(),
-          ),
-      extractionText: (latestExtraction?['extractedText'] ??
-              latestExtraction?['extracted_text'])
-          ?.toString(),
+      processedAt: DateTime.tryParse(
+        (json['processedAt'] ??
+                json['processed_at'] ??
+                latestProcessingLog?['processedAt'] ??
+                latestProcessingLog?['processed_at'] ??
+                '')
+            .toString(),
+      ),
+      extractionText:
+          (latestExtraction?['extractedText'] ??
+                  latestExtraction?['extracted_text'])
+              ?.toString(),
       extractionConfidence: double.tryParse(
         (latestExtraction?['confidenceScore'] ??
                 latestExtraction?['confidence_score'] ??

@@ -7,10 +7,8 @@ import '../../data/models/membership_model.dart';
 import '../../data/repositories/membership_repository.dart';
 
 class MembershipController extends ChangeNotifier {
-  MembershipController({
-    MembershipRepository? repository,
-    this.customerId,
-  }) : _repository = repository ?? MembershipRepository();
+  MembershipController({MembershipRepository? repository, this.customerId})
+    : _repository = repository ?? MembershipRepository();
 
   final MembershipRepository _repository;
   final String? customerId;

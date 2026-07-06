@@ -1,19 +1,18 @@
 import 'admin_command_definition.dart';
 
-typedef AdminCommandHandler = Future<Object?> Function(
-  AdminCommandDefinition command,
-);
+typedef AdminCommandHandler =
+    Future<Object?> Function(AdminCommandDefinition command);
 
-typedef AdminCommandMiddleware = Future<Object?> Function(
-  AdminCommandDefinition command,
-  Future<Object?> Function(AdminCommandDefinition command) next,
-);
+typedef AdminCommandMiddleware =
+    Future<Object?> Function(
+      AdminCommandDefinition command,
+      Future<Object?> Function(AdminCommandDefinition command) next,
+    );
 
 class AdminCommandBus {
   final Map<String, AdminCommandHandler> _handlers =
       <String, AdminCommandHandler>{};
-  final List<AdminCommandMiddleware> _middlewares =
-      <AdminCommandMiddleware>[];
+  final List<AdminCommandMiddleware> _middlewares = <AdminCommandMiddleware>[];
 
   void registerHandler(String type, AdminCommandHandler handler) {
     _handlers[type] = handler;
@@ -39,10 +38,7 @@ class AdminCommandBus {
       }
 
       final middleware = _middlewares[index];
-      return middleware(
-        nextCommand,
-        (command) => invokeAt(index + 1, command),
-      );
+      return middleware(nextCommand, (command) => invokeAt(index + 1, command));
     }
 
     return invokeAt(0, command);

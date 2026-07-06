@@ -16,10 +16,7 @@ class AdminBuilderStepItem {
 }
 
 class AdminBuilderSteps extends StatelessWidget {
-  const AdminBuilderSteps({
-    super.key,
-    required this.steps,
-  });
+  const AdminBuilderSteps({super.key, required this.steps});
 
   final List<AdminBuilderStepItem> steps;
 
@@ -64,7 +61,9 @@ class AdminBuilderSteps extends StatelessWidget {
                         const SizedBox(height: 4),
                         Text(
                           item.description,
-                          style: AdminTypography.small.copyWith(color: AdminColors.subtext),
+                          style: AdminTypography.small.copyWith(
+                            color: AdminColors.subtext,
+                          ),
                         ),
                       ],
                     ),

@@ -76,73 +76,72 @@ class _CustomerWalletScreenState extends State<CustomerWalletScreen> {
               customer: customer,
               customerStatus: customer.status,
             );
-        if (_controller.isLoading && !_controller.hasData) {
-          return const WalletShimmer();
-        }
+            if (_controller.isLoading && !_controller.hasData) {
+              return const WalletShimmer();
+            }
 
-        if (_controller.error != null && !_controller.hasData) {
-          return ErrorCard(
-            title: 'Wallet unavailable',
-            message: 'The local wallet preview could not be loaded.',
-            onRetry: _controller.load,
-          );
-        }
+            if (_controller.error != null && !_controller.hasData) {
+              return ErrorCard(
+                title: 'Wallet unavailable',
+                message: 'The local wallet preview could not be loaded.',
+                onRetry: _controller.load,
+              );
+            }
 
-        final wallet = _controller.wallet;
-        if (wallet == null) {
-          return ErrorCard(
-            title: 'Wallet unavailable',
-            message: 'No wallet data is available right now.',
-            onRetry: _controller.load,
-          );
-        }
+            final wallet = _controller.wallet;
+            if (wallet == null) {
+              return ErrorCard(
+                title: 'Wallet unavailable',
+                message: 'No wallet data is available right now.',
+                onRetry: _controller.load,
+              );
+            }
 
-        if (!accessState.serviceAccessEnabled) {
-          return _LockedWalletView(customer: customer);
-        }
+            if (!accessState.serviceAccessEnabled) {
+              return _LockedWalletView(customer: customer);
+            }
 
-        final visibleTransactions = wallet.recentTransactions.where((txn) {
-          return _selectedLedger == 'ALL' || txn.subLedgerType == _selectedLedger;
-        }).toList();
+            final visibleTransactions = wallet.recentTransactions.where((txn) {
+              return _selectedLedger == 'ALL' ||
+                  txn.subLedgerType == _selectedLedger;
+            }).toList();
 
-        return RefreshIndicator(
-          onRefresh: _controller.refresh,
-          color: AppColors.shieldBlue,
-          child: ListView(
-            physics: const BouncingScrollPhysics(
-              parent: AlwaysScrollableScrollPhysics(),
-            ),
-            children: [
-              _WalletHero(
-                status: wallet.status,
-                cashBalance: wallet.cashWallet.available,
-                pointsBalance: wallet.rewardWallet.available,
-                creditAvailable: wallet.statistics.creditAvailable,
-                monthlySpend: wallet.statistics.monthlySpend,
-                rewardCredits: wallet.statistics.rewardCredits,
-              ),
-              const SizedBox(height: 20),
-              Text('Recent activity', style: AppTypography.h4),
-              const SizedBox(height: 10),
-              WalletFilters(
-                selectedLedger: _selectedLedger,
-                onSelected: (value) {
-                  setState(() {
-                    _selectedLedger = value;
-                  });
-                },
-              ),
-              const SizedBox(height: 12),
-              TransactionList(
-                transactions: visibleTransactions,
-                ledgerBalanceAfter: (txn) => _ledgerBalanceAfter(
-                  wallet.recentTransactions,
-                  txn,
+            return RefreshIndicator(
+              onRefresh: _controller.refresh,
+              color: AppColors.shieldBlue,
+              child: ListView(
+                physics: const BouncingScrollPhysics(
+                  parent: AlwaysScrollableScrollPhysics(),
                 ),
+                children: [
+                  _WalletHero(
+                    status: wallet.status,
+                    cashBalance: wallet.cashWallet.available,
+                    pointsBalance: wallet.rewardWallet.available,
+                    creditAvailable: wallet.statistics.creditAvailable,
+                    monthlySpend: wallet.statistics.monthlySpend,
+                    rewardCredits: wallet.statistics.rewardCredits,
+                  ),
+                  const SizedBox(height: 20),
+                  Text('Recent activity', style: AppTypography.h4),
+                  const SizedBox(height: 10),
+                  WalletFilters(
+                    selectedLedger: _selectedLedger,
+                    onSelected: (value) {
+                      setState(() {
+                        _selectedLedger = value;
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  TransactionList(
+                    transactions: visibleTransactions,
+                    ledgerBalanceAfter: (txn) =>
+                        _ledgerBalanceAfter(wallet.recentTransactions, txn),
+                  ),
+                ],
               ),
-            ],
-          ),
-        );
+            );
           },
         );
       },
@@ -153,10 +152,11 @@ class _CustomerWalletScreenState extends State<CustomerWalletScreen> {
     List<WalletTransaction> transactions,
     WalletTransaction target,
   ) {
-    final sameLedger = transactions
-        .where((txn) => txn.subLedgerType == target.subLedgerType)
-        .toList()
-      ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
+    final sameLedger =
+        transactions
+            .where((txn) => txn.subLedgerType == target.subLedgerType)
+            .toList()
+          ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
     var balance = 0.0;
     for (final txn in sameLedger) {
       balance += txn.isCredit ? txn.amount : -txn.amount;
@@ -382,7 +382,10 @@ class _WalletHero extends StatelessWidget {
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 6,
+                ),
                 decoration: BoxDecoration(
                   color: AppColors.white.withValues(alpha: 0.14),
                   borderRadius: BorderRadius.circular(999),
@@ -422,7 +425,8 @@ class _WalletHero extends StatelessWidget {
                     width: itemWidth,
                     label: 'Credit',
                     value: '₹${creditAvailable.toStringAsFixed(0)}',
-                    secondary: '₹${monthlySpend.toStringAsFixed(0)} spent this cycle',
+                    secondary:
+                        '₹${monthlySpend.toStringAsFixed(0)} spent this cycle',
                   ),
                 ],
               );
@@ -562,7 +566,10 @@ class _WalletActions extends StatelessWidget {
                 onTap: onTap,
                 borderRadius: BorderRadius.circular(14),
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 12,
+                  ),
                   child: Text(
                     label,
                     maxLines: 1,
@@ -583,7 +590,10 @@ class _WalletActions extends StatelessWidget {
           spacing: 12,
           runSpacing: 10,
           children: [
-            action('Open profile', () => context.go('/portal/customer/profile')),
+            action(
+              'Open profile',
+              () => context.go('/portal/customer/profile'),
+            ),
             action(
               'Open statement',
               () => showPortalDetailsSheet(

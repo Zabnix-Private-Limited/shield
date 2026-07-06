@@ -75,12 +75,20 @@ class TwoColumnBody extends StatelessWidget {
       children: [
         Expanded(
           flex: 7,
-          child: Panel(title: leftTitle, subtitle: leftSubtitle, child: leftChild),
+          child: Panel(
+            title: leftTitle,
+            subtitle: leftSubtitle,
+            child: leftChild,
+          ),
         ),
         const SizedBox(width: 16),
         Expanded(
           flex: 5,
-          child: Panel(title: rightTitle, subtitle: rightSubtitle, child: rightChild),
+          child: Panel(
+            title: rightTitle,
+            subtitle: rightSubtitle,
+            child: rightChild,
+          ),
         ),
       ],
     );

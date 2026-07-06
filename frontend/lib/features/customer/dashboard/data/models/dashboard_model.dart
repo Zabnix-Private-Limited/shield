@@ -31,13 +31,15 @@ class DashboardModel extends DashboardEntity with EquatableMixin {
       json['membership'] as Map? ?? const {},
     );
     final transactions = (json['recentActivity'] as List? ?? const [])
-        .map((item) => WalletTransaction.fromJson(Map<String, dynamic>.from(item as Map)))
+        .map(
+          (item) => WalletTransaction.fromJson(
+            Map<String, dynamic>.from(item as Map),
+          ),
+        )
         .toList();
     final membership = Membership.fromApi(
       customer: customer,
-      customerPayload: {
-        'membership': membershipPayload,
-      },
+      customerPayload: {'membership': membershipPayload},
       transactions: transactions,
     );
     final walletPayload = Map<String, dynamic>.from(
@@ -57,16 +59,22 @@ class DashboardModel extends DashboardEntity with EquatableMixin {
         status: (walletPayload['status'] ?? 'ACTIVE').toString(),
       ),
       appointments: (json['appointments'] as List? ?? const [])
-          .map((item) => Appointment.fromJson(Map<String, dynamic>.from(item as Map)))
+          .map(
+            (item) =>
+                Appointment.fromJson(Map<String, dynamic>.from(item as Map)),
+          )
           .toList(),
       recentActivity: transactions,
       documents: (json['documents'] as List? ?? const [])
-          .map((item) => Document.fromJson(Map<String, dynamic>.from(item as Map)))
+          .map(
+            (item) => Document.fromJson(Map<String, dynamic>.from(item as Map)),
+          )
           .toList(),
       notifications: (json['notifications'] as List? ?? const [])
           .map(
-            (item) =>
-                NotificationModel.fromJson(Map<String, dynamic>.from(item as Map)),
+            (item) => NotificationModel.fromJson(
+              Map<String, dynamic>.from(item as Map),
+            ),
           )
           .toList(),
       quickActions: (json['quickActions'] as List? ?? const [])
@@ -132,9 +140,7 @@ class DashboardModel extends DashboardEntity with EquatableMixin {
         'expiryDate': membership.endDate.toIso8601String(),
         'createdAt': membership.createdAt.toIso8601String(),
         'updatedAt': membership.updatedAt.toIso8601String(),
-        'membershipType': {
-          'name': membership.tierLabel,
-        },
+        'membershipType': {'name': membership.tierLabel},
       },
       'wallet': {
         'walletId': wallet.walletId,

@@ -13,7 +13,8 @@ class CustomerDocumentsScreen extends StatefulWidget {
   const CustomerDocumentsScreen({super.key});
 
   @override
-  State<CustomerDocumentsScreen> createState() => _CustomerDocumentsScreenState();
+  State<CustomerDocumentsScreen> createState() =>
+      _CustomerDocumentsScreenState();
 }
 
 class _CustomerDocumentsScreenState extends State<CustomerDocumentsScreen> {
@@ -159,7 +160,9 @@ class _CustomerDocumentsScreenState extends State<CustomerDocumentsScreen> {
                         'Uploaded by: ${document.uploadedBy ?? 'System'}',
                         if (document.processedAt != null)
                           'Processed on ${_formatDate(document.processedAt!)}',
-                        if ((document.extractionPreview ?? '').trim().isNotEmpty)
+                        if ((document.extractionPreview ?? '')
+                            .trim()
+                            .isNotEmpty)
                           'OCR preview: ${document.extractionPreview}',
                       ],
                     ),
@@ -169,7 +172,9 @@ class _CustomerDocumentsScreenState extends State<CustomerDocumentsScreen> {
                           width: 46,
                           height: 46,
                           decoration: BoxDecoration(
-                            color: _typeColor(document.type).withValues(alpha: 0.1),
+                            color: _typeColor(
+                              document.type,
+                            ).withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(14),
                           ),
                           child: Icon(
@@ -207,7 +212,9 @@ class _CustomerDocumentsScreenState extends State<CustomerDocumentsScreen> {
                             vertical: 4,
                           ),
                           decoration: BoxDecoration(
-                            color: _statusColor(document.status).withValues(alpha: 0.1),
+                            color: _statusColor(
+                              document.status,
+                            ).withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(999),
                           ),
                           child: Text(
@@ -230,7 +237,8 @@ class _CustomerDocumentsScreenState extends State<CustomerDocumentsScreen> {
     );
   }
 
-  String _formatDate(DateTime value) => '${value.day}/${value.month}/${value.year}';
+  String _formatDate(DateTime value) =>
+      '${value.day}/${value.month}/${value.year}';
 
   IconData _typeIcon(DocumentType? type) {
     switch (type) {

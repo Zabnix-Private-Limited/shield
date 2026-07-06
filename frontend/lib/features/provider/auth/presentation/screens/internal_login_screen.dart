@@ -38,7 +38,8 @@ class _InternalLoginScreenState extends State<InternalLoginScreen> {
       _statusMessage = 'Finishing your secure Google sign-in...';
     });
     try {
-      final resumed = await InternalAuthRepository.instance.resumeRedirectSignIn();
+      final resumed = await InternalAuthRepository.instance
+          .resumeRedirectSignIn();
       if (!mounted) {
         return;
       }

@@ -15,7 +15,10 @@ class DashboardLocalDataSource {
 
   Future<void> save(String customerId, DashboardModel model) async {
     final box = await Hive.openBox<String>(DashboardCachePolicy.boxName);
-    await box.put(DashboardCachePolicy.cacheKeyFor(customerId), model.toCache());
+    await box.put(
+      DashboardCachePolicy.cacheKeyFor(customerId),
+      model.toCache(),
+    );
   }
 
   Future<void> clear(String customerId) async {

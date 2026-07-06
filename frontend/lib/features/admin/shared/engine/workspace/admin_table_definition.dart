@@ -1,19 +1,8 @@
 import '../actions/admin_action_definition.dart';
 
-enum AdminColumnValueType {
-  text,
-  number,
-  currency,
-  date,
-  status,
-}
+enum AdminColumnValueType { text, number, currency, date, status }
 
-enum AdminFilterType {
-  text,
-  select,
-  dateRange,
-  multiSelect,
-}
+enum AdminFilterType { text, select, dateRange, multiSelect }
 
 class AdminTableColumnDefinition {
   const AdminTableColumnDefinition({
@@ -40,10 +29,7 @@ class AdminFilterDefinition {
 }
 
 class AdminSortDefinition {
-  const AdminSortDefinition({
-    required this.key,
-    required this.label,
-  });
+  const AdminSortDefinition({required this.key, required this.label});
 
   final String key;
   final String label;

@@ -24,7 +24,8 @@ class WalletModel extends CustomerWalletEntity {
   factory WalletModel.fromJson(Map<String, dynamic> json) {
     final recentTransactions = (json['recentTransactions'] as List? ?? const [])
         .map(
-          (item) => TransactionModel.fromJson(Map<String, dynamic>.from(item as Map)),
+          (item) =>
+              TransactionModel.fromJson(Map<String, dynamic>.from(item as Map)),
         )
         .cast<WalletTransaction>()
         .toList();
@@ -59,16 +60,16 @@ class WalletModel extends CustomerWalletEntity {
       recentTransactions: recentTransactions,
       statistics: WalletStatisticsEntity(
         monthlySpend: _asDouble((json['statistics'] as Map?)?['monthlySpend']),
-        rewardCredits: _asDouble((json['statistics'] as Map?)?['rewardCredits']),
+        rewardCredits: _asDouble(
+          (json['statistics'] as Map?)?['rewardCredits'],
+        ),
         creditAvailable: _asDouble(
           (json['statistics'] as Map?)?['creditAvailable'],
         ),
       ),
       membership: Membership.fromApi(
         customer: _syntheticCustomer((json['customerId'] ?? '').toString()),
-        customerPayload: {
-          'membership': membershipPayload,
-        },
+        customerPayload: {'membership': membershipPayload},
         transactions: recentTransactions,
       ),
     );
@@ -124,9 +125,7 @@ class WalletModel extends CustomerWalletEntity {
         'expiryDate': membership.endDate.toIso8601String(),
         'createdAt': membership.createdAt.toIso8601String(),
         'updatedAt': membership.updatedAt.toIso8601String(),
-        'membershipType': {
-          'name': membership.tierLabel,
-        },
+        'membershipType': {'name': membership.tierLabel},
       },
     };
   }

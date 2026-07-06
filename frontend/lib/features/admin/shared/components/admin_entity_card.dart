@@ -6,10 +6,7 @@ import '../theme/admin_typography.dart';
 import 'admin_status_badge.dart';
 
 class AdminEntityCard extends StatelessWidget {
-  const AdminEntityCard({
-    super.key,
-    required this.item,
-  });
+  const AdminEntityCard({super.key, required this.item});
 
   final AdminEntityItem item;
 
@@ -50,9 +47,7 @@ class AdminEntityCard extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             item.meta,
-            style: AdminTypography.tiny.copyWith(
-              color: AdminColors.caption,
-            ),
+            style: AdminTypography.tiny.copyWith(color: AdminColors.caption),
           ),
         ],
       ),

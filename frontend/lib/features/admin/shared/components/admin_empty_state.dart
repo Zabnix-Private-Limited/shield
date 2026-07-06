@@ -47,7 +47,10 @@ class AdminEmptyState extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 14),
-          const AdminStatusBadge(label: 'Ready for action', color: AdminColors.secondary),
+          const AdminStatusBadge(
+            label: 'Ready for action',
+            color: AdminColors.secondary,
+          ),
           const SizedBox(height: 8),
           if (onActionPressed == null)
             Text(

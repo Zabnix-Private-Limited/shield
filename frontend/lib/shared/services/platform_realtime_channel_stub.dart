@@ -1,4 +1,5 @@
-typedef PlatformRealtimeEventHandler = void Function(Map<String, dynamic> event);
+typedef PlatformRealtimeEventHandler =
+    void Function(Map<String, dynamic> event);
 typedef PlatformRealtimeErrorHandler = void Function(Object error);
 
 class PlatformRealtimeSubscription {

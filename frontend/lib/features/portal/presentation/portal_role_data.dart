@@ -194,65 +194,61 @@ PortalRoleData portalDataForProviderWorkspaceMeta(
   final providerContext =
       workspaceMeta['providerContext'] as Map<String, dynamic>? ??
       const <String, dynamic>{};
-  final rawModules = (workspaceMeta['moduleRegistry'] as List? ??
-          const <dynamic>[])
-      .map((item) => Map<String, dynamic>.from(item as Map))
-      .toList();
+  final rawModules =
+      (workspaceMeta['moduleRegistry'] as List? ?? const <dynamic>[])
+          .map((item) => Map<String, dynamic>.from(item as Map))
+          .toList();
   final modulesById = <String, Map<String, dynamic>>{
     for (final module in rawModules)
       if ((module['id']?.toString().trim() ?? '').isNotEmpty)
         module['id']!.toString(): module,
   };
-  final rawSections = (workspaceMeta['navigationSections'] as List? ??
-          const <dynamic>[])
-      .map((item) => Map<String, dynamic>.from(item as Map))
-      .toList()
-    ..sort(
-      (left, right) => (left['order'] as num? ?? 0).compareTo(
-        right['order'] as num? ?? 0,
-      ),
-    );
+  final rawSections =
+      (workspaceMeta['navigationSections'] as List? ?? const <dynamic>[])
+          .map((item) => Map<String, dynamic>.from(item as Map))
+          .toList()
+        ..sort(
+          (left, right) => (left['order'] as num? ?? 0).compareTo(
+            right['order'] as num? ?? 0,
+          ),
+        );
 
   final sections = rawSections
-      .map(
-        (item) {
-          final moduleId = item['moduleId']?.toString();
-          final module = moduleId == null ? null : modulesById[moduleId];
-          final resolvedTitle =
-              item['title']?.toString() ??
-              module?['title']?.toString() ??
-              'Section';
-          return PortalSectionData(
-            key:
-                module?['sectionKey']?.toString() ??
-                item['id']?.toString() ??
-                item['code']?.toString() ??
-                '',
-            title: resolvedTitle,
-            summary:
-                item['summary']?.toString() ??
-                module?['summary']?.toString() ??
-                'Live $resolvedTitle records.',
-            iconKey: item['icon']?.toString(),
-            moduleId: moduleId,
-            rendererKey:
-                module?['renderer']?.toString() ??
-                item['renderer']?.toString(),
-            route: item['route']?.toString(),
-            permission:
-                item['permission']?.toString() ??
-                module?['permission']?.toString(),
-            badgeCount:
-                item['badge'] is num ? (item['badge'] as num).toInt() : 0,
-            order: item['order'] is num ? (item['order'] as num).toInt() : 0,
-            actions: List<String>.from(item['actions'] ?? const <String>[]),
-            metrics: const <PortalMetric>[],
-            queueItems: const <PortalListItem>[],
-            recentItems: const <PortalListItem>[],
-            insightItems: const <PortalListItem>[],
-          );
-        },
-      )
+      .map((item) {
+        final moduleId = item['moduleId']?.toString();
+        final module = moduleId == null ? null : modulesById[moduleId];
+        final resolvedTitle =
+            item['title']?.toString() ??
+            module?['title']?.toString() ??
+            'Section';
+        return PortalSectionData(
+          key:
+              module?['sectionKey']?.toString() ??
+              item['id']?.toString() ??
+              item['code']?.toString() ??
+              '',
+          title: resolvedTitle,
+          summary:
+              item['summary']?.toString() ??
+              module?['summary']?.toString() ??
+              'Live $resolvedTitle records.',
+          iconKey: item['icon']?.toString(),
+          moduleId: moduleId,
+          rendererKey:
+              module?['renderer']?.toString() ?? item['renderer']?.toString(),
+          route: item['route']?.toString(),
+          permission:
+              item['permission']?.toString() ??
+              module?['permission']?.toString(),
+          badgeCount: item['badge'] is num ? (item['badge'] as num).toInt() : 0,
+          order: item['order'] is num ? (item['order'] as num).toInt() : 0,
+          actions: List<String>.from(item['actions'] ?? const <String>[]),
+          metrics: const <PortalMetric>[],
+          queueItems: const <PortalListItem>[],
+          recentItems: const <PortalListItem>[],
+          insightItems: const <PortalListItem>[],
+        );
+      })
       .where((section) => section.key.trim().isNotEmpty)
       .toList();
 
@@ -264,8 +260,7 @@ PortalRoleData portalDataForProviderWorkspaceMeta(
         providerContext['headline']?.toString() ??
         'Patients, appointments, records, and payments in one place',
     regionLabel:
-        workflowProfile['title']?.toString() ??
-        'Unified provider care portal',
+        workflowProfile['title']?.toString() ?? 'Unified provider care portal',
     icon: Icons.local_hospital_outlined,
     accentColor: AppColors.shieldGreen,
     sections: sections.isEmpty
@@ -322,7 +317,8 @@ PortalRoleData portalDataForRole(SHIELDRole role) {
       return PortalRoleData(
         role: role,
         operatorName: 'Field Agent Workspace',
-        headline: 'Daily customer care, registrations, follow-ups, and visit coordination',
+        headline:
+            'Daily customer care, registrations, follow-ups, and visit coordination',
         regionLabel: 'Mobile-first customer growth and retention workspace',
         icon: Icons.badge_outlined,
         accentColor: AppColors.shieldBlue,
@@ -668,7 +664,8 @@ class _PortalSectionFactory {
   static final PortalSectionData providerCustomers = _section(
     'customers',
     title: 'Patients',
-    summary: 'Patient profile, appointments, medical records, membership, and payments.',
+    summary:
+        'Patient profile, appointments, medical records, membership, and payments.',
     moduleId: 'patient-workspace',
     rendererKey: 'patient-workspace',
   );
@@ -700,59 +697,70 @@ class _PortalSectionFactory {
   );
   static final PortalSectionData agentDashboard = _section(
     'dashboard',
-    summary: 'Today tasks, registrations, visits, customer network activity, and recent actions.',
+    summary:
+        'Today tasks, registrations, visits, customer network activity, and recent actions.',
     actions: const ['Register customer', 'Open follow-ups'],
   );
   static final PortalSectionData agentCustomers = _section(
     'customers',
-      title: 'Customers',
-    summary: 'Assigned customers only, with onboarding, card, wallet, and appointment context.',
+    title: 'Customers',
+    summary:
+        'Assigned customers only, with onboarding, card, wallet, and appointment context.',
   );
   static final PortalSectionData agentRegistration = _section(
     'registration',
     title: 'Register Customer',
-    summary: 'Step-based customer registration with branch, membership, and document readiness.',
+    summary:
+        'Step-based customer registration with branch, membership, and document readiness.',
   );
   static final PortalSectionData agentFollowUps = _section(
     'followups',
-      title: 'Follow-Ups',
-    summary: 'Customer-first follow-up planning, outcomes, reminders, and next actions.',
+    title: 'Follow-Ups',
+    summary:
+        'Customer-first follow-up planning, outcomes, reminders, and next actions.',
   );
   static final PortalSectionData agentAppointments = _section(
     'appointments',
     title: 'Visits',
-    summary: 'Customer visit booking, provider selection, preferred slots, and visit status tracking.',
+    summary:
+        'Customer visit booking, provider selection, preferred slots, and visit status tracking.',
   );
   static final PortalSectionData agentReferrals = _section(
     'referrals',
-      title: 'Network',
-    summary: 'Customer network growth, relationship tree, and conversion progress in the scoped graph.',
+    title: 'Network',
+    summary:
+        'Customer network growth, relationship tree, and conversion progress in the scoped graph.',
   );
   static final PortalSectionData agentDocuments = _section(
     'documents',
-      title: 'Documents',
-    summary: 'Required onboarding and customer documents limited to this agent assignment.',
+    title: 'Documents',
+    summary:
+        'Required onboarding and customer documents limited to this agent assignment.',
   );
   static final PortalSectionData agentNotifications = _section(
     'notifications',
-    summary: 'Assigned customer notifications and updates with read-state visibility.',
+    summary:
+        'Assigned customer notifications and updates with read-state visibility.',
   );
   static final PortalSectionData agentPerformance = _section(
     'performance',
-      title: 'Performance',
-    summary: 'This month customer growth, retention, follow-up completion, visits, and incentives.',
+    title: 'Performance',
+    summary:
+        'This month customer growth, retention, follow-up completion, visits, and incentives.',
   );
   static final PortalSectionData agentReports = _section(
     'reports',
-    summary: 'Export customer, follow-up, referral, document, and performance reports.',
+    summary:
+        'Export customer, follow-up, referral, document, and performance reports.',
   );
   static final PortalSectionData agentProfile = _section(
     'profile',
-      title: 'Profile',
+    title: 'Profile',
     summary: 'Agent identity, contact info, and employee assignment details.',
   );
   static final PortalSectionData agentSettings = _section(
     'settings',
-    summary: 'Portal preferences, workspace behavior, devices, and session security.',
+    summary:
+        'Portal preferences, workspace behavior, devices, and session security.',
   );
 }

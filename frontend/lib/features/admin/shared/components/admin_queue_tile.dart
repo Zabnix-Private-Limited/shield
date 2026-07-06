@@ -34,10 +34,7 @@ class AdminQueueTile extends StatelessWidget {
             width: 10,
             height: 10,
             margin: const EdgeInsets.only(top: 6),
-            decoration: BoxDecoration(
-              color: color,
-              shape: BoxShape.circle,
-            ),
+            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
           ),
           const SizedBox(width: 12),
           Expanded(

@@ -26,7 +26,8 @@ class AppConfig {
 
   static const String firebaseWebVapidKey = String.fromEnvironment(
     'FIREBASE_WEB_VAPID_KEY',
-    defaultValue: 'BByFZgPis7H9VOxreoKe70XY6-1ww9QtPxIDKJ9ha372nQbtyKIuyN3KYDEMMQvUXbAZey-Rj-glpG_yZo5Kbvo',
+    defaultValue:
+        'BByFZgPis7H9VOxreoKe70XY6-1ww9QtPxIDKJ9ha372nQbtyKIuyN3KYDEMMQvUXbAZey-Rj-glpG_yZo5Kbvo',
   );
 
   static const bool enableSentry = bool.fromEnvironment(

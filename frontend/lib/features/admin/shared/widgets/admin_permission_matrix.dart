@@ -52,7 +52,9 @@ class AdminPermissionMatrix extends StatelessWidget {
                         cell,
                         style: AdminTypography.small.copyWith(
                           color: AdminColors.subtext,
-                          fontWeight: cell == row.first ? FontWeight.w800 : FontWeight.w600,
+                          fontWeight: cell == row.first
+                              ? FontWeight.w800
+                              : FontWeight.w600,
                         ),
                       ),
                     ),

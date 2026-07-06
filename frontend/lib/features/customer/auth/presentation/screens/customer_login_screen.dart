@@ -38,9 +38,8 @@ class _CustomerLoginScreenState extends State<CustomerLoginScreen> {
     });
 
     try {
-      final result = await CustomerAuthRepository.instance.startPhoneVerification(
-        _phoneController.text,
-      );
+      final result = await CustomerAuthRepository.instance
+          .startPhoneVerification(_phoneController.text);
       if (!mounted) {
         return;
       }

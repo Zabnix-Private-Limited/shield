@@ -58,10 +58,7 @@ class AdminWorkspaceActionConfirmation {
 }
 
 class AdminWorkspaceActionDialog {
-  const AdminWorkspaceActionDialog({
-    required this.type,
-    this.formId,
-  });
+  const AdminWorkspaceActionDialog({required this.type, this.formId});
 
   final String type;
   final String? formId;

@@ -5,10 +5,8 @@ import '../../data/models/dashboard_model.dart';
 import '../../data/repositories/dashboard_repository.dart';
 
 class DashboardController extends ChangeNotifier {
-  DashboardController({
-    DashboardRepository? repository,
-    this.customerId,
-  }) : _repository = repository ?? DashboardRepository();
+  DashboardController({DashboardRepository? repository, this.customerId})
+    : _repository = repository ?? DashboardRepository();
 
   final DashboardRepository _repository;
   final String? customerId;

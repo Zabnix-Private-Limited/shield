@@ -34,7 +34,8 @@ class AgentPortalController extends ChangeNotifier {
   String? get error => _error;
   String? get providerLookupError => _providerLookupError;
   Map<String, dynamic> get workspace => _workspace;
-  Map<String, dynamic> get selectedCustomerWorkspace => _selectedCustomerWorkspace;
+  Map<String, dynamic> get selectedCustomerWorkspace =>
+      _selectedCustomerWorkspace;
   Map<String, dynamic> get reportRegistry => _reportRegistry;
   String? get selectedCustomerId => _selectedCustomerId;
   List<Map<String, dynamic>> get providers => _providers;
@@ -51,40 +52,48 @@ class AgentPortalController extends ChangeNotifier {
       Map<String, dynamic>.from(workspace['authProfile'] ?? const {});
   Map<String, dynamic> get agentSettings =>
       Map<String, dynamic>.from(workspace['agentSettings'] ?? const {});
-  Map<String, dynamic> get selectedCustomer =>
-      Map<String, dynamic>.from(selectedCustomerWorkspace['customer'] ?? const {});
+  Map<String, dynamic> get selectedCustomer => Map<String, dynamic>.from(
+    selectedCustomerWorkspace['customer'] ?? const {},
+  );
 
   List<Map<String, dynamic>> get customers => List<Map<String, dynamic>>.from(
-        (workspace['customers'] as List? ?? const <dynamic>[])
-            .map((item) => Map<String, dynamic>.from(item as Map)),
-      );
+    (workspace['customers'] as List? ?? const <dynamic>[]).map(
+      (item) => Map<String, dynamic>.from(item as Map),
+    ),
+  );
 
   List<Map<String, dynamic>> get tasks => List<Map<String, dynamic>>.from(
-        (workspace['tasks'] as List? ?? const <dynamic>[])
-            .map((item) => Map<String, dynamic>.from(item as Map)),
-      );
+    (workspace['tasks'] as List? ?? const <dynamic>[]).map(
+      (item) => Map<String, dynamic>.from(item as Map),
+    ),
+  );
 
   List<Map<String, dynamic>> get notifications =>
       List<Map<String, dynamic>>.from(
-        (workspace['notifications'] as List? ?? const <dynamic>[])
-            .map((item) => Map<String, dynamic>.from(item as Map)),
+        (workspace['notifications'] as List? ?? const <dynamic>[]).map(
+          (item) => Map<String, dynamic>.from(item as Map),
+        ),
       );
 
   List<Map<String, dynamic>> get recentActivity =>
       List<Map<String, dynamic>>.from(
-        (workspace['recentActivity'] as List? ?? const <dynamic>[])
-            .map((item) => Map<String, dynamic>.from(item as Map)),
+        (workspace['recentActivity'] as List? ?? const <dynamic>[]).map(
+          (item) => Map<String, dynamic>.from(item as Map),
+        ),
       );
 
   List<Map<String, dynamic>> get upcomingAppointments =>
       List<Map<String, dynamic>>.from(
-        (workspace['upcomingAppointments'] as List? ?? const <dynamic>[])
-            .map((item) => Map<String, dynamic>.from(item as Map)),
+        (workspace['upcomingAppointments'] as List? ?? const <dynamic>[]).map(
+          (item) => Map<String, dynamic>.from(item as Map),
+        ),
       );
 
-  List<Map<String, dynamic>> get customerTasks => List<Map<String, dynamic>>.from(
-        (selectedCustomerWorkspace['tasks'] as List? ?? const <dynamic>[])
-            .map((item) => Map<String, dynamic>.from(item as Map)),
+  List<Map<String, dynamic>> get customerTasks =>
+      List<Map<String, dynamic>>.from(
+        (selectedCustomerWorkspace['tasks'] as List? ?? const <dynamic>[]).map(
+          (item) => Map<String, dynamic>.from(item as Map),
+        ),
       );
 
   List<Map<String, dynamic>> get customerActivities =>
@@ -95,7 +104,8 @@ class AgentPortalController extends ChangeNotifier {
 
   List<Map<String, dynamic>> get customerAppointments =>
       List<Map<String, dynamic>>.from(
-        (selectedCustomerWorkspace['appointments'] as List? ?? const <dynamic>[])
+        (selectedCustomerWorkspace['appointments'] as List? ??
+                const <dynamic>[])
             .map((item) => Map<String, dynamic>.from(item as Map)),
       );
 
@@ -114,7 +124,8 @@ class AgentPortalController extends ChangeNotifier {
 
   List<Map<String, dynamic>> get customerFamilyDetails =>
       List<Map<String, dynamic>>.from(
-        (selectedCustomerWorkspace['familyDetails'] as List? ?? const <dynamic>[])
+        (selectedCustomerWorkspace['familyDetails'] as List? ??
+                const <dynamic>[])
             .map((item) => Map<String, dynamic>.from(item as Map)),
       );
 
@@ -126,7 +137,8 @@ class AgentPortalController extends ChangeNotifier {
 
   List<Map<String, dynamic>> get customerMedicalRecords =>
       List<Map<String, dynamic>>.from(
-        (selectedCustomerWorkspace['medicalRecords'] as List? ?? const <dynamic>[])
+        (selectedCustomerWorkspace['medicalRecords'] as List? ??
+                const <dynamic>[])
             .map((item) => Map<String, dynamic>.from(item as Map)),
       );
 
@@ -136,21 +148,24 @@ class AgentPortalController extends ChangeNotifier {
             .map((item) => Map<String, dynamic>.from(item as Map)),
       );
 
-  Map<String, dynamic> get customerMembership =>
-      Map<String, dynamic>.from(selectedCustomerWorkspace['membership'] ?? const {});
+  Map<String, dynamic> get customerMembership => Map<String, dynamic>.from(
+    selectedCustomerWorkspace['membership'] ?? const {},
+  );
 
-  Map<String, dynamic> get customerWallet =>
-      Map<String, dynamic>.from(selectedCustomerWorkspace['wallet'] ?? const {});
+  Map<String, dynamic> get customerWallet => Map<String, dynamic>.from(
+    selectedCustomerWorkspace['wallet'] ?? const {},
+  );
 
   Map<String, dynamic> get customerReferralSummary => Map<String, dynamic>.from(
-        selectedCustomerWorkspace['referralSummary'] ?? const {},
-      );
+    selectedCustomerWorkspace['referralSummary'] ?? const {},
+  );
 
   Map<String, dynamic> get customerPrinting => Map<String, dynamic>.from(
-        selectedCustomerWorkspace['printing'] ?? const {},
-      );
+    selectedCustomerWorkspace['printing'] ?? const {},
+  );
 
-  List<Map<String, dynamic>> get availableReports => List<Map<String, dynamic>>.from(
+  List<Map<String, dynamic>> get availableReports =>
+      List<Map<String, dynamic>>.from(
         (reportRegistry['reports'] as List? ?? const <dynamic>[]).map(
           (item) => Map<String, dynamic>.from(item as Map),
         ),
@@ -170,8 +185,9 @@ class AgentPortalController extends ChangeNotifier {
     try {
       _workspace = await _repository.getWorkspace();
       await _ensureReferenceData();
-      _selectedCustomerId ??=
-          customers.isNotEmpty ? customers.first['id']?.toString() : null;
+      _selectedCustomerId ??= customers.isNotEmpty
+          ? customers.first['id']?.toString()
+          : null;
       if (_selectedCustomerId != null && _selectedCustomerWorkspace.isEmpty) {
         await selectCustomer(_selectedCustomerId!);
       }

@@ -31,9 +31,7 @@ class CustomerScaffold extends StatelessWidget {
       backgroundColor: AppColors.lightGray,
       drawer: drawerContent == null
           ? null
-          : Drawer(
-              child: SafeArea(child: drawerContent!),
-            ),
+          : Drawer(child: SafeArea(child: drawerContent!)),
       appBar: PreferredSize(
         preferredSize: const Size.fromHeight(74),
         child: Builder(

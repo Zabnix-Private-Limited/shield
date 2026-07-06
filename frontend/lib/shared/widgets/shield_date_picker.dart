@@ -423,8 +423,11 @@ class _ShieldDatePickerSurfaceState extends State<_ShieldDatePickerSurface> {
     required bool isDark,
   }) {
     final firstDay = DateTime(_displayMonth.year, _displayMonth.month, 1);
-    final daysInMonth = DateTime(_displayMonth.year, _displayMonth.month + 1, 0)
-        .day;
+    final daysInMonth = DateTime(
+      _displayMonth.year,
+      _displayMonth.month + 1,
+      0,
+    ).day;
     final leadingEmptyDays = firstDay.weekday % 7;
 
     final cells = <Widget>[
@@ -499,9 +502,7 @@ class _ShieldDatePickerSurfaceState extends State<_ShieldDatePickerSurface> {
     } else if (isToday) {
       backgroundColor = AppColors.shieldBlue.withValues(alpha: 0.1);
       foregroundColor = AppColors.shieldBlue;
-      border = Border.all(
-        color: AppColors.shieldBlue.withValues(alpha: 0.22),
-      );
+      border = Border.all(color: AppColors.shieldBlue.withValues(alpha: 0.22));
     } else if (isDark) {
       backgroundColor = Colors.white.withValues(alpha: 0.02);
     }
@@ -602,9 +603,12 @@ class _ShieldDatePickerSurfaceState extends State<_ShieldDatePickerSurface> {
               final month = index + 1;
               final monthDate = DateTime(_displayMonth.year, month, 1);
               final monthEnd = DateTime(_displayMonth.year, month + 1, 0);
-              final hasSelectableDate =
-                  !_monthHasNoSelectableDates(monthDate, monthEnd);
-              final isDisabled = monthEnd.isBefore(widget.firstDate) ||
+              final hasSelectableDate = !_monthHasNoSelectableDates(
+                monthDate,
+                monthEnd,
+              );
+              final isDisabled =
+                  monthEnd.isBefore(widget.firstDate) ||
                   monthDate.isAfter(widget.lastDate) ||
                   !hasSelectableDate;
               final isActive = _displayMonth.month == month;
@@ -629,8 +633,8 @@ class _ShieldDatePickerSurfaceState extends State<_ShieldDatePickerSurface> {
                       color: isActive
                           ? AppColors.shieldBlue
                           : isDark
-                              ? Colors.white.withValues(alpha: 0.03)
-                              : AppColors.lightGray,
+                          ? Colors.white.withValues(alpha: 0.03)
+                          : AppColors.lightGray,
                       borderRadius: BorderRadius.circular(18),
                       border: isActive
                           ? null
@@ -646,8 +650,8 @@ class _ShieldDatePickerSurfaceState extends State<_ShieldDatePickerSurface> {
                         color: isDisabled
                             ? textSecondary.withValues(alpha: 0.38)
                             : isActive
-                                ? AppColors.white
-                                : textPrimary,
+                            ? AppColors.white
+                            : textPrimary,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
@@ -707,9 +711,13 @@ class _ShieldDatePickerSurfaceState extends State<_ShieldDatePickerSurface> {
   }
 
   DateTime _clampSelectedToDisplayMonth() {
-    final daysInMonth = DateTime(_displayMonth.year, _displayMonth.month + 1, 0)
-        .day;
-    final day = _selectedDate.year == _displayMonth.year &&
+    final daysInMonth = DateTime(
+      _displayMonth.year,
+      _displayMonth.month + 1,
+      0,
+    ).day;
+    final day =
+        _selectedDate.year == _displayMonth.year &&
             _selectedDate.month == _displayMonth.month
         ? _selectedDate.day
         : 1;

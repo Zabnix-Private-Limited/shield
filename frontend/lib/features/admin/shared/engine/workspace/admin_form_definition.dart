@@ -37,10 +37,7 @@ class AdminFormSectionDefinition {
 }
 
 class AdminFormDefinition {
-  const AdminFormDefinition({
-    required this.entity,
-    required this.sections,
-  });
+  const AdminFormDefinition({required this.entity, required this.sections});
 
   final String entity;
   final List<AdminFormSectionDefinition> sections;

@@ -155,8 +155,10 @@ class _ShieldDateInputFieldState extends State<ShieldDateInputField> {
             errorText: _errorText,
             filled: true,
             fillColor: AppColors.lightGray,
-            contentPadding:
-                const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 14,
+            ),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(16),
               borderSide: BorderSide.none,

@@ -53,7 +53,9 @@ class ProviderAppointmentsScreen extends StatelessWidget {
                             if (!context.mounted) {
                               return;
                             }
-                            context.go('/portal/$roleKey/customers?tab=overview');
+                            context.go(
+                              '/portal/$roleKey/customers?tab=overview',
+                            );
                           },
                           child: const Text('Patient'),
                         ),
@@ -66,7 +68,9 @@ class ProviderAppointmentsScreen extends StatelessWidget {
                             if (!context.mounted) {
                               return;
                             }
-                            context.go('/portal/$roleKey/customers?tab=today-visit');
+                            context.go(
+                              '/portal/$roleKey/customers?tab=today-visit',
+                            );
                           },
                           child: Text(
                             appointment.statusLabel.toLowerCase().contains(

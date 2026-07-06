@@ -94,7 +94,11 @@ class _AdminSearchBarState extends State<AdminSearchBar> {
                 _controller.clear();
                 widget.onClear?.call();
               },
-              icon: const Icon(Icons.close, color: AdminColors.caption, size: 18),
+              icon: const Icon(
+                Icons.close,
+                color: AdminColors.caption,
+                size: 18,
+              ),
             ),
         ],
       ),

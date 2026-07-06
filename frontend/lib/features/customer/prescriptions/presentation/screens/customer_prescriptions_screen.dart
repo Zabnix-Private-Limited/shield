@@ -29,12 +29,15 @@ class _CustomerPrescriptionsScreenState
 
   void _loadPrescriptions() {
     setState(() {
-      _prescriptionsFuture = ApiService.getCustomerDocumentsStrict(
-        ApiService.requireAuthenticatedCustomerId(),
-      ).then(
-        (documents) => documents
-          ..retainWhere((document) => document.type == DocumentType.prescription),
-      );
+      _prescriptionsFuture =
+          ApiService.getCustomerDocumentsStrict(
+            ApiService.requireAuthenticatedCustomerId(),
+          ).then(
+            (documents) => documents
+              ..retainWhere(
+                (document) => document.type == DocumentType.prescription,
+              ),
+          );
     });
   }
 
@@ -155,7 +158,9 @@ class _CustomerPrescriptionsScreenState
                       highlights: [
                         'Upload source: ${prescription.uploadedBy ?? 'Provider'}',
                         'Current state: ${_statusText(prescription.status)}',
-                        if ((prescription.extractionPreview ?? '').trim().isNotEmpty)
+                        if ((prescription.extractionPreview ?? '')
+                            .trim()
+                            .isNotEmpty)
                           'OCR preview: ${prescription.extractionPreview}',
                       ],
                     ),
@@ -203,7 +208,9 @@ class _CustomerPrescriptionsScreenState
                             vertical: 4,
                           ),
                           decoration: BoxDecoration(
-                            color: _statusColor(prescription.status).withValues(alpha: 0.1),
+                            color: _statusColor(
+                              prescription.status,
+                            ).withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(999),
                           ),
                           child: Text(
@@ -226,7 +233,8 @@ class _CustomerPrescriptionsScreenState
     );
   }
 
-  String _formatDate(DateTime value) => '${value.day}/${value.month}/${value.year}';
+  String _formatDate(DateTime value) =>
+      '${value.day}/${value.month}/${value.year}';
 
   Color _statusColor(DocumentStatus status) {
     switch (status) {

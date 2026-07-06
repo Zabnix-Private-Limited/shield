@@ -41,8 +41,7 @@ class AdminWorkspaceQuery {
       search: clearSearch ? null : (search ?? this.search),
       status: clearStatus ? null : (status ?? this.status),
       tab: clearTab ? null : (tab ?? this.tab),
-      selectedId:
-          clearSelectedId ? null : (selectedId ?? this.selectedId),
+      selectedId: clearSelectedId ? null : (selectedId ?? this.selectedId),
       sortKey: clearSortKey ? null : (sortKey ?? this.sortKey),
       sortDirection: clearSortDirection
           ? null

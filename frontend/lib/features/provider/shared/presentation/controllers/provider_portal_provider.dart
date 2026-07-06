@@ -9,7 +9,6 @@ final providerPortalRepositoryProvider = Provider<ProviderPortalRepository>(
 
 final providerPortalControllerProvider =
     ChangeNotifierProvider<ProviderPortalController>(
-      (ref) => ProviderPortalController(
-        ref.watch(providerPortalRepositoryProvider),
-      ),
+      (ref) =>
+          ProviderPortalController(ref.watch(providerPortalRepositoryProvider)),
     );

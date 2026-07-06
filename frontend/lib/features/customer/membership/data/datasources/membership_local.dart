@@ -15,7 +15,10 @@ class MembershipLocalDataSource {
 
   Future<void> save(String customerId, MembershipModel model) async {
     final box = await Hive.openBox<String>(MembershipCachePolicy.boxName);
-    await box.put(MembershipCachePolicy.cacheKeyFor(customerId), model.toCache());
+    await box.put(
+      MembershipCachePolicy.cacheKeyFor(customerId),
+      model.toCache(),
+    );
   }
 
   Future<void> clear(String customerId) async {

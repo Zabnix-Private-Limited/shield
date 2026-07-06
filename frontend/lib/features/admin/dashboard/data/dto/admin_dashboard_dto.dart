@@ -21,11 +21,7 @@ class AdminDashboardMetricDto {
   final String note;
 
   AdminDashboardMetricEntity toEntity() {
-    return AdminDashboardMetricEntity(
-      label: label,
-      value: value,
-      note: note,
-    );
+    return AdminDashboardMetricEntity(label: label, value: value, note: note);
   }
 }
 

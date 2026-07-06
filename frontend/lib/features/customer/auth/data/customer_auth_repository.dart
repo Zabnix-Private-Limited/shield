@@ -10,6 +10,7 @@ import '../../../../../shared/services/device_identity_service.dart';
 import '../../../../../shared/services/firebase_bootstrap_service.dart';
 
 enum CustomerAuthOutcome { authenticated, registrationRequired }
+
 enum CustomerPhoneVerificationStartResult {
   codeSent,
   authenticated,

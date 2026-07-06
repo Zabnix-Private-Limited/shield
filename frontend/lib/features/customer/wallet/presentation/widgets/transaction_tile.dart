@@ -69,9 +69,7 @@ class TransactionTile extends StatelessWidget {
                 const SizedBox(height: 3),
                 Text(
                   DateFormat('dd MMM • hh:mm a').format(transaction.createdAt),
-                  style: AppTypography.tiny.copyWith(
-                    color: AppColors.gray,
-                  ),
+                  style: AppTypography.tiny.copyWith(color: AppColors.gray),
                 ),
               ],
             ),

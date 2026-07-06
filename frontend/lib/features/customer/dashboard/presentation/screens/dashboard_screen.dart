@@ -15,7 +15,8 @@ class CustomerDashboardScreen extends StatefulWidget {
   const CustomerDashboardScreen({super.key});
 
   @override
-  State<CustomerDashboardScreen> createState() => _CustomerDashboardScreenState();
+  State<CustomerDashboardScreen> createState() =>
+      _CustomerDashboardScreenState();
 }
 
 class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> {
@@ -127,12 +128,14 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> {
               const SizedBox(height: 24),
               Text('Upcoming Appointments', style: AppTypography.h4),
               const SizedBox(height: 12),
-              ...dashboard.appointments.take(3).map(
-                (appointment) => Padding(
-                  padding: const EdgeInsets.only(bottom: 10),
-                  child: AppointmentCard(appointment: appointment),
-                ),
-              ),
+              ...dashboard.appointments
+                  .take(3)
+                  .map(
+                    (appointment) => Padding(
+                      padding: const EdgeInsets.only(bottom: 10),
+                      child: AppointmentCard(appointment: appointment),
+                    ),
+                  ),
               const SizedBox(height: 14),
               Text('Recent Activity', style: AppTypography.h4),
               const SizedBox(height: 12),

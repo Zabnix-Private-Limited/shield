@@ -23,15 +23,15 @@ class CustomerAccessState {
 
   String get heroStatusLabel => serviceAccessEnabled ? 'ACTIVE' : 'PENDING';
 
-  String get membershipHeadline =>
-      serviceAccessEnabled ? membership?.tierLabel ?? 'SHIELD Member' : 'Membership pending';
+  String get membershipHeadline => serviceAccessEnabled
+      ? membership?.tierLabel ?? 'SHIELD Member'
+      : 'Membership pending';
 
   String get membershipSupportingText => serviceAccessEnabled
       ? 'Issued by SHIELD admin or agent team'
       : 'Registration complete. Awaiting admin or agent approval and card issuance.';
 
-  String get walletStatusLabel =>
-      serviceAccessEnabled ? 'ACTIVE' : 'LOCKED';
+  String get walletStatusLabel => serviceAccessEnabled ? 'ACTIVE' : 'LOCKED';
 
   String get servicesStatusLabel =>
       serviceAccessEnabled ? 'AVAILABLE' : 'BROWSE ONLY';

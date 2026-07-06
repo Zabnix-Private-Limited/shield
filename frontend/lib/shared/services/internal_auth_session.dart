@@ -119,7 +119,9 @@ class InternalAuthSession extends ChangeNotifier {
 
     await _persistSessionSnapshot();
 
-    _trace('token stored and session persistence completed for role=${homeRole.routeKey}');
+    _trace(
+      'token stored and session persistence completed for role=${homeRole.routeKey}',
+    );
     notifyListeners();
   }
 
@@ -306,7 +308,9 @@ class InternalAuthSession extends ChangeNotifier {
       }
     } catch (error) {
       _trace('session persistence degraded to in-memory only: $error');
-      _trace('session remains authenticated in-memory for role=${homeRole.routeKey}');
+      _trace(
+        'session remains authenticated in-memory for role=${homeRole.routeKey}',
+      );
     }
   }
 }

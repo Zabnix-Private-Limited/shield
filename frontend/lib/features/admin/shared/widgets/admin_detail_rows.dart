@@ -5,10 +5,7 @@ import '../theme/admin_colors.dart';
 import '../theme/admin_typography.dart';
 
 class AdminDetailRows extends StatelessWidget {
-  const AdminDetailRows({
-    super.key,
-    required this.rows,
-  });
+  const AdminDetailRows({super.key, required this.rows});
 
   final List<AdminDetailItem> rows;
 

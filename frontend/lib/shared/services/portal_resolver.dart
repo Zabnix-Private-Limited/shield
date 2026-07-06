@@ -3,10 +3,7 @@ import 'customer_auth_session.dart';
 import 'internal_auth_session.dart';
 
 class PortalResolution {
-  const PortalResolution({
-    required this.role,
-    required this.isInternal,
-  });
+  const PortalResolution({required this.role, required this.isInternal});
 
   final SHIELDRole role;
   final bool isInternal;
@@ -22,10 +19,7 @@ class PortalResolver {
   static PortalResolution? get current {
     final internalSession = InternalAuthSession.instance;
     if (internalSession.isAuthenticated) {
-      return PortalResolution(
-        role: internalSession.homeRole,
-        isInternal: true,
-      );
+      return PortalResolution(role: internalSession.homeRole, isInternal: true);
     }
 
     if (CustomerAuthSession.instance.isAuthenticated) {

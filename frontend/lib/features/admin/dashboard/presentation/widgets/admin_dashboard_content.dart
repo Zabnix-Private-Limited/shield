@@ -4,10 +4,7 @@ import '../../../shared/exports.dart';
 import '../../domain/entities/admin_dashboard_entity.dart';
 
 class AdminDashboardContent extends StatelessWidget {
-  const AdminDashboardContent({
-    super.key,
-    required this.dashboard,
-  });
+  const AdminDashboardContent({super.key, required this.dashboard});
 
   final AdminDashboardEntity dashboard;
 
@@ -29,7 +26,8 @@ class AdminDashboardContent extends StatelessWidget {
                   emptyTitle: 'No operational queue items',
                   emptyDescription:
                       'The dashboard API returned no queue workload for this admin section right now.',
-                  emptyAction: 'Connect the next workflow once the backend emits it',
+                  emptyAction:
+                      'Connect the next workflow once the backend emits it',
                 ),
               ),
             ),
@@ -76,7 +74,8 @@ class AdminDashboardContent extends StatelessWidget {
                   emptyTitle: 'No insights returned',
                   emptyDescription:
                       'The admin dashboard backend has not emitted insight cards for this section yet.',
-                  emptyAction: 'Use this slot for branch health and KPI narratives next',
+                  emptyAction:
+                      'Use this slot for branch health and KPI narratives next',
                 ),
               ),
             ),
@@ -140,7 +139,8 @@ class _ActionList extends StatelessWidget {
         title: 'No backend action labels yet',
         description:
             'The admin dashboard route is live, but it has not published explicit action labels for this section.',
-        actionLabel: 'Keep action definitions backend-driven as new workflows ship',
+        actionLabel:
+            'Keep action definitions backend-driven as new workflows ship',
       );
     }
 

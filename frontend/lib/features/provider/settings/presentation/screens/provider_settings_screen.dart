@@ -67,7 +67,10 @@ class _ProviderSettingsScreenState extends State<ProviderSettingsScreen> {
     _profileVersion = version;
   }
 
-  Future<void> _savePreferences(BuildContext context, dynamic controller) async {
+  Future<void> _savePreferences(
+    BuildContext context,
+    dynamic controller,
+  ) async {
     final messenger = ScaffoldMessenger.of(context);
     final payload = <String, dynamic>{
       'notifications': {
@@ -92,14 +95,18 @@ class _ProviderSettingsScreenState extends State<ProviderSettingsScreen> {
       if (!mounted) {
         return;
       }
-      messenger.showSnackBar(const SnackBar(content: Text('Settings updated.')));
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Settings updated.')),
+      );
     } catch (_) {
       if (!mounted) {
         return;
       }
       messenger.showSnackBar(
         SnackBar(
-          content: Text(controller.error?.toString() ?? 'Unable to update settings.'),
+          content: Text(
+            controller.error?.toString() ?? 'Unable to update settings.',
+          ),
         ),
       );
     }
@@ -130,7 +137,8 @@ class _ProviderSettingsScreenState extends State<ProviderSettingsScreen> {
                       value: _appointmentChanges,
                       onChanged: controller.isProviderProfileSaving
                           ? null
-                          : (value) => setState(() => _appointmentChanges = value),
+                          : (value) =>
+                                setState(() => _appointmentChanges = value),
                       title: const Text('Appointment changes'),
                       subtitle: const Text(
                         'Notify me when bookings are created, moved, or cancelled.',
@@ -150,7 +158,8 @@ class _ProviderSettingsScreenState extends State<ProviderSettingsScreen> {
                       value: _prescriptionUpdates,
                       onChanged: controller.isProviderProfileSaving
                           ? null
-                          : (value) => setState(() => _prescriptionUpdates = value),
+                          : (value) =>
+                                setState(() => _prescriptionUpdates = value),
                       title: const Text('Prescription updates'),
                       subtitle: const Text(
                         'Notify me after prescriptions are finalized.',
@@ -172,7 +181,9 @@ class _ProviderSettingsScreenState extends State<ProviderSettingsScreen> {
                         Expanded(
                           child: DropdownButtonFormField<String>(
                             initialValue: _theme,
-                            decoration: const InputDecoration(labelText: 'Theme'),
+                            decoration: const InputDecoration(
+                              labelText: 'Theme',
+                            ),
                             items: const [
                               DropdownMenuItem(
                                 value: 'system',
@@ -217,9 +228,8 @@ class _ProviderSettingsScreenState extends State<ProviderSettingsScreen> {
                             ],
                             onChanged: controller.isProviderProfileSaving
                                 ? null
-                                : (value) => setState(
-                                    () => _language = value ?? 'en',
-                                  ),
+                                : (value) =>
+                                      setState(() => _language = value ?? 'en'),
                           ),
                         ),
                       ],
@@ -277,19 +287,28 @@ class _ProviderSettingsScreenState extends State<ProviderSettingsScreen> {
                       value: _includeSignature,
                       onChanged: controller.isProviderProfileSaving
                           ? null
-                          : (value) => setState(() => _includeSignature = value),
-                      title: const Text('Include digital signature on printouts'),
+                          : (value) =>
+                                setState(() => _includeSignature = value),
+                      title: const Text(
+                        'Include digital signature on printouts',
+                      ),
                     ),
                     DropdownButtonFormField<String>(
                       initialValue: _paperSize,
-                      decoration: const InputDecoration(labelText: 'Paper size'),
+                      decoration: const InputDecoration(
+                        labelText: 'Paper size',
+                      ),
                       items: const [
                         DropdownMenuItem(value: 'A4', child: Text('A4')),
-                        DropdownMenuItem(value: 'LETTER', child: Text('Letter')),
+                        DropdownMenuItem(
+                          value: 'LETTER',
+                          child: Text('Letter'),
+                        ),
                       ],
                       onChanged: controller.isProviderProfileSaving
                           ? null
-                          : (value) => setState(() => _paperSize = value ?? 'A4'),
+                          : (value) =>
+                                setState(() => _paperSize = value ?? 'A4'),
                     ),
                     const SizedBox(height: 16),
                     Align(
@@ -360,7 +379,9 @@ class _ProviderSettingsScreenState extends State<ProviderSettingsScreen> {
             ...controller.loginHistory.map(
               (row) => Card(
                 child: ListTile(
-                  title: Text(row['status']?.toString() ?? 'Status unavailable'),
+                  title: Text(
+                    row['status']?.toString() ?? 'Status unavailable',
+                  ),
                   subtitle: Text(row['createdAt']?.toString() ?? ''),
                   trailing: Text(row['loginMethod']?.toString() ?? ''),
                 ),

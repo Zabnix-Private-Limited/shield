@@ -58,7 +58,8 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen> {
     }
 
     final contact =
-        profile['contact'] as Map<String, dynamic>? ?? const <String, dynamic>{};
+        profile['contact'] as Map<String, dynamic>? ??
+        const <String, dynamic>{};
     final registration =
         profile['registration'] as Map<String, dynamic>? ??
         const <String, dynamic>{};
@@ -82,8 +83,10 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen> {
     _displayNameController.text = profile['displayName']?.toString() ?? '';
     _contactEmailController.text = contact['email']?.toString() ?? '';
     _contactPhoneController.text = contact['phone']?.toString() ?? '';
-    _qualificationsController.text = profile['qualifications']?.toString() ?? '';
-    _specializationController.text = profile['specialization']?.toString() ?? '';
+    _qualificationsController.text =
+        profile['qualifications']?.toString() ?? '';
+    _specializationController.text =
+        profile['specialization']?.toString() ?? '';
     _registrationNumberController.text =
         registration['number']?.toString() ?? '';
     _registrationAuthorityController.text =
@@ -101,10 +104,7 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen> {
     _profileVersion = version;
   }
 
-  Future<void> _saveProfile(
-    BuildContext context,
-    dynamic controller,
-  ) async {
+  Future<void> _saveProfile(BuildContext context, dynamic controller) async {
     final messenger = ScaffoldMessenger.of(context);
     final payload = <String, dynamic>{
       'displayName': _displayNameController.text.trim(),
@@ -122,9 +122,7 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen> {
       'consultationAvailability': {
         'summary': _availabilityController.text.trim(),
       },
-      'workingHours': {
-        'summary': _workingHoursController.text.trim(),
-      },
+      'workingHours': {'summary': _workingHoursController.text.trim()},
       'primaryBranchId': _primaryBranchId,
       'departmentId': _departmentId,
       'assignedBranchIds': _assignedBranchIds.toList(),
@@ -142,7 +140,9 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen> {
       }
       messenger.showSnackBar(
         SnackBar(
-          content: Text(controller.error?.toString() ?? 'Unable to update profile.'),
+          content: Text(
+            controller.error?.toString() ?? 'Unable to update profile.',
+          ),
         ),
       );
     }
@@ -208,7 +208,8 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen> {
       messenger.showSnackBar(
         SnackBar(
           content: Text(
-            controller.error?.toString() ?? 'Unable to upload the selected file.',
+            controller.error?.toString() ??
+                'Unable to upload the selected file.',
           ),
         ),
       );
@@ -223,10 +224,9 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen> {
         final lookups =
             profile['lookups'] as Map<String, dynamic>? ??
             const <String, dynamic>{};
-        final branches =
-            (lookups['branches'] as List? ?? const <dynamic>[])
-                .map((item) => Map<String, dynamic>.from(item as Map))
-                .toList();
+        final branches = (lookups['branches'] as List? ?? const <dynamic>[])
+            .map((item) => Map<String, dynamic>.from(item as Map))
+            .toList();
         final departments =
             (lookups['departments'] as List? ?? const <dynamic>[])
                 .map((item) => Map<String, dynamic>.from(item as Map))
@@ -369,7 +369,9 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen> {
                       runSpacing: 8,
                       children: branches.map((branch) {
                         final branchId = branch['id']?.toString() ?? '';
-                        final isSelected = _assignedBranchIds.contains(branchId);
+                        final isSelected = _assignedBranchIds.contains(
+                          branchId,
+                        );
                         return FilterChip(
                           label: Text(branch['name']?.toString() ?? 'Branch'),
                           selected: isSelected,
@@ -383,8 +385,8 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen> {
                                     } else {
                                       _assignedBranchIds.remove(branchId);
                                       if (_primaryBranchId == branchId) {
-                                        _primaryBranchId = _assignedBranchIds
-                                            .isEmpty
+                                        _primaryBranchId =
+                                            _assignedBranchIds.isEmpty
                                             ? null
                                             : _assignedBranchIds.first;
                                       }
@@ -409,7 +411,9 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen> {
                           .map(
                             (branch) => DropdownMenuItem<String>(
                               value: branch['id']?.toString(),
-                              child: Text(branch['name']?.toString() ?? 'Branch'),
+                              child: Text(
+                                branch['name']?.toString() ?? 'Branch',
+                              ),
                             ),
                           )
                           .toList(),
@@ -420,7 +424,9 @@ class _ProviderProfileScreenState extends State<ProviderProfileScreen> {
                     const SizedBox(height: 12),
                     DropdownButtonFormField<String>(
                       initialValue: _departmentId,
-                      decoration: const InputDecoration(labelText: 'Department'),
+                      decoration: const InputDecoration(
+                        labelText: 'Department',
+                      ),
                       items: departments
                           .where((department) {
                             if (_assignedBranchIds.isEmpty) {
@@ -539,7 +545,11 @@ class _AssetCard extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 8),
-            Text(fileName?.trim().isNotEmpty == true ? fileName! : 'No file selected'),
+            Text(
+              fileName?.trim().isNotEmpty == true
+                  ? fileName!
+                  : 'No file selected',
+            ),
             const SizedBox(height: 8),
             OutlinedButton(
               onPressed: enabled ? onPressed : null,

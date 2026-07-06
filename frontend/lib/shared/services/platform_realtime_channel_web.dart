@@ -4,7 +4,8 @@ import 'dart:convert';
 import 'dart:html' as html;
 import 'package:flutter/foundation.dart';
 
-typedef PlatformRealtimeEventHandler = void Function(Map<String, dynamic> event);
+typedef PlatformRealtimeEventHandler =
+    void Function(Map<String, dynamic> event);
 typedef PlatformRealtimeErrorHandler = void Function(Object error);
 
 class PlatformRealtimeSubscription {
@@ -31,9 +32,7 @@ PlatformRealtimeSubscription connectPlatformRealtimeStream({
   required PlatformRealtimeEventHandler onEvent,
   PlatformRealtimeErrorHandler? onError,
 }) {
-  final uri = Uri.parse(
-    '$baseUrl/platform/realtime/stream',
-  ).replace(
+  final uri = Uri.parse('$baseUrl/platform/realtime/stream').replace(
     queryParameters: <String, String>{
       'workspace': workspace,
       'access_token': accessToken,

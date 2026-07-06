@@ -5,10 +5,7 @@ import '../theme/admin_colors.dart';
 import '../theme/admin_typography.dart';
 
 class AdminKpiStrip extends StatelessWidget {
-  const AdminKpiStrip({
-    super.key,
-    required this.items,
-  });
+  const AdminKpiStrip({super.key, required this.items});
 
   final List<AdminKpiItem> items;
 
@@ -48,7 +45,9 @@ class AdminKpiStrip extends StatelessWidget {
                   const SizedBox(height: 4),
                   Text(
                     item.note,
-                    style: AdminTypography.tiny.copyWith(color: AdminColors.caption),
+                    style: AdminTypography.tiny.copyWith(
+                      color: AdminColors.caption,
+                    ),
                   ),
                 ],
               ),

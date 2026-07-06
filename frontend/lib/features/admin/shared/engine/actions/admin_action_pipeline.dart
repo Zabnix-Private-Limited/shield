@@ -68,4 +68,5 @@ class AdminActionPipeline {
   }
 }
 
-String _defaultIdGenerator() => DateTime.now().microsecondsSinceEpoch.toString();
+String _defaultIdGenerator() =>
+    DateTime.now().microsecondsSinceEpoch.toString();

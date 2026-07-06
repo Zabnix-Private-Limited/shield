@@ -1,10 +1,7 @@
 import 'package:flutter/material.dart';
 
 class AdminContentArea extends StatelessWidget {
-  const AdminContentArea({
-    super.key,
-    required this.child,
-  });
+  const AdminContentArea({super.key, required this.child});
 
   final Widget child;
 

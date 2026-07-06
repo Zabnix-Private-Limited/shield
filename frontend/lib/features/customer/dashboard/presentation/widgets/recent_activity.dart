@@ -26,10 +26,11 @@ class RecentActivity extends StatelessWidget {
                       width: 40,
                       height: 40,
                       decoration: BoxDecoration(
-                        color: (txn.transactionType == 'CREDIT'
-                                ? AppColors.shieldGreen
-                                : AppColors.error)
-                            .withValues(alpha: 0.12),
+                        color:
+                            (txn.transactionType == 'CREDIT'
+                                    ? AppColors.shieldGreen
+                                    : AppColors.error)
+                                .withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(14),
                       ),
                       child: Icon(
@@ -56,7 +57,9 @@ class RecentActivity extends StatelessWidget {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            DateFormat('dd MMM yyyy • hh:mm a').format(txn.createdAt),
+                            DateFormat(
+                              'dd MMM yyyy • hh:mm a',
+                            ).format(txn.createdAt),
                             style: AppTypography.tiny.copyWith(
                               color: AppColors.gray,
                             ),

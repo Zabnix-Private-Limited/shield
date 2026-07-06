@@ -23,10 +23,7 @@ class AdminSplitWorkspace extends StatelessWidget {
           left,
           const SizedBox(height: 16),
           center,
-          if (right != null) ...[
-            const SizedBox(height: 16),
-            right!,
-          ],
+          if (right != null) ...[const SizedBox(height: 16), right!],
         ],
       );
     }

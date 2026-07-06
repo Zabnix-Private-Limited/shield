@@ -3,11 +3,7 @@ import 'package:flutter/material.dart';
 import '../theme/admin_typography.dart';
 
 class AdminStatusBadge extends StatelessWidget {
-  const AdminStatusBadge({
-    super.key,
-    required this.label,
-    required this.color,
-  });
+  const AdminStatusBadge({super.key, required this.label, required this.color});
 
   final String label;
   final Color color;

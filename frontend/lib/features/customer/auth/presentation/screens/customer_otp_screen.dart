@@ -147,8 +147,8 @@ class _CustomerOtpScreenState extends State<CustomerOtpScreen> {
       _isSubmitting = true;
     });
     try {
-      final outcome =
-          await CustomerAuthRepository.instance.tryCompleteAutoVerifiedSession();
+      final outcome = await CustomerAuthRepository.instance
+          .tryCompleteAutoVerifiedSession();
       if (!mounted || outcome == null) {
         return;
       }

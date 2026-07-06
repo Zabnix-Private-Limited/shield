@@ -16,10 +16,7 @@ class AdminTreeNodeData {
 }
 
 class AdminTreeView extends StatelessWidget {
-  const AdminTreeView({
-    super.key,
-    required this.nodes,
-  });
+  const AdminTreeView({super.key, required this.nodes});
 
   final List<AdminTreeNodeData> nodes;
 
@@ -36,7 +33,9 @@ class AdminTreeView extends StatelessWidget {
                     width: 10,
                     height: 10,
                     decoration: BoxDecoration(
-                      color: node.depth == 0 ? AdminColors.rewards : AdminColors.secondary,
+                      color: node.depth == 0
+                          ? AdminColors.rewards
+                          : AdminColors.secondary,
                       shape: BoxShape.circle,
                     ),
                   ),

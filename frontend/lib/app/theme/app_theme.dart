@@ -122,8 +122,9 @@ class AppTheme {
       labelColor: AppColors.shieldBlue,
       unselectedLabelColor: AppColors.gray,
       labelStyle: AppTypography.small.copyWith(fontWeight: FontWeight.w700),
-      unselectedLabelStyle:
-          AppTypography.small.copyWith(fontWeight: FontWeight.w600),
+      unselectedLabelStyle: AppTypography.small.copyWith(
+        fontWeight: FontWeight.w600,
+      ),
       indicator: BoxDecoration(
         borderRadius: BorderRadius.circular(16),
         color: AppColors.shieldBlue.withValues(alpha: 0.12),

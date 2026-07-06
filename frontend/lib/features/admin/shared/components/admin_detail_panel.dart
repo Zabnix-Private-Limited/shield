@@ -16,10 +16,6 @@ class AdminDetailPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AdminStatCard(
-      title: title,
-      subtitle: subtitle,
-      child: child,
-    );
+    return AdminStatCard(title: title, subtitle: subtitle, child: child);
   }
 }

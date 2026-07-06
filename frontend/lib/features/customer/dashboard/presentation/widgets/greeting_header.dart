@@ -180,7 +180,11 @@ class _PendingQuickActions extends StatelessWidget {
           children: [
             action('Complete profile', '/portal/customer/profile'),
             action('Browse products', '/portal/customer/services'),
-            action('Check membership', '/portal/customer/membership', full: true),
+            action(
+              'Check membership',
+              '/portal/customer/membership',
+              full: true,
+            ),
           ],
         );
       },

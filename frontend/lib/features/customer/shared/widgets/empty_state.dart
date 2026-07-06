@@ -33,10 +33,7 @@ class EmptyState extends StatelessWidget {
             style: AppTypography.small.copyWith(color: AppColors.gray),
             textAlign: TextAlign.center,
           ),
-          if (action != null) ...[
-            const SizedBox(height: 16),
-            action!,
-          ],
+          if (action != null) ...[const SizedBox(height: 16), action!],
         ],
       ),
     );

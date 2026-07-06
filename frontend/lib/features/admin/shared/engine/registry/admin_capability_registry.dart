@@ -16,9 +16,7 @@ class AdminCapabilityRegistry {
   }
 
   Set<String> capabilitiesFor(String workspaceId) {
-    return Set<String>.unmodifiable(
-      _bindings[workspaceId] ?? const <String>{},
-    );
+    return Set<String>.unmodifiable(_bindings[workspaceId] ?? const <String>{});
   }
 
   bool supports(String workspaceId, String capability) {

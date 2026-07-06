@@ -5,10 +5,7 @@ import '../theme/admin_colors.dart';
 import '../theme/admin_typography.dart';
 
 class AdminHealthRow extends StatelessWidget {
-  const AdminHealthRow({
-    super.key,
-    required this.item,
-  });
+  const AdminHealthRow({super.key, required this.item});
 
   final AdminHealthItem item;
 

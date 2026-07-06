@@ -20,7 +20,9 @@ class _ProviderQueueScreenState extends State<ProviderQueueScreen> {
   Widget build(BuildContext context) {
     return ProviderWorkspaceScaffold(
       builder: (context, ref, controller) {
-        final routeFilter = GoRouterState.of(context).uri.queryParameters['filter'];
+        final routeFilter = GoRouterState.of(
+          context,
+        ).uri.queryParameters['filter'];
         final selectedFilter = (_selectedFilter ?? routeFilter)?.trim();
         final queueItems = controller.queueItemsForFilter(selectedFilter);
         final stageBuckets = <String, List<Map<String, dynamic>>>{};
@@ -32,10 +34,13 @@ class _ProviderQueueScreenState extends State<ProviderQueueScreen> {
         }
         for (final item in queueItems) {
           final stageCode = item['stageCode']?.toString() ?? '';
-          stageBuckets.putIfAbsent(stageCode, () => <Map<String, dynamic>>[]).add(item);
+          stageBuckets
+              .putIfAbsent(stageCode, () => <Map<String, dynamic>>[])
+              .add(item);
         }
         final counts = {
-          for (final entry in stageBuckets.entries) entry.key: entry.value.length,
+          for (final entry in stageBuckets.entries)
+            entry.key: entry.value.length,
         };
         final hasItems = queueItems.isNotEmpty;
         final stageMetadata = controller.queueStagesMetadata;
@@ -98,7 +103,9 @@ class _ProviderQueueScreenState extends State<ProviderQueueScreen> {
                         setState(() {
                           _selectedFilter = filterCode;
                         });
-                        final query = filterCode == null ? '' : '?filter=$filterCode';
+                        final query = filterCode == null
+                            ? ''
+                            : '?filter=$filterCode';
                         context.go('/portal/$roleKey/queue$query');
                       },
                     ),
@@ -142,7 +149,6 @@ class _ProviderQueueScreenState extends State<ProviderQueueScreen> {
       },
     );
   }
-
 }
 
 class _StagePill extends StatelessWidget {
@@ -218,7 +224,11 @@ class _QueueColumn extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  Icon(_iconForId(iconId), size: 18, color: _colorForId(colorId)),
+                  Icon(
+                    _iconForId(iconId),
+                    size: 18,
+                    color: _colorForId(colorId),
+                  ),
                   const SizedBox(width: 8),
                   Expanded(child: Text(label, style: AppTypography.h5)),
                 ],
@@ -276,8 +286,12 @@ class _QueueCard extends StatelessWidget {
     final title = item['title']?.toString() ?? 'Workflow item';
     final subtitle = item['subtitle']?.toString() ?? 'Operational work';
     final meta = item['meta']?.toString();
-    final statusLabel = item['stageLabel']?.toString() ?? item['statusLabel']?.toString() ?? 'Waiting';
-    final secondaryActionLabel = item['secondaryActionLabel']?.toString() ?? 'Open patient';
+    final statusLabel =
+        item['stageLabel']?.toString() ??
+        item['statusLabel']?.toString() ??
+        'Waiting';
+    final secondaryActionLabel =
+        item['secondaryActionLabel']?.toString() ?? 'Open patient';
     final primaryActionLabel = item['primaryActionLabel']?.toString() ?? 'Open';
 
     return InkWell(
@@ -334,10 +348,7 @@ class _QueueCard extends StatelessWidget {
               children: [
                 Expanded(
                   child: OutlinedButton(
-                    onPressed: () => _openQueueAction(
-                      context,
-                      primary: false,
-                    ),
+                    onPressed: () => _openQueueAction(context, primary: false),
                     style: OutlinedButton.styleFrom(
                       side: const BorderSide(color: AppColors.divider),
                       shape: RoundedRectangleBorder(
@@ -350,10 +361,7 @@ class _QueueCard extends StatelessWidget {
                 const SizedBox(width: 10),
                 Expanded(
                   child: FilledButton(
-                    onPressed: () => _openQueueAction(
-                      context,
-                      primary: true,
-                    ),
+                    onPressed: () => _openQueueAction(context, primary: true),
                     style: FilledButton.styleFrom(
                       backgroundColor: AppColors.shieldBlue,
                       shape: RoundedRectangleBorder(

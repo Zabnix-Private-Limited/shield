@@ -1527,10 +1527,7 @@ class ApiService {
     final normalizedWorkspaceId = workspaceId.trim().toLowerCase();
     final response = await _dio.post(
       '/admin/workspaces/$normalizedWorkspaceId/bulk-actions/$actionId',
-      data: <String, Object?>{
-        'record_ids': recordIds,
-        ...payload,
-      },
+      data: <String, Object?>{'record_ids': recordIds, ...payload},
     );
     return _readEnvelope(response);
   }

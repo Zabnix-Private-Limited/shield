@@ -2,7 +2,8 @@ import 'dart:typed_data';
 
 import 'prescription_file_picker_stub.dart'
     if (dart.library.io) 'prescription_file_picker_io.dart'
-    if (dart.library.html) 'prescription_file_picker_web.dart' as impl;
+    if (dart.library.html) 'prescription_file_picker_web.dart'
+    as impl;
 
 class PickedPrescriptionFile {
   final String name;

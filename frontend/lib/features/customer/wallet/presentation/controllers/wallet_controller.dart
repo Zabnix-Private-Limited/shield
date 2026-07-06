@@ -7,10 +7,8 @@ import '../../data/models/wallet_model.dart';
 import '../../data/repositories/wallet_repository.dart';
 
 class WalletController extends ChangeNotifier {
-  WalletController({
-    WalletRepository? repository,
-    this.customerId,
-  }) : _repository = repository ?? WalletRepository();
+  WalletController({WalletRepository? repository, this.customerId})
+    : _repository = repository ?? WalletRepository();
 
   final WalletRepository _repository;
   final String? customerId;

@@ -26,15 +26,14 @@ class PrescriptionAnalysis extends Equatable {
   });
 
   factory PrescriptionAnalysis.fromJson(Map<String, dynamic> json) {
-    final structured =
-        Map<String, dynamic>.from(
-          json['structuredJson'] as Map? ?? const <String, dynamic>{},
-        );
+    final structured = Map<String, dynamic>.from(
+      json['structuredJson'] as Map? ?? const <String, dynamic>{},
+    );
     return PrescriptionAnalysis(
       documentId: json['documentId'].toString(),
       fileName: (json['fileName'] ?? 'Prescription').toString(),
-      reviewStatus:
-          (json['reviewStatus'] ?? 'PENDING_PHARMACIST_APPROVAL').toString(),
+      reviewStatus: (json['reviewStatus'] ?? 'PENDING_PHARMACIST_APPROVAL')
+          .toString(),
       overallConfidence:
           double.tryParse((json['overallConfidence'] ?? 0).toString()) ?? 0,
       extractionConfidence:
@@ -50,23 +49,21 @@ class PrescriptionAnalysis extends Equatable {
                 ),
               )
               .toList(),
-      cartPrefill:
-          (json['cartPrefill'] as List<dynamic>? ?? const <dynamic>[])
-              .whereType<Map>()
-              .map(
-                (item) =>
-                    PrescriptionCartItem.fromJson(Map<String, dynamic>.from(item)),
-              )
-              .toList(),
-      steps:
-          (json['steps'] as List<dynamic>? ?? const <dynamic>[])
-              .whereType<Map>()
-              .map(
-                (item) => PrescriptionPipelineStep.fromJson(
-                  Map<String, dynamic>.from(item),
-                ),
-              )
-              .toList(),
+      cartPrefill: (json['cartPrefill'] as List<dynamic>? ?? const <dynamic>[])
+          .whereType<Map>()
+          .map(
+            (item) =>
+                PrescriptionCartItem.fromJson(Map<String, dynamic>.from(item)),
+          )
+          .toList(),
+      steps: (json['steps'] as List<dynamic>? ?? const <dynamic>[])
+          .whereType<Map>()
+          .map(
+            (item) => PrescriptionPipelineStep.fromJson(
+              Map<String, dynamic>.from(item),
+            ),
+          )
+          .toList(),
     );
   }
 
@@ -105,15 +102,14 @@ class PrescriptionStructuredData extends Equatable {
       patient: (json['patient'] ?? 'Customer').toString(),
       doctor: (json['doctor'] ?? 'Doctor unavailable').toString(),
       date: (json['date'] ?? '').toString(),
-      medicines:
-          (json['medicines'] as List<dynamic>? ?? const <dynamic>[])
-              .whereType<Map>()
-              .map(
-                (item) => PrescriptionMedicineItem.fromJson(
-                  Map<String, dynamic>.from(item),
-                ),
-              )
-              .toList(),
+      medicines: (json['medicines'] as List<dynamic>? ?? const <dynamic>[])
+          .whereType<Map>()
+          .map(
+            (item) => PrescriptionMedicineItem.fromJson(
+              Map<String, dynamic>.from(item),
+            ),
+          )
+          .toList(),
     );
   }
 
@@ -209,15 +205,14 @@ class PrescriptionMedicineMatch extends Equatable {
       matchedProductId: json['matchedProductId']?.toString(),
       matchedProductName: json['matchedProductName']?.toString(),
       matchedBrand: json['matchedBrand']?.toString(),
-      candidates:
-          (json['candidates'] as List<dynamic>? ?? const <dynamic>[])
-              .whereType<Map>()
-              .map(
-                (item) => PrescriptionMatchCandidate.fromJson(
-                  Map<String, dynamic>.from(item),
-                ),
-              )
-              .toList(),
+      candidates: (json['candidates'] as List<dynamic>? ?? const <dynamic>[])
+          .whereType<Map>()
+          .map(
+            (item) => PrescriptionMatchCandidate.fromJson(
+              Map<String, dynamic>.from(item),
+            ),
+          )
+          .toList(),
     );
   }
 

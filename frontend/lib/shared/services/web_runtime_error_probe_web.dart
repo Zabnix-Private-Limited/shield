@@ -24,9 +24,7 @@ Future<void> ensureWebRuntimeErrorProbe() async {
 
   html.window.addEventListener('unhandledrejection', (event) {
     if (event is html.PromiseRejectionEvent) {
-      debugPrint(
-        '[WebRuntimeProbe] unhandledrejection reason=${event.reason}',
-      );
+      debugPrint('[WebRuntimeProbe] unhandledrejection reason=${event.reason}');
       return;
     }
     debugPrint('[WebRuntimeProbe] unhandledrejection event=$event');

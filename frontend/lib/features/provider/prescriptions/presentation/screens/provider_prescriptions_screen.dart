@@ -43,17 +43,16 @@ class ProviderPrescriptionsScreen extends StatelessWidget {
                 (document) => Card(
                   child: ListTile(
                     onTap: () async {
-                      final url = await controller.getPatientDocumentDownloadUrl(
-                        document.id,
-                      );
+                      final url = await controller
+                          .getPatientDocumentDownloadUrl(document.id);
                       await openPlatformUrl(url);
                     },
                     title: Text(document.fileName),
                     subtitle: Text(
-                      [
-                        document.typeLabel,
-                        document.extractionPreview,
-                      ].whereType<String>().where((value) => value.trim().isNotEmpty).join(' • '),
+                      [document.typeLabel, document.extractionPreview]
+                          .whereType<String>()
+                          .where((value) => value.trim().isNotEmpty)
+                          .join(' • '),
                     ),
                     trailing: Wrap(
                       spacing: 8,
@@ -62,10 +61,8 @@ class ProviderPrescriptionsScreen extends StatelessWidget {
                         Text(document.statusLabel),
                         TextButton(
                           onPressed: () async {
-                            final url =
-                                await controller.getPatientDocumentDownloadUrl(
-                              document.id,
-                            );
+                            final url = await controller
+                                .getPatientDocumentDownloadUrl(document.id);
                             await openPlatformUrl(url);
                           },
                           child: const Text('Open'),

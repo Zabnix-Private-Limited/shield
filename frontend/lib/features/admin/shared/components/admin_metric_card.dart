@@ -6,10 +6,7 @@ import '../theme/admin_colors.dart';
 import '../theme/admin_typography.dart';
 
 class AdminMetricCard extends StatelessWidget {
-  const AdminMetricCard({
-    super.key,
-    required this.metric,
-  });
+  const AdminMetricCard({super.key, required this.metric});
 
   final AdminMetric metric;
 
@@ -57,9 +54,7 @@ class AdminMetricCard extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             metric.note,
-            style: AdminTypography.small.copyWith(
-              color: AdminColors.subtext,
-            ),
+            style: AdminTypography.small.copyWith(color: AdminColors.subtext),
           ),
         ],
       ),

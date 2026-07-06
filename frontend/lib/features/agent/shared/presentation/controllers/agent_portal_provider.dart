@@ -9,5 +9,5 @@ final agentPortalRepositoryProvider = Provider<AgentPortalRepository>(
 
 final agentPortalControllerProvider =
     ChangeNotifierProvider<AgentPortalController>(
-  (ref) => AgentPortalController(ref.watch(agentPortalRepositoryProvider)),
-);
+      (ref) => AgentPortalController(ref.watch(agentPortalRepositoryProvider)),
+    );

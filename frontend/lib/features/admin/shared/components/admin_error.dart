@@ -4,10 +4,7 @@ import '../theme/admin_colors.dart';
 import '../theme/admin_typography.dart';
 
 class AdminError extends StatelessWidget {
-  const AdminError({
-    super.key,
-    required this.message,
-  });
+  const AdminError({super.key, required this.message});
 
   final String message;
 

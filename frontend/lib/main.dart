@@ -20,18 +20,12 @@ Future<void> main() async {
       '[FlutterError] exception=${details.exceptionAsString()} library=${details.library ?? 'unknown'} context=${details.context}',
     );
     if (details.stack != null) {
-      debugPrintStack(
-        label: '[FlutterError] stack',
-        stackTrace: details.stack,
-      );
+      debugPrintStack(label: '[FlutterError] stack', stackTrace: details.stack);
     }
   };
   PlatformDispatcher.instance.onError = (error, stack) {
     debugPrint('[PlatformDispatcher] uncaught error=$error');
-    debugPrintStack(
-      label: '[PlatformDispatcher] stack',
-      stackTrace: stack,
-    );
+    debugPrintStack(label: '[PlatformDispatcher] stack', stackTrace: stack);
     return false;
   };
   await ensureWebRuntimeErrorProbe();

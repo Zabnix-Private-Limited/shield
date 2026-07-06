@@ -7,8 +7,8 @@ import '../../domain/repositories/admin_dashboard_repository.dart';
 
 final adminDashboardRemoteDataSourceProvider =
     Provider<AdminDashboardRemoteDataSource>(
-  (ref) => AdminDashboardRemoteDataSource(),
-);
+      (ref) => AdminDashboardRemoteDataSource(),
+    );
 
 final adminDashboardRepositoryProvider = Provider<AdminDashboardRepository>(
   (ref) => AdminDashboardRepositoryImpl(
@@ -18,9 +18,9 @@ final adminDashboardRepositoryProvider = Provider<AdminDashboardRepository>(
 
 final adminDashboardControllerProvider =
     ChangeNotifierProvider<AdminDashboardController>((ref) {
-  final controller = AdminDashboardController(
-    ref.watch(adminDashboardRepositoryProvider),
-  );
-  controller.load();
-  return controller;
-});
+      final controller = AdminDashboardController(
+        ref.watch(adminDashboardRepositoryProvider),
+      );
+      controller.load();
+      return controller;
+    });

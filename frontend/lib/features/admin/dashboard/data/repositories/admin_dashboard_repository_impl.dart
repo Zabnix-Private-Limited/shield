@@ -6,9 +6,8 @@ class AdminDashboardRepositoryImpl implements AdminDashboardRepository {
   AdminDashboardRepositoryImpl({
     AdminDashboardRemoteDataSource? remoteDataSource,
     Duration? cacheTtl,
-  })  : _remoteDataSource =
-            remoteDataSource ?? AdminDashboardRemoteDataSource(),
-        _cacheTtl = cacheTtl ?? const Duration(minutes: 2);
+  }) : _remoteDataSource = remoteDataSource ?? AdminDashboardRemoteDataSource(),
+       _cacheTtl = cacheTtl ?? const Duration(minutes: 2);
 
   final AdminDashboardRemoteDataSource _remoteDataSource;
   final Duration _cacheTtl;

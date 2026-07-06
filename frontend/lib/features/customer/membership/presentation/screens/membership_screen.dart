@@ -74,10 +74,7 @@ class _CustomerMembershipScreenState extends State<CustomerMembershipScreen> {
               parent: AlwaysScrollableScrollPhysics(),
             ),
             children: [
-              _MembershipHero(
-                membership: membership,
-                accessState: accessState,
-              ),
+              _MembershipHero(membership: membership, accessState: accessState),
               const SizedBox(height: 20),
               LayoutBuilder(
                 builder: (context, constraints) {
@@ -115,8 +112,7 @@ class _CustomerMembershipScreenState extends State<CustomerMembershipScreen> {
                         label: accessState.serviceAccessEnabled
                             ? 'Total used'
                             : 'Service access',
-                        value:
-                            accessState.serviceAccessEnabled
+                        value: accessState.serviceAccessEnabled
                             ? '₹${membership.totalRedeemedCredits.toStringAsFixed(0)}'
                             : 'Pending',
                         note: accessState.serviceAccessEnabled
@@ -175,8 +171,7 @@ class _CustomerMembershipScreenState extends State<CustomerMembershipScreen> {
                 onTap: () => showPortalDetailsSheet(
                   context,
                   title: 'Membership details',
-                  subtitle:
-                      accessState.serviceAccessEnabled
+                  subtitle: accessState.serviceAccessEnabled
                       ? 'This customer membership is active and card-backed.'
                       : 'The customer registration is complete, but SHIELD membership issuance is still pending.',
                   meta: accessState.serviceAccessEnabled
@@ -262,10 +257,7 @@ class _CustomerMembershipScreenState extends State<CustomerMembershipScreen> {
 }
 
 class _MembershipHero extends StatelessWidget {
-  const _MembershipHero({
-    required this.membership,
-    required this.accessState,
-  });
+  const _MembershipHero({required this.membership, required this.accessState});
 
   final Membership membership;
   final CustomerAccessState accessState;
@@ -288,10 +280,7 @@ class _MembershipHero extends StatelessWidget {
                     AppColors.shieldBlue,
                   ],
                 }
-              : const [
-                  AppColors.warning,
-                  AppColors.shieldBlue,
-                ],
+              : const [AppColors.warning, AppColors.shieldBlue],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -363,14 +352,8 @@ class _MembershipHero extends StatelessWidget {
                   value: DateFormat('dd MMM yyyy').format(membership.endDate),
                 ),
               ] else ...const [
-                _HeroChip(
-                  label: 'Stage',
-                  value: 'Profile created',
-                ),
-                _HeroChip(
-                  label: 'Next step',
-                  value: 'Await card issue',
-                ),
+                _HeroChip(label: 'Stage', value: 'Profile created'),
+                _HeroChip(label: 'Next step', value: 'Await card issue'),
               ],
             ],
           ),
@@ -540,7 +523,9 @@ class _MembershipActions extends StatelessWidget {
           runSpacing: 10,
           children: [
             action(
-              accessState.serviceAccessEnabled ? 'Open wallet' : 'Browse products',
+              accessState.serviceAccessEnabled
+                  ? 'Open wallet'
+                  : 'Browse products',
               () => context.go(
                 accessState.serviceAccessEnabled
                     ? '/portal/customer/wallet'
@@ -548,7 +533,9 @@ class _MembershipActions extends StatelessWidget {
               ),
             ),
             action(
-              accessState.serviceAccessEnabled ? 'Open profile' : 'Complete profile',
+              accessState.serviceAccessEnabled
+                  ? 'Open profile'
+                  : 'Complete profile',
               () => context.go('/portal/customer/profile'),
             ),
             action(
@@ -560,8 +547,7 @@ class _MembershipActions extends StatelessWidget {
                 title: accessState.serviceAccessEnabled
                     ? 'Renewal guidance'
                     : 'Approval guidance',
-                subtitle:
-                    accessState.serviceAccessEnabled
+                subtitle: accessState.serviceAccessEnabled
                     ? 'Renewal flow can now build on this dedicated membership slice without adding more customer logic back into the shared portal shell.'
                     : 'SHIELD cards are issued by admin or agent operations after registration review.',
                 meta: accessState.serviceAccessEnabled

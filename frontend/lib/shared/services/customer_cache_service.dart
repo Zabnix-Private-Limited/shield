@@ -13,10 +13,14 @@ class CustomerCacheService {
       return;
     }
 
-    final dashboardBox = await Hive.openBox<String>(DashboardCachePolicy.boxName);
+    final dashboardBox = await Hive.openBox<String>(
+      DashboardCachePolicy.boxName,
+    );
     await dashboardBox.delete(DashboardCachePolicy.cacheKeyFor(normalized));
 
-    final membershipBox = await Hive.openBox<String>(MembershipCachePolicy.boxName);
+    final membershipBox = await Hive.openBox<String>(
+      MembershipCachePolicy.boxName,
+    );
     await membershipBox.delete(MembershipCachePolicy.cacheKeyFor(normalized));
 
     final walletBox = await Hive.openBox<String>(WalletCachePolicy.boxName);

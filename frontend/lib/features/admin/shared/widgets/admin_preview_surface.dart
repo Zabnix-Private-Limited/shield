@@ -26,7 +26,11 @@ class AdminPreviewSurface extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.picture_as_pdf_outlined, size: 42, color: AdminColors.primary),
+          const Icon(
+            Icons.picture_as_pdf_outlined,
+            size: 42,
+            color: AdminColors.primary,
+          ),
           const SizedBox(height: 12),
           Text(
             title,

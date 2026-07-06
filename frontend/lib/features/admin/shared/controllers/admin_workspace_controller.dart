@@ -22,7 +22,9 @@ class AdminWorkspaceController extends ChangeNotifier {
     required AdminNavigationRegistry navigationRegistry,
     required AdminWorkspaceSchemaRepository schemaRepository,
     required AdminWorkspacePermissionGateway permissionGateway,
-    required AdminWorkspaceRepository Function(AdminWorkspaceDefinition workspace)
+    required AdminWorkspaceRepository Function(
+      AdminWorkspaceDefinition workspace,
+    )
     repositoryResolver,
     required AdminEventBus eventBus,
     required AdminCommandBus commandBus,
@@ -96,16 +98,15 @@ class AdminWorkspaceController extends ChangeNotifier {
     }
 
     final existingSnapshot = snapshot;
-    _state =
-        existingSnapshot == null
-            ? AdminWorkspaceState.loading(
-                workspaceId: workspaceId,
-                payload: existingSnapshot,
-              )
-            : AdminWorkspaceState.ready(
-                workspaceId: workspaceId,
-                payload: existingSnapshot,
-              ).toRefreshing();
+    _state = existingSnapshot == null
+        ? AdminWorkspaceState.loading(
+            workspaceId: workspaceId,
+            payload: existingSnapshot,
+          )
+        : AdminWorkspaceState.ready(
+            workspaceId: workspaceId,
+            payload: existingSnapshot,
+          ).toRefreshing();
     notifyListeners();
 
     final navigation = _navigationRegistry.findByWorkspaceId(workspaceId);
@@ -146,11 +147,9 @@ class AdminWorkspaceController extends ChangeNotifier {
         userId: userId,
       );
       final schema = await _schemaRepository.loadSchema(workspace);
-      final data = await _repositoryResolver(workspace).loadWorkspaceData(
+      final data = await _repositoryResolver(
         workspace,
-        query: _query,
-        forceRefresh: forceRefresh,
-      );
+      ).loadWorkspaceData(workspace, query: _query, forceRefresh: forceRefresh);
       final resolvedNavigation =
           navigation ??
           AdminNavigationDefinition(
@@ -275,12 +274,7 @@ class AdminWorkspaceController extends ChangeNotifier {
 
   Future<void> changePageSize(int pageSize) {
     final normalized = pageSize < 1 ? 25 : pageSize;
-    return _reload(
-      _query.copyWith(
-        pageSize: normalized,
-        page: 1,
-      ),
-    );
+    return _reload(_query.copyWith(pageSize: normalized, page: 1));
   }
 
   Future<Map<String, dynamic>> loadForm(
@@ -418,4 +412,5 @@ class AdminWorkspaceController extends ChangeNotifier {
   }
 }
 
-String _defaultIdGenerator() => DateTime.now().microsecondsSinceEpoch.toString();
+String _defaultIdGenerator() =>
+    DateTime.now().microsecondsSinceEpoch.toString();

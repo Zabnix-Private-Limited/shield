@@ -8,7 +8,9 @@ class AdminNavigationController extends ChangeNotifier {
     required AdminNavigationRegistry navigationRegistry,
     required String initialWorkspaceId,
   }) : _navigationRegistry = navigationRegistry {
-    _activeNavigation = _navigationRegistry.findByWorkspaceId(initialWorkspaceId);
+    _activeNavigation = _navigationRegistry.findByWorkspaceId(
+      initialWorkspaceId,
+    );
   }
 
   final AdminNavigationRegistry _navigationRegistry;
@@ -16,8 +18,7 @@ class AdminNavigationController extends ChangeNotifier {
 
   String get activeSection => activeWorkspaceId;
 
-  String get activeWorkspaceId =>
-      _activeNavigation?.workspaceId ?? 'dashboard';
+  String get activeWorkspaceId => _activeNavigation?.workspaceId ?? 'dashboard';
 
   String? get activeRoute => _activeNavigation?.route;
 
