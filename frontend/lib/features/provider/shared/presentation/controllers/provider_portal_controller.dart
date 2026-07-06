@@ -9,6 +9,7 @@ import '../../../../../shared/models/wallet.dart';
 import '../../../../../shared/services/api_service.dart';
 import '../../../../../shared/services/internal_auth_session.dart';
 import '../../../../../shared/services/platform_realtime_channel.dart';
+import '../../../../../shared/utils/app_display_formatters.dart';
 import '../../data/provider_portal_repository.dart';
 
 class ProviderPortalController extends ChangeNotifier {
@@ -1368,8 +1369,7 @@ class ProviderPortalController extends ChangeNotifier {
   );
 
   String formatCurrency(Object? value) {
-    final amount = double.tryParse('${value ?? 0}') ?? 0;
-    return 'Rs ${amount.toStringAsFixed(0)}';
+    return AppDisplayFormatters.formatCurrencyString('${value ?? 0}');
   }
 
   String resolvePatientTab(String? tabCode) {

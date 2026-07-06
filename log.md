@@ -9051,3 +9051,31 @@ Hardened the shared admin runtime so workspace search, filters, sorting, paginat
 - `cd frontend && dart format frontend/lib/shared/utils/app_display_formatters.dart frontend/lib/features/admin/shared/exports.dart frontend/lib/features/admin/presentation/screens/admin_portal_workspace.dart frontend/lib/features/admin/shared/components/admin_data_table.dart frontend/lib/features/admin/shared/components/admin_console_toolbar.dart frontend/lib/features/admin/shared/components/admin_workspace_header.dart frontend/lib/features/admin/shared/presentation/widgets/admin_backend_workspace_module.dart frontend/lib/app/routes/app_router.dart frontend/lib/features/portal/presentation/screens/portal_shell.dart frontend/test/admin_data_table_test.dart` ✅
 - `cd frontend && flutter analyze lib/shared/utils/app_display_formatters.dart lib/features/admin/presentation/screens/admin_portal_workspace.dart lib/features/admin/shared/components/admin_data_table.dart lib/features/admin/shared/components/admin_console_toolbar.dart lib/features/admin/shared/components/admin_workspace_header.dart lib/features/admin/shared/presentation/widgets/admin_backend_workspace_module.dart lib/app/routes/app_router.dart lib/features/portal/presentation/screens/portal_shell.dart` ✅
 - `cd frontend && flutter test test/admin_data_table_test.dart test/admin_backend_workspace_module_test.dart test/admin_dashboard_controller_test.dart test/admin_engine_foundation_test.dart test/admin_engine_runtime_test.dart` ✅
+
+## 254. Provider Customer Workspace Decomposition and Wallet Language Hardening
+**Timestamp:** 2026-07-06 17:10:00 IST
+
+Replaced the oversized provider patient screen with a smaller shell plus dedicated detail widgets, and tightened customer-visible wallet wording so cash and reward balances remain clear while internal SHIELD benefit support stops appearing like a third spendable balance.
+
+**Frontend Files**
+- `frontend/lib/features/provider/customers/presentation/screens/provider_customers_screen.dart`
+- `frontend/lib/features/provider/customers/presentation/widgets/provider_customers_shell.dart`
+- `frontend/lib/features/provider/customers/presentation/widgets/patient_header_strip.dart`
+- `frontend/lib/features/provider/customers/presentation/widgets/provider_patient_tabbed_detail_pane.dart`
+- `frontend/lib/features/provider/shared/presentation/controllers/provider_portal_controller.dart`
+- `frontend/lib/features/customer/wallet/presentation/screens/wallet_screen.dart`
+- `frontend/lib/features/customer/wallet/presentation/widgets/transaction_tile.dart`
+- `frontend/test/provider_customers_shell_test.dart`
+
+**Backend Files**
+- None.
+
+**Why**
+- The provider customer workspace was the clearest remaining monolith risk in the audit: too much product surface, too much layout responsibility, and too much inconsistent language in one owner.
+- This pass splits the screen into a search/grid shell, a compact patient header strip, and a tabbed detail pane that keeps documents, clinical notes, billing and wallet, timeline, and prescriptions separate while reusing the shared admin grid and shared formatters.
+- Customer wallet messaging now clearly distinguishes visible cash, visible reward points, and internal SHIELD support so customers no longer see internal benefit behavior mixed into the spendable wallet story.
+
+**Verification**
+- `cd frontend && dart format lib/features/provider/customers/presentation/screens/provider_customers_screen.dart lib/features/provider/customers/presentation/widgets/provider_customers_shell.dart lib/features/provider/customers/presentation/widgets/patient_header_strip.dart lib/features/provider/customers/presentation/widgets/provider_patient_tabbed_detail_pane.dart lib/features/provider/shared/presentation/controllers/provider_portal_controller.dart lib/features/customer/wallet/presentation/screens/wallet_screen.dart lib/features/customer/wallet/presentation/widgets/transaction_tile.dart test/provider_customers_shell_test.dart` ✅
+- `cd frontend && flutter analyze lib/features/provider/customers/presentation/screens/provider_customers_screen.dart lib/features/provider/customers/presentation/widgets/provider_customers_shell.dart lib/features/provider/customers/presentation/widgets/patient_header_strip.dart lib/features/provider/customers/presentation/widgets/provider_patient_tabbed_detail_pane.dart lib/features/provider/shared/presentation/controllers/provider_portal_controller.dart lib/features/customer/wallet/presentation/screens/wallet_screen.dart lib/features/customer/wallet/presentation/widgets/transaction_tile.dart` ✅
+- `cd frontend && flutter test test/provider_customers_shell_test.dart test/admin_data_table_test.dart test/admin_backend_workspace_module_test.dart test/admin_dashboard_controller_test.dart test/admin_engine_foundation_test.dart test/admin_engine_runtime_test.dart` ✅

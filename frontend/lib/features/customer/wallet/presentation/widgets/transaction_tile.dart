@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 
 import '../../../../../app/theme/app_colors.dart';
 import '../../../../../app/theme/app_typography.dart';
 import '../../../../../shared/models/wallet.dart';
+import '../../../../../shared/utils/app_display_formatters.dart';
 import '../../../../../shared/widgets/app_card.dart';
 import '../../../../../shared/widgets/portal_support.dart';
 
@@ -28,12 +28,14 @@ class TransactionTile extends StatelessWidget {
         context,
         title: transaction.remarks ?? 'Wallet transaction',
         subtitle:
-            '${transaction.subLedgerType} ${transaction.transactionType.toLowerCase()} entry for ${transaction.amount.toStringAsFixed(0)}.',
-        meta: DateFormat('dd MMM yyyy, hh:mm a').format(transaction.createdAt),
+            '${_ledgerLabel(transaction.subLedgerType)} ${transaction.transactionType.toLowerCase()} entry for ${AppDisplayFormatters.formatCurrencyString(transaction.amount.toStringAsFixed(2))}.',
+        meta: AppDisplayFormatters.formatDateOrDateTime(
+          transaction.createdAt.toIso8601String(),
+        ),
         status: transaction.transactionType,
         highlights: [
-          'Post-transaction balance in ${transaction.subLedgerType} ledger is ${ledgerBalanceAfter(transaction).toStringAsFixed(0)}.',
-          'This transaction is loaded from the live customer wallet ledger.',
+          'Balance after this ${_ledgerLabel(transaction.subLedgerType).toLowerCase()} transaction is ${AppDisplayFormatters.formatCurrencyString(ledgerBalanceAfter(transaction).toStringAsFixed(2))}.',
+          'Only customer-visible cash and reward ledgers appear in this activity list.',
         ],
       ),
       child: Row(
@@ -68,7 +70,9 @@ class TransactionTile extends StatelessWidget {
                 ),
                 const SizedBox(height: 3),
                 Text(
-                  DateFormat('dd MMM • hh:mm a').format(transaction.createdAt),
+                  AppDisplayFormatters.formatDateOrDateTime(
+                    transaction.createdAt.toIso8601String(),
+                  ),
                   style: AppTypography.tiny.copyWith(color: AppColors.gray),
                 ),
               ],
@@ -79,7 +83,7 @@ class TransactionTile extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(
-                '${isCredit ? '+' : '-'}₹${transaction.amount.toStringAsFixed(0)}',
+                '${isCredit ? '+' : '-'}${AppDisplayFormatters.formatCurrencyString(transaction.amount.toStringAsFixed(2))}',
                 style: AppTypography.body.copyWith(
                   color: accent,
                   fontWeight: FontWeight.w700,
@@ -103,9 +107,9 @@ class _LedgerBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = switch (ledgerType) {
-      'POINTS' => (AppColors.warning, 'Points'),
-      'BENEFIT' => (AppColors.shieldGreen, 'Benefit'),
-      _ => (AppColors.shieldBlue, 'Cash'),
+      'POINTS' => (AppColors.warning, 'Reward points'),
+      'BENEFIT' => (AppColors.shieldGreen, 'Internal support'),
+      _ => (AppColors.shieldBlue, 'Cash wallet'),
     };
 
     return Container(
@@ -122,5 +126,16 @@ class _LedgerBadge extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+String _ledgerLabel(String ledgerType) {
+  switch (ledgerType) {
+    case 'POINTS':
+      return 'reward points';
+    case 'BENEFIT':
+      return 'internal SHIELD support';
+    default:
+      return 'cash wallet';
   }
 }

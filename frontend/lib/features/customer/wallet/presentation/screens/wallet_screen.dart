@@ -6,6 +6,7 @@ import '../../../../../app/theme/app_typography.dart';
 import '../../../../../shared/models/customer.dart';
 import '../../../../../shared/models/wallet.dart';
 import '../../../../../shared/services/api_service.dart';
+import '../../../../../shared/utils/app_display_formatters.dart';
 import '../../../../../shared/widgets/app_card.dart';
 import '../../../shared/domain/customer_access_state.dart';
 import '../../../../../shared/widgets/portal_support.dart';
@@ -102,6 +103,9 @@ class _CustomerWalletScreenState extends State<CustomerWalletScreen> {
             }
 
             final visibleTransactions = wallet.recentTransactions.where((txn) {
+              if (txn.subLedgerType == 'BENEFIT') {
+                return false;
+              }
               return _selectedLedger == 'ALL' ||
                   txn.subLedgerType == _selectedLedger;
             }).toList();
@@ -402,7 +406,7 @@ class _WalletHero extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           Text(
-            'Cash, points, credit, and ledger movement in one compact customer view.',
+            'Cash and reward points are visible here. Internal SHIELD benefit support is applied behind the scenes and is never shown as spendable wallet balance.',
             style: AppTypography.small.copyWith(
               color: AppColors.white.withValues(alpha: 0.84),
             ),
@@ -418,15 +422,20 @@ class _WalletHero extends StatelessWidget {
                   _HeroStatBlock(
                     width: itemWidth,
                     label: 'Cash',
-                    value: '₹${cashBalance.toStringAsFixed(0)}',
-                    secondary: '${pointsBalance.toStringAsFixed(0)} reward pts',
+                    value: AppDisplayFormatters.formatCurrencyString(
+                      cashBalance.toStringAsFixed(2),
+                    ),
+                    secondary:
+                        '${pointsBalance.toStringAsFixed(0)} reward points',
                   ),
                   _HeroStatBlock(
                     width: itemWidth,
                     label: 'Credit',
-                    value: '₹${creditAvailable.toStringAsFixed(0)}',
+                    value: AppDisplayFormatters.formatCurrencyString(
+                      creditAvailable.toStringAsFixed(2),
+                    ),
                     secondary:
-                        '₹${monthlySpend.toStringAsFixed(0)} spent this cycle',
+                        '${AppDisplayFormatters.formatCurrencyString(monthlySpend.toStringAsFixed(2))} spent this cycle',
                   ),
                 ],
               );
@@ -437,9 +446,11 @@ class _WalletHero extends StatelessWidget {
             children: [
               Expanded(
                 child: BalanceCard(
-                  title: 'Cash balance',
-                  value: '₹${cashBalance.toStringAsFixed(0)}',
-                  caption: 'Redeemable portal cash',
+                  title: 'Visible cash balance',
+                  value: AppDisplayFormatters.formatCurrencyString(
+                    cashBalance.toStringAsFixed(2),
+                  ),
+                  caption: 'Customer-visible cash available for eligible use',
                   icon: Icons.currency_rupee,
                   dark: true,
                 ),
@@ -447,9 +458,9 @@ class _WalletHero extends StatelessWidget {
               const SizedBox(width: 12),
               Expanded(
                 child: RewardPointsCard(
-                  title: 'Points balance',
+                  title: 'Reward points',
                   value: '${pointsBalance.toStringAsFixed(0)} pts',
-                  caption: 'Referral + loyalty rewards',
+                  caption: 'Customer-visible referral and loyalty rewards',
                   icon: Icons.stars_rounded,
                   dark: true,
                 ),
@@ -462,8 +473,10 @@ class _WalletHero extends StatelessWidget {
               Expanded(
                 child: BalanceCard(
                   title: 'Monthly spend',
-                  value: '₹${monthlySpend.toStringAsFixed(0)}',
-                  caption: 'Pharmacy + services',
+                  value: AppDisplayFormatters.formatCurrencyString(
+                    monthlySpend.toStringAsFixed(2),
+                  ),
+                  caption: 'Recent eligible pharmacy and service activity',
                   icon: Icons.arrow_upward_rounded,
                   dark: true,
                 ),
@@ -473,7 +486,7 @@ class _WalletHero extends StatelessWidget {
                 child: RewardPointsCard(
                   title: 'Rewards earned',
                   value: '${rewardCredits.toStringAsFixed(0)} pts',
-                  caption: 'Approved referrals + promos',
+                  caption: 'Approved referrals and promotional rewards',
                   icon: Icons.card_giftcard_outlined,
                   dark: true,
                 ),
