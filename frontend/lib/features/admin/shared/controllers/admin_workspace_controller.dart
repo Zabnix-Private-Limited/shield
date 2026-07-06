@@ -235,6 +235,45 @@ class AdminWorkspaceController extends ChangeNotifier {
     );
   }
 
+  Future<void> selectRecord(String? recordId) {
+    final normalized = recordId?.trim();
+    return _reload(
+      _query.copyWith(
+        selectedId: normalized?.isEmpty ?? true ? null : normalized,
+        clearSelectedId: normalized?.isEmpty ?? true,
+      ),
+    );
+  }
+
+  Future<void> sortBy(String sortKey, {required bool ascending}) {
+    final normalized = sortKey.trim();
+    if (normalized.isEmpty) {
+      return Future.value();
+    }
+    return _reload(
+      _query.copyWith(
+        sortKey: normalized,
+        sortDirection: ascending ? 'asc' : 'desc',
+        page: 1,
+      ),
+    );
+  }
+
+  Future<void> goToPage(int page) {
+    final normalized = page < 1 ? 1 : page;
+    return _reload(_query.copyWith(page: normalized));
+  }
+
+  Future<void> changePageSize(int pageSize) {
+    final normalized = pageSize < 1 ? 25 : pageSize;
+    return _reload(
+      _query.copyWith(
+        pageSize: normalized,
+        page: 1,
+      ),
+    );
+  }
+
   Future<void> _reload(AdminWorkspaceQuery query) async {
     final workspaceId = _activeWorkspaceId;
     if (workspaceId == null) {

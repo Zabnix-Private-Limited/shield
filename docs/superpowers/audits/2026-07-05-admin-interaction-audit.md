@@ -121,7 +121,9 @@ Entity cards, KPI cards, timeline rows, empty-state actions, data-table headers/
 ### Current State
 - Visible across multiple modules
 - Shared owner
-- No click, drilldown, sort, pagination, row selection, or actionable empty-state CTA
+- Table rows can now sort, paginate, bulk-select, export the current view, and select a live record in backend-driven workspaces
+- Entity cards and KPI drilldowns still depend on backend action metadata
+- Empty-state CTA remains refresh-oriented rather than workflow-specific
 
 ### Expected Behaviour
 - Cards drill into filtered workspaces or details
@@ -137,7 +139,7 @@ Entity cards, KPI cards, timeline rows, empty-state actions, data-table headers/
 Critical
 
 ### Status
-Blocked
+Partial
 
 ## Dashboard
 
@@ -231,12 +233,14 @@ Header actions
 
 ### Current State
 - Backend labels exist
-- Refresh and inferred tab/filter actions execute
-- Explicit create/approval command metadata is still missing
+- Refresh executes
+- Customer export is now available from the live table surface
+- Explicit create, approval, and mutation command metadata is still missing
 
 ### Expected Behaviour
 - `Create customer`
 - `Review approvals`
+- `Export current view`
 
 ### Backend Needed
 - Action descriptors and command metadata
@@ -252,15 +256,65 @@ Search, tabs, filters
 
 ### Current State
 - Backend contract exists
-- Shared toolbar is decorative
+- Shared toolbar search, tab switching, and status filters all reload the workspace through the repository/runtime path
 
 ### Expected Behaviour
-- Search customers by name, code, branch, membership, wallet, CRM signals
-- Switch tabs such as `Overview`, `Approvals`, `Wallet`, `Documents`, `Timeline`
-- Filter by `ACTIVE`, `PENDING`, `SUSPENDED`, `REJECTED`
+- Search customers by name, code, membership, wallet, CRM signals, and email
+- Switch tabs such as `Profile`, `Wallet`, `Membership`, `Referrals`, `Family`, `Documents`, `Medical Records`, `Visits`, `Timeline`, `Activity Log`, `Notes`, `CRM`, `Services Used`, `Lab Reports`, `Prescriptions`
+- Filter by `ACTIVE`, `INACTIVE`, `PENDING`, `SUSPENDED`, `REJECTED`
 
 ### Backend Needed
 - Already exists
+
+### Priority
+Critical
+
+### Status
+Completed
+
+### Component
+Customer list table
+
+### Current State
+- Visible
+- Backend-owned rows
+- Server-backed selection, sorting, and pagination are live
+- Bulk selection is live for the current view
+- Current-view export is live
+
+### Expected Behaviour
+- Search and filter through runtime query state
+- Sort columns through backend query contract
+- Paginate through backend query contract
+- Select one or many rows
+- Export current filtered view
+
+### Backend Needed
+- Already exists for current query state
+- Bulk mutation command metadata still needed for multi-record actions
+
+### Priority
+Critical
+
+### Status
+Completed
+
+### Component
+Customer detail tabs
+
+### Current State
+- Visible
+- Selected customer drives tab-specific backend detail content
+- Profile, wallet, membership, referrals, family, documents, medical records, visits, timeline, activity log, notes, CRM, services used, lab reports, and prescriptions now render from live backend data
+
+### Expected Behaviour
+- Selecting a customer updates the detail workspace
+- Switching tabs reloads tab-specific customer data
+- Tabs should remain command-capable as customer mutations are added
+
+### Backend Needed
+- Already exists for read surfaces
+- Customer command/action descriptors still needed for edit/suspend/activate/delete and related workflows
 
 ### Priority
 Critical

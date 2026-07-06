@@ -1,6 +1,9 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 
 import '../../exports.dart';
+import '../../../../../shared/services/platform_file_actions.dart';
 
 class AdminBackendWorkspaceModule extends StatelessWidget {
   const AdminBackendWorkspaceModule({super.key, required this.snapshot});
@@ -71,16 +74,19 @@ class AdminBackendWorkspaceModule extends StatelessWidget {
             left: _PanelView(
               panel: _PanelData.fromMap(panels['left']),
               onRefresh: controller?.refresh,
+              controller: controller,
             ),
             center: _PanelView(
               panel: _PanelData.fromMap(panels['center']),
               onRefresh: controller?.refresh,
+              controller: controller,
             ),
             right: panels['right'] == null
                 ? null
                 : _PanelView(
                     panel: _PanelData.fromMap(panels['right']),
                     onRefresh: controller?.refresh,
+                    controller: controller,
                   ),
           ),
         ],
@@ -93,10 +99,12 @@ class _PanelView extends StatelessWidget {
   const _PanelView({
     required this.panel,
     this.onRefresh,
+    this.controller,
   });
 
   final _PanelData panel;
   final VoidCallback? onRefresh;
+  final AdminWorkspaceController? controller;
 
   @override
   Widget build(BuildContext context) {
@@ -104,10 +112,18 @@ class _PanelView extends StatelessWidget {
       title: panel.title,
       subtitle: panel.subtitle,
       child: switch (panel.type) {
-        _PanelType.table => _TablePanel(panel: panel, onRefresh: onRefresh),
+        _PanelType.table => _TablePanel(
+          panel: panel,
+          onRefresh: onRefresh,
+          controller: controller,
+        ),
         _PanelType.details =>
           _DetailsPanel(panel: panel, onRefresh: onRefresh),
-        _PanelType.list => _ListPanel(panel: panel, onRefresh: onRefresh),
+        _PanelType.list => _ListPanel(
+          panel: panel,
+          onRefresh: onRefresh,
+          controller: controller,
+        ),
       },
     );
   }
@@ -117,10 +133,12 @@ class _TablePanel extends StatelessWidget {
   const _TablePanel({
     required this.panel,
     this.onRefresh,
+    this.controller,
   });
 
   final _PanelData panel;
   final VoidCallback? onRefresh;
+  final AdminWorkspaceController? controller;
 
   @override
   Widget build(BuildContext context) {
@@ -140,12 +158,39 @@ class _TablePanel extends StatelessWidget {
       columns: panel.columns
           .map(
             (column) => AdminDataTableColumn<Map<String, String>>(
+              key: column.key,
               label: column.label,
+              sortKey: column.sortKey,
               valueBuilder: (row) => row[column.key] ?? 'N/A',
             ),
           )
           .toList(growable: false),
       rows: panel.rows,
+      selectionKey: panel.selectionKey == null
+          ? null
+          : (row) => row[panel.selectionKey!] ?? '',
+      selectedRowId: panel.selectedId,
+      selectionEnabled: panel.selectionEnabled,
+      sortedColumnKey: panel.sortKey,
+      sortAscending: panel.sortDirection != 'desc',
+      onSortChanged: controller == null
+          ? null
+          : (columnKey, ascending) => controller!.sortBy(
+                columnKey,
+                ascending: ascending,
+              ),
+      onRowTap: controller == null || panel.selectionKey == null
+          ? null
+          : (row) => controller!.selectRecord(row[panel.selectionKey!]),
+      page: panel.pagination?.page,
+      pageSize: panel.pagination?.pageSize,
+      totalRows: panel.pagination?.totalRows,
+      onPageChanged:
+          controller == null ? null : (page) => controller!.goToPage(page),
+      onPageSizeChanged: controller == null
+          ? null
+          : (pageSize) => controller!.changePageSize(pageSize),
+      onExport: () => _exportTablePanel(context, panel),
     );
   }
 }
@@ -190,10 +235,12 @@ class _ListPanel extends StatelessWidget {
   const _ListPanel({
     required this.panel,
     this.onRefresh,
+    this.controller,
   });
 
   final _PanelData panel;
   final VoidCallback? onRefresh;
+  final AdminWorkspaceController? controller;
 
   @override
   Widget build(BuildContext context) {
@@ -214,13 +261,18 @@ class _ListPanel extends StatelessWidget {
           .map(
             (item) => Padding(
               padding: const EdgeInsets.only(bottom: 12),
-              child: AdminEntityCard(
-                item: AdminEntityItem(
-                  title: item['title'] ?? 'Record',
-                  subtitle: item['subtitle'] ?? '',
-                  meta: item['meta'] ?? '',
-                  status: item['status'] ?? 'UNKNOWN',
-                  color: _statusColor(item['status']),
+              child: InkWell(
+                onTap: controller == null || panel.selectionKey == null
+                    ? null
+                    : () => controller!.selectRecord(item[panel.selectionKey!]),
+                child: AdminEntityCard(
+                  item: AdminEntityItem(
+                    title: item['title'] ?? 'Record',
+                    subtitle: item['subtitle'] ?? '',
+                    meta: item['meta'] ?? '',
+                    status: item['status'] ?? 'UNKNOWN',
+                    color: _statusColor(item['status']),
+                  ),
                 ),
               ),
             ),
@@ -296,6 +348,12 @@ class _PanelData {
     required this.columns,
     required this.rows,
     required this.emptyState,
+    required this.selectionKey,
+    required this.selectedId,
+    required this.selectionEnabled,
+    required this.sortKey,
+    required this.sortDirection,
+    required this.pagination,
   });
 
   factory _PanelData.fromMap(Object? raw) {
@@ -327,6 +385,12 @@ class _PanelData {
           .map((item) => Map<String, String>.from(item as Map))
           .toList(growable: false),
       emptyState: _EmptyStateData.fromMap(map['emptyState']),
+      selectionKey: map['selectionKey']?.toString(),
+      selectedId: map['selectedId']?.toString(),
+      selectionEnabled: map['selectionEnabled'] == true,
+      sortKey: map['sortKey']?.toString(),
+      sortDirection: map['sortDirection']?.toString(),
+      pagination: _PaginationData.fromMap(map['pagination']),
     );
   }
 
@@ -338,10 +402,20 @@ class _PanelData {
   final List<_ColumnData> columns;
   final List<Map<String, String>> rows;
   final _EmptyStateData? emptyState;
+  final String? selectionKey;
+  final String? selectedId;
+  final bool selectionEnabled;
+  final String? sortKey;
+  final String? sortDirection;
+  final _PaginationData? pagination;
 }
 
 class _ColumnData {
-  const _ColumnData({required this.key, required this.label});
+  const _ColumnData({
+    required this.key,
+    required this.label,
+    this.sortKey,
+  });
 
   factory _ColumnData.fromMap(Object? raw) {
     final map = Map<String, dynamic>.from(
@@ -350,11 +424,13 @@ class _ColumnData {
     return _ColumnData(
       key: (map['key'] ?? '').toString(),
       label: (map['label'] ?? '').toString(),
+      sortKey: map['sortKey']?.toString(),
     );
   }
 
   final String key;
   final String label;
+  final String? sortKey;
 }
 
 class _EmptyStateData {
@@ -381,7 +457,77 @@ class _EmptyStateData {
   final String actionLabel;
 }
 
+class _PaginationData {
+  const _PaginationData({
+    required this.page,
+    required this.pageSize,
+    required this.totalRows,
+  });
+
+  static _PaginationData? fromMap(Object? raw) {
+    if (raw is! Map) {
+      return null;
+    }
+    final map = Map<String, dynamic>.from(raw);
+    return _PaginationData(
+      page: _readPositiveInt(map['page'], 1),
+      pageSize: _readPositiveInt(map['pageSize'], 25),
+      totalRows: _readPositiveInt(map['totalRows'], 0),
+    );
+  }
+
+  final int page;
+  final int pageSize;
+  final int totalRows;
+}
+
 enum _PanelType { list, details, table }
+
+int _readPositiveInt(Object? value, int fallback) {
+  final parsed = int.tryParse('${value ?? ''}');
+  if (parsed == null || parsed <= 0) {
+    return fallback;
+  }
+  return parsed;
+}
+
+Future<void> _exportTablePanel(BuildContext context, _PanelData panel) async {
+  if (panel.columns.isEmpty || panel.rows.isEmpty) {
+    return;
+  }
+  final header = panel.columns.map((column) => _escapeCsv(column.label)).join(',');
+  final lines = <String>[
+    header,
+    ...panel.rows.map(
+      (row) => panel.columns
+          .map((column) => _escapeCsv(row[column.key] ?? ''))
+          .join(','),
+    ),
+  ];
+  final fileName = '${panel.title.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]+'), '_')}.csv';
+  final downloaded = await downloadPlatformFile(
+    fileName: fileName,
+    mimeType: 'text/csv',
+    contentBase64: base64Encode(utf8.encode(lines.join('\n'))),
+  );
+  if (!context.mounted) {
+    return;
+  }
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(
+      content: Text(
+        downloaded
+            ? 'Export ready: $fileName'
+            : 'The export is ready, but automatic download is not available on this device.',
+      ),
+    ),
+  );
+}
+
+String _escapeCsv(String value) {
+  final normalized = value.replaceAll('"', '""');
+  return '"$normalized"';
+}
 
 AdminActionItem? _resolveHeaderAction({
   required String? label,

@@ -8889,3 +8889,34 @@ Completed the remaining Super Admin module migration sweep onto the shared backe
 - `cd frontend && flutter test` ✅
 - `cd backend && npm test -- --runInBand` ✅
 - `cd backend && npm run build` ✅
+
+## 248. Customer Management Interface Vertical Slice
+**Timestamp:** 2026-07-05 20:26:44 IST
+
+Completed a vertical customer-management interface pass through the existing Admin Runtime so the customer workspace now behaves like an operational table-and-detail module instead of a static split-view summary. The work stays inside the server-driven contract path: repository query state now carries selected entity, sort, and pagination; the customer backend workspace emits tab-specific detail data; and the shared renderer/table now support live selection, backend-driven sorting, pagination, bulk selection, and current-view export.
+
+**Frontend Files**
+- `docs/superpowers/audits/2026-07-05-admin-interaction-audit.md`
+- `frontend/lib/features/admin/governance/data/admin_governance_remote_data_source.dart`
+- `frontend/lib/features/admin/shared/components/admin_data_table.dart`
+- `frontend/lib/features/admin/shared/controllers/admin_workspace_controller.dart`
+- `frontend/lib/features/admin/shared/engine/workspace/admin_workspace_repository.dart`
+- `frontend/lib/features/admin/shared/presentation/widgets/admin_backend_workspace_module.dart`
+- `frontend/lib/shared/services/api_service.dart`
+- `frontend/test/admin_backend_workspace_module_test.dart`
+- `frontend/test/admin_data_table_test.dart`
+
+**Backend Files**
+- `backend/src/admin-governance/admin-governance.controller.spec.ts`
+- `backend/src/admin-governance/admin-governance.controller.ts`
+- `backend/src/admin-governance/admin-governance.service.ts`
+
+**Why**
+- The earlier runtime migration removed prototype module shells, but the customer workspace still behaved like a read-only composition because selection, sorting, pagination, and detail-tab state were not first-class runtime query concepts.
+- This pass makes the customer module usable without introducing a parallel customer-specific UI architecture: the shared table now owns enterprise list behavior, and the backend customer workspace owns tab-specific detail content for profile, wallet, membership, referrals, family, documents, medical records, visits, timeline, activity log, notes, CRM, services used, lab reports, and prescriptions.
+
+**Verification**
+- `cd frontend && flutter analyze --no-pub lib/features/admin/shared/components/admin_data_table.dart lib/features/admin/shared/presentation/widgets/admin_backend_workspace_module.dart lib/features/admin/shared/controllers/admin_workspace_controller.dart lib/features/admin/shared/engine/workspace/admin_workspace_repository.dart lib/features/admin/governance/data/admin_governance_remote_data_source.dart lib/shared/services/api_service.dart test/admin_data_table_test.dart test/admin_backend_workspace_module_test.dart` ✅
+- `cd frontend && flutter test test/admin_data_table_test.dart test/admin_backend_workspace_module_test.dart` ✅
+- `cd backend && npm test -- --runInBand admin-governance.controller.spec.ts` ✅
+- `cd backend && npm run build` ✅

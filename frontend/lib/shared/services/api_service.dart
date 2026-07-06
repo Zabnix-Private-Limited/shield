@@ -1430,6 +1430,9 @@ class ApiService {
     String? search,
     String? status,
     String? tab,
+    String? selectedId,
+    String? sortKey,
+    String? sortDirection,
     int page = 1,
     int pageSize = 25,
     bool forceRefresh = false,
@@ -1440,6 +1443,9 @@ class ApiService {
       search?.trim() ?? '',
       status?.trim() ?? '',
       tab?.trim() ?? '',
+      selectedId?.trim() ?? '',
+      sortKey?.trim() ?? '',
+      sortDirection?.trim() ?? '',
       page,
       pageSize,
     ].join('|');
@@ -1455,6 +1461,12 @@ class ApiService {
         if (search != null && search.trim().isNotEmpty) 'search': search.trim(),
         if (status != null && status.trim().isNotEmpty) 'status': status.trim(),
         if (tab != null && tab.trim().isNotEmpty) 'tab': tab.trim(),
+        if (selectedId != null && selectedId.trim().isNotEmpty)
+          'selected_id': selectedId.trim(),
+        if (sortKey != null && sortKey.trim().isNotEmpty)
+          'sort_key': sortKey.trim(),
+        if (sortDirection != null && sortDirection.trim().isNotEmpty)
+          'sort_direction': sortDirection.trim(),
         if (page != 1) 'page': page,
         if (pageSize != 25) 'page_size': pageSize,
       },

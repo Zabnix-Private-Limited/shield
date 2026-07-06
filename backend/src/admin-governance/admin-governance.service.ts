@@ -15,6 +15,9 @@ export type AdminGovernanceWorkspaceQuery = {
   search?: string | null;
   status?: string | null;
   tab?: string | null;
+  selectedId?: string | null;
+  sortKey?: string | null;
+  sortDirection?: 'asc' | 'desc' | null;
   page: number;
   pageSize: number;
 };
@@ -41,6 +44,16 @@ type WorkspacePanel = {
   details?: Array<Record<string, string>>;
   columns?: Array<Record<string, string>>;
   rows?: Array<Record<string, string>>;
+  selectionKey?: string;
+  selectedId?: string;
+  selectionEnabled?: boolean;
+  sortKey?: string;
+  sortDirection?: string;
+  pagination?: {
+    page: number;
+    pageSize: number;
+    totalRows: number;
+  };
   emptyState?: {
     title: string;
     description: string;
@@ -578,63 +591,100 @@ export class AdminGovernanceService {
     startOfToday.setHours(0, 0, 0, 0);
     const endOfToday = new Date(today);
     endOfToday.setHours(23, 59, 59, 999);
+    const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
     const search = query.search?.trim();
     const status = query.status?.trim().toUpperCase();
+    const selectedTab = (query.tab?.trim().length ? query.tab!.trim() : 'Profile');
+    const pageSize = Math.min(query.pageSize, 50);
+    const page = query.page < 1 ? 1 : query.page;
+    const customerWhere = {
+      deletedAt: null,
+      ...(status != null && status.length > 0 ? { status } : {}),
+      ...(search == null || search.length === 0
+        ? {}
+        : {
+            OR: [
+              { firstName: { contains: search, mode: 'insensitive' as const } },
+              { lastName: { contains: search, mode: 'insensitive' as const } },
+              { customerCode: { contains: search, mode: 'insensitive' as const } },
+              { mobile: { contains: search } },
+              { email: { contains: search, mode: 'insensitive' as const } },
+            ],
+          }),
+    };
+    const orderBy = this.resolveCustomerWorkspaceOrderBy(query);
 
-    const [customers, totalCustomers, activeCustomers, pendingDocuments, todaysVisits] =
-      await Promise.all([
-        this.prisma.customer.findMany({
-          where: {
-            deletedAt: null,
-            ...(status != null && status.length > 0 ? { status } : {}),
-            ...(search == null || search.length === 0
-              ? {}
-              : {
-                  OR: [
-                    { firstName: { contains: search, mode: 'insensitive' } },
-                    { lastName: { contains: search, mode: 'insensitive' } },
-                    { customerCode: { contains: search, mode: 'insensitive' } },
-                    { mobile: { contains: search } },
-                  ],
-                }),
+    const [
+      totalCustomers,
+      activeCustomers,
+      inactiveCustomers,
+      suspendedCustomers,
+      newToday,
+      newThisMonth,
+      filteredCustomers,
+      customers,
+    ] = await Promise.all([
+      this.prisma.customer.count({ where: { deletedAt: null } }),
+      this.prisma.customer.count({
+        where: { deletedAt: null, status: 'ACTIVE' },
+      }),
+      this.prisma.customer.count({
+        where: { deletedAt: null, status: 'INACTIVE' },
+      }),
+      this.prisma.customer.count({
+        where: { deletedAt: null, status: 'SUSPENDED' },
+      }),
+      this.prisma.customer.count({
+        where: { deletedAt: null, createdAt: { gte: startOfToday, lte: endOfToday } },
+      }),
+      this.prisma.customer.count({
+        where: { deletedAt: null, createdAt: { gte: startOfMonth } },
+      }),
+      this.prisma.customer.count({ where: customerWhere }),
+      this.prisma.customer.findMany({
+        where: customerWhere,
+        include: {
+          membership: {
+            include: {
+              membershipType: true,
+            },
           },
-          include: {
-            membership: {
-              include: {
-                membershipType: true,
+          wallet: true,
+          shieldCard: {
+            include: {
+              issuedBusiness: true,
+            },
+          },
+        },
+        orderBy: orderBy as any,
+        take: pageSize,
+        skip: (page - 1) * pageSize,
+      }),
+    ]);
+
+    const selectedCustomerId = query.selectedId?.trim().length
+      ? BigInt(query.selectedId.trim())
+      : customers[0]?.id;
+    const selectedCustomer: any =
+      selectedCustomerId == null
+        ? null
+        : await this.prisma.customer.findUnique({
+            where: { id: selectedCustomerId },
+            include: {
+              membership: {
+                include: {
+                  membershipType: true,
+                },
+              },
+              wallet: true,
+              shieldCard: {
+                include: {
+                  issuedBusiness: true,
+                },
               },
             },
-            wallet: true,
-            shieldCard: {
-              include: {
-                issuedBusiness: true,
-              },
-            },
-          },
-          orderBy: [{ updatedAt: 'desc' }, { id: 'desc' }],
-          take: Math.min(query.pageSize, 25),
-          skip: (query.page - 1) * query.pageSize,
-        }),
-        this.prisma.customer.count({ where: { deletedAt: null } }),
-        this.prisma.customer.count({
-          where: { deletedAt: null, status: 'ACTIVE' },
-        }),
-        this.prisma.document.count({
-          where: {
-            customer: { deletedAt: null },
-            NOT: { status: { in: ['APPROVED', 'VALIDATED'] } },
-          },
-        }),
-        this.prisma.appointment.count({
-          where: {
-            appointmentDate: { gte: startOfToday, lte: endOfToday },
-            customer: { deletedAt: null },
-          },
-        }),
-      ]);
+          });
 
-    const selectedCustomer = customers.length === 0 ? null : customers[0];
-    const selectedCustomerId = selectedCustomer?.id;
     const [
       selectedTimeline,
       selectedDocuments,
@@ -644,52 +694,166 @@ export class AdminGovernanceService {
       selectedPurchases,
       selectedReferralEvents,
       selectedWalletSummary,
-    ] = selectedCustomerId == null
-      ? [[], [], [], [], [], [], [], null]
+      selectedContacts,
+      selectedConsultations,
+      selectedLabReports,
+      selectedPrescriptions,
+      selectedDentalRecords,
+      selectedStatusHistory,
+      selectedAuditLogs,
+      selectedLoginHistory,
+    ] = selectedCustomer?.id == null
+      ? [[], [], [], [], [], [], [], null, [], [], [], [], [], [], [], []]
       : await Promise.all([
-          this.timelineService.getPatientTimeline(selectedCustomerId),
+          this.timelineService.getPatientTimeline(selectedCustomer.id),
           this.prisma.document.findMany({
-            where: { customerId: selectedCustomerId },
+            where: { customerId: selectedCustomer.id },
             orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
-            take: 12,
+            take: 25,
           }),
           this.prisma.appointment.findMany({
-            where: { customerId: selectedCustomerId },
+            where: { customerId: selectedCustomer.id },
             include: { provider: true },
             orderBy: [{ appointmentDate: 'desc' }, { id: 'desc' }],
-            take: 12,
+            take: 25,
           }),
           this.prisma.crmTask.findMany({
-            where: { customerId: selectedCustomerId },
+            where: { customerId: selectedCustomer.id },
+            include: {
+              assignedToUser: {
+                select: {
+                  firstName: true,
+                  lastName: true,
+                  employeeCode: true,
+                },
+              },
+            },
             orderBy: [{ dueDate: 'asc' }, { id: 'desc' }],
-            take: 12,
+            take: 25,
           }),
           this.prisma.crmActivity.findMany({
-            where: { customerId: selectedCustomerId },
+            where: { customerId: selectedCustomer.id },
             include: { createdByUser: true },
             orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
-            take: 12,
+            take: 25,
           }),
           this.prisma.purchase.findMany({
-            where: { customerId: selectedCustomerId },
+            where: { customerId: selectedCustomer.id },
             include: { provider: true },
             orderBy: [{ purchaseDate: 'desc' }, { id: 'desc' }],
-            take: 12,
+            take: 25,
           }),
           this.prisma.referralRewardEvent.findMany({
             where: {
               OR: [
-                { referrerCustomerId: selectedCustomerId },
-                { referredCustomerId: selectedCustomerId },
+                { referrerCustomerId: selectedCustomer.id },
+                { referredCustomerId: selectedCustomer.id },
               ],
             },
             orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
-            take: 12,
+            take: 25,
           }),
-          selectedCustomer!.wallet == null
+          selectedCustomer.wallet == null
             ? Promise.resolve(null)
-            : this.walletService.getWalletSummary(selectedCustomer!.wallet!.id),
+            : this.walletService.getWalletSummary(selectedCustomer.wallet.id),
+          this.prisma.customerContact.findMany({
+            where: { customerId: selectedCustomer.id },
+            orderBy: [{ isPrimary: 'desc' }, { id: 'asc' }],
+            take: 25,
+          }),
+          this.prisma.consultation.findMany({
+            where: { customerId: selectedCustomer.id },
+            include: { prescriptions: true },
+            orderBy: [{ appointmentId: 'desc' }, { id: 'desc' }],
+            take: 25,
+          }),
+          this.prisma.labReport.findMany({
+            where: { customerId: selectedCustomer.id },
+            include: { document: true },
+            orderBy: [{ reportDate: 'desc' }, { id: 'desc' }],
+            take: 25,
+          }),
+          this.prisma.prescription.findMany({
+            where: { customerId: selectedCustomer.id },
+            include: {
+              consultation: {
+                include: {
+                  appointment: true,
+                },
+              },
+            },
+            orderBy: [{ issueDate: 'desc' }, { id: 'desc' }],
+            take: 25,
+          }),
+          this.prisma.dentalRecord.findMany({
+            where: { customerId: selectedCustomer.id },
+            orderBy: [{ id: 'desc' }],
+            take: 25,
+          }),
+          this.prisma.customerStatusHistory.findMany({
+            where: { customerId: selectedCustomer.id },
+            orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+            take: 25,
+          }),
+          this.prisma.auditLog.findMany({
+            where: {
+              entityType: 'customers',
+              entityId: selectedCustomer.id,
+            },
+            include: {
+              user: {
+                select: {
+                  firstName: true,
+                  lastName: true,
+                  email: true,
+                },
+              },
+            },
+            orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+            take: 25,
+          }),
+          this.prisma.loginHistory.findMany({
+            where: {
+              ownerType: 'CUSTOMER',
+              ownerId: selectedCustomer.id.toString(),
+            },
+            orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+            take: 25,
+          }),
         ]);
+
+    const customerTableRows = (customers as any[]).map((customer: any) => ({
+      id: customer.id.toString(),
+      customer: this.resolveCustomerLabel(customer),
+      membership:
+        customer.membership?.membershipType?.name ??
+        customer.membership?.membershipNumber ??
+        'No membership',
+      mobile: customer.mobile,
+      status: customer.status ?? 'PENDING',
+      joinedAt: this.formatDateTime(customer.createdAt),
+      updatedAt: this.formatDateTime(customer.updatedAt),
+    }));
+    const rightPanel = this.buildCustomerWorkspaceRightPanel({
+      tab: selectedTab,
+      selectedCustomer,
+      selectedTimeline: selectedTimeline as Array<Record<string, unknown>>,
+      selectedDocuments,
+      selectedAppointments,
+      selectedTasks,
+      selectedActivities,
+      selectedPurchases,
+      selectedReferralEvents,
+      selectedWalletSummary,
+      selectedContacts,
+      selectedConsultations,
+      selectedLabReports,
+      selectedPrescriptions,
+      selectedDentalRecords,
+      selectedStatusHistory,
+      selectedAuditLogs,
+      selectedLoginHistory,
+    });
 
     return this.buildWorkspacePayload(
       'customers',
@@ -697,84 +861,63 @@ export class AdminGovernanceService {
         eyebrow: 'Admin / Customer operations',
         title: 'Customers',
         description:
-          'Customer identity, membership, wallet, visits, documents, CRM follow-up, and timeline data now flow through one backend workspace contract.',
-        primaryActionLabel: 'Create customer',
-        secondaryActionLabel: 'Review approvals',
+          'Customer management is backend-owned end to end, including live counts, searchable customer lists, server pagination and sorting, and selected-customer detail workspaces.',
+        primaryActionLabel: 'Export customers',
+        secondaryActionLabel: 'Refresh customers',
       },
       {
         searchHint:
-          'Search customers by name, customer code, or mobile number',
+          'Search customers by name, customer code, mobile number, or email',
         tabs: [
-          'Overview',
-          'Timeline',
-          'CRM',
-          'Documents',
-          'Visits',
+          'Profile',
           'Wallet',
           'Membership',
+          'Referrals',
+          'Family',
+          'Documents',
+          'Medical Records',
+          'Visits',
+          'Timeline',
+          'Activity Log',
+          'Notes',
+          'CRM',
+          'Services Used',
+          'Lab Reports',
+          'Prescriptions',
         ],
-        filters: ['ACTIVE', 'PENDING', 'SUSPENDED', 'REJECTED'],
+        filters: ['ACTIVE', 'INACTIVE', 'SUSPENDED', 'PENDING', 'REJECTED'],
       },
       [
-        this.metric('Customers', totalCustomers, 'Live customer rows'),
-        this.metric('Active', activeCustomers, 'ACTIVE lifecycle state'),
-        this.metric('Pending docs', pendingDocuments, 'Needs verification'),
-        this.metric('Today visits', todaysVisits, 'Scheduled for today'),
+        this.metric('Customer count', totalCustomers, 'Live customer rows'),
+        this.metric('Active members', activeCustomers, 'ACTIVE customers'),
+        this.metric('Inactive', inactiveCustomers, 'INACTIVE customers'),
+        this.metric('Suspended', suspendedCustomers, 'SUSPENDED customers'),
+        this.metric('New today', newToday, 'Created since midnight'),
+        this.metric('New this month', newThisMonth, 'Created this month'),
       ],
       {
         left: {
-          title: 'Customer list',
-          subtitle: 'Search, status filtering, and latest lifecycle changes.',
-          type: 'list',
-          items: customers.map((customer) => {
-            const membershipName =
-              customer.membership?.membershipType?.name ??
-              customer.membership?.membershipNumber ??
-              'No membership';
-            const branch = customer.shieldCard?.issuedBusiness?.name?.trim();
-            return {
-              title: this.resolveCustomerLabel(customer),
-              subtitle: `${customer.customerCode?.trim().length ? customer.customerCode.trim() : 'No code'} • ${membershipName}`,
-              meta: `${customer.mobile}${branch != null && branch.length > 0 ? ` • ${branch}` : ''}`,
-              status: customer.status ?? 'PENDING',
-            };
-          }),
-          emptyState: {
-            title: 'No customers matched this query',
-            description:
-              'The customer workspace is live, but the current search and status filter returned no customer rows.',
-            actionLabel: 'Clear filters or create a new customer record.',
-          },
-        },
-        center: {
-          title: 'Selected customer workspace',
-          subtitle:
-            selectedCustomer == null
-              ? 'Select a customer from the live list to inspect identity, wallet, CRM, and documents.'
-              : 'Backend-owned summary for ${this.resolveCustomerLabel(selectedCustomer)}.',
+          title: 'Customer dashboard',
+          subtitle: 'Selected customer summary and current data scope.',
           type: 'details',
           details:
             selectedCustomer == null
               ? []
               : [
                   {
-                    label: 'Customer',
+                    label: 'Selected customer',
                     value: this.resolveCustomerLabel(selectedCustomer),
                   },
                   {
-                    label: 'Code',
-                    value: selectedCustomer.customerCode ?? 'Unavailable',
-                  },
-                  {
-                    label: 'Mobile',
-                    value: selectedCustomer.mobile,
+                    label: 'Current tab',
+                    value: selectedTab,
                   },
                   {
                     label: 'Membership',
                     value:
                       selectedCustomer.membership?.membershipType?.name ??
                       selectedCustomer.membership?.membershipNumber ??
-                      'No active membership',
+                      'No membership',
                   },
                   {
                     label: 'Wallet',
@@ -784,65 +927,623 @@ export class AdminGovernanceService {
                         : 'Cash ₹${Number(selectedWalletSummary.cashWallet.available ?? 0).toFixed(2)} • Rewards ${selectedWalletSummary.rewardPoints.available ?? 0}',
                   },
                   {
-                    label: 'Documents',
-                    value: `${selectedDocuments.length} recent rows`,
+                    label: 'Card status',
+                    value: selectedCustomer.shieldCard?.status ?? 'No card',
                   },
                   {
-                    label: 'Appointments',
-                    value: `${selectedAppointments.length} recent rows`,
-                  },
-                  {
-                    label: 'CRM tasks',
-                    value: `${selectedTasks.length} open and recent rows`,
-                  },
-                  {
-                    label: 'Activities',
-                    value: `${selectedActivities.length} CRM activity rows`,
-                  },
-                  {
-                    label: 'Purchases',
-                    value: `${selectedPurchases.length} medicine or billing rows`,
-                  },
-                  {
-                    label: 'Referral events',
-                    value: `${selectedReferralEvents.length} related reward rows`,
+                    label: 'Data scope',
+                    value:
+                      '$filteredCustomers matching customer rows • page $page of ${Math.max(1, Math.ceil(filteredCustomers / pageSize))}',
                   },
                 ],
           emptyState: {
             title: 'No customer selected',
             description:
-              'The customers workspace needs at least one live customer record before the master-detail surface can render a selected customer.',
-            actionLabel: 'Create a customer or clear restrictive filters.',
+              'Choose a customer from the live table to inspect profile, wallet, membership, referrals, documents, visits, and activity.',
+            actionLabel: 'Adjust the current search or filters.',
           },
         },
-        right: {
-          title: 'Customer timeline',
+        center: {
+          title: 'Customer list',
           subtitle:
-            selectedCustomer == null
-              ? 'Live timeline rows appear after a customer is selected.'
-              : 'Timeline events from the shared timeline service.',
+            '$filteredCustomers matching customers. Search, filters, sorting, pagination, and selection are all backend-backed.',
+          type: 'table',
+          columns: [
+            { key: 'customer', label: 'Customer', sortKey: 'name' },
+            { key: 'membership', label: 'Membership', sortKey: 'membership' },
+            { key: 'mobile', label: 'Mobile', sortKey: 'mobile' },
+            { key: 'status', label: 'Status', sortKey: 'status' },
+            { key: 'joinedAt', label: 'Joined', sortKey: 'createdAt' },
+            { key: 'updatedAt', label: 'Updated', sortKey: 'updatedAt' },
+          ],
+          rows: customerTableRows,
+          selectionKey: 'id',
+          selectedId: selectedCustomer?.id.toString(),
+          selectionEnabled: true,
+          sortKey: query.sortKey ?? 'updatedAt',
+          sortDirection: query.sortDirection ?? 'desc',
+          pagination: {
+            page,
+            pageSize,
+            totalRows: filteredCustomers,
+          },
+          emptyState: {
+            title: 'No customers matched this query',
+            description:
+              'The customer workspace is live, but the current search and status filter returned no customer rows.',
+            actionLabel: 'Clear filters or refine the search.',
+          },
+        },
+        right: rightPanel,
+      },
+    );
+  }
+
+  private resolveCustomerWorkspaceOrderBy(
+    query: AdminGovernanceWorkspaceQuery,
+  ): any[] {
+    const direction = query.sortDirection === 'asc' ? 'asc' : 'desc';
+    switch ((query.sortKey ?? '').trim()) {
+      case 'name':
+        return [{ firstName: direction }, { lastName: direction }, { id: 'desc' as const }];
+      case 'mobile':
+        return [{ mobile: direction }, { id: 'desc' as const }];
+      case 'status':
+        return [{ status: direction }, { updatedAt: 'desc' as const }];
+      case 'createdAt':
+        return [{ createdAt: direction }, { id: 'desc' as const }];
+      case 'membership':
+        return [
+          { membership: { membershipNumber: direction } },
+          { updatedAt: 'desc' as const },
+        ];
+      case 'updatedAt':
+      default:
+        return [{ updatedAt: direction }, { id: 'desc' as const }];
+    }
+  }
+
+  private buildCustomerWorkspaceRightPanel(input: {
+    tab: string;
+    selectedCustomer: any;
+    selectedTimeline: Array<Record<string, unknown>>;
+    selectedDocuments: any[];
+    selectedAppointments: any[];
+    selectedTasks: any[];
+    selectedActivities: any[];
+    selectedPurchases: any[];
+    selectedReferralEvents: any[];
+    selectedWalletSummary: any;
+    selectedContacts: any[];
+    selectedConsultations: any[];
+    selectedLabReports: any[];
+    selectedPrescriptions: any[];
+    selectedDentalRecords: any[];
+    selectedStatusHistory: any[];
+    selectedAuditLogs: any[];
+    selectedLoginHistory: any[];
+  }): WorkspacePanel {
+    const {
+      tab,
+      selectedCustomer,
+      selectedTimeline,
+      selectedDocuments,
+      selectedAppointments,
+      selectedTasks,
+      selectedActivities,
+      selectedPurchases,
+      selectedReferralEvents,
+      selectedWalletSummary,
+      selectedContacts,
+      selectedConsultations,
+      selectedLabReports,
+      selectedPrescriptions,
+      selectedDentalRecords,
+      selectedStatusHistory,
+      selectedAuditLogs,
+      selectedLoginHistory,
+    } = input;
+    const customerLabel =
+      selectedCustomer == null
+        ? 'No customer selected'
+        : this.resolveCustomerLabel(selectedCustomer);
+    const emptyState = {
+      title: 'No customer selected',
+      description:
+        'Select a customer from the live table to inspect detail tabs and related workflow data.',
+      actionLabel: 'Choose a customer from the table.',
+    };
+    if (selectedCustomer == null) {
+      return {
+        title: tab,
+        subtitle: 'Select a customer to load this workspace.',
+        type: 'details',
+        details: [],
+        emptyState,
+      };
+    }
+
+    switch (tab.trim().toLowerCase()) {
+      case 'wallet':
+        return {
+          title: 'Wallet',
+          subtitle: `Ledger summary for ${customerLabel}.`,
+          type: 'details',
+          details: [
+            {
+              label: 'Cash available',
+              value:
+                selectedWalletSummary == null
+                  ? '0.00'
+                  : this.formatMoneyValue(
+                      Number(selectedWalletSummary.cashWallet.available ?? 0),
+                    ),
+            },
+            {
+              label: 'Cash spent',
+              value:
+                selectedWalletSummary == null
+                  ? '0.00'
+                  : this.formatMoneyValue(
+                      Number(selectedWalletSummary.cashWallet.spent ?? 0),
+                    ),
+            },
+            {
+              label: 'Reward points',
+              value:
+                selectedWalletSummary == null
+                  ? '0'
+                  : `${selectedWalletSummary.rewardPoints.available ?? 0}`,
+            },
+            {
+              label: 'Benefit applied',
+              value:
+                selectedWalletSummary == null
+                  ? '0.00'
+                  : this.formatMoneyValue(
+                      Number(selectedWalletSummary.hiddenBenefits.applied ?? 0),
+                    ),
+            },
+          ],
+          emptyState: {
+            title: 'Wallet data unavailable',
+            description:
+              'This customer does not yet have a wallet summary available through the ledger service.',
+            actionLabel: 'Refresh after wallet activity is recorded.',
+          },
+        };
+      case 'membership':
+        return {
+          title: 'Membership',
+          subtitle: `Membership and lifecycle history for ${customerLabel}.`,
+          type: 'table',
+          columns: [
+            { key: 'membership', label: 'Membership' },
+            { key: 'number', label: 'Number' },
+            { key: 'status', label: 'Status' },
+            { key: 'expiry', label: 'Expiry' },
+          ],
+          rows: [
+            {
+              membership:
+                selectedCustomer.membership?.membershipType?.name ?? 'No membership',
+              number: selectedCustomer.membership?.membershipNumber ?? 'N/A',
+              status: selectedCustomer.membership?.status ?? 'N/A',
+              expiry: this.formatDateTime(selectedCustomer.membership?.expiryDate),
+            },
+            ...selectedStatusHistory.map((row) => ({
+              membership: 'Status change',
+              number: row.remarks?.toString().trim() || 'N/A',
+              status: row.newStatus?.toString().trim() || 'UNKNOWN',
+              expiry: this.formatDateTime(row.createdAt),
+            })),
+          ],
+          emptyState: {
+            title: 'No membership history',
+            description:
+              'No membership or customer lifecycle records were found for the selected customer.',
+            actionLabel: 'Create or renew a membership to populate this view.',
+          },
+        };
+      case 'referrals':
+        return {
+          title: 'Referrals',
+          subtitle: `Referral tree events connected to ${customerLabel}.`,
+          type: 'table',
+          columns: [
+            { key: 'createdAt', label: 'Created' },
+            { key: 'role', label: 'Role' },
+            { key: 'status', label: 'Status' },
+            { key: 'amount', label: 'Amount' },
+          ],
+          rows: selectedReferralEvents.map((event) => ({
+            createdAt: this.formatDateTime(event.createdAt),
+            role:
+              event.referrerCustomerId === selectedCustomer.id
+                ? 'Referrer'
+                : 'Referred',
+            status: event.status?.toString().trim() || 'UNKNOWN',
+            amount: this.formatMoney(event.rewardAmount),
+          })),
+          emptyState: {
+            title: 'No referral events',
+            description:
+              'This customer has no referral reward events recorded yet.',
+            actionLabel: 'Create or qualify referrals to populate this tab.',
+          },
+        };
+      case 'family':
+        return {
+          title: 'Family',
+          subtitle: `Saved contact records for ${customerLabel}.`,
+          type: 'table',
+          columns: [
+            { key: 'name', label: 'Name' },
+            { key: 'relation', label: 'Relation' },
+            { key: 'mobile', label: 'Mobile' },
+            { key: 'primary', label: 'Primary' },
+          ],
+          rows: selectedContacts.map((contact) => ({
+            name: [contact.firstName, contact.lastName]
+                .filter(
+                  (value: any) => (value ?? '').toString().trim().length > 0,
+                )
+                .join(' ')
+                .trim(),
+            relation: contact.relationship?.toString().trim() || 'N/A',
+            mobile: contact.mobile?.toString().trim() || 'N/A',
+            primary: contact.isPrimary == true ? 'Yes' : 'No',
+          })),
+          emptyState: {
+            title: 'No family contacts',
+            description:
+              'This customer does not have any saved customer_contacts rows yet.',
+            actionLabel: 'Add contact records to populate this tab.',
+          },
+        };
+      case 'documents':
+        return {
+          title: 'Documents',
+          subtitle: `Uploaded customer documents for ${customerLabel}.`,
+          type: 'table',
+          columns: [
+            { key: 'fileName', label: 'File' },
+            { key: 'status', label: 'Status' },
+            { key: 'type', label: 'Type' },
+            { key: 'uploadedAt', label: 'Uploaded' },
+          ],
+          rows: selectedDocuments.map((document) => ({
+            fileName:
+              document.fileName?.toString().trim() ||
+              document.originalFileName?.toString().trim() ||
+              'Document',
+            status: document.status?.toString().trim() || 'UPLOADED',
+            type: document.documentType?.toString().trim() || 'UNKNOWN',
+            uploadedAt: this.formatDateTime(document.createdAt),
+          })),
+          emptyState: {
+            title: 'No documents uploaded',
+            description:
+              'No customer documents were found for the selected customer.',
+            actionLabel: 'Upload a document to populate this tab.',
+          },
+        };
+      case 'medical records':
+        return {
+          title: 'Medical records',
+          subtitle: `Clinical, dental, and consultation notes for ${customerLabel}.`,
+          type: 'table',
+          columns: [
+            { key: 'category', label: 'Category' },
+            { key: 'summary', label: 'Summary' },
+            { key: 'status', label: 'Status' },
+            { key: 'recordedAt', label: 'Recorded' },
+          ],
+          rows: [
+            ...selectedConsultations.map((consultation) => ({
+              category: 'Consultation',
+              summary: consultation.diagnosis?.toString().trim() || 'Consultation note',
+              status: consultation.status?.toString().trim() || 'RECORDED',
+              recordedAt: this.formatDateTime(consultation.createdAt),
+            })),
+            ...selectedDentalRecords.map((record) => ({
+              category: 'Dental',
+              summary: record.chiefComplaint?.toString().trim() || 'Dental record',
+              status: 'RECORDED',
+              recordedAt: this.formatDateTime(record.createdAt),
+            })),
+          ],
+          emptyState: {
+            title: 'No medical records',
+            description:
+              'This customer has no consultation or dental records in the current backend scope.',
+            actionLabel: 'Complete consultations or dental visits to populate this tab.',
+          },
+        };
+      case 'visits':
+        return {
+          title: 'Visits',
+          subtitle: `Appointments and visit status for ${customerLabel}.`,
+          type: 'table',
+          columns: [
+            { key: 'date', label: 'Date' },
+            { key: 'provider', label: 'Provider' },
+            { key: 'service', label: 'Service' },
+            { key: 'status', label: 'Status' },
+          ],
+          rows: selectedAppointments.map((appointment) => ({
+            date: this.formatDateTime(appointment.appointmentDate),
+            provider:
+              appointment.provider?.displayName?.toString().trim() ||
+              appointment.provider?.providerCode?.toString().trim() ||
+              'Provider',
+            service: appointment.appointmentType?.toString().trim() || 'Visit',
+            status: appointment.status?.toString().trim() || 'SCHEDULED',
+          })),
+          emptyState: {
+            title: 'No visits found',
+            description:
+              'The selected customer does not have any appointment rows yet.',
+            actionLabel: 'Create or schedule a visit to populate this tab.',
+          },
+        };
+      case 'timeline':
+        return {
+          title: 'Timeline',
+          subtitle: `Cross-domain history from the shared timeline service for ${customerLabel}.`,
           type: 'table',
           columns: [
             { key: 'time', label: 'Time' },
             { key: 'event', label: 'Event' },
             { key: 'status', label: 'Status' },
           ],
-          rows: (selectedTimeline as Array<Record<string, unknown>>)
-            .slice(0, 12)
-            .map((event) => ({
-              time: `${event['timestamp'] ?? ''}`,
-              event: `${event['displayTitle'] ?? 'Timeline event'}`,
-              status: `${event['status'] ?? 'RECORDED'}`,
-            })),
+          rows: selectedTimeline.slice(0, 25).map((event) => ({
+            time: `${event['timestamp'] ?? ''}`,
+            event: `${event['displayTitle'] ?? 'Timeline event'}`,
+            status: `${event['status'] ?? 'RECORDED'}`,
+          })),
           emptyState: {
             title: 'No timeline events available',
             description:
-              'The selected customer does not yet have timeline evidence recorded through the shared timeline service.',
-            actionLabel: 'Open a customer with visits, documents, or wallet history.',
+              'The shared timeline service has not yet produced events for this customer.',
+            actionLabel: 'Open a customer with documents, visits, or wallet activity.',
           },
-        },
-      },
-    );
+        };
+      case 'activity log':
+        return {
+          title: 'Activity log',
+          subtitle: `Audit and login activity for ${customerLabel}.`,
+          type: 'table',
+          columns: [
+            { key: 'time', label: 'Time' },
+            { key: 'action', label: 'Action' },
+            { key: 'actor', label: 'Actor' },
+            { key: 'detail', label: 'Detail' },
+          ],
+          rows: [
+            ...selectedAuditLogs.map((log) => ({
+              time: this.formatDateTime(log.createdAt),
+              action: log.action?.toString().trim() || 'AUDIT',
+              actor: this.resolveActorLabel(log.user),
+              detail:
+                log.entityType?.toString().trim() || log.ipAddress?.toString().trim() || 'Audit log',
+            })),
+            ...selectedLoginHistory.map((row) => ({
+              time: this.formatDateTime(row.createdAt),
+              action: row.status?.toString().trim() || 'LOGIN',
+              actor: row.loginMethod?.toString().trim() || 'Customer auth',
+              detail:
+                row.deviceInfo?.toString().trim() ||
+                row.ipAddress?.toString().trim() ||
+                'Login history',
+            })),
+          ],
+          emptyState: {
+            title: 'No activity recorded',
+            description:
+              'No audit or login evidence is currently stored for the selected customer.',
+            actionLabel: 'Perform customer workflows to generate activity evidence.',
+          },
+        };
+      case 'notes':
+        return {
+          title: 'Notes',
+          subtitle: `Freeform CRM and consultation notes for ${customerLabel}.`,
+          type: 'table',
+          columns: [
+            { key: 'time', label: 'Time' },
+            { key: 'source', label: 'Source' },
+            { key: 'note', label: 'Note' },
+          ],
+          rows: [
+            ...selectedActivities
+              .filter((activity) => `${activity.notes ?? ''}`.trim().length > 0)
+              .map((activity) => ({
+                time: this.formatDateTime(activity.createdAt),
+                source: 'CRM activity',
+                note: activity.notes?.toString().trim() || '',
+              })),
+            ...selectedConsultations
+              .filter(
+                (consultation) =>
+                  `${consultation.notes ?? ''}`.trim().length > 0,
+              )
+              .map((consultation) => ({
+                time: this.formatDateTime(consultation.createdAt),
+                source: 'Consultation',
+                note: consultation.notes?.toString().trim() || '',
+              })),
+          ],
+          emptyState: {
+            title: 'No notes available',
+            description:
+              'There are no CRM activity notes or consultation notes for this customer.',
+            actionLabel: 'Add notes through CRM or consultation workflows.',
+          },
+        };
+      case 'crm':
+        return {
+          title: 'CRM',
+          subtitle: `Tasks and CRM activity for ${customerLabel}.`,
+          type: 'table',
+          columns: [
+            { key: 'type', label: 'Type' },
+            { key: 'summary', label: 'Summary' },
+            { key: 'owner', label: 'Owner' },
+            { key: 'status', label: 'Status' },
+          ],
+          rows: [
+            ...selectedTasks.map((task) => ({
+              type: 'Task',
+              summary: task.title?.toString().trim() || 'CRM task',
+              owner: this.resolveUserDisplayName(task.assignedToUser),
+              status: task.status?.toString().trim() || 'OPEN',
+            })),
+            ...selectedActivities.map((activity) => ({
+              type: activity.activityType?.toString().trim() || 'Activity',
+              summary: activity.subject?.toString().trim() || 'CRM activity',
+              owner: this.resolveUserDisplayName(activity.createdByUser),
+              status: activity.status?.toString().trim() || 'RECORDED',
+            })),
+          ],
+          emptyState: {
+            title: 'No CRM records',
+            description:
+              'This customer does not currently have CRM tasks or CRM activities.',
+            actionLabel: 'Assign CRM follow-ups to populate this tab.',
+          },
+        };
+      case 'services used':
+        return {
+          title: 'Services used',
+          subtitle: `Purchase and provider service history for ${customerLabel}.`,
+          type: 'table',
+          columns: [
+            { key: 'date', label: 'Date' },
+            { key: 'provider', label: 'Provider' },
+            { key: 'bill', label: 'Bill amount' },
+            { key: 'status', label: 'Status' },
+          ],
+          rows: selectedPurchases.map((purchase) => ({
+            date: this.formatDateTime(purchase.purchaseDate),
+            provider:
+              purchase.provider?.displayName?.toString().trim() ||
+              purchase.provider?.providerCode?.toString().trim() ||
+              'Provider',
+            bill: this.formatMoney(purchase.totalAmount),
+            status: purchase.status?.toString().trim() || 'RECORDED',
+          })),
+          emptyState: {
+            title: 'No services recorded',
+            description:
+              'The selected customer has no purchase or service history yet.',
+            actionLabel: 'Complete provider or pharmacy transactions to populate this tab.',
+          },
+        };
+      case 'lab reports':
+        return {
+          title: 'Lab reports',
+          subtitle: `Lab report history for ${customerLabel}.`,
+          type: 'table',
+          columns: [
+            { key: 'reportDate', label: 'Report date' },
+            { key: 'title', label: 'Title' },
+            { key: 'status', label: 'Status' },
+            { key: 'document', label: 'Document' },
+          ],
+          rows: selectedLabReports.map((report) => ({
+            reportDate: this.formatDateTime(report.reportDate),
+            title: report.reportType?.toString().trim() || 'Lab report',
+            status: report.status?.toString().trim() || 'RECORDED',
+            document:
+              report.document?.fileName?.toString().trim() || 'No document',
+          })),
+          emptyState: {
+            title: 'No lab reports',
+            description:
+              'No lab_reports rows were found for this customer.',
+            actionLabel: 'Upload or complete lab reports to populate this tab.',
+          },
+        };
+      case 'prescriptions':
+        return {
+          title: 'Prescriptions',
+          subtitle: `Prescription history for ${customerLabel}.`,
+          type: 'table',
+          columns: [
+            { key: 'issueDate', label: 'Issued' },
+            { key: 'doctor', label: 'Doctor' },
+            { key: 'summary', label: 'Summary' },
+            { key: 'status', label: 'Status' },
+          ],
+          rows: selectedPrescriptions.map((prescription) => ({
+            issueDate: this.formatDateTime(prescription.issueDate),
+            doctor:
+              prescription.consultation?.doctorName?.toString().trim() ||
+              'Doctor',
+            summary:
+              prescription.instructions?.toString().trim() ||
+              prescription.diagnosis?.toString().trim() ||
+              'Prescription',
+            status: prescription.status?.toString().trim() || 'ISSUED',
+          })),
+          emptyState: {
+            title: 'No prescriptions',
+            description:
+              'No prescription records were found for this customer.',
+            actionLabel: 'Complete consultations to generate prescriptions.',
+          },
+        };
+      case 'profile':
+      default:
+        return {
+          title: 'Profile',
+          subtitle: `Core customer identity for ${customerLabel}.`,
+          type: 'details',
+          details: [
+            { label: 'Customer', value: customerLabel },
+            { label: 'Customer code', value: selectedCustomer.customerCode ?? 'N/A' },
+            { label: 'Mobile', value: selectedCustomer.mobile ?? 'N/A' },
+            { label: 'Email', value: selectedCustomer.email ?? 'N/A' },
+            {
+              label: 'Status',
+              value: selectedCustomer.status?.toString().trim() || 'UNKNOWN',
+            },
+            {
+              label: 'Date of birth',
+              value: this.formatDateTime(selectedCustomer.dob),
+            },
+            { label: 'Gender', value: selectedCustomer.gender ?? 'N/A' },
+            {
+              label: 'Address',
+              value: [
+                selectedCustomer.addressLine1,
+                selectedCustomer.addressLine2,
+                selectedCustomer.city,
+                selectedCustomer.district,
+                selectedCustomer.state,
+                selectedCustomer.pincode,
+              ]
+                  .filter(
+                    (value: any) => (value ?? '').toString().trim().length > 0,
+                  )
+                  .join(', '),
+            },
+            {
+              label: 'Agent code',
+              value: selectedCustomer.agentCode?.toString().trim() || 'Unassigned',
+            },
+            {
+              label: 'Referral code',
+              value: selectedCustomer.referralCode?.toString().trim() || 'N/A',
+            },
+            {
+              label: 'Last login',
+              value: this.formatDateTime(selectedCustomer.lastLoginAt),
+            },
+          ],
+        };
+    }
   }
 
   async getAgentsWorkspace(query: AdminGovernanceWorkspaceQuery) {
@@ -3664,6 +4365,18 @@ export class AdminGovernanceService {
             ...(panel.details != null ? { details: panel.details } : {}),
             ...(panel.columns != null ? { columns: panel.columns } : {}),
             ...(panel.rows != null ? { rows: panel.rows } : {}),
+            ...(panel.selectionKey != null
+              ? { selectionKey: panel.selectionKey }
+              : {}),
+            ...(panel.selectedId != null ? { selectedId: panel.selectedId } : {}),
+            ...(panel.selectionEnabled != null
+              ? { selectionEnabled: panel.selectionEnabled }
+              : {}),
+            ...(panel.sortKey != null ? { sortKey: panel.sortKey } : {}),
+            ...(panel.sortDirection != null
+              ? { sortDirection: panel.sortDirection }
+              : {}),
+            ...(panel.pagination != null ? { pagination: panel.pagination } : {}),
             ...(panel.emptyState != null
               ? { emptyState: panel.emptyState }
               : {}),

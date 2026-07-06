@@ -35,6 +35,9 @@ describe('AdminGovernanceController', () => {
       search: 'alerts',
       status: 'LIVE',
       tab: null,
+      selectedId: null,
+      sortKey: null,
+      sortDirection: null,
       page: 2,
       pageSize: 10,
     });
@@ -49,6 +52,12 @@ describe('AdminGovernanceController', () => {
       controller.getCustomersWorkspace({
         search: 'kochi',
         status: 'ACTIVE',
+        tab: 'Profile',
+        selected_id: '42',
+        sort_key: 'createdAt',
+        sort_direction: 'asc',
+        page: '3',
+        page_size: '15',
       }),
     ).resolves.toEqual({
       success: true,
@@ -59,9 +68,12 @@ describe('AdminGovernanceController', () => {
     expect(adminGovernanceService.getCustomersWorkspace).toHaveBeenCalledWith({
       search: 'kochi',
       status: 'ACTIVE',
-      tab: null,
-      page: 1,
-      pageSize: 25,
+      tab: 'Profile',
+      selectedId: '42',
+      sortKey: 'createdAt',
+      sortDirection: 'asc',
+      page: 3,
+      pageSize: 15,
     });
   });
 });

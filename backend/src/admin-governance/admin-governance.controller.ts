@@ -337,6 +337,9 @@ export class AdminGovernanceController {
       search: this.normalizeString(query.search),
       status: this.normalizeString(query.status),
       tab: this.normalizeString(query.tab),
+      selectedId: this.normalizeString(query.selected_id),
+      sortKey: this.normalizeString(query.sort_key),
+      sortDirection: this.normalizeSortDirection(query.sort_direction),
       page: this.parsePositiveInt(query.page, 1),
       pageSize: this.parsePositiveInt(query.page_size, 25),
     };
@@ -398,5 +401,16 @@ export class AdminGovernanceController {
       return false;
     }
     throw new Error('value_boolean must be boolean-like.');
+  }
+
+  private normalizeSortDirection(value: unknown): 'asc' | 'desc' | null {
+    const normalized = this.normalizeString(value)?.toLowerCase();
+    if (normalized == null) {
+      return null;
+    }
+    if (normalized == 'asc' || normalized == 'desc') {
+      return normalized;
+    }
+    return null;
   }
 }
