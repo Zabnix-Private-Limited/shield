@@ -1211,7 +1211,13 @@ class _AdminPortalNav extends StatelessWidget {
 
   static const List<MapEntry<String, List<String>>> _groups = [
     MapEntry('Overview', ['dashboard']),
-    MapEntry('Operations', ['customers', 'agents', 'crm', 'visits', 'documents']),
+    MapEntry('Operations', [
+      'customers',
+      'agents',
+      'crm',
+      'visits',
+      'documents',
+    ]),
     MapEntry('Business', ['memberships', 'wallet', 'rewards', 'referrals']),
     MapEntry('Providers', ['providers', 'services', 'availability']),
     MapEntry('Organization', ['branches', 'employees', 'roles']),
@@ -1446,10 +1452,9 @@ class _RoleSwitcher extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final resolvedPortal = PortalResolver.current;
-    final availableRoles =
-        resolvedPortal == null
-            ? SHIELDRole.switchableRoles
-            : <SHIELDRole>[resolvedPortal.role];
+    final availableRoles = resolvedPortal == null
+        ? SHIELDRole.switchableRoles
+        : <SHIELDRole>[resolvedPortal.role];
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -8145,7 +8150,6 @@ class _AdminProviderNetworkViewState extends State<_AdminProviderNetworkView> {
         _isLoading = false;
       });
     } catch (e) {
-      debugPrint('Error loading provider data: $e');
       setState(() {
         _isLoading = false;
       });

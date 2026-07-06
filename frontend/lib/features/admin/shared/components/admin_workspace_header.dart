@@ -26,7 +26,7 @@ class AdminWorkspaceHeader extends StatelessWidget {
     final narrow = MediaQuery.of(context).size.width < 1240;
 
     return Container(
-      padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
@@ -41,7 +41,7 @@ class AdminWorkspaceHeader extends StatelessWidget {
                   title: title,
                   description: description,
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 12),
                 _HeaderActions(
                   primaryAction: primaryAction,
                   secondaryAction: secondaryAction,
@@ -58,7 +58,7 @@ class AdminWorkspaceHeader extends StatelessWidget {
                     description: description,
                   ),
                 ),
-                const SizedBox(width: 20),
+                const SizedBox(width: 16),
                 _HeaderActions(
                   primaryAction: primaryAction,
                   secondaryAction: secondaryAction,

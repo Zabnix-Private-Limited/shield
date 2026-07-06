@@ -8982,4 +8982,72 @@ Refactored the shared backend-workspace presentation layer to make the admin por
 **Verification**
 - `cd frontend && flutter analyze --no-pub` ✅
 - `cd frontend && flutter test test/admin_backend_workspace_module_test.dart test/admin_data_table_test.dart test/admin_engine_runtime_test.dart` ✅
-- `cd frontend && flutter test` ✅
+- `cd frontend && flutter test` ✅## 251. Customer Workspace Selection and Timestamp UX Fix
+**Timestamp:** 2026-07-06 15:11:29 IST
+
+Corrected a customer-workspace contract regression that preselected the first row before any operator action, and cleaned the backend-owned display strings so the customer summary and table timestamps read like user-facing product copy instead of raw template/debug output.
+
+**Frontend Files**
+- None.
+
+**Backend Files**
+- ackend/src/admin-governance/admin-governance.service.ts
+
+**Why**
+- The shared data table was behaving correctly, but the backend customer workspace contract was implicitly assigning the first customer as the selected record whenever selectedId was absent, which made the module look stateful before any user interaction.
+- The same contract also emitted literal interpolation strings for wallet and scope summaries, and all workspace datetimes were rendered as raw ISO timestamps, which made the UI feel developer-oriented even when the underlying data was live.
+- This fix keeps the backend-owned workspace architecture intact: the contract now returns no selected customer until a real selection exists, and shared timestamp formatting is human-readable across admin workspaces.
+
+**Verification**
+- cd backend && npm test -- --runInBand ✅
+- cd backend && npm run build ✅
+
+## 252. Full Portal UI UX Audit Report
+**Timestamp:** 2026-07-06 15:44:52 IST
+
+Created a repo-grounded cross-portal UI and UX audit artifact covering Admin, Agent, Provider, Customer, and shared shell/runtime surfaces. The document is intentionally blunt and execution-oriented: it calls out good foundations, dead architectural patterns, weak interaction models, data readability issues, and page-by-page remediation priorities without treating visually complete screens as product-complete.
+
+**Frontend Files**
+- docs/superpowers/audits/2026-07-06-full-portal-ui-ux-audit.md
+
+**Backend Files**
+- None.
+
+**Why**
+- The repository has reached the stage where UX, density, language, and interaction quality are the main constraints, not basic feature presence.
+- The admin runtime is now strong enough to serve as the quality baseline, but the wider portal family still contains a mix of modern backend-driven screens and oversized legacy owners such as the shared portal shell and provider customer workspace.
+- This audit gives the team one artifact that can be used as a hard-truth backlog for UI polish, architectural decomposition, copy cleanup, and interaction improvement work across all portal families.
+
+**Verification**
+- Repository inspection completed across shared shell, admin runtime, and portal screen families. ✅
+- Audit artifact written to docs/superpowers/audits/2026-07-06-full-portal-ui-ux-audit.md. ✅
+
+## 253. Admin Runtime Query Persistence and Table UX Hardening
+**Timestamp:** 2026-07-06 16:35:00 IST
+
+Hardened the shared admin runtime so workspace search, filters, sorting, pagination, and selected-record state can round-trip through the route query string when GoRouter is available, while keeping injected runtime/test usage safe when no router state exists. Also tightened the shared admin renderer copy and grid ergonomics so backend-driven modules read more like a product and less like raw contract output.
+
+**Frontend Files**
+- `frontend/lib/app/routes/app_router.dart`
+- `frontend/lib/features/admin/presentation/screens/admin_portal_workspace.dart`
+- `frontend/lib/features/admin/shared/components/admin_console_toolbar.dart`
+- `frontend/lib/features/admin/shared/components/admin_data_table.dart`
+- `frontend/lib/features/admin/shared/components/admin_workspace_header.dart`
+- `frontend/lib/features/admin/shared/exports.dart`
+- `frontend/lib/features/admin/shared/presentation/widgets/admin_backend_workspace_module.dart`
+- `frontend/lib/features/portal/presentation/screens/portal_shell.dart`
+- `frontend/lib/shared/utils/app_display_formatters.dart`
+- `frontend/test/admin_data_table_test.dart`
+
+**Backend Files**
+- None.
+
+**Why**
+- The audit called out weak query persistence, developer-oriented data language, and table ergonomics that were still below enterprise operator expectations even though the admin runtime architecture was already strong.
+- This pass fixes those issues in the shared owners instead of screen-by-screen forks: route query sync now lives in the admin workspace shell, row hover and denser table rhythm live in the shared grid, and generic payload/detail/list rendering now routes values through shared display formatters.
+- The renderer copy is now less contract-flavored, action menus are clearer, and production router logging is quieter by default while preserving debug visibility in development.
+
+**Verification**
+- `cd frontend && dart format frontend/lib/shared/utils/app_display_formatters.dart frontend/lib/features/admin/shared/exports.dart frontend/lib/features/admin/presentation/screens/admin_portal_workspace.dart frontend/lib/features/admin/shared/components/admin_data_table.dart frontend/lib/features/admin/shared/components/admin_console_toolbar.dart frontend/lib/features/admin/shared/components/admin_workspace_header.dart frontend/lib/features/admin/shared/presentation/widgets/admin_backend_workspace_module.dart frontend/lib/app/routes/app_router.dart frontend/lib/features/portal/presentation/screens/portal_shell.dart frontend/test/admin_data_table_test.dart` ✅
+- `cd frontend && flutter analyze lib/shared/utils/app_display_formatters.dart lib/features/admin/presentation/screens/admin_portal_workspace.dart lib/features/admin/shared/components/admin_data_table.dart lib/features/admin/shared/components/admin_console_toolbar.dart lib/features/admin/shared/components/admin_workspace_header.dart lib/features/admin/shared/presentation/widgets/admin_backend_workspace_module.dart lib/app/routes/app_router.dart lib/features/portal/presentation/screens/portal_shell.dart` ✅
+- `cd frontend && flutter test test/admin_data_table_test.dart test/admin_backend_workspace_module_test.dart test/admin_dashboard_controller_test.dart test/admin_engine_foundation_test.dart test/admin_engine_runtime_test.dart` ✅

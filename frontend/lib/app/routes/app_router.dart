@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
@@ -18,7 +19,9 @@ import '../../shared/services/portal_resolver.dart';
 final GlobalKey<NavigatorState> rootNavigatorKey = GlobalKey<NavigatorState>();
 
 void _traceRouter(String message) {
-  debugPrint('[AppRouter] $message');
+  if (kDebugMode) {
+    debugPrint('[AppRouter] $message');
+  }
 }
 
 final GoRouter router = GoRouter(
@@ -31,10 +34,11 @@ final GoRouter router = GoRouter(
     AuthRedirectNotice.instance,
   ]),
   redirect: (context, state) {
-    final isCustomerAuthenticated = CustomerAuthSession.instance.isAuthenticated;
-    final isInternalAuthenticated = InternalAuthSession.instance.isAuthenticated;
-    final isAuthenticated =
-        isCustomerAuthenticated || isInternalAuthenticated;
+    final isCustomerAuthenticated =
+        CustomerAuthSession.instance.isAuthenticated;
+    final isInternalAuthenticated =
+        InternalAuthSession.instance.isAuthenticated;
+    final isAuthenticated = isCustomerAuthenticated || isInternalAuthenticated;
     final resolvedPortal = PortalResolver.current;
     final authNotice = AuthRedirectNotice.instance;
     final location = state.matchedLocation;
@@ -53,10 +57,9 @@ final GoRouter router = GoRouter(
     };
     final isPublicLocation = publicLocations.contains(location);
     if (authNotice.hasNotice && location != '/session-expired') {
-      final kind =
-          authNotice.sessionKind == ShieldSessionKind.internal
-              ? 'internal'
-              : 'customer';
+      final kind = authNotice.sessionKind == ShieldSessionKind.internal
+          ? 'internal'
+          : 'customer';
       return '/session-expired?kind=$kind';
     }
 
@@ -98,7 +101,9 @@ final GoRouter router = GoRouter(
     }
 
     if (isCustomerAuthenticated && location == '/internal/login') {
-      _traceRouter('customer session blocked from internal login; redirecting home');
+      _traceRouter(
+        'customer session blocked from internal login; redirecting home',
+      );
       return PortalResolver.resolvedHomeRoute();
     }
 
@@ -116,7 +121,9 @@ final GoRouter router = GoRouter(
     if (isInternalAuthenticated &&
         (location.startsWith('/customer/') ||
             location.startsWith('/portal/customer'))) {
-      _traceRouter('internal session blocked from customer route; redirecting home');
+      _traceRouter(
+        'internal session blocked from customer route; redirecting home',
+      );
       return PortalResolver.resolvedHomeRoute();
     }
 
@@ -138,7 +145,9 @@ final GoRouter router = GoRouter(
     if (isInternalAuthenticated &&
         resolvedPortal != null &&
         !resolvedPortal.isInternal) {
-      _traceRouter('internal auth resolved to non-internal portal; redirecting home');
+      _traceRouter(
+        'internal auth resolved to non-internal portal; redirecting home',
+      );
       return PortalResolver.resolvedHomeRoute();
     }
 

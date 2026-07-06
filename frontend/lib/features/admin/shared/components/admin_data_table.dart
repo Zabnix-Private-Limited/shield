@@ -65,10 +65,13 @@ class _AdminDataTableState<T> extends State<AdminDataTable<T>> {
   int? _sortedColumnIndex;
   bool _ascending = true;
   final Set<String> _selectedRowIds = <String>{};
+  String? _hoveredRowId;
 
   bool get _usesServerSorting => widget.onSortChanged != null;
   bool get _usesPagination =>
-      widget.page != null && widget.pageSize != null && widget.totalRows != null;
+      widget.page != null &&
+      widget.pageSize != null &&
+      widget.totalRows != null;
 
   @override
   void initState() {
@@ -109,7 +112,9 @@ class _AdminDataTableState<T> extends State<AdminDataTable<T>> {
   int get _totalPages => math.max(1, (_totalRows / _pageSize).ceil());
 
   bool get _allVisibleSelected {
-    if (!widget.selectionEnabled || widget.selectionKey == null || widget.rows.isEmpty) {
+    if (!widget.selectionEnabled ||
+        widget.selectionKey == null ||
+        widget.rows.isEmpty) {
       return false;
     }
     for (final row in widget.rows) {
@@ -130,7 +135,9 @@ class _AdminDataTableState<T> extends State<AdminDataTable<T>> {
       ),
       child: Column(
         children: [
-          if (widget.selectionEnabled || widget.onExport != null || _usesPagination)
+          if (widget.selectionEnabled ||
+              widget.onExport != null ||
+              _usesPagination)
             _TableUtilityBar(
               selectedCount: _selectedCount,
               showSelection: widget.selectionEnabled,
@@ -149,7 +156,7 @@ class _AdminDataTableState<T> extends State<AdminDataTable<T>> {
               onPageSizeChanged: widget.onPageSizeChanged,
             ),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: const BoxDecoration(
               border: Border(bottom: BorderSide(color: AdminColors.border)),
             ),
@@ -175,6 +182,7 @@ class _AdminDataTableState<T> extends State<AdminDataTable<T>> {
                               style: AdminTypography.tiny.copyWith(
                                 color: AdminColors.caption,
                                 fontWeight: FontWeight.w800,
+                                letterSpacing: 0.2,
                               ),
                             ),
                           ),
@@ -192,22 +200,39 @@ class _AdminDataTableState<T> extends State<AdminDataTable<T>> {
               ],
             ),
           ),
-          ..._sortedRows.map(
-            (row) {
-              final rowId = widget.selectionKey?.call(row);
-              final isSelected =
-                  rowId != null &&
-                  (rowId == widget.selectedRowId || _selectedRowIds.contains(rowId));
-              return InkWell(
-                onTap: widget.onRowTap == null ? null : () => widget.onRowTap!(row),
-                child: Container(
+          ..._sortedRows.map((row) {
+            final rowId = widget.selectionKey?.call(row);
+            final isSelected =
+                rowId != null &&
+                (rowId == widget.selectedRowId ||
+                    _selectedRowIds.contains(rowId));
+            final isHovered = rowId != null && rowId == _hoveredRowId;
+            return MouseRegion(
+              onEnter: rowId == null
+                  ? null
+                  : (_) => setState(() => _hoveredRowId = rowId),
+              onExit: rowId == null
+                  ? null
+                  : (_) => setState(() {
+                      if (_hoveredRowId == rowId) {
+                        _hoveredRowId = null;
+                      }
+                    }),
+              child: InkWell(
+                onTap: widget.onRowTap == null
+                    ? null
+                    : () => widget.onRowTap!(row),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 140),
                   padding: const EdgeInsets.symmetric(
                     horizontal: 12,
-                    vertical: 10,
+                    vertical: 9,
                   ),
                   decoration: BoxDecoration(
                     color: isSelected
-                        ? AdminColors.primary.withValues(alpha: 0.06)
+                        ? AdminColors.primary.withValues(alpha: 0.08)
+                        : isHovered
+                        ? AdminColors.mutedSurface
                         : null,
                     border: const Border(
                       bottom: BorderSide(color: AdminColors.border),
@@ -219,7 +244,9 @@ class _AdminDataTableState<T> extends State<AdminDataTable<T>> {
                         SizedBox(
                           width: 44,
                           child: Checkbox(
-                            value: rowId != null && _selectedRowIds.contains(rowId),
+                            value:
+                                rowId != null &&
+                                _selectedRowIds.contains(rowId),
                             onChanged: rowId == null
                                 ? null
                                 : (_) => _toggleRowSelection(rowId),
@@ -229,9 +256,16 @@ class _AdminDataTableState<T> extends State<AdminDataTable<T>> {
                         (column) => Expanded(
                           child: Text(
                             column.valueBuilder(row),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
                             style: AdminTypography.small.copyWith(
-                              color: AdminColors.subtext,
-                              fontWeight: FontWeight.w600,
+                              color: isSelected
+                                  ? AdminColors.text
+                                  : AdminColors.subtext,
+                              fontWeight: isSelected
+                                  ? FontWeight.w700
+                                  : FontWeight.w600,
+                              height: 1.25,
                             ),
                           ),
                         ),
@@ -239,9 +273,9 @@ class _AdminDataTableState<T> extends State<AdminDataTable<T>> {
                     ],
                   ),
                 ),
-              );
-            },
-          ),
+              ),
+            );
+          }),
         ],
       ),
     );
@@ -251,7 +285,9 @@ class _AdminDataTableState<T> extends State<AdminDataTable<T>> {
     _selectedRowIds
       ..clear()
       ..addAll(
-        widget.selectedRowId == null ? const <String>[] : <String>[widget.selectedRowId!],
+        widget.selectedRowId == null
+            ? const <String>[]
+            : <String>[widget.selectedRowId!],
       );
     _notifySelectionChanged();
   }
@@ -320,9 +356,7 @@ class _AdminDataTableState<T> extends State<AdminDataTable<T>> {
   }
 
   void _notifySelectionChanged() {
-    widget.onSelectionChanged?.call(
-      _selectedRowIds.toList(growable: false),
-    );
+    widget.onSelectionChanged?.call(_selectedRowIds.toList(growable: false));
   }
 }
 
@@ -365,7 +399,9 @@ class _TableUtilityBar extends StatelessWidget {
         children: [
           if (showSelection)
             Text(
-              '$selectedCount selected',
+              selectedCount == 0
+                  ? 'No rows selected'
+                  : '$selectedCount row${selectedCount == 1 ? '' : 's'} selected',
               style: AdminTypography.tiny.copyWith(
                 color: AdminColors.caption,
                 fontWeight: FontWeight.w700,
@@ -392,11 +428,11 @@ class _TableUtilityBar extends StatelessWidget {
                 ),
                 TextButton(
                   onPressed: onPreviousPage,
-                  child: const Text('Previous'),
+                  child: const Text('Previous page'),
                 ),
                 TextButton(
                   onPressed: onNextPage,
-                  child: const Text('Next'),
+                  child: const Text('Next page'),
                 ),
                 if (onPageSizeChanged != null)
                   PopupMenuButton<int>(

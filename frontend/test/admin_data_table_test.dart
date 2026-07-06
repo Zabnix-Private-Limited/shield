@@ -64,7 +64,7 @@ void main() {
         ),
       );
 
-      expect(find.text('1 selected'), findsOneWidget);
+      expect(find.text('1 row selected'), findsOneWidget);
       expect(find.text('Page 2 of 3'), findsOneWidget);
       expect(find.text('Rows per page'), findsOneWidget);
       expect(find.text('Export'), findsOneWidget);
@@ -82,7 +82,7 @@ void main() {
       await tester.pump();
       expect(tappedRowId, '2');
 
-      await tester.tap(find.text('Next'));
+      await tester.tap(find.text('Next page'));
       await tester.pump();
       expect(changedPage, 3);
 

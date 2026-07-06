@@ -54,7 +54,7 @@ class AdminConsoleToolbar extends StatelessWidget {
                     onClear: onSearchCleared,
                   ),
                   if (trailing != null || onRefresh != null) ...[
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 10),
                     Wrap(
                       spacing: 8,
                       runSpacing: 8,
@@ -79,7 +79,7 @@ class AdminConsoleToolbar extends StatelessWidget {
                     ),
                   ),
                   if (trailing != null || onRefresh != null) ...[
-                    const SizedBox(width: 16),
+                    const SizedBox(width: 12),
                     Wrap(
                       spacing: 8,
                       crossAxisAlignment: WrapCrossAlignment.center,
@@ -93,7 +93,7 @@ class AdminConsoleToolbar extends StatelessWidget {
                 ],
               ),
         if (showTabs && tabs.isNotEmpty) ...[
-          const SizedBox(height: 10),
+          const SizedBox(height: 8),
           AdminSectionTabs(
             tabs: tabs,
             selectedTab: selectedTab,
@@ -101,7 +101,7 @@ class AdminConsoleToolbar extends StatelessWidget {
           ),
         ],
         if (filters.isNotEmpty) ...[
-          const SizedBox(height: 10),
+          const SizedBox(height: 8),
           AdminFilterBar(
             filters: filters,
             selectedFilter: selectedFilter,

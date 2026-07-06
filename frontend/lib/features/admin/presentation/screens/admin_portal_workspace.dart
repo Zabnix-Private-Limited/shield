@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 import '../registry/admin_platform_runtime.dart';
 import '../registry/admin_workspace_catalog.dart';
@@ -42,11 +43,13 @@ class _AdminRegisteredWorkspace extends StatefulWidget {
 
 class _AdminRegisteredWorkspaceState extends State<_AdminRegisteredWorkspace> {
   late AdminWorkspaceController _controller;
+  bool _syncingRouteState = false;
 
   @override
   void initState() {
     super.initState();
     _controller = widget.runtime.createWorkspaceController();
+    _controller.addListener(_handleControllerChanged);
     _loadWorkspace();
   }
 
@@ -55,22 +58,68 @@ class _AdminRegisteredWorkspaceState extends State<_AdminRegisteredWorkspace> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.runtime != widget.runtime ||
         oldWidget.section.key != widget.section.key) {
+      _controller.removeListener(_handleControllerChanged);
       _controller.dispose();
       _controller = widget.runtime.createWorkspaceController();
+      _controller.addListener(_handleControllerChanged);
       _loadWorkspace();
     }
   }
 
   @override
   void dispose() {
+    _controller.removeListener(_handleControllerChanged);
     _controller.dispose();
     super.dispose();
   }
 
   void _loadWorkspace() {
     Future<void>.microtask(
-      () => _controller.loadWorkspace(widget.section.key),
+      () => _controller.loadWorkspace(
+        widget.section.key,
+        query: _queryFromRoute(),
+      ),
     );
+  }
+
+  AdminWorkspaceQuery _queryFromRoute() {
+    final uri = _currentUriOrNull(context);
+    final queryParameters = uri?.queryParameters ?? const <String, String>{};
+    return AdminWorkspaceQuery(
+      search: _readOptionalQuery(queryParameters, 'search'),
+      status: _readOptionalQuery(queryParameters, 'status'),
+      tab: _readOptionalQuery(queryParameters, 'tab'),
+      selectedId: _readOptionalQuery(queryParameters, 'selected_id'),
+      sortKey: _readOptionalQuery(queryParameters, 'sort_key'),
+      sortDirection: _readOptionalQuery(queryParameters, 'sort_direction'),
+      page: _readPositiveInt(queryParameters['page']) ?? 1,
+      pageSize: _readPositiveInt(queryParameters['page_size']) ?? 25,
+    );
+  }
+
+  void _handleControllerChanged() {
+    if (!mounted || _syncingRouteState) {
+      return;
+    }
+
+    final currentUri = _currentUriOrNull(context);
+    if (currentUri == null) {
+      return;
+    }
+    final nextQuery = _controller.query.toQueryParameters().map(
+      (key, value) => MapEntry(key, value.toString()),
+    );
+
+    if (_mapsEqual(currentUri.queryParameters, nextQuery)) {
+      return;
+    }
+
+    _syncingRouteState = true;
+    final nextUri = currentUri.replace(
+      queryParameters: nextQuery.isEmpty ? null : nextQuery,
+    );
+    context.replace(nextUri.toString());
+    _syncingRouteState = false;
   }
 
   @override
@@ -162,17 +211,14 @@ class _StateModule extends StatelessWidget {
       child: AdminEmptyState(
         title: title,
         description: message,
-        actionLabel: 'Refresh or adjust the current workspace query.',
+        actionLabel: 'Refresh this view or adjust the filters.',
       ),
     );
   }
 }
 
 class _PermissionDeniedModule extends StatelessWidget {
-  const _PermissionDeniedModule({
-    required this.section,
-    required this.message,
-  });
+  const _PermissionDeniedModule({required this.section, required this.message});
 
   final PortalSectionData section;
   final String message;
@@ -186,17 +232,14 @@ class _PermissionDeniedModule extends StatelessWidget {
       child: AdminEmptyState(
         title: 'Permission required',
         description: message,
-        actionLabel: 'Grant the backend permission contract to unlock this workspace.',
+        actionLabel: 'Ask an administrator to grant access to this workspace.',
       ),
     );
   }
 }
 
 class _ErrorModule extends StatelessWidget {
-  const _ErrorModule({
-    required this.section,
-    required this.message,
-  });
+  const _ErrorModule({required this.section, required this.message});
 
   final PortalSectionData section;
   final String message;
@@ -210,8 +253,44 @@ class _ErrorModule extends StatelessWidget {
       child: AdminEmptyState(
         title: 'Workspace runtime failed',
         description: message,
-        actionLabel: 'Check workspace registration, schema ownership, and backend data contracts.',
+        actionLabel: 'Refresh the workspace or review the backend contract.',
       ),
     );
   }
+}
+
+Uri? _currentUriOrNull(BuildContext context) {
+  try {
+    return GoRouterState.of(context).uri;
+  } catch (_) {
+    return null;
+  }
+}
+
+String? _readOptionalQuery(Map<String, String> queryParameters, String key) {
+  final value = queryParameters[key]?.trim();
+  if (value == null || value.isEmpty) {
+    return null;
+  }
+  return value;
+}
+
+int? _readPositiveInt(String? value) {
+  final parsed = int.tryParse(value ?? '');
+  if (parsed == null || parsed < 1) {
+    return null;
+  }
+  return parsed;
+}
+
+bool _mapsEqual(Map<String, String> left, Map<String, String> right) {
+  if (left.length != right.length) {
+    return false;
+  }
+  for (final entry in left.entries) {
+    if (right[entry.key] != entry.value) {
+      return false;
+    }
+  }
+  return true;
 }

@@ -1022,7 +1022,7 @@ export class AdminGovernanceService {
 
     const selectedCustomerId = query.selectedId?.trim().length
       ? BigInt(query.selectedId.trim())
-      : customers[0]?.id;
+      : null;
     const selectedCustomer: any =
       selectedCustomerId == null
         ? null
@@ -1285,7 +1285,7 @@ export class AdminGovernanceService {
                     value:
                       selectedWalletSummary == null
                         ? 'Wallet unavailable'
-                        : 'Cash ₹${Number(selectedWalletSummary.cashWallet.available ?? 0).toFixed(2)} • Rewards ${selectedWalletSummary.rewardPoints.available ?? 0}',
+                        : `Cash balance ₹${Number(selectedWalletSummary.cashWallet.available ?? 0).toFixed(2)} • Reward points ${selectedWalletSummary.rewardPoints.available ?? 0}`,
                   },
                   {
                     label: 'Card status',
@@ -1294,7 +1294,7 @@ export class AdminGovernanceService {
                   {
                     label: 'Data scope',
                     value:
-                      '$filteredCustomers matching customer rows • page $page of ${Math.max(1, Math.ceil(filteredCustomers / pageSize))}',
+                      `${filteredCustomers} matching customers • page ${page} of ${Math.max(1, Math.ceil(filteredCustomers / pageSize))}`,
                   },
                 ],
           emptyState: {
@@ -5290,6 +5290,17 @@ export class AdminGovernanceService {
   }
 
   private formatDateTime(value?: Date | null) {
-    return value == null ? 'N/A' : value.toISOString();
+    if (value == null) {
+      return 'N/A';
+    }
+    return new Intl.DateTimeFormat('en-IN', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true,
+      timeZone: 'Asia/Kolkata',
+    }).format(value);
   }
 }

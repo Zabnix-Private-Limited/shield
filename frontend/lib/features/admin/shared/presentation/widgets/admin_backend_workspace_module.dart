@@ -16,7 +16,8 @@ class AdminBackendWorkspaceModule extends StatefulWidget {
       _AdminBackendWorkspaceModuleState();
 }
 
-class _AdminBackendWorkspaceModuleState extends State<AdminBackendWorkspaceModule> {
+class _AdminBackendWorkspaceModuleState
+    extends State<AdminBackendWorkspaceModule> {
   List<String> _selectedRowIds = const <String>[];
   bool _actionInFlight = false;
 
@@ -27,8 +28,8 @@ class _AdminBackendWorkspaceModuleState extends State<AdminBackendWorkspaceModul
       return const AdminEmptyState(
         title: 'Workspace payload unavailable',
         description:
-            'The backend workspace loaded without a payload that the shared renderer can understand.',
-        actionLabel: 'Verify the backend workspace contract.',
+            'This workspace loaded, but the renderer did not receive a usable payload.',
+        actionLabel: 'Review the backend workspace response.',
       );
     }
 
@@ -103,10 +104,10 @@ class _AdminBackendWorkspaceModuleState extends State<AdminBackendWorkspaceModul
                 onRecordAction: controller == null
                     ? null
                     : (action) => _handleAction(
-                          controller,
-                          action,
-                          recordId: controller.query.selectedId,
-                        ),
+                        controller,
+                        action,
+                        recordId: controller.query.selectedId,
+                      ),
                 onBulkAction: controller == null
                     ? null
                     : (action) => _handleBulkAction(controller, action),
@@ -189,8 +190,9 @@ class _AdminBackendWorkspaceModuleState extends State<AdminBackendWorkspaceModul
     AdminWorkspaceActionDescriptor action, {
     String? recordId,
   }) async {
-    if (action.requiresSelection && (recordId == null || recordId.trim().isEmpty)) {
-      _showMessage('Select a customer first.');
+    if (action.requiresSelection &&
+        (recordId == null || recordId.trim().isEmpty)) {
+      _showMessage('Select a record first.');
       return;
     }
     final confirmed = await _confirmIfNeeded(action);
@@ -229,7 +231,7 @@ class _AdminBackendWorkspaceModuleState extends State<AdminBackendWorkspaceModul
     AdminWorkspaceActionDescriptor action,
   ) async {
     if (_selectedRowIds.isEmpty) {
-      _showMessage('Select one or more customers first.');
+      _showMessage('Select one or more rows first.');
       return;
     }
     final confirmed = await _confirmIfNeeded(action);
@@ -318,9 +320,9 @@ class _AdminBackendWorkspaceModuleState extends State<AdminBackendWorkspaceModul
     if (!mounted) {
       return;
     }
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 }
 
@@ -352,8 +354,7 @@ class _PanelView extends StatelessWidget {
           controller: controller,
           onSelectionChanged: onSelectionChanged,
         ),
-        _PanelType.details =>
-          _DetailsPanel(panel: panel, onRefresh: onRefresh),
+        _PanelType.details => _DetailsPanel(panel: panel, onRefresh: onRefresh),
         _PanelType.list => _ListPanel(
           panel: panel,
           onRefresh: onRefresh,
@@ -384,9 +385,9 @@ class _TablePanel extends StatelessWidget {
       return AdminEmptyState(
         title: emptyState?.title ?? 'No rows available',
         description:
-            emptyState?.description ??
-            'This backend-driven table completed successfully but returned no rows.',
-        actionLabel: emptyState?.actionLabel ?? 'Adjust the current filters.',
+            emptyState?.description ?? 'No records match the current view yet.',
+        actionLabel:
+            emptyState?.actionLabel ?? 'Adjust the filters or refresh.',
         onActionPressed: onRefresh,
       );
     }
@@ -398,7 +399,10 @@ class _TablePanel extends StatelessWidget {
               key: column.key,
               label: column.label,
               sortKey: column.sortKey,
-              valueBuilder: (row) => row[column.key] ?? 'N/A',
+              valueBuilder: (row) => AppDisplayFormatters.formatCell(
+                column.key,
+                row[column.key] ?? '',
+              ),
             ),
           )
           .toList(growable: false),
@@ -412,18 +416,17 @@ class _TablePanel extends StatelessWidget {
       sortAscending: panel.sortDirection != 'desc',
       onSortChanged: controller == null
           ? null
-          : (columnKey, ascending) => controller!.sortBy(
-                columnKey,
-                ascending: ascending,
-              ),
+          : (columnKey, ascending) =>
+                controller!.sortBy(columnKey, ascending: ascending),
       onRowTap: controller == null || panel.selectionKey == null
           ? null
           : (row) => controller!.selectRecord(row[panel.selectionKey!]),
       page: panel.pagination?.page,
       pageSize: panel.pagination?.pageSize,
       totalRows: panel.pagination?.totalRows,
-      onPageChanged:
-          controller == null ? null : (page) => controller!.goToPage(page),
+      onPageChanged: controller == null
+          ? null
+          : (page) => controller!.goToPage(page),
       onPageSizeChanged: controller == null
           ? null
           : (pageSize) => controller!.changePageSize(pageSize),
@@ -434,10 +437,7 @@ class _TablePanel extends StatelessWidget {
 }
 
 class _DetailsPanel extends StatelessWidget {
-  const _DetailsPanel({
-    required this.panel,
-    this.onRefresh,
-  });
+  const _DetailsPanel({required this.panel, this.onRefresh});
 
   final _PanelData panel;
   final VoidCallback? onRefresh;
@@ -450,8 +450,8 @@ class _DetailsPanel extends StatelessWidget {
         title: emptyState?.title ?? 'No details available',
         description:
             emptyState?.description ??
-            'This backend-driven detail panel completed successfully but returned no rows.',
-        actionLabel: emptyState?.actionLabel ?? 'Check the workspace contract.',
+            'Select a record or adjust the current view to load details.',
+        actionLabel: emptyState?.actionLabel ?? 'Refresh the details panel.',
         onActionPressed: onRefresh,
       );
     }
@@ -461,7 +461,10 @@ class _DetailsPanel extends StatelessWidget {
           .map(
             (detail) => AdminDetailItem(
               label: detail['label'] ?? 'Detail',
-              value: detail['value'] ?? 'N/A',
+              value: AppDisplayFormatters.formatCell(
+                detail['label'] ?? 'detail',
+                detail['value'] ?? '',
+              ),
             ),
           )
           .toList(growable: false),
@@ -470,11 +473,7 @@ class _DetailsPanel extends StatelessWidget {
 }
 
 class _ListPanel extends StatelessWidget {
-  const _ListPanel({
-    required this.panel,
-    this.onRefresh,
-    this.controller,
-  });
+  const _ListPanel({required this.panel, this.onRefresh, this.controller});
 
   final _PanelData panel;
   final VoidCallback? onRefresh;
@@ -487,9 +486,9 @@ class _ListPanel extends StatelessWidget {
       return AdminEmptyState(
         title: emptyState?.title ?? 'No records available',
         description:
-            emptyState?.description ??
-            'This backend-driven list completed successfully but returned no records.',
-        actionLabel: emptyState?.actionLabel ?? 'Check the current filters.',
+            emptyState?.description ?? 'No records match the current view yet.',
+        actionLabel:
+            emptyState?.actionLabel ?? 'Adjust the filters or refresh.',
         onActionPressed: onRefresh,
       );
     }
@@ -508,7 +507,9 @@ class _ListPanel extends StatelessWidget {
                     title: item['title'] ?? 'Record',
                     subtitle: item['subtitle'] ?? '',
                     meta: item['meta'] ?? '',
-                    status: item['status'] ?? 'UNKNOWN',
+                    status: AppDisplayFormatters.formatStatusLabel(
+                      item['status'] ?? 'UNKNOWN',
+                    ),
                     color: _statusColor(item['status']),
                   ),
                 ),
@@ -535,7 +536,7 @@ class _HeaderData {
     );
     return _HeaderData(
       eyebrow: (map['eyebrow'] ?? 'Admin / Workspace').toString(),
-      title: (map['title'] ?? 'Backend workspace').toString(),
+      title: (map['title'] ?? 'Workspace').toString(),
       description: (map['description'] ?? '').toString(),
       primaryActionLabel: map['primaryActionLabel']?.toString(),
       secondaryActionLabel: map['secondaryActionLabel']?.toString(),
@@ -561,8 +562,9 @@ class _ToolbarData {
       raw as Map? ?? const <String, dynamic>{},
     );
     return _ToolbarData(
-      searchHint: (map['searchHint'] ?? 'Search backend-driven workspace data')
-          .toString(),
+      searchHint:
+          (map['searchHint'] ?? 'Search records, names, IDs, or statuses')
+              .toString(),
       tabs: List<String>.from(map['tabs'] as List? ?? const <String>[]),
       filters: List<String>.from(map['filters'] as List? ?? const <String>[]),
     );
@@ -656,11 +658,7 @@ class _PanelData {
 }
 
 class _ColumnData {
-  const _ColumnData({
-    required this.key,
-    required this.label,
-    this.sortKey,
-  });
+  const _ColumnData({required this.key, required this.label, this.sortKey});
 
   factory _ColumnData.fromMap(Object? raw) {
     final map = Map<String, dynamic>.from(
@@ -740,7 +738,9 @@ Future<void> _exportTablePanel(BuildContext context, _PanelData panel) async {
   if (panel.columns.isEmpty || panel.rows.isEmpty) {
     return;
   }
-  final header = panel.columns.map((column) => _escapeCsv(column.label)).join(',');
+  final header = panel.columns
+      .map((column) => _escapeCsv(column.label))
+      .join(',');
   final lines = <String>[
     header,
     ...panel.rows.map(
@@ -749,7 +749,8 @@ Future<void> _exportTablePanel(BuildContext context, _PanelData panel) async {
           .join(','),
     ),
   ];
-  final fileName = '${panel.title.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]+'), '_')}.csv';
+  final fileName =
+      '${panel.title.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]+'), '_')}.csv';
   final downloaded = await downloadPlatformFile(
     fileName: fileName,
     mimeType: 'text/csv',
@@ -832,7 +833,8 @@ AdminActionItem? _resolveHeaderAction({
       if (normalized.contains(normalizedFilter)) {
         return filter;
       }
-      if (normalized.contains('approval') && normalizedFilter.contains('review')) {
+      if (normalized.contains('approval') &&
+          normalizedFilter.contains('review')) {
         return filter;
       }
       if (normalized.contains('healthy') &&
@@ -1004,7 +1006,9 @@ class _WorkspaceActionMenus extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (workspaceActions.isEmpty && recordActions.isEmpty && bulkActions.isEmpty) {
+    if (workspaceActions.isEmpty &&
+        recordActions.isEmpty &&
+        bulkActions.isEmpty) {
       return const SizedBox.shrink();
     }
     return Wrap(
@@ -1013,25 +1017,25 @@ class _WorkspaceActionMenus extends StatelessWidget {
       children: [
         if (workspaceActions.isNotEmpty)
           _ActionMenuButton(
-            label: 'Actions',
+            label: 'Workspace',
             actions: workspaceActions,
             enabled: !actionInFlight,
             onSelected: onWorkspaceAction,
           ),
         if (recordActions.isNotEmpty)
           _ActionMenuButton(
-            label: selectedRecordId?.trim().isNotEmpty ?? false
-                ? 'Customer'
-                : 'Customer',
+            label: 'Selected record',
             actions: recordActions,
-            enabled: !actionInFlight && (selectedRecordId?.trim().isNotEmpty ?? false),
+            enabled:
+                !actionInFlight &&
+                (selectedRecordId?.trim().isNotEmpty ?? false),
             onSelected: onRecordAction,
           ),
         if (bulkActions.isNotEmpty)
           _ActionMenuButton(
             label: selectedRowIds.isEmpty
-                ? 'Bulk'
-                : 'Bulk (${selectedRowIds.length})',
+                ? 'Bulk actions'
+                : 'Bulk actions (${selectedRowIds.length})',
             actions: bulkActions,
             enabled: !actionInFlight && selectedRowIds.isNotEmpty,
             onSelected: onBulkAction,
@@ -1140,19 +1144,19 @@ class _DetailWorkspaceSection extends StatelessWidget {
           ],
           switch (panel.type) {
             _PanelType.table => _TablePanel(
-                panel: panel,
-                onRefresh: onRefresh,
-                controller: controller,
-              ),
+              panel: panel,
+              onRefresh: onRefresh,
+              controller: controller,
+            ),
             _PanelType.details => _DetailsPanel(
-                panel: panel,
-                onRefresh: onRefresh,
-              ),
+              panel: panel,
+              onRefresh: onRefresh,
+            ),
             _PanelType.list => _ListPanel(
-                panel: panel,
-                onRefresh: onRefresh,
-                controller: controller,
-              ),
+              panel: panel,
+              onRefresh: onRefresh,
+              controller: controller,
+            ),
           },
         ],
       ),
@@ -1181,7 +1185,10 @@ class _WorkspaceFormDialogState extends State<_WorkspaceFormDialog> {
     super.initState();
     _fields = (widget.form['fields'] as List? ?? const <dynamic>[])
         .whereType<Map>()
-        .map((field) => _WorkspaceFieldData.fromMap(Map<String, dynamic>.from(field)))
+        .map(
+          (field) =>
+              _WorkspaceFieldData.fromMap(Map<String, dynamic>.from(field)),
+        )
         .toList(growable: false);
     for (final field in _fields) {
       switch (field.type) {
@@ -1285,8 +1292,8 @@ class _WorkspaceFormDialogState extends State<_WorkspaceFormDialog> {
             keyboardType: field.type == 'number'
                 ? TextInputType.number
                 : field.type == 'date'
-                    ? TextInputType.datetime
-                    : TextInputType.text,
+                ? TextInputType.datetime
+                : TextInputType.text,
             decoration: InputDecoration(
               labelText: label,
               helperText: field.helperText,
