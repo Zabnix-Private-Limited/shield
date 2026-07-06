@@ -8957,3 +8957,29 @@ Completed the first command-side platform slice for the backend-driven Admin Run
 - `cd backend && npm test -- --runInBand` ✅
 - `cd backend && npm test -- --runInBand src/admin-governance/admin-governance.controller.spec.ts` ✅
 - `cd backend && npm run build` ✅
+## 250. Backend Workspace UX Density Refactor
+**Timestamp:** 2026-07-06 09:18:21 IST
+
+Refactored the shared backend-workspace presentation layer to make the admin portal feel more like an operational console and less like a metadata proof-of-concept. The main goal was to reclaim workspace width for the data grid, reduce nested card weight, compress whitespace, and move record/bulk actions out of permanent top-level button rows without changing the backend-owned runtime contract.
+
+**Frontend Files**
+- `frontend/lib/features/admin/shared/components/admin_console_toolbar.dart`
+- `frontend/lib/features/admin/shared/components/admin_data_table.dart`
+- `frontend/lib/features/admin/shared/components/admin_metric_card.dart`
+- `frontend/lib/features/admin/shared/components/admin_stat_card.dart`
+- `frontend/lib/features/admin/shared/components/admin_workspace_header.dart`
+- `frontend/lib/features/admin/shared/layout/admin_page.dart`
+- `frontend/lib/features/admin/shared/presentation/widgets/admin_backend_workspace_module.dart`
+
+**Backend Files**
+- None.
+
+**Why**
+- The shared runtime had already become functionally real, but the customer workspace still looked like three competing cards with too much empty space and too little emphasis on the table.
+- This pass keeps the server-driven contract intact while making the renderer task-oriented: search and filters stay at the top, the summary panel becomes narrow, the table becomes the dominant surface, detail tabs move below the grid instead of consuming a permanent right column, and runtime actions collapse into compact menus.
+- The density changes live in shared admin presentation owners so every backend-driven module can benefit from the same layout improvements instead of introducing customer-specific UI forks.
+
+**Verification**
+- `cd frontend && flutter analyze --no-pub` ✅
+- `cd frontend && flutter test test/admin_backend_workspace_module_test.dart test/admin_data_table_test.dart test/admin_engine_runtime_test.dart` ✅
+- `cd frontend && flutter test` ✅

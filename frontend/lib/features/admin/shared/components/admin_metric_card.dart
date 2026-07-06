@@ -16,48 +16,45 @@ class AdminMetricCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AppCard(
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.all(14),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
               Container(
-                width: 40,
-                height: 40,
+                width: 34,
+                height: 34,
                 decoration: BoxDecoration(
                   color: metric.color.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(14),
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(metric.icon, color: metric.color, size: 20),
+                child: Icon(metric.icon, color: metric.color, size: 18),
               ),
               const Spacer(),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                decoration: BoxDecoration(
-                  color: AdminColors.mutedSurface,
-                  borderRadius: BorderRadius.circular(999),
-                ),
+              Flexible(
                 child: Text(
                   metric.label,
+                  textAlign: TextAlign.right,
+                  maxLines: 2,
                   style: AdminTypography.tiny.copyWith(
                     color: AdminColors.caption,
-                    fontWeight: FontWeight.w700,
+                    fontWeight: FontWeight.w800,
                   ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 10),
           Text(
             metric.value,
             style: AdminTypography.h2.copyWith(
-              fontSize: 26,
+              fontSize: 22,
               fontWeight: FontWeight.w800,
               color: AdminColors.text,
             ),
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 4),
           Text(
             metric.note,
             style: AdminTypography.small.copyWith(

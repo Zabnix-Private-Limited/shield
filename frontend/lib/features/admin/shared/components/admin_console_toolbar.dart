@@ -19,6 +19,7 @@ class AdminConsoleToolbar extends StatelessWidget {
     this.onFilterSelected,
     this.onRefresh,
     this.trailing,
+    this.showTabs = true,
   });
 
   final String searchHint;
@@ -33,6 +34,7 @@ class AdminConsoleToolbar extends StatelessWidget {
   final ValueChanged<String>? onFilterSelected;
   final VoidCallback? onRefresh;
   final Widget? trailing;
+  final bool showTabs;
 
   @override
   Widget build(BuildContext context) {
@@ -90,8 +92,8 @@ class AdminConsoleToolbar extends StatelessWidget {
                   ],
                 ],
               ),
-        if (tabs.isNotEmpty) ...[
-          const SizedBox(height: 12),
+        if (showTabs && tabs.isNotEmpty) ...[
+          const SizedBox(height: 10),
           AdminSectionTabs(
             tabs: tabs,
             selectedTab: selectedTab,
@@ -99,7 +101,7 @@ class AdminConsoleToolbar extends StatelessWidget {
           ),
         ],
         if (filters.isNotEmpty) ...[
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
           AdminFilterBar(
             filters: filters,
             selectedFilter: selectedFilter,

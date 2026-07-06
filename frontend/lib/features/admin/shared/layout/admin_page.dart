@@ -38,10 +38,10 @@ class AdminPage extends StatelessWidget {
           secondaryAction: secondaryAction,
         ),
         if (metrics.isNotEmpty) ...[
-          const SizedBox(height: 18),
+          const SizedBox(height: 12),
           Wrap(
-            spacing: 14,
-            runSpacing: 14,
+            spacing: 10,
+            runSpacing: 10,
             children: metrics
                 .map(
                   (metric) => SizedBox(
@@ -52,7 +52,7 @@ class AdminPage extends StatelessWidget {
                 .toList(),
           ),
         ],
-        const SizedBox(height: 18),
+        const SizedBox(height: 12),
         child,
       ],
     );
@@ -60,9 +60,9 @@ class AdminPage extends StatelessWidget {
 
   double _metricWidth(BuildContext context) {
     final width = MediaQuery.of(context).size.width;
-    if (width >= 1600) return 190;
-    if (width >= 1280) return 180;
-    if (width >= 1024) return 220;
+    if (width >= 1600) return 168;
+    if (width >= 1280) return 164;
+    if (width >= 1024) return 200;
     return width - 80;
   }
 }

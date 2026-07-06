@@ -47,30 +47,29 @@ class _AdminBackendWorkspaceModuleState extends State<AdminBackendWorkspaceModul
     final recordActions = actions
         .where((action) => action.requiresSelection && !action.allowBulk)
         .toList(growable: false);
-    final resolvedPrimaryAction = workspaceActions.isEmpty
-        ? _resolveHeaderAction(
-            label: header.primaryActionLabel,
-            icon: Icons.bolt_outlined,
-            toolbar: toolbar,
-            controller: controller,
-          )
-        : _toActionItem(workspaceActions.first, controller);
-    final resolvedSecondaryAction =
-        workspaceActions.length < 2
-            ? _resolveHeaderAction(
-                label: header.secondaryActionLabel,
-                icon: Icons.tune_outlined,
-                toolbar: toolbar,
-                controller: controller,
-              )
-            : _toActionItem(workspaceActions[1], controller);
+    final hasDetailPanel = panels['right'] != null;
+    final topRow = _buildTopRow(
+      leftPanel: _PanelData.fromMap(panels['left']),
+      centerPanel: _PanelData.fromMap(panels['center']),
+      controller: controller,
+    );
 
     return AdminPage(
       eyebrow: header.eyebrow,
       title: header.title,
       description: header.description,
-      primaryAction: resolvedPrimaryAction,
-      secondaryAction: resolvedSecondaryAction,
+      primaryAction: _resolveHeaderAction(
+        label: header.primaryActionLabel,
+        icon: Icons.bolt_outlined,
+        toolbar: toolbar,
+        controller: controller,
+      ),
+      secondaryAction: _resolveHeaderAction(
+        label: header.secondaryActionLabel,
+        icon: Icons.tune_outlined,
+        toolbar: toolbar,
+        controller: controller,
+      ),
       metrics: metrics,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -80,6 +79,7 @@ class _AdminBackendWorkspaceModuleState extends State<AdminBackendWorkspaceModul
               searchHint: toolbar.searchHint,
               searchValue: controller?.query.search ?? '',
               tabs: toolbar.tabs,
+              showTabs: !hasDetailPanel,
               filters: toolbar.filters,
               selectedTab: controller?.query.tab,
               selectedFilter: controller?.query.status,
@@ -90,77 +90,97 @@ class _AdminBackendWorkspaceModuleState extends State<AdminBackendWorkspaceModul
               onTabSelected: controller?.selectTab,
               onFilterSelected: controller?.toggleStatus,
               onRefresh: controller?.refresh,
-            ),
-            const SizedBox(height: 18),
-          ],
-          if (recordActions.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 16),
-              child: _WorkspaceActionBar(
-                title: 'Customer actions',
-                actions: recordActions,
+              trailing: _WorkspaceActionMenus(
+                workspaceActions: workspaceActions,
+                recordActions: recordActions,
+                bulkActions: bulkActions,
                 actionInFlight: _actionInFlight,
-                onActionPressed: controller == null
+                selectedRecordId: controller?.query.selectedId,
+                selectedRowIds: _selectedRowIds,
+                onWorkspaceAction: controller == null
+                    ? null
+                    : (action) => _handleAction(controller, action),
+                onRecordAction: controller == null
                     ? null
                     : (action) => _handleAction(
                           controller,
                           action,
                           recordId: controller.query.selectedId,
                         ),
-              ),
-            ),
-          if (bulkActions.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 16),
-              child: _WorkspaceActionBar(
-                title: 'Bulk actions',
-                actions: bulkActions,
-                actionInFlight: _actionInFlight,
-                enabled: _selectedRowIds.isNotEmpty,
-                onActionPressed: controller == null
+                onBulkAction: controller == null
                     ? null
                     : (action) => _handleBulkAction(controller, action),
               ),
             ),
-          AdminSplitWorkspace(
-            left: _PanelView(
-              panel: _PanelData.fromMap(panels['left']),
+            const SizedBox(height: 12),
+          ],
+          topRow,
+          if (hasDetailPanel) ...[
+            const SizedBox(height: 12),
+            _DetailWorkspaceSection(
+              tabs: toolbar.tabs,
+              selectedTab: controller?.query.tab,
+              onTabSelected: controller?.selectTab,
+              panel: _PanelData.fromMap(panels['right']),
               onRefresh: controller?.refresh,
               controller: controller,
             ),
-            center: _PanelView(
-              panel: _PanelData.fromMap(panels['center']),
-              onRefresh: controller?.refresh,
-              controller: controller,
-              onSelectionChanged: _updateSelection,
-            ),
-            right: panels['right'] == null
-                ? null
-                : _PanelView(
-                    panel: _PanelData.fromMap(panels['right']),
-                    onRefresh: controller?.refresh,
-                    controller: controller,
-                  ),
-          ),
+          ],
         ],
       ),
     );
   }
 
-  AdminActionItem _toActionItem(
-    AdminWorkspaceActionDescriptor action,
-    AdminWorkspaceController? controller,
-  ) {
-    return AdminActionItem(
-      label: action.label,
-      icon: _iconForAction(action.icon),
-      onPressed: controller == null || _actionInFlight
-          ? null
-          : () => _handleAction(
-                controller,
-                action,
-                recordId: controller.query.selectedId,
+  Widget _buildTopRow({
+    required _PanelData leftPanel,
+    required _PanelData centerPanel,
+    required AdminWorkspaceController? controller,
+  }) {
+    final hasLeftContent = leftPanel.hasVisibleContent;
+    final center = _PanelView(
+      panel: centerPanel,
+      onRefresh: controller?.refresh,
+      controller: controller,
+      onSelectionChanged: _updateSelection,
+      compact: true,
+    );
+    if (!hasLeftContent) {
+      return center;
+    }
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.maxWidth < 1180) {
+          return Column(
+            children: [
+              _PanelView(
+                panel: leftPanel,
+                onRefresh: controller?.refresh,
+                controller: controller,
+                compact: true,
               ),
+              const SizedBox(height: 12),
+              center,
+            ],
+          );
+        }
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SizedBox(
+              width: 300,
+              child: _PanelView(
+                panel: leftPanel,
+                onRefresh: controller?.refresh,
+                controller: controller,
+                compact: true,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(child: center),
+          ],
+        );
+      },
     );
   }
 
@@ -310,18 +330,21 @@ class _PanelView extends StatelessWidget {
     this.onRefresh,
     this.controller,
     this.onSelectionChanged,
+    this.compact = false,
   });
 
   final _PanelData panel;
   final VoidCallback? onRefresh;
   final AdminWorkspaceController? controller;
   final ValueChanged<List<String>>? onSelectionChanged;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
     return AdminStatCard(
       title: panel.title,
       subtitle: panel.subtitle,
+      compact: compact,
       child: switch (panel.type) {
         _PanelType.table => _TablePanel(
           panel: panel,
@@ -623,6 +646,13 @@ class _PanelData {
   final String? sortKey;
   final String? sortDirection;
   final _PaginationData? pagination;
+
+  bool get hasVisibleContent =>
+      items.isNotEmpty ||
+      details.isNotEmpty ||
+      rows.isNotEmpty ||
+      columns.isNotEmpty ||
+      emptyState != null;
 }
 
 class _ColumnData {
@@ -949,77 +979,184 @@ IconData _iconForAction(String iconKey) {
   }
 }
 
-class _WorkspaceActionBar extends StatelessWidget {
-  const _WorkspaceActionBar({
-    required this.title,
-    required this.actions,
+class _WorkspaceActionMenus extends StatelessWidget {
+  const _WorkspaceActionMenus({
+    required this.workspaceActions,
+    required this.recordActions,
+    required this.bulkActions,
     required this.actionInFlight,
-    required this.onActionPressed,
-    this.enabled = true,
+    required this.selectedRecordId,
+    required this.selectedRowIds,
+    this.onWorkspaceAction,
+    this.onRecordAction,
+    this.onBulkAction,
   });
 
-  final String title;
-  final List<AdminWorkspaceActionDescriptor> actions;
+  final List<AdminWorkspaceActionDescriptor> workspaceActions;
+  final List<AdminWorkspaceActionDescriptor> recordActions;
+  final List<AdminWorkspaceActionDescriptor> bulkActions;
   final bool actionInFlight;
-  final bool enabled;
-  final ValueChanged<AdminWorkspaceActionDescriptor>? onActionPressed;
+  final String? selectedRecordId;
+  final List<String> selectedRowIds;
+  final ValueChanged<AdminWorkspaceActionDescriptor>? onWorkspaceAction;
+  final ValueChanged<AdminWorkspaceActionDescriptor>? onRecordAction;
+  final ValueChanged<AdminWorkspaceActionDescriptor>? onBulkAction;
 
   @override
   Widget build(BuildContext context) {
-    if (actions.isEmpty) {
+    if (workspaceActions.isEmpty && recordActions.isEmpty && bulkActions.isEmpty) {
       return const SizedBox.shrink();
     }
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AdminColors.surface,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AdminColors.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: AdminTypography.body.copyWith(
-              color: AdminColors.text,
-              fontWeight: FontWeight.w800,
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        if (workspaceActions.isNotEmpty)
+          _ActionMenuButton(
+            label: 'Actions',
+            actions: workspaceActions,
+            enabled: !actionInFlight,
+            onSelected: onWorkspaceAction,
+          ),
+        if (recordActions.isNotEmpty)
+          _ActionMenuButton(
+            label: selectedRecordId?.trim().isNotEmpty ?? false
+                ? 'Customer'
+                : 'Customer',
+            actions: recordActions,
+            enabled: !actionInFlight && (selectedRecordId?.trim().isNotEmpty ?? false),
+            onSelected: onRecordAction,
+          ),
+        if (bulkActions.isNotEmpty)
+          _ActionMenuButton(
+            label: selectedRowIds.isEmpty
+                ? 'Bulk'
+                : 'Bulk (${selectedRowIds.length})',
+            actions: bulkActions,
+            enabled: !actionInFlight && selectedRowIds.isNotEmpty,
+            onSelected: onBulkAction,
+          ),
+      ],
+    );
+  }
+}
+
+class _ActionMenuButton extends StatelessWidget {
+  const _ActionMenuButton({
+    required this.label,
+    required this.actions,
+    required this.enabled,
+    this.onSelected,
+  });
+
+  final String label;
+  final List<AdminWorkspaceActionDescriptor> actions;
+  final bool enabled;
+  final ValueChanged<AdminWorkspaceActionDescriptor>? onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    return PopupMenuButton<AdminWorkspaceActionDescriptor>(
+      enabled: enabled && onSelected != null,
+      tooltip: label,
+      onSelected: onSelected,
+      itemBuilder: (context) => actions
+          .map(
+            (action) => PopupMenuItem<AdminWorkspaceActionDescriptor>(
+              value: action,
+              child: Row(
+                children: [
+                  Icon(_iconForAction(action.icon), size: 18),
+                  const SizedBox(width: 10),
+                  Expanded(child: Text(action.label)),
+                ],
+              ),
             ),
-          ),
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 10,
-            runSpacing: 10,
-            children: actions
-                .map(
-                  (action) => FilledButton.icon(
-                    onPressed: !enabled || actionInFlight || onActionPressed == null
-                        ? null
-                        : () => onActionPressed!(action),
-                    icon: Icon(_iconForAction(action.icon), size: 18),
-                    label: Text(action.label),
-                    style: FilledButton.styleFrom(
-                      backgroundColor: _actionColor(action),
-                      foregroundColor: Colors.white,
-                    ),
-                  ),
-                )
-                .toList(growable: false),
-          ),
-        ],
+          )
+          .toList(growable: false),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: enabled ? AdminColors.surface : AdminColors.mutedSurface,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AdminColors.border),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              label,
+              style: AdminTypography.small.copyWith(
+                color: enabled ? AdminColors.text : AdminColors.caption,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(width: 6),
+            Icon(
+              Icons.keyboard_arrow_down,
+              size: 18,
+              color: enabled ? AdminColors.caption : AdminColors.caption,
+            ),
+          ],
+        ),
       ),
     );
   }
+}
 
-  Color _actionColor(AdminWorkspaceActionDescriptor action) {
-    switch (action.category.trim().toLowerCase()) {
-      case 'danger':
-        return AdminColors.danger;
-      case 'primary':
-        return AdminColors.primary;
-      default:
-        return AdminColors.secondary;
-    }
+class _DetailWorkspaceSection extends StatelessWidget {
+  const _DetailWorkspaceSection({
+    required this.tabs,
+    required this.selectedTab,
+    required this.panel,
+    this.onTabSelected,
+    this.onRefresh,
+    this.controller,
+  });
+
+  final List<String> tabs;
+  final String? selectedTab;
+  final ValueChanged<String>? onTabSelected;
+  final _PanelData panel;
+  final VoidCallback? onRefresh;
+  final AdminWorkspaceController? controller;
+
+  @override
+  Widget build(BuildContext context) {
+    return AdminStatCard(
+      title: panel.title,
+      subtitle: panel.subtitle,
+      compact: true,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (tabs.isNotEmpty) ...[
+            AdminSectionTabs(
+              tabs: tabs,
+              selectedTab: selectedTab,
+              onSelected: onTabSelected,
+            ),
+            const SizedBox(height: 12),
+          ],
+          switch (panel.type) {
+            _PanelType.table => _TablePanel(
+                panel: panel,
+                onRefresh: onRefresh,
+                controller: controller,
+              ),
+            _PanelType.details => _DetailsPanel(
+                panel: panel,
+                onRefresh: onRefresh,
+              ),
+            _PanelType.list => _ListPanel(
+                panel: panel,
+                onRefresh: onRefresh,
+                controller: controller,
+              ),
+          },
+        ],
+      ),
+    );
   }
 }
 

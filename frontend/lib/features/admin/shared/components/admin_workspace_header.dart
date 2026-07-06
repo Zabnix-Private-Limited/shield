@@ -26,14 +26,10 @@ class AdminWorkspaceHeader extends StatelessWidget {
     final narrow = MediaQuery.of(context).size.width < 1240;
 
     return Container(
-      padding: const EdgeInsets.fromLTRB(24, 22, 24, 22),
+      padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFFFFFFFF), Color(0xFFF8FBFF)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(28),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
         border: Border.all(color: AdminColors.border),
       ),
       child: narrow
@@ -101,19 +97,19 @@ class _HeaderText extends StatelessWidget {
         Text(
           title,
           style: AdminTypography.h1.copyWith(
-            fontSize: 28,
+            fontSize: 24,
             fontWeight: FontWeight.w800,
             color: AdminColors.text,
           ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 6),
         ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 760),
+          constraints: const BoxConstraints(maxWidth: 860),
           child: Text(
             description,
             style: AdminTypography.body.copyWith(
               color: AdminColors.subtext,
-              height: 1.45,
+              height: 1.35,
             ),
           ),
         ),
@@ -142,25 +138,19 @@ class _HeaderActions extends StatelessWidget {
     }
 
     return Wrap(
-      spacing: 12,
-      runSpacing: 12,
+      spacing: 8,
+      runSpacing: 8,
       children: [
         if (secondaryAction?.onPressed != null)
-          SizedBox(
-            width: 176,
-            child: AppButton(
-              text: secondaryAction!.label,
-              onPressed: secondaryAction!.onPressed!,
-              type: AppButtonType.secondary,
-            ),
+          AppButton(
+            text: secondaryAction!.label,
+            onPressed: secondaryAction!.onPressed!,
+            type: AppButtonType.secondary,
           ),
         if (primaryAction?.onPressed != null)
-          SizedBox(
-            width: 176,
-            child: AppButton(
-              text: primaryAction!.label,
-              onPressed: primaryAction!.onPressed!,
-            ),
+          AppButton(
+            text: primaryAction!.label,
+            onPressed: primaryAction!.onPressed!,
           ),
       ],
     );

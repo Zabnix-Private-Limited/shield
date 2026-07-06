@@ -9,21 +9,23 @@ class AdminStatCard extends StatelessWidget {
     required this.title,
     required this.subtitle,
     required this.child,
+    this.compact = false,
   });
 
   final String title;
   final String subtitle;
   final Widget child;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
     return AppCard(
-      padding: const EdgeInsets.all(18),
+      padding: EdgeInsets.all(compact ? 14 : 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           AdminSectionHeader(title: title, subtitle: subtitle),
-          const SizedBox(height: 16),
+          SizedBox(height: compact ? 12 : 14),
           child,
         ],
       ),

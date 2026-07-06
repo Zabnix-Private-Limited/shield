@@ -125,7 +125,7 @@ class _AdminDataTableState<T> extends State<AdminDataTable<T>> {
     return Container(
       decoration: BoxDecoration(
         color: AdminColors.surface,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(color: AdminColors.border),
       ),
       child: Column(
@@ -149,7 +149,7 @@ class _AdminDataTableState<T> extends State<AdminDataTable<T>> {
               onPageSizeChanged: widget.onPageSizeChanged,
             ),
           Container(
-            padding: const EdgeInsets.all(14),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             decoration: const BoxDecoration(
               border: Border(bottom: BorderSide(color: AdminColors.border)),
             ),
@@ -201,7 +201,10 @@ class _AdminDataTableState<T> extends State<AdminDataTable<T>> {
               return InkWell(
                 onTap: widget.onRowTap == null ? null : () => widget.onRowTap!(row),
                 child: Container(
-                  padding: const EdgeInsets.all(14),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 10,
+                  ),
                   decoration: BoxDecoration(
                     color: isSelected
                         ? AdminColors.primary.withValues(alpha: 0.06)
@@ -353,7 +356,7 @@ class _TableUtilityBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(14, 14, 14, 0),
+      padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
       child: Wrap(
         alignment: WrapAlignment.spaceBetween,
         runSpacing: 12,
