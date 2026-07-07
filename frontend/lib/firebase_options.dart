@@ -44,7 +44,7 @@ class DefaultFirebaseOptions {
     messagingSenderId: '1086152719549',
     projectId: 'shield-zabnix',
     storageBucket: 'shield-zabnix.firebasestorage.app',
-    iosBundleId: 'com.zabnix.shield',
+    iosBundleId: 'nix.shiecom.zabld',
     iosClientId:
         '1086152719549-pc7sti6p3n05i8e3v56njpj9f8qmj2k1.apps.googleusercontent.com',
   );
