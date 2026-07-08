@@ -9245,3 +9245,40 @@ Added a public static account-deletion request page to the Flutter web source an
 ### Frontend Files
 - `frontend/android/app/src/main/AndroidManifest.xml`
 - `frontend/android/app/build.gradle.kts`
+## 263. Android Play Console Compliance and Release Bundle Recovery
+**Timestamp:** 2026-07-08 17:15:00 IST
+
+Completed the Android Play Console recovery pass needed to move SHIELD from a rejected Advertising ID upload to a new Play-ready bundle with a unique upgradeable version code, while keeping Firebase Analytics enabled without Advertising ID collection.
+
+**Frontend Files**
+- `frontend/android/app/src/main/AndroidManifest.xml`
+- `frontend/android/app/build.gradle.kts`
+- `frontend/android/gradle.properties`
+- `frontend/android/local.properties`
+- `frontend/pubspec.yaml`
+- `frontend/build/app/outputs/bundle/release/app-release.aab`
+
+**Backend Files**
+- None.
+
+**Why**
+- Google Play Console detected `com.google.android.gms.permission.AD_ID` in the Android App Bundle even though SHIELD does not use advertising or marketing attribution SDK behavior.
+- Repository inspection confirmed the permission was not declared by the app manifest itself; it was introduced by the Firebase Analytics measurement dependency chain through `play-services-measurement*` and transitive `play-services-ads-identifier` manifests.
+- A plain manifest `tools:node="remove"` rule was not sufficient on this Windows/Flutter/Gradle build path because the remove markers still leaked into packaged output, so the release build needed both an Analytics metadata opt-out and a post-merge packaged-manifest sanitization step.
+- The first rejected Play upload still consumed version code `1`, and the next attempted upload still conflicted with existing consumed codes / stale draft state, so the final release bundle was moved to a clearly unique version code to avoid further Play Console upgrade-path conflicts.
+- Release bundle builds were also being interrupted by a Kotlin incremental cache bug in Windows Flutter plugin builds, so incremental Kotlin compilation was disabled to restore deterministic AAB generation without changing runtime app behavior.
+
+**Implementation**
+- Added `google_analytics_adid_collection_enabled=false` to the main Android manifest and declared remove markers for `AD_ID` plus related AdServices permissions.
+- Added a release-only Gradle task that strips `com.google.android.gms.permission.AD_ID`, `android.permission.ACCESS_ADSERVICES_AD_ID`, and `android.permission.ACCESS_ADSERVICES_ATTRIBUTION` from the packaged release manifest after Android manifest merging completes.
+- Disabled Kotlin incremental compilation in `frontend/android/gradle.properties` to work around the recurring plugin cache-close crash during `bundleRelease`.
+- Updated the Flutter app version from the original Play-uploaded `1.0.0+1` to `0.0.3+2026070802`, which resolves to Android `versionName 0.0.3` and `versionCode 2026070802`.
+- Rebuilt the release App Bundle multiple times while validating the generated packaged manifest and final output metadata until both Play policy compliance and version-code uniqueness were satisfied.
+
+**Verification**
+- Manifest merger report and dependency-tree inspection confirmed the root cause path: `firebase_analytics` -> `play-services-measurement` / `play-services-measurement-api` / `play-services-measurement-impl` / `play-services-measurement-sdk-api` -> `play-services-ads-identifier`. ✅
+- `frontend/build/app/intermediates/packaged_manifests/release/processReleaseManifestForPackage/AndroidManifest.xml` no longer contains `com.google.android.gms.permission.AD_ID`, `android.permission.ACCESS_ADSERVICES_AD_ID`, or `android.permission.ACCESS_ADSERVICES_ATTRIBUTION`. ✅
+- The same packaged manifest reports `android:versionCode="2026070802"` and `android:versionName="0.0.3"`. ✅
+- `flutter build appbundle --release` completed successfully after the Kotlin incremental workaround. ✅
+- Final Play upload artifact generated at `frontend/build/app/outputs/bundle/release/app-release.aab`. ✅
+- Console-side follow-up still required: remove the stale rejected bundle from the current Play draft or discard the draft and create a fresh internal-testing release before uploading the new AAB, otherwise Play may keep showing the old “does not add or remove any app bundles” draft-state error. ⚠️
