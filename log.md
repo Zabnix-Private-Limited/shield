@@ -9235,3 +9235,13 @@ Added a public static account-deletion request page to the Flutter web source an
 - `Get-Content -Raw frontend/vercel.json | node -e "const fs=require('fs'); JSON.parse(fs.readFileSync(0,'utf8')); console.log('vercel.json ok')"` ✅
 - `frontend/web/account-deletion.html` created with the requested SHIELD deletion-request content. ✅
 - Full Vercel deploy was not run locally; the page should publish at `https://shield-zabnix.vercel.app/account-deletion` on the next Git-based deployment. ⚠️
+
+## 48. Remove Advertising ID declarations from Android release manifest (2026-07-08 19:45:00 IST)
+- Root cause: `firebase_analytics` pulls in Google Play measurement libraries (`play-services-measurement`, `play-services-measurement-api`, `play-services-measurement-impl`, `play-services-measurement-sdk-api`) and the transitive `play-services-ads-identifier`, which add `com.google.android.gms.permission.AD_ID` and related AdServices permissions during manifest merge.
+- Why: Google Play production review requires SHIELD to declare that it does not use Advertising ID when no advertising or marketing attribution SDK behavior is intended.
+- Fix: disabled Firebase Analytics Advertising ID collection in the app manifest, added release-time packaged-manifest stripping for `AD_ID` and AdServices permissions, and kept Firebase Auth, Messaging, Google Sign-In, and Sentry unchanged.
+- Verification: `processReleaseManifestForPackage` output no longer contains `com.google.android.gms.permission.AD_ID`, `android.permission.ACCESS_ADSERVICES_AD_ID`, or `android.permission.ACCESS_ADSERVICES_ATTRIBUTION`; analytics metadata remains present.
+
+### Frontend Files
+- `frontend/android/app/src/main/AndroidManifest.xml`
+- `frontend/android/app/build.gradle.kts`

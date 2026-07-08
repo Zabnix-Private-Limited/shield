@@ -15,6 +15,12 @@ if (keystorePropertiesFile.exists()) {
     keystoreProperties.load(FileInputStream(keystorePropertiesFile))
 }
 
+val releaseManifestPermissionsToStrip = listOf(
+    "com.google.android.gms.permission.AD_ID",
+    "android.permission.ACCESS_ADSERVICES_AD_ID",
+    "android.permission.ACCESS_ADSERVICES_ATTRIBUTION",
+)
+
 android {
     namespace = "com.zabnix.shield"
     compileSdk = flutter.compileSdkVersion
@@ -63,4 +69,43 @@ android {
 
 flutter {
     source = "../.."
+}
+
+val stripReleaseAdIdPermissions by tasks.registering {
+    dependsOn("processReleaseManifestForPackage")
+
+    val packagedManifest = layout.buildDirectory.file(
+        "intermediates/packaged_manifests/release/processReleaseManifestForPackage/AndroidManifest.xml",
+    )
+
+    inputs.file(packagedManifest)
+    outputs.file(packagedManifest)
+
+    doLast {
+        val manifestFile = packagedManifest.get().asFile
+        if (!manifestFile.exists()) {
+            throw GradleException("Packaged release manifest not found at ${manifestFile.absolutePath}")
+        }
+
+        var manifestText = manifestFile.readText()
+        releaseManifestPermissionsToStrip.forEach { permission ->
+            manifestText = manifestText.replace(
+                Regex("""\s*<uses-permission android:name="$permission"\s*/>\r?\n"""),
+                "",
+            )
+        }
+
+        manifestFile.writeText(manifestText)
+    }
+}
+
+tasks.matching {
+    it.name in setOf(
+        "assembleRelease",
+        "bundleRelease",
+        "packageReleaseBundle",
+        "processReleaseResources",
+    )
+}.configureEach {
+    dependsOn(stripReleaseAdIdPermissions)
 }
