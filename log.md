@@ -9220,3 +9220,18 @@ Completed the targeted analyzer pass for the newly added privacy-policy link sur
 - The privacy-policy links now resolve through one shared launcher and the touched Flutter surfaces pass analyzer cleanly.
 **Verification**
 - `cd frontend && flutter analyze lib/shared/services/app_policy_links.dart lib/features/customer/auth/presentation/screens/customer_login_screen.dart lib/features/provider/auth/presentation/screens/internal_login_screen.dart lib/features/portal/presentation/screens/portal_shell.dart` ✅
+
+## 262. Public Account Deletion Request Page
+**Timestamp:** 2026-07-08 12:20:08 IST
+Added a public static account-deletion request page to the Flutter web source and updated the frontend Vercel rewrites so the clean route `/account-deletion` resolves directly to that page instead of the single-page-app catch-all.
+**Frontend Files**
+- `frontend/web/account-deletion.html`
+- `frontend/vercel.json`
+**Backend Files**
+- None.
+- Google Play expects a user-visible account deletion request path for apps handling personal or sensitive data, so this page provides the required deletion instructions, contact channels, deletion scope, retention caveat, and timeline.
+- The route is intentionally extensionless for the public URL, while still mapping to a static HTML file inside the Flutter web build output.
+**Verification**
+- `Get-Content -Raw frontend/vercel.json | node -e "const fs=require('fs'); JSON.parse(fs.readFileSync(0,'utf8')); console.log('vercel.json ok')"` ✅
+- `frontend/web/account-deletion.html` created with the requested SHIELD deletion-request content. ✅
+- Full Vercel deploy was not run locally; the page should publish at `https://shield-zabnix.vercel.app/account-deletion` on the next Git-based deployment. ⚠️
