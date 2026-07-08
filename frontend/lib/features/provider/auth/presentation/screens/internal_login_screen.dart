@@ -4,7 +4,9 @@ import 'package:go_router/go_router.dart';
 import '../../../../../app/theme/app_colors.dart';
 import '../../../../../app/theme/app_typography.dart';
 import '../../../../../shared/services/auth_error_messages.dart';
+import '../../../../../shared/services/app_policy_links.dart';
 import '../../../../../shared/services/portal_resolver.dart';
+import '../../../../../shared/widgets/shield_brand_lockup.dart';
 import '../../data/internal_auth_repository.dart';
 
 class InternalLoginScreen extends StatefulWidget {
@@ -174,20 +176,9 @@ class _InternalLoginScreenState extends State<InternalLoginScreen> {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Container(
-                      width: 56,
-                      height: 56,
-                      decoration: BoxDecoration(
-                        color: AppColors.shieldNavy,
-                        borderRadius: BorderRadius.circular(18),
-                      ),
-                      child: const Icon(
-                        Icons.local_hospital_outlined,
-                        color: Colors.white,
-                      ),
-                    ),
+                    const ShieldBrandLockup(showTagline: true),
                     const SizedBox(height: 18),
-                    Text('SHIELD Internal Access', style: AppTypography.h3),
+                    Text('Internal Access', style: AppTypography.h3),
                     const SizedBox(height: 10),
                     Text(
                       _statusMessage,
@@ -243,6 +234,31 @@ class _InternalLoginScreenState extends State<InternalLoginScreen> {
                             borderRadius: BorderRadius.circular(16),
                           ),
                         ),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: TextButton.icon(
+                        onPressed: () async {
+                          final opened =
+                              await AppPolicyLinks.openPrivacyPolicy();
+                          if (!context.mounted || opened) {
+                            return;
+                          }
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                'Unable to open the privacy policy.',
+                              ),
+                            ),
+                          );
+                        },
+                        icon: const Icon(
+                          Icons.verified_user_outlined,
+                          size: 18,
+                        ),
+                        label: const Text('Privacy Policy'),
                       ),
                     ),
                     if (_error != null) ...[

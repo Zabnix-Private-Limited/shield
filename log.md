@@ -9106,3 +9106,117 @@ Created the requested seven Markdown production readiness reports for the SHIELD
 - Static repository inspection completed across schema, Prisma models, backend module/controller surface, routing, portal shell, admin runtime, provider/agent/customer portals, wallet handling, and test inventory. ✅
 - Markdown reports created under `docs/superpowers/audits/`. ✅
 - Full build/test suites were not run because this change is documentation-only and the reports explicitly preserve unverified test status as a production-readiness gap. ⚠️
+## 256. Android Play Store App Bundle Build
+**Timestamp:** 2026-07-07 18:00:18 IST
+
+Configured Android release signing to use the local ignored upload keystore when `frontend/android/key.properties` is present, generated a local upload keystore for Play Console testing, and built a signed release Android App Bundle for package `com.zabnix.shield`.
+
+**Frontend Files**
+- `frontend/android/app/build.gradle.kts`
+- `frontend/android/upload-keystore.jks` (ignored local signing key)
+- `frontend/android/key.properties` (ignored local signing config)
+- `frontend/build/play-store/shield-com.zabnix.shield-1.0.0+1-release.aab` (ignored build artifact)
+
+**Backend Files**
+- None.
+
+**Why**
+- Play Console requires a properly signed Android App Bundle; the previous Android release config used the debug signing key, which is not suitable for Play testing or release uploads.
+- The Gradle change keeps local compatibility by falling back to debug signing only when no upload keystore is available, while using the release upload key for Play-ready builds.
+- The signing key and generated bundle are intentionally kept out of git by existing ignore rules.
+
+**Verification**
+- `cd frontend && flutter pub get` ✅
+- `cd frontend && flutter build appbundle --release` ✅
+- `jarsigner -verify -verbose -certs frontend/build/play-store/shield-com.zabnix.shield-1.0.0+1-release.aab` ✅
+- Bundle SHA256: `26B4818D9B8FCA7505CA7D4DDDC3E57A09411F5834B76DB0A2703572691CBD37`
+## 257. Repo Context Baseline
+**Timestamp:** 2026-07-08 08:21:42 IST
+Created a durable repo-context document that summarizes the live SHIELD architecture from the current codebase so future work can start from the real routing, auth, portal, backend-module, and schema shape instead of re-deriving it from scattered files.
+**Frontend Files**
+- `docs/SHIELD Repo Context.md`
+**Backend Files**
+- None.
+- The repo now spans a broad modular monolith, a shared Flutter portal shell, a backend-driven provider workspace model, and an in-progress admin workspace engine, so a grounded onboarding map reduces repeated discovery cost and lowers the chance of making changes against outdated assumptions.
+- The context doc points future work at the actual bootstrap, router, session, provider-platform, admin-runtime, backend module, and `current_schema.md` truth-source files that define how SHIELD works today.
+**Verification**
+- Repo context was grounded against `AGENTS.md`, `current_schema.md`, `frontend/lib/main.dart`, `frontend/lib/app/routes/app_router.dart`, `frontend/lib/shared/services/portal_resolver.dart`, `backend/src/main.ts`, `backend/src/app.module.ts`, `backend/src/auth/auth.types.ts`, `backend/src/platform-metadata/platform-metadata.controller.ts`, and provider/admin runtime files. ✅
+- No build or test suite was run because this change is documentation-only. ⚠️
+
+## 258. Full Branding Pass For App Icon and Portal Headers
+**Timestamp:** 2026-07-08 09:05:00 IST
+Replaced the launcher and web icon assets with generated versions of `assets/logos/shield_mark.png`, aligned the native Android launch splash with the logo mark, and expanded shared Flutter branding so the SHIELD wordmark appears across internal login and portal header surfaces instead of leaving plain text-only headings.
+**Frontend Files**
+- `frontend/lib/shared/widgets/shield_brand_lockup.dart`
+- `frontend/lib/features/provider/auth/presentation/screens/internal_login_screen.dart`
+- `frontend/lib/features/customer/shared/widgets/customer_app_bar.dart`
+- `frontend/lib/features/portal/presentation/screens/portal_shell.dart`
+- `frontend/android/app/src/main/res/drawable/launch_background.xml`
+- `frontend/android/app/src/main/res/drawable-v21/launch_background.xml`
+- `frontend/android/app/src/main/res/drawable/launch_logo.png`
+- `frontend/android/app/src/main/res/mipmap-mdpi/ic_launcher.png`
+- `frontend/android/app/src/main/res/mipmap-hdpi/ic_launcher.png`
+- `frontend/android/app/src/main/res/mipmap-xhdpi/ic_launcher.png`
+- `frontend/android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png`
+- `frontend/android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png`
+- `frontend/web/favicon.png`
+- `frontend/web/icons/Icon-192.png`
+- `frontend/web/icons/Icon-512.png`
+- `frontend/web/icons/Icon-maskable-192.png`
+- `frontend/web/icons/Icon-maskable-512.png`
+**Backend Files**
+- None.
+- The customer splash and login already had the logo assets available, so this pass focused on the missing native icon surfaces and the internal/shared portal areas that were still showing generic iconography or text-only SHIELD headings.
+- The new shared lockup keeps the brand treatment consistent across customer and internal portal shells while keeping the changes small and isolated.
+**Verification**
+- `cd frontend && dart format lib/shared/widgets/shield_brand_lockup.dart lib/features/provider/auth/presentation/screens/internal_login_screen.dart lib/features/customer/shared/widgets/customer_app_bar.dart lib/features/portal/presentation/screens/portal_shell.dart` ✅
+- Regenerated Android launcher icons, Android splash logo, and web icon assets from `frontend/assets/logos/shield_mark.png` via PowerShell image resize script. ✅
+- `cd frontend && flutter analyze lib/shared/widgets/shield_brand_lockup.dart lib/features/provider/auth/presentation/screens/internal_login_screen.dart lib/features/customer/shared/widgets/customer_app_bar.dart lib/features/portal/presentation/screens/portal_shell.dart` was started but did not return a final result before the session was stopped. ⚠️
+
+## 259. Static Privacy Policy Page For Web Deployment
+**Timestamp:** 2026-07-08 10:53:58 IST
+Added a static privacy policy page to the Flutter web source and updated the frontend Vercel rewrite config so `/privacy-policy.html` is served directly instead of being absorbed by the single-page-app catch-all rewrite.
+**Frontend Files**
+- `frontend/web/privacy-policy.html`
+- `frontend/vercel.json`
+**Backend Files**
+- None.
+- This frontend deploys `build/web` on Vercel, so the correct source location for a directly published static HTML page is the Flutter web folder rather than a separate unused `public/` directory.
+- The explicit rewrite for `/privacy-policy.html` preserves the static page while leaving the existing SPA fallback behavior intact for the rest of the app.
+**Verification**
+- `Get-Content -Raw frontend/vercel.json | node -e "const fs=require('fs'); JSON.parse(fs.readFileSync(0,'utf8')); console.log('vercel.json ok')"` ✅
+- `frontend/web/privacy-policy.html` created with the provided SHIELD privacy policy content. ✅
+- Full Vercel deploy was not run locally; the page should publish at `https://shield-zabnix.vercel.app/privacy-policy.html` on the next Git-based deployment. ⚠️
+
+## 260. In-App Privacy Policy Links
+**Timestamp:** 2026-07-08 10:57:52 IST
+Added real in-app entry points to the deployed privacy policy by introducing a shared policy-link launcher and wiring it into the customer login screen, internal login screen, and customer settings support section.
+**Frontend Files**
+- `frontend/lib/shared/services/app_policy_links.dart`
+- `frontend/lib/features/customer/auth/presentation/screens/customer_login_screen.dart`
+- `frontend/lib/features/provider/auth/presentation/screens/internal_login_screen.dart`
+- `frontend/lib/features/portal/presentation/screens/portal_shell.dart`
+- `frontend/pubspec.yaml`
+- `frontend/pubspec.lock`
+**Backend Files**
+- None.
+- The prior customer settings entry only opened placeholder frontend content, which does not satisfy the requirement for a real privacy-policy link for an app handling personal and health-related data.
+- The shared launcher keeps the live URL centralized so login and settings stay aligned with the deployed policy page at `https://shield-zabnix.vercel.app/privacy-policy.html`.
+**Verification**
+- `cd frontend && flutter pub add url_launcher` ✅
+- `cd frontend && dart format lib/shared/services/app_policy_links.dart lib/features/customer/auth/presentation/screens/customer_login_screen.dart lib/features/provider/auth/presentation/screens/internal_login_screen.dart lib/features/portal/presentation/screens/portal_shell.dart` ✅
+- `cd frontend && flutter analyze lib/shared/services/app_policy_links.dart lib/features/customer/auth/presentation/screens/customer_login_screen.dart lib/features/provider/auth/presentation/screens/internal_login_screen.dart lib/features/portal/presentation/screens/portal_shell.dart` was started and was still running when this log entry was appended. ⚠️
+
+## 261. Privacy Policy Link Verification Update
+**Timestamp:** 2026-07-08 11:00:00 IST
+Completed the targeted analyzer pass for the newly added privacy-policy link surfaces after fixing the customer login callback scope reference.
+**Frontend Files**
+- `frontend/lib/shared/services/app_policy_links.dart`
+- `frontend/lib/features/customer/auth/presentation/screens/customer_login_screen.dart`
+- `frontend/lib/features/provider/auth/presentation/screens/internal_login_screen.dart`
+- `frontend/lib/features/portal/presentation/screens/portal_shell.dart`
+**Backend Files**
+- None.
+- The privacy-policy links now resolve through one shared launcher and the touched Flutter surfaces pass analyzer cleanly.
+**Verification**
+- `cd frontend && flutter analyze lib/shared/services/app_policy_links.dart lib/features/customer/auth/presentation/screens/customer_login_screen.dart lib/features/provider/auth/presentation/screens/internal_login_screen.dart lib/features/portal/presentation/screens/portal_shell.dart` ✅

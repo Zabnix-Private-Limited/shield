@@ -41,7 +41,9 @@ import '../../../../shared/widgets/app_page_frame.dart';
 import '../../../../shared/widgets/app_responsive.dart';
 import '../../../../shared/widgets/app_skeleton.dart';
 import '../../../../shared/widgets/shield_date_input_field.dart';
+import '../../../../shared/widgets/shield_brand_lockup.dart';
 import '../../../../shared/services/api_service.dart';
+import '../../../../shared/services/app_policy_links.dart';
 import '../../../../shared/services/customer_auth_session.dart';
 import '../../../../shared/services/internal_auth_session.dart';
 import '../../../../shared/services/portal_resolver.dart';
@@ -194,7 +196,16 @@ class _PortalShellState extends State<PortalShell> {
         );
       }
       return Scaffold(
-        appBar: AppBar(title: Text(portal.role.label)),
+        appBar: AppBar(
+          title: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const ShieldBrandLockup(compact: true),
+              const SizedBox(width: 12),
+              Flexible(child: Text(portal.role.label)),
+            ],
+          ),
+        ),
         body: Center(
           child: Padding(
             padding: const EdgeInsets.all(24.0),
@@ -956,6 +967,8 @@ class _PortalHeader extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              const ShieldBrandLockup(compact: true, showTagline: true),
+              const SizedBox(height: 14),
               Text(
                 portal.role.label,
                 style: AppTypography.tiny.copyWith(
@@ -4639,18 +4652,16 @@ class _CustomerSettingsViewState extends State<_CustomerSettingsView> {
               icon: Icons.verified_user_outlined,
               title: 'Privacy policy',
               subtitle: 'Review how SHIELD handles member data',
-              onTap: () => showPortalDetailsSheet(
-                context,
-                title: 'Privacy Policy',
-                subtitle:
-                    'This policy governs customer-facing data usage across SHIELD services.',
-                meta: 'Settings',
-                status: 'Active',
-                highlights: const [
-                  'Medical records stay restricted to approved provider workflows.',
-                  'Notification preferences remain configurable from the customer app.',
-                ],
-              ),
+              onTap: () async {
+                final opened = await AppPolicyLinks.openPrivacyPolicy();
+                if (!context.mounted || opened) {
+                  return;
+                }
+                showPortalSnackBar(
+                  context,
+                  'Unable to open the privacy policy right now.',
+                );
+              },
             ),
             _CompactSettingAction(
               icon: Icons.contact_support_outlined,

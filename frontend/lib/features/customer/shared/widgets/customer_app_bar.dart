@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_typography.dart';
+import '../../../../shared/widgets/shield_brand_lockup.dart';
 import '../../../portal/presentation/portal_role_data.dart';
 
 class CustomerAppBar extends StatelessWidget {
@@ -37,6 +38,8 @@ class CustomerAppBar extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                const ShieldBrandLockup(compact: true),
+                const SizedBox(height: 10),
                 Text(
                   section.title,
                   style: AppTypography.h4.copyWith(fontWeight: FontWeight.w700),

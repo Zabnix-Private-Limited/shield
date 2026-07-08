@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../../app/theme/app_colors.dart';
 import '../../../../../app/theme/app_typography.dart';
 import '../../../../../shared/services/auth_error_messages.dart';
+import '../../../../../shared/services/app_policy_links.dart';
 import '../../data/customer_auth_repository.dart';
 
 class CustomerLoginScreen extends StatefulWidget {
@@ -242,6 +243,22 @@ class _CustomerLoginScreenState extends State<CustomerLoginScreen> {
                       style: AppTypography.small.copyWith(
                         color: AppColors.gray,
                       ),
+                    ),
+                    const SizedBox(height: 8),
+                    TextButton.icon(
+                      onPressed: () async {
+                        final opened = await AppPolicyLinks.openPrivacyPolicy();
+                        if (!context.mounted || opened) {
+                          return;
+                        }
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Unable to open the privacy policy.'),
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.verified_user_outlined, size: 18),
+                      label: const Text('Privacy Policy'),
                     ),
                   ],
                 ),
