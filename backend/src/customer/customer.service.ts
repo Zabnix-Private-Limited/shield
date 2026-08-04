@@ -396,6 +396,15 @@ export class CustomerService {
     });
   }
 
+  async removeAlternativeContact(customerId: bigint, contactId: bigint) {
+    const result = await this.prisma.customerContact.deleteMany({
+      where: { id: contactId, customerId, isPrimary: false },
+    });
+    if (result.count === 0) {
+      throw new NotFoundException('Alternative contact not found.');
+    }
+  }
+
   async requestPhysicalCard(customerId: bigint, requestedBy?: bigint) {
     const customer = await this.findOne(customerId);
     if (!customer.membership) {

@@ -6,6 +6,7 @@ describe('CustomerController card scope', () => {
     requestPhysicalCard: jest.fn(),
     saveAlternativeContact: jest.fn(),
     listAlternativeContacts: jest.fn(),
+    removeAlternativeContact: jest.fn(),
     search: jest.fn(),
     findExistingCustomerByMobile: jest.fn(),
   };
@@ -49,20 +50,33 @@ describe('CustomerController card scope', () => {
   });
 
   it('rejects a customer reading another customer alternative contacts', async () => {
-    await expect(controller.listAlternativeContacts('12', customer)).rejects.toThrow(
-      'Customers can only access their own customer record.',
-    );
+    await expect(
+      controller.listAlternativeContacts('12', customer),
+    ).rejects.toThrow('Customers can only access their own customer record.');
     expect(service.listAlternativeContacts).not.toHaveBeenCalled();
   });
 
   it('rejects customer access to staff customer lookup endpoints', async () => {
-    await expect(controller.search('9876543210', undefined, undefined, undefined, customer)).rejects.toThrow(
-      'Customer search is not available to customer accounts.',
-    );
-    await expect(controller.existingByMobile('9876543210', customer)).rejects.toThrow(
-      'Customer lookup is not available to customer accounts.',
-    );
+    await expect(
+      controller.search(
+        '9876543210',
+        undefined,
+        undefined,
+        undefined,
+        customer,
+      ),
+    ).rejects.toThrow('Customer search is not available to customer accounts.');
+    await expect(
+      controller.existingByMobile('9876543210', customer),
+    ).rejects.toThrow('Customer lookup is not available to customer accounts.');
     expect(service.search).not.toHaveBeenCalled();
     expect(service.findExistingCustomerByMobile).not.toHaveBeenCalled();
+  });
+
+  it('rejects a customer removing another customer alternative contact', async () => {
+    await expect(
+      controller.removeAlternativeContact('12', '7', customer),
+    ).rejects.toThrow('Customers can only access their own customer record.');
+    expect(service.removeAlternativeContact).not.toHaveBeenCalled();
   });
 });

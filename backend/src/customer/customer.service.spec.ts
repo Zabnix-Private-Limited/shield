@@ -6,6 +6,7 @@ describe('CustomerService alternative contacts', () => {
       findMany: jest.fn(),
       update: jest.fn(),
       create: jest.fn(),
+      deleteMany: jest.fn(),
     },
   };
   const service = new CustomerService(
@@ -51,5 +52,16 @@ describe('CustomerService alternative contacts', () => {
       'Alternative mobile number must differ from the primary login number.',
     );
     expect(prisma.customerContact.findMany).not.toHaveBeenCalled();
+  });
+
+  it('deletes only a matching non-primary contact', async () => {
+    prisma.customerContact.deleteMany.mockResolvedValue({ count: 1 });
+
+    await expect(
+      service.removeAlternativeContact(1n, 7n),
+    ).resolves.toBeUndefined();
+    expect(prisma.customerContact.deleteMany).toHaveBeenCalledWith({
+      where: { id: 7n, customerId: 1n, isPrimary: false },
+    });
   });
 });

@@ -9895,3 +9895,13 @@ Replaced the removed static Flutter carousel with a database-backed Operations c
   - `docs/CUSTOMER_UI_API_BINDINGS.md`: records the backend validation rule.
 - Why:
   - Alternative contact data is a persisted operational record. The API, rather than a best-effort Flutter form, must enforce the minimum mobile identifier requirement.
+## 312. Customer alternative-contact removal — 2026-08-04 21:56:05 IST
+- Backend Files:
+  - `backend/src/customer/customer.controller.ts` and `backend/src/customer/customer.service.ts`: add a self-scoped deletion endpoint that deletes only a matching non-primary contact and fails when no such record exists.
+  - `backend/src/customer/customer.controller.spec.ts` and `backend/src/customer/customer.service.spec.ts`: verify cross-customer removal is rejected and the delete query remains scoped to customer/contact/primary status.
+- Frontend Files:
+  - `frontend/lib/shared/services/api_service.dart` and `frontend/lib/features/portal/presentation/screens/portal_shell.dart`: add API deletion, a profile confirmation dialog, and post-delete database refresh.
+- Documentation Files:
+  - `docs/CUSTOMER_UI_API_BINDINGS.md`, `docs/CUSTOMER_UI_STATE_MATRIX.md`, `docs/CUSTOMER_UI_IMPLEMENTATION_STATUS.md`, and `docs/customer-ui/CUSTOMER_UI_AUDIT.md`: record the supported removal contract and states.
+- Why:
+  - A saved alternative contact needs a reversible, explicit management flow. Customer and contact scopes are enforced server-side rather than trusting the displayed Flutter list.

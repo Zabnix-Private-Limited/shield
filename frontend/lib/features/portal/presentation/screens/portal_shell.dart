@@ -4029,6 +4029,47 @@ class _CustomerAlternativeContactsCardState
     }
   }
 
+  Future<void> _removeContact(Map<String, dynamic> contact) async {
+    final contactId = contact['id']?.toString();
+    if (contactId == null || contactId.isEmpty) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Remove alternative contact?'),
+        content: Text(
+          'Remove ${contact['name']?.toString().trim().isNotEmpty == true ? contact['name'] : 'this contact'} from your profile?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Remove'),
+          ),
+        ],
+      ),
+    );
+    if (!mounted || confirmed != true) return;
+
+    try {
+      await ApiService.removeAlternativeCustomerContact(
+        widget.customerId,
+        contactId,
+      );
+      if (!mounted) return;
+      setState(_loadContacts);
+      showPortalSnackBar(context, 'Alternative contact removed.');
+    } catch (_) {
+      if (!mounted) return;
+      showPortalSnackBar(
+        context,
+        'Alternative contact could not be removed. Please retry.',
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return AppCard(
@@ -4073,19 +4114,34 @@ class _CustomerAlternativeContactsCardState
                 ...contacts.map(
                   (contact) => Padding(
                     padding: const EdgeInsets.only(top: 10),
-                    child: _ProfileFactRow(
-                      label:
-                          contact['name']?.toString().trim().isNotEmpty == true
-                          ? contact['name'].toString()
-                          : 'Alternative contact',
-                      value:
-                          [
-                                contact['mobile']?.toString(),
-                                contact['relation']?.toString(),
-                              ]
-                              .whereType<String>()
-                              .where((value) => value.trim().isNotEmpty)
-                              .join(' • '),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: _ProfileFactRow(
+                            label:
+                                contact['name']?.toString().trim().isNotEmpty ==
+                                    true
+                                ? contact['name'].toString()
+                                : 'Alternative contact',
+                            value:
+                                [
+                                      contact['mobile']?.toString(),
+                                      contact['relation']?.toString(),
+                                    ]
+                                    .whereType<String>()
+                                    .where((value) => value.trim().isNotEmpty)
+                                    .join(' • '),
+                          ),
+                        ),
+                        IconButton(
+                          tooltip: 'Remove contact',
+                          onPressed: () => _removeContact(contact),
+                          icon: const Icon(
+                            Icons.delete_outline,
+                            color: AppColors.error,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),

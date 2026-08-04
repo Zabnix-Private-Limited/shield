@@ -1,5 +1,6 @@
 import {
   Controller,
+  Delete,
   ForbiddenException,
   Get,
   Post,
@@ -186,6 +187,29 @@ export class CustomerController {
       success: true,
       data: await this.customerService.listAlternativeContacts(BigInt(id)),
     };
+  }
+
+  @RequirePermissions('customers.update')
+  @Delete(':id/alternative-contacts/:contactId')
+  async removeAlternativeContact(
+    @Param('id') id: string,
+    @Param('contactId') contactId: string,
+    @CurrentPrincipal() principal?: ShieldPrincipal,
+  ) {
+    this.assertCustomerSelfScope(id, principal);
+    await this.providerScopeService.assertProviderCanAccessCustomer(
+      BigInt(id),
+      principal,
+    );
+    await this.agentScopeService.assertAgentCanAccessCustomer(
+      BigInt(id),
+      principal,
+    );
+    await this.customerService.removeAlternativeContact(
+      BigInt(id),
+      BigInt(contactId),
+    );
+    return { success: true };
   }
 
   @RequirePermissions('customers.create')

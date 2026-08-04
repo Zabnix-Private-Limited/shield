@@ -813,6 +813,16 @@ class ApiService {
     ).map((item) => Map<String, dynamic>.from(item as Map)).toList();
   }
 
+  static Future<void> removeAlternativeCustomerContact(
+    String customerId,
+    String contactId,
+  ) async {
+    final resolvedCustomerId = _requireCustomerId(customerId);
+    await _dio.delete(
+      '/customers/$resolvedCustomerId/alternative-contacts/$contactId',
+    );
+  }
+
   static Future<Map<String, dynamic>> getCustomerCardProfile(
     String customerId,
   ) async {
