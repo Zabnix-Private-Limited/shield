@@ -10110,3 +10110,11 @@ Replaced the removed static Flutter carousel with a database-backed Operations c
   - docs/customer-ui/CUSTOMER_UI_AUDIT.md and docs/CUSTOMER_UI_IMPLEMENTATION_STATUS.md: record the distinct provider failure state.
 - Why:
   - Booking must remain based on real active backend providers. A temporary list failure must not mislead a customer into thinking the network has no providers.
+
+## 338. Customer API binding and state matrix — 2026-08-05 01:18:00 IST
+- Documentation Files:
+  - docs/customer-ui/CUSTOMER_UI_API_BINDINGS.md: maps customer screens to existing authenticated API/repository contracts and scope rules.
+  - docs/customer-ui/CUSTOMER_UI_STATE_MATRIX.md: defines loading, empty, failure, and safety behavior without inventing customer data.
+  - docs/customer-ui/CUSTOMER_UI_AUDIT.md and docs/CUSTOMER_UI_IMPLEMENTATION_STATUS.md: link the documents into the redesign audit.
+- Why:
+  - These references prevent future UI work from using staff-only endpoints, shared records, fabricated balances, or false empty states.
