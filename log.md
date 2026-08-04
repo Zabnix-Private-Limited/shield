@@ -9801,3 +9801,10 @@ Replaced the removed static Flutter carousel with a database-backed Operations c
   - `docs/CUSTOMER_UI_IMPLEMENTATION_STATUS.md` and `docs/customer-ui/CUSTOMER_UI_AUDIT.md`: document the supported account settings boundary and missing customer preference contracts.
 - Why:
   - Customer settings must not imply a preference was persisted when the backend has no customer preference API.
+## 300. Retryable protected customer access state — 2026-08-04 21:19:41 IST
+- Frontend Files:
+  - `frontend/lib/features/portal/presentation/screens/portal_shell.dart`: keeps the authenticated customer-profile request stable across rebuilds and distinguishes its loading state from a failed access check. Appointments, documents, and prescriptions now show a retryable access-status error rather than a permanent skeleton when that request fails.
+- Documentation Files:
+  - `docs/CUSTOMER_UI_STATE_MATRIX.md`, `docs/CUSTOMER_UI_IMPLEMENTATION_STATUS.md`, and `docs/customer-ui/CUSTOMER_UI_AUDIT.md`: record the protected-route loading, error, and no-fallback-data behavior.
+- Why:
+  - Protected routes require a verified customer access state. Failing visibly and retrying preserves authorization boundaries and avoids showing stale, shared, or fabricated account data.

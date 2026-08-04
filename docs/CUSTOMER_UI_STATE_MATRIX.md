@@ -7,6 +7,7 @@
 | Membership | Membership skeleton | Pending/unissued membership state | Retry `ErrorCard` | Per-customer membership cache |
 | Documents | Skeleton | `No documents yet` | Retry state | Backend response only |
 | Prescriptions | Skeleton | `No prescriptions yet` | Retry state | Backend response only |
+| Protected customer sections (appointments, documents, prescriptions) | Profile-access skeleton | Access rules/section empty states | `Access status unavailable` with retry | No shared fallback data |
 | Header chips | Compact loading labels | `₹0` / `0` only after API resolves | Refresh icon | Dashboard repository cache |
 
 New screens must define all five states before being marked complete.

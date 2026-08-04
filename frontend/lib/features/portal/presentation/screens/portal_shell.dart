@@ -4760,7 +4760,7 @@ class _PendingCustomerAccessCard extends StatelessWidget {
   }
 }
 
-class _CustomerProtectedSection extends StatelessWidget {
+class _CustomerProtectedSection extends StatefulWidget {
   const _CustomerProtectedSection({
     required this.sectionKey,
     required this.child,
@@ -4770,17 +4770,44 @@ class _CustomerProtectedSection extends StatelessWidget {
   final Widget child;
 
   @override
+  State<_CustomerProtectedSection> createState() =>
+      _CustomerProtectedSectionState();
+}
+
+class _CustomerProtectedSectionState extends State<_CustomerProtectedSection> {
+  late Future<Customer> _customerFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCustomer();
+  }
+
+  void _loadCustomer() {
+    _customerFuture = ApiService.getCustomerProfile(
+      ApiService.requireAuthenticatedCustomerId(),
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
     return FutureBuilder<Customer>(
-      future: ApiService.getCustomerProfile(
-        ApiService.requireAuthenticatedCustomerId(),
-      ),
+      future: _customerFuture,
       builder: (context, snapshot) {
-        if (!snapshot.hasData) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
           return const AppPortalSectionSkeleton(
             showHero: true,
             statCards: 2,
             listItems: 3,
+          );
+        }
+
+        if (snapshot.hasError || !snapshot.hasData) {
+          return ErrorCard(
+            title: 'Access status unavailable',
+            message:
+                'Your customer access status could not be verified. Please try again.',
+            onRetry: () => setState(_loadCustomer),
           );
         }
 
@@ -4791,10 +4818,10 @@ class _CustomerProtectedSection extends StatelessWidget {
         );
 
         if (accessState.serviceAccessEnabled) {
-          return child;
+          return widget.child;
         }
 
-        switch (sectionKey) {
+        switch (widget.sectionKey) {
           case 'appointments':
             return const _PendingCustomerAccessCard(
               title: 'Appointments unlock after card issue',
@@ -4806,7 +4833,7 @@ class _CustomerProtectedSection extends StatelessWidget {
               secondaryRoute: '/portal/customer/services',
             );
           default:
-            return child;
+            return widget.child;
         }
       },
     );

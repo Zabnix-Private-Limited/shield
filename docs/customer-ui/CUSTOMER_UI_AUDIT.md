@@ -22,7 +22,7 @@ Last audited: 2026-08-04. The customer portal is protected by the customer JWT/s
 
 ## Shared foundation
 
-`CustomerScaffold`, `CustomerAppBar`, `CustomerBottomNavigation`, shared error/empty/loading widgets, and `CustomerDesignTokens` provide the active customer shell. Header balances are derived from the existing dashboard bundle; SHIELD benefit is never rendered as cash.
+`CustomerScaffold`, `CustomerAppBar`, `CustomerBottomNavigation`, shared error/empty/loading widgets, and `CustomerDesignTokens` provide the active customer shell. Profile-gated routes show a retryable access-status failure when the authenticated customer profile cannot be verified; they never fall back to shared or dummy customer data. Header balances are derived from the existing dashboard bundle; SHIELD benefit is never rendered as cash.
 
 ## Known blockers
 
