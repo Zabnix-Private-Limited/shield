@@ -287,6 +287,7 @@ PortalRoleData portalDataForRole(SHIELDRole role) {
           _PortalSectionFactory.customerServices,
           _PortalSectionFactory.customerOrders,
           _PortalSectionFactory.customerReferrals,
+          _PortalSectionFactory.customerActivity,
           _PortalSectionFactory.customerAppointments,
           _PortalSectionFactory.customerDocuments,
           _PortalSectionFactory.customerProfile,
@@ -631,6 +632,12 @@ class _PortalSectionFactory {
     'referrals',
     title: 'Referral & Rewards',
     summary: 'Customer referral lifecycle and reward status.',
+  );
+
+  static final PortalSectionData customerActivity = _section(
+    'activity',
+    title: 'Activity Timeline',
+    summary: 'Customer-scoped membership, care, document, and wallet activity.',
   );
 
   static final PortalSectionData customerAppointments = _section(

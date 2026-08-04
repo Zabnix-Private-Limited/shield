@@ -20,6 +20,7 @@ Reference images were inspected from `Design reference/`; they are visual refere
 | Shared mobile header | All main customer routes | Not captured in this environment | Runtime log reported right overflow at 448px and vertical overflow after hot restarts | Header switches to a mark-only brand below 560px while retaining wallet, rewards, and notification actions | Device capture at 360/390/448px remains required |
 | My Orders | `/portal/customer/orders` | Not captured in this environment | New customer purchase-history route | Uses the shared customer shell, white bordered order cards, navy amounts, and existing status treatment | Device capture remains required |
 | Referral & Rewards | `/portal/customer/referrals` | Not captured in this environment | New customer referral-status route | Uses the shared customer shell, white bordered cards, navy summary values, and lifecycle statuses | Device capture remains required |
+| Activity Timeline | `/portal/customer/activity` | Not captured in this environment | New database-backed customer-self timeline route | Uses the shared customer shell, white bordered event cards, and category accents | Device capture remains required |
 # Membership batch visual QA
 
 | Reference | Route | Screenshot | Result |

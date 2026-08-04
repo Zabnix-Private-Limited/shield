@@ -15,6 +15,7 @@ import '../../../agent/reports/presentation/screens/agent_reports_screen.dart';
 import '../../../agent/settings/presentation/screens/agent_settings_screen.dart';
 import '../../../admin/presentation/screens/admin_portal_workspace.dart';
 import '../../../customer/dashboard/presentation/screens/dashboard_screen.dart';
+import '../../../customer/activity/presentation/screens/customer_activity_screen.dart';
 import '../../../customer/documents/presentation/screens/customer_documents_screen.dart';
 import '../../../customer/membership/presentation/screens/membership_screen.dart';
 import '../../../customer/membership/presentation/screens/privilege_card_screen.dart';
@@ -523,6 +524,8 @@ class _RoleContent extends StatelessWidget {
         portal.role == SHIELDRole.customer && section.key == 'orders';
     final isCustomerReferrals =
         portal.role == SHIELDRole.customer && section.key == 'referrals';
+    final isCustomerActivity =
+        portal.role == SHIELDRole.customer && section.key == 'activity';
     final isCustomerAppointments =
         portal.role == SHIELDRole.customer && section.key == 'appointments';
     final isCustomerNotifications =
@@ -577,6 +580,8 @@ class _RoleContent extends StatelessWidget {
       content = const CustomerOrdersScreen();
     } else if (isCustomerReferrals) {
       content = const CustomerReferralsScreen();
+    } else if (isCustomerActivity) {
+      content = const CustomerActivityScreen();
     } else if (isCustomerAppointments) {
       content = _CustomerProtectedSection(
         sectionKey: section.key,
@@ -630,7 +635,8 @@ class _RoleContent extends StatelessWidget {
         isCustomerWalletHistory ||
         isCustomerRewards ||
         isCustomerOrders ||
-        isCustomerReferrals;
+        isCustomerReferrals ||
+        isCustomerActivity;
 
     if (portal.role == SHIELDRole.customer && customerContentOwnsScroll) {
       return AppPageFrame(
@@ -1046,7 +1052,7 @@ class _CustomerPortalNav extends StatelessWidget {
       'prescriptions',
     ]),
     MapEntry('Commerce', ['orders']),
-    MapEntry('Engagement', ['referrals', 'notifications']),
+    MapEntry('Engagement', ['referrals', 'activity', 'notifications']),
     MapEntry('Account', ['profile', 'settings']),
   ];
 

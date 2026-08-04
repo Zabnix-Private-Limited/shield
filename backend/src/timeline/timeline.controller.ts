@@ -1,10 +1,34 @@
-import { Controller, Get, Param, Query } from '@nestjs/common';
+import {
+  Controller,
+  ForbiddenException,
+  Get,
+  Param,
+  Query,
+} from '@nestjs/common';
+import { CurrentPrincipal } from '../auth/current-principal.decorator';
 import { RequirePermissions } from '../auth/permissions.decorator';
+import type { ShieldPrincipal } from '../auth/auth.types';
 import { TimelineService } from './timeline.service';
 
 @Controller('timeline')
 export class TimelineController {
   constructor(private readonly timelineService: TimelineService) {}
+
+  @RequirePermissions('customers.view')
+  @Get('me')
+  async getCustomerTimeline(@CurrentPrincipal() principal?: ShieldPrincipal) {
+    if (principal?.principalType !== 'CUSTOMER' || !principal.customerId) {
+      throw new ForbiddenException('Authenticated customer context is required.');
+    }
+
+    return {
+      success: true,
+      message: 'Customer activity timeline retrieved successfully.',
+      data: await this.timelineService.getPatientTimeline(
+        BigInt(principal.customerId),
+      ),
+    };
+  }
 
   @RequirePermissions('providers.view')
   @Get('patient/:customerId')

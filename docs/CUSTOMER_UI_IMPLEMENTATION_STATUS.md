@@ -24,6 +24,7 @@ Completed:
 - Profile-gated customer sections now distinguish access-status loading from an API failure and provide a retryable error state instead of a permanent skeleton.
 - Customer document and prescription archive failures now use the shared customer error card with a generic retry message; transport and server details are not rendered to the customer.
 - Customer Visits now has explicit upcoming/history empty states and the shared retryable failure state while retaining the existing customer-scoped appointment and cancellation workflows.
+- Activity Timeline is now a customer-self route backed by `GET /timeline/me`; it has loading, empty, retry, and refresh states and never accepts an arbitrary customer ID.
 
 Not complete:
 

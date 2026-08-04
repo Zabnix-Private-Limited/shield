@@ -120,6 +120,7 @@ class PortalResolver {
       case 'wallet':
       case 'orders':
       case 'prescriptions':
+      case 'activity':
         return role == SHIELDRole.customer;
       case 'customers':
       case 'followups':

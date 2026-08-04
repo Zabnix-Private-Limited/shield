@@ -16,6 +16,7 @@
 | Wellness catalogue | `GET /customer/wellness-products` | `ApiService.getCustomerWellnessProducts` / customer Services | Authenticated customer only; returns only `is_demo_available=true`, `status=DEMO` seeded records |
 | My Orders | `GET /pharmacy/purchases?customer_id=` | `ApiService.getCustomerPurchases` / `CustomerOrdersScreen` | Missing customer context fails closed; customer ID is verified against the authenticated customer by the backend; read-only purchase history only |
 | Appointments | `GET/POST /appointments`, `GET /appointments/:id`, cancellation/reschedule endpoints | `ApiService` | Customer principal is forced to self context; read/cancel/reschedule require appointment ownership. Consultation, billing, invoice, and prescription endpoints are staff-only. |
+| Activity Timeline | `GET /timeline/me` | `ApiService.getCustomerTimeline` / `TimelineController` | The endpoint accepts no customer ID and derives the timeline only from the authenticated customer principal. |
 
 Do not expose `SHIELD_BENEFIT` as cash. Do not replace these APIs with Flutter lists. Operations banners, catalogue/cart presentation, and full card lifecycle require verified backend contracts before UI implementation.
 

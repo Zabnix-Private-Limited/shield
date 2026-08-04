@@ -9822,3 +9822,14 @@ Replaced the removed static Flutter carousel with a database-backed Operations c
   - `docs/CUSTOMER_UI_STATE_MATRIX.md`, `docs/CUSTOMER_UI_IMPLEMENTATION_STATUS.md`, and `docs/customer-ui/CUSTOMER_UI_AUDIT.md`: record supported Visit loading, empty, and failure behavior.
 - Why:
   - A customer appointment response can be valid but empty. Making that state explicit is clearer than rendering an empty section, while the generic retry failure preserves existing scope and avoids leaking transport details.
+## 303. Customer-self Activity Timeline — 2026-08-04 21:32:36 IST
+- Backend Files:
+  - `backend/src/timeline/timeline.controller.ts`: adds `GET /timeline/me` guarded by `customers.view`. It rejects missing or non-customer principals and derives the customer ID exclusively from the authenticated session.
+  - `backend/src/timeline/timeline.controller.spec.ts`: verifies self-ID resolution and fail-closed missing context behavior.
+- Frontend Files:
+  - `frontend/lib/features/customer/activity/presentation/screens/customer_activity_screen.dart` and `frontend/lib/shared/services/api_service.dart`: add the database-backed activity timeline with loading, empty, retry, and refresh states.
+  - `frontend/lib/features/portal/presentation/portal_role_data.dart`, `frontend/lib/features/portal/presentation/screens/portal_shell.dart`, and `frontend/lib/shared/services/portal_resolver.dart`: expose the authenticated customer route and navigation entry.
+- Documentation Files:
+  - `docs/CUSTOMER_UI_API_BINDINGS.md`, `docs/CUSTOMER_UI_STATE_MATRIX.md`, `docs/CUSTOMER_UI_IMPLEMENTATION_STATUS.md`, `docs/customer-ui/CUSTOMER_UI_AUDIT.md`, and `docs/CUSTOMER_UI_VISUAL_QA.md`: record the self-only contract and visual-verification status.
+- Why:
+  - The provider patient endpoint must not be reused by customers because it accepts a target ID. A self-only route preserves the existing database timeline while making the customer Activity screen safe and functional.

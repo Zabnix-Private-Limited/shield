@@ -314,6 +314,13 @@ class ApiService {
       ..sort((a, b) => a.appointmentDate.compareTo(b.appointmentDate));
   }
 
+  static Future<List<Map<String, dynamic>>> getCustomerTimeline() async {
+    final response = await _dio.get('/timeline/me');
+    return _readEnvelopeList(
+      response,
+    ).map((item) => Map<String, dynamic>.from(item as Map)).toList();
+  }
+
   static Future<List<Appointment>> getAppointmentsByCustomerId(
     String customerId,
   ) async {
