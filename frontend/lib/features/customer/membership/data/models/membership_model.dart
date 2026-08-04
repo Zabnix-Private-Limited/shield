@@ -16,6 +16,10 @@ class MembershipModel extends Membership {
     required super.totalRedeemedCredits,
     required super.createdAt,
     required super.updatedAt,
+    super.cardNumber,
+    super.cardQrPayload,
+    super.cardStatus,
+    super.cardIssuedAt,
   });
 
   factory MembershipModel.fromJson(Map<String, dynamic> json) {
@@ -31,6 +35,9 @@ class MembershipModel extends Membership {
     );
     final stats = Map<String, dynamic>.from(
       json['membershipStats'] as Map? ?? const {},
+    );
+    final shieldCard = Map<String, dynamic>.from(
+      json['shieldCard'] as Map? ?? const {},
     );
     final tierSource =
         (membershipType['name'] ??
@@ -64,6 +71,12 @@ class MembershipModel extends Membership {
       totalRedeemedCredits: _asDouble(stats['totalRedeemedCredits']),
       createdAt: createdAt,
       updatedAt: _parseDate(membership['updatedAt'], fallback: createdAt),
+      cardNumber: shieldCard['cardNumber']?.toString(),
+      cardQrPayload: shieldCard['qrCode']?.toString(),
+      cardStatus: shieldCard['status']?.toString(),
+      cardIssuedAt: shieldCard['issuedAt'] == null
+          ? null
+          : _parseDate(shieldCard['issuedAt']),
     );
   }
 
@@ -92,6 +105,13 @@ class MembershipModel extends Membership {
         'totalRedeemedCredits': totalRedeemedCredits,
         'availableCredits': totalEarnedCredits - totalRedeemedCredits,
       },
+      if (cardNumber != null || cardQrPayload != null || cardStatus != null)
+        'shieldCard': {
+          'cardNumber': cardNumber,
+          'qrCode': cardQrPayload,
+          'status': cardStatus,
+          'issuedAt': cardIssuedAt?.toIso8601String(),
+        },
     };
   }
 

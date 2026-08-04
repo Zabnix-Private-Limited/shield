@@ -24,6 +24,17 @@ export class CustomerController {
     private readonly providerScopeService: ProviderScopeService,
   ) {}
 
+  private assertCustomerSelfScope(id: string, principal?: ShieldPrincipal) {
+    if (
+      principal?.principalType === 'CUSTOMER' &&
+      principal.customerId !== id
+    ) {
+      throw new ForbiddenException(
+        'Customers can only access their own customer record.',
+      );
+    }
+  }
+
   @RequirePermissions('customers.create')
   @Post()
   async create(
@@ -179,6 +190,7 @@ export class CustomerController {
     @Param('id') id: string,
     @CurrentPrincipal() principal?: ShieldPrincipal,
   ) {
+    this.assertCustomerSelfScope(id, principal);
     await this.providerScopeService.assertProviderCanAccessCustomer(
       BigInt(id),
       principal,
@@ -199,6 +211,7 @@ export class CustomerController {
     @Param('id') id: string,
     @CurrentPrincipal() principal?: ShieldPrincipal,
   ) {
+    this.assertCustomerSelfScope(id, principal);
     await this.providerScopeService.assertProviderCanAccessCustomer(
       BigInt(id),
       principal,
@@ -239,14 +252,7 @@ export class CustomerController {
     @Param('id') id: string,
     @CurrentPrincipal() principal?: ShieldPrincipal,
   ) {
-    if (
-      principal?.principalType === 'CUSTOMER' &&
-      principal.customerId !== id
-    ) {
-      throw new ForbiddenException(
-        'Customers can only view their own profile.',
-      );
-    }
+    this.assertCustomerSelfScope(id, principal);
 
     await this.providerScopeService.assertProviderCanAccessCustomer(
       BigInt(id),
@@ -271,14 +277,7 @@ export class CustomerController {
     @Body() body: any,
     @CurrentPrincipal() principal?: ShieldPrincipal,
   ) {
-    if (
-      principal?.principalType === 'CUSTOMER' &&
-      principal.customerId !== id
-    ) {
-      throw new ForbiddenException(
-        'Customers can only update their own profile.',
-      );
-    }
+    this.assertCustomerSelfScope(id, principal);
 
     await this.providerScopeService.assertProviderCanAccessCustomer(
       BigInt(id),

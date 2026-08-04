@@ -3,6 +3,22 @@ import { PrismaService } from '../prisma/prisma.service';
 import { WalletService } from '../wallet/wallet.service';
 import { PricingService } from '../pricing/pricing.service';
 
+type CustomerBanner = {
+  id: string;
+  title: string;
+  subtitle: string;
+  imageUrl: string;
+  altText: string;
+  ctaLabel: string;
+  ctaRoute: string;
+  placement: string;
+  audience: string[];
+  priority: number;
+  status: string;
+  startAt?: string;
+  endAt?: string;
+};
+
 @Injectable()
 export class DashboardService {
   constructor(
@@ -99,7 +115,7 @@ export class DashboardService {
       ? await this.walletService.getTransactions(customer.wallet.id, {})
       : [];
 
-    const [appointments, notifications, documents] = await Promise.all([
+    const [appointments, notifications, documents, banners] = await Promise.all([
       this.prisma.appointment.findMany({
         where: { customerId },
         include: { provider: true },
@@ -124,6 +140,7 @@ export class DashboardService {
         orderBy: { createdAt: 'desc' },
         take: 6,
       }),
+      this.getCustomerBanners(),
     ]);
 
     return {
@@ -193,6 +210,7 @@ export class DashboardService {
       notifications,
       recentActivity: recentTransactions.slice(0, 4),
       documents,
+      banners,
       quickActions: [
         {
           key: 'view-card',
@@ -228,6 +246,61 @@ export class DashboardService {
         },
       ],
     };
+  }
+
+  private async getCustomerBanners(): Promise<CustomerBanner[]> {
+    const setting = await this.prisma.commercialSetting.findUnique({
+      where: { code: 'OPERATIONS_CUSTOMER_BANNERS' },
+      select: { valueText: true, status: true },
+    });
+    if (!setting || setting.status !== 'ACTIVE' || !setting.valueText?.trim()) {
+      return [];
+    }
+
+    try {
+      const records = JSON.parse(setting.valueText) as unknown;
+      if (!Array.isArray(records)) return [];
+      const now = new Date();
+      return records
+        .map((record) => record as Partial<CustomerBanner>)
+        .filter((record) => {
+          const audience = Array.isArray(record.audience) ? record.audience : [];
+          const startsAt = record.startAt ? new Date(record.startAt) : null;
+          const endsAt = record.endAt ? new Date(record.endAt) : null;
+          return (
+            record.id &&
+            record.title &&
+            record.subtitle &&
+            record.imageUrl &&
+            record.altText &&
+            record.ctaLabel &&
+            record.ctaRoute?.startsWith('/portal/customer/') &&
+            record.placement === 'DASHBOARD' &&
+            record.status === 'PUBLISHED' &&
+            (audience.includes('ALL_CUSTOMERS') || audience.includes('CUSTOMER')) &&
+            (!startsAt || startsAt <= now) &&
+            (!endsAt || endsAt >= now)
+          );
+        })
+        .map((record) => ({
+          id: record.id!,
+          title: record.title!,
+          subtitle: record.subtitle!,
+          imageUrl: record.imageUrl!,
+          altText: record.altText!,
+          ctaLabel: record.ctaLabel!,
+          ctaRoute: record.ctaRoute!,
+          placement: 'DASHBOARD',
+          audience: Array.isArray(record.audience) ? record.audience : [],
+          priority: Number(record.priority ?? 0),
+          status: 'PUBLISHED',
+          startAt: record.startAt,
+          endAt: record.endAt,
+        }))
+        .sort((left, right) => right.priority - left.priority);
+    } catch {
+      return [];
+    }
   }
 
   async getStaffDashboard() {

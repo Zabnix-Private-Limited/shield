@@ -18,6 +18,10 @@ class Membership extends Equatable {
   final double totalRedeemedCredits;
   final DateTime createdAt;
   final DateTime updatedAt;
+  final String? cardNumber;
+  final String? cardQrPayload;
+  final String? cardStatus;
+  final DateTime? cardIssuedAt;
 
   const Membership({
     required this.id,
@@ -32,6 +36,10 @@ class Membership extends Equatable {
     required this.totalRedeemedCredits,
     required this.createdAt,
     required this.updatedAt,
+    this.cardNumber,
+    this.cardQrPayload,
+    this.cardStatus,
+    this.cardIssuedAt,
   });
 
   String get tierLabel => switch (tier) {
@@ -105,6 +113,12 @@ class Membership extends Equatable {
         membership?['updatedAt'] ?? membership?['updated_at'],
         customer.updatedAt,
       ),
+      cardNumber: customerPayload['shieldCard']?['cardNumber']?.toString(),
+      cardQrPayload: customerPayload['shieldCard']?['qrCode']?.toString(),
+      cardStatus: customerPayload['shieldCard']?['status']?.toString(),
+      cardIssuedAt: DateTime.tryParse(
+        customerPayload['shieldCard']?['issuedAt']?.toString() ?? '',
+      ),
     );
   }
 
@@ -122,5 +136,9 @@ class Membership extends Equatable {
     totalRedeemedCredits,
     createdAt,
     updatedAt,
+    cardNumber,
+    cardQrPayload,
+    cardStatus,
+    cardIssuedAt,
   ];
 }

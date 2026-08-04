@@ -39,9 +39,12 @@ export class WalletController {
       BigInt(customerId),
       principal,
     );
-    const data = await this.walletService.getWalletByCustomerId(BigInt(customerId), {
-      includeHiddenBenefit: principal?.roleCode === 'ADMIN',
-    });
+    const data = await this.walletService.getWalletByCustomerId(
+      BigInt(customerId),
+      {
+        includeHiddenBenefit: principal?.roleCode === 'ADMIN',
+      },
+    );
     return {
       success: true,
       message: 'Wallet profile retrieved successfully',
@@ -51,7 +54,10 @@ export class WalletController {
 
   @RequirePermissions('wallet.update')
   @Post('recharge')
-  async recharge(@Body() body: any, @CurrentPrincipal() principal?: ShieldPrincipal) {
+  async recharge(
+    @Body() body: any,
+    @CurrentPrincipal() principal?: ShieldPrincipal,
+  ) {
     if (!principal || !principal.userId) {
       throw new UnauthorizedException('Authentication required');
     }
@@ -81,7 +87,10 @@ export class WalletController {
 
   @RequirePermissions('wallet.update')
   @Post('adjustments')
-  async adjust(@Body() body: any, @CurrentPrincipal() principal?: ShieldPrincipal) {
+  async adjust(
+    @Body() body: any,
+    @CurrentPrincipal() principal?: ShieldPrincipal,
+  ) {
     if (!principal || !principal.userId) {
       throw new UnauthorizedException('Authentication required');
     }
@@ -119,6 +128,22 @@ export class WalletController {
     @Query('type') type?: string,
     @CurrentPrincipal() principal?: ShieldPrincipal,
   ) {
+    if (principal?.principalType === 'CUSTOMER') {
+      if (!principal.customerId) {
+        throw new ForbiddenException(
+          'Authenticated customer context is required.',
+        );
+      }
+      const ownsWallet = await this.walletService.walletBelongsToCustomer(
+        BigInt(id),
+        BigInt(principal.customerId),
+      );
+      if (!ownsWallet) {
+        throw new ForbiddenException(
+          'Customers can only view their own wallet transactions.',
+        );
+      }
+    }
     await this.providerScopeService.assertProviderCanAccessWallet(
       BigInt(id),
       principal,
@@ -137,7 +162,10 @@ export class WalletController {
 
   @RequirePermissions('wallet.update')
   @Post('redeem-points')
-  async redeemPoints(@Body() body: any, @CurrentPrincipal() principal?: ShieldPrincipal) {
+  async redeemPoints(
+    @Body() body: any,
+    @CurrentPrincipal() principal?: ShieldPrincipal,
+  ) {
     if (!principal || !principal.userId) {
       throw new UnauthorizedException('Authentication required');
     }

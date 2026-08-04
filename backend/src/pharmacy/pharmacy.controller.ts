@@ -1,4 +1,12 @@
-import { Controller, Get, Post, Param, Body, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  ForbiddenException,
+  Get,
+  Param,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { CurrentPrincipal } from '../auth/current-principal.decorator';
 import { RequirePermissions } from '../auth/permissions.decorator';
 import type { ShieldPrincipal } from '../auth/auth.types';
@@ -40,6 +48,24 @@ export class PharmacyController {
     return {
       success: true,
       message: 'Wellness demo catalog retrieved',
+      data: await this.pharmacyService.listWellnessDemoProducts(),
+    };
+  }
+
+  @RequirePermissions('customers.view')
+  @Get('customer/wellness-products')
+  async listCustomerWellnessProducts(
+    @CurrentPrincipal() principal?: ShieldPrincipal,
+  ) {
+    if (principal?.principalType !== 'CUSTOMER' || !principal.customerId) {
+      throw new ForbiddenException(
+        'Only authenticated customers can browse the customer wellness catalogue.',
+      );
+    }
+
+    return {
+      success: true,
+      message: 'Customer wellness demo catalog retrieved',
       data: await this.pharmacyService.listWellnessDemoProducts(),
     };
   }

@@ -282,11 +282,14 @@ PortalRoleData portalDataForRole(SHIELDRole role) {
         sections: [
           _PortalSectionFactory.customerDashboard,
           _PortalSectionFactory.customerWallet,
+          _PortalSectionFactory.customerWalletHistory,
+          _PortalSectionFactory.customerRewards,
           _PortalSectionFactory.customerServices,
           _PortalSectionFactory.customerAppointments,
           _PortalSectionFactory.customerDocuments,
           _PortalSectionFactory.customerProfile,
           _PortalSectionFactory.customerMembership,
+          _PortalSectionFactory.customerPrivilegeCard,
           _PortalSectionFactory.customerPrescriptions,
           _PortalSectionFactory.customerRecharge,
           _PortalSectionFactory.customerBooking,
@@ -597,7 +600,18 @@ class _PortalSectionFactory {
   static final PortalSectionData customerWallet = _section(
     'wallet',
     summary: 'Live wallet balances, credits, and transaction history.',
-    actions: const ['Recharge', 'View statement'],
+  );
+
+  static final PortalSectionData customerWalletHistory = _section(
+    'wallet-history',
+    title: 'Wallet History',
+    summary: 'Full customer-scoped wallet ledger history.',
+  );
+
+  static final PortalSectionData customerRewards = _section(
+    'rewards',
+    title: 'Reward Points',
+    summary: 'Available customer reward points and ledger activity.',
   );
 
   static final PortalSectionData customerServices = _section(
@@ -623,6 +637,12 @@ class _PortalSectionFactory {
   static final PortalSectionData customerMembership = _section(
     'membership',
     summary: 'Issued membership details and card access.',
+  );
+
+  static final PortalSectionData customerPrivilegeCard = _section(
+    'privilege-card',
+    title: 'Privilege Card',
+    summary: 'Digital membership card and verification QR.',
   );
 
   static final PortalSectionData customerPrescriptions = _section(

@@ -1,0 +1,31 @@
+# Customer membership and card API matrix
+
+Audited: 2026-08-04. `current_schema.md` is authoritative for persisted models; an API is treated as supported only when a customer-reachable contract was verified.
+
+| Operation | Endpoint and method | Customer scope | Returned/supported values | UI decision |
+|---|---|---|---|---|
+| Current membership | `GET /customer/membership` | Customer principal resolves to its own `customerId`; agent access is additionally scope-checked | Membership number, status, dates, membership type/plan, cash-ledger totals, digital card | Supported |
+| Digital privilege card | Included as `shieldCard` in `GET /customer/membership` | Same as above | Card number, actual QR payload, status, issued date/business | Supported when a card exists |
+| Cash membership usage | Included as `membershipStats` in `GET /customer/membership` | Same as above | Cash wallet credited/debited/available; this is not SHIELD Benefit | Supported as wallet-derived summary only |
+| Physical-card request | `POST /customers/:id/card-requests` | Customer-self guard, provider/agent scope checks, Flutter authenticated-id guard | Creates/reuses a request; customer UI confirms returned status | Supported |
+| Physical-card status | `GET /customers/:id/card-profile` | Customer-self guard, provider/agent scope checks, Flutter authenticated-id guard | Latest request and card, action state | Supported |
+| Subscription read | `GET /management-demo/subscriptions/:customerId` | `customers.view`, no customer-self resolver in this controller | Subscription, monthly allocations, carry-forward, used/remaining | Not customer-safe; do not use in customer app |
+| Subscription activation/preview | `POST /management-demo/subscriptions/:customerId/activate`, `POST /management-demo/subscriptions/preview` | Staff permission | Management-demo workflow | Not customer operation |
+| Card history/replacement/lost/damaged | No verified customer API | N/A | Schema has `card_requests`, no customer history/replacement contract located | Unsupported |
+
+## Data models
+
+- `memberships`: membership number, status, activation/expiry and type.
+- `shield_cards`: one card per customer, card number, QR payload, status, issuing business/date.
+- `membership_subscriptions` and `subscription_monthly_allocations`: configured contribution, SHIELD Benefit, entitlement and monthly allocation data; not currently exposed by a customer-safe subscription read API.
+- `card_requests`: physical-card request state; no customer-safe history contract verified.
+
+## Explicit gaps
+
+- No customer-scoped subscription entitlement endpoint, therefore the customer UI must show entitlement as unavailable rather than using management-demo constants.
+- No verified customer-safe physical-card history/replacement/lost/damaged endpoints.
+- The present membership DTO omits customer display name; the privilege card screen obtains it through the existing authenticated customer profile API.
+
+## Current customer presentation
+
+The membership screen presents identity, validity, plan and actual cash-ledger summary. It renders subscription entitlement as unavailable; it does not derive contribution, SHIELD Benefit, total entitlement, carry-forward or monthly allocation on the client. The privilege-card route shows an issued digital card or the real physical-card request/status state.

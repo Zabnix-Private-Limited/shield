@@ -8,14 +8,9 @@ import '../../../../../shared/widgets/app_card.dart';
 import '../../../../../shared/widgets/portal_support.dart';
 
 class TransactionTile extends StatelessWidget {
-  const TransactionTile({
-    super.key,
-    required this.transaction,
-    required this.ledgerBalanceAfter,
-  });
+  const TransactionTile({super.key, required this.transaction});
 
   final WalletTransaction transaction;
-  final double Function(WalletTransaction transaction) ledgerBalanceAfter;
 
   @override
   Widget build(BuildContext context) {
@@ -34,8 +29,9 @@ class TransactionTile extends StatelessWidget {
         ),
         status: transaction.transactionType,
         highlights: [
-          'Balance after this ${_ledgerLabel(transaction.subLedgerType).toLowerCase()} transaction is ${AppDisplayFormatters.formatCurrencyString(ledgerBalanceAfter(transaction).toStringAsFixed(2))}.',
           'Only customer-visible cash and reward ledgers appear in this activity list.',
+          if (transaction.referenceType?.trim().isNotEmpty == true)
+            'Reference: ${transaction.referenceType}${transaction.referenceId?.trim().isNotEmpty == true ? ' · ${transaction.referenceId}' : ''}',
         ],
       ),
       child: Row(

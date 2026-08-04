@@ -6,6 +6,7 @@ import '../../../../../app/theme/app_typography.dart';
 import '../../../../../shared/models/customer.dart';
 import '../../../../../shared/models/membership.dart';
 import '../../../shared/domain/customer_access_state.dart';
+import '../../../shared/theme/customer_design_tokens.dart';
 import '../../domain/entities/dashboard_entity.dart';
 import 'membership_card.dart';
 import 'quick_actions.dart';
@@ -16,18 +17,12 @@ class GreetingHeader extends StatelessWidget {
     required this.customer,
     required this.membership,
     required this.accessState,
-    required this.wallet,
-    required this.upcomingVisits,
-    required this.documentCount,
     required this.quickActions,
   });
 
   final Customer customer;
   final Membership membership;
   final CustomerAccessState accessState;
-  final DashboardWalletSummary wallet;
-  final int upcomingVisits;
-  final int documentCount;
   final List<DashboardQuickActionEntity> quickActions;
 
   @override
@@ -37,7 +32,7 @@ class GreetingHeader extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [AppColors.shieldBlue, AppColors.shieldNavy],
+          colors: [Color(0xFF1458D4), Color(0xFF073483)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -85,41 +80,69 @@ class GreetingHeader extends StatelessWidget {
               ),
             ),
           ],
-          const SizedBox(height: 12),
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final itemWidth = (constraints.maxWidth - 10) / 2;
-              return Wrap(
-                spacing: 10,
-                runSpacing: 10,
-                children: [
-                  _HeroStatBlock(
-                    width: itemWidth,
-                    label: accessState.serviceAccessEnabled
-                        ? 'Wallet'
-                        : 'Products',
-                    value: accessState.serviceAccessEnabled
-                        ? '₹${wallet.balance.toStringAsFixed(0)}'
-                        : 'Browse only',
-                    secondary: accessState.serviceAccessEnabled
-                        ? '${wallet.pointsBalance.toStringAsFixed(0)} reward pts'
-                        : 'Loaded products stay visible before card issue',
+          const SizedBox(height: 16),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: AppColors.white.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(
+                CustomerDesignTokens.controlRadius,
+              ),
+              border: Border.all(
+                color: AppColors.white.withValues(alpha: 0.16),
+              ),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: _MembershipDetail(
+                    label: 'Membership no.',
+                    value: membership.customerCode.isEmpty
+                        ? 'Pending issue'
+                        : membership.customerCode,
                   ),
-                  _HeroStatBlock(
-                    width: itemWidth,
-                    label: accessState.serviceAccessEnabled
-                        ? 'Activity'
-                        : 'Card status',
-                    value: accessState.serviceAccessEnabled
-                        ? '$upcomingVisits visits'
-                        : 'Pending',
-                    secondary: accessState.serviceAccessEnabled
-                        ? '$documentCount documents'
-                        : 'Issued by admin or agent team',
+                ),
+                Container(
+                  width: 1,
+                  height: 38,
+                  color: AppColors.white.withValues(alpha: 0.22),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: InkWell(
+                    onTap: () => context.go('/portal/customer/membership'),
+                    borderRadius: BorderRadius.circular(10),
+                    child: const _MembershipDetail(
+                      label: 'Digital card',
+                      value: 'Tap to view',
+                      icon: Icons.qr_code_rounded,
+                    ),
                   ),
-                ],
-              );
-            },
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: _MembershipDetail(
+                  label: 'Privilege plan',
+                  value: membership.tierLabel,
+                  icon: Icons.workspace_premium_outlined,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _MembershipDetail(
+                  label: 'Valid until',
+                  value:
+                      '${membership.endDate.day.toString().padLeft(2, '0')} ${_monthLabel(membership.endDate.month)} ${membership.endDate.year}',
+                  icon: Icons.calendar_today_outlined,
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 10),
           if (accessState.serviceAccessEnabled)
@@ -128,6 +151,69 @@ class GreetingHeader extends StatelessWidget {
             const _PendingQuickActions(),
         ],
       ),
+    );
+  }
+}
+
+String _monthLabel(int month) => const [
+  'Jan',
+  'Feb',
+  'Mar',
+  'Apr',
+  'May',
+  'Jun',
+  'Jul',
+  'Aug',
+  'Sep',
+  'Oct',
+  'Nov',
+  'Dec',
+][month - 1];
+
+class _MembershipDetail extends StatelessWidget {
+  const _MembershipDetail({
+    required this.label,
+    required this.value,
+    this.icon,
+  });
+
+  final String label;
+  final String value;
+  final IconData? icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: AppTypography.tiny.copyWith(
+            color: AppColors.white.withValues(alpha: 0.72),
+          ),
+        ),
+        const SizedBox(height: 5),
+        Row(
+          children: [
+            if (icon != null) ...[
+              Icon(icon, size: 17, color: AppColors.white),
+              const SizedBox(width: 6),
+            ],
+            Expanded(
+              child: Text(
+                value,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: AppTypography.small.copyWith(
+                  color: AppColors.white,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ],
     );
   }
 }
@@ -188,64 +274,6 @@ class _PendingQuickActions extends StatelessWidget {
           ],
         );
       },
-    );
-  }
-}
-
-class _HeroStatBlock extends StatelessWidget {
-  const _HeroStatBlock({
-    required this.label,
-    required this.value,
-    required this.secondary,
-    this.width,
-  });
-
-  final String label;
-  final String value;
-  final String secondary;
-  final double? width;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: width,
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: AppColors.white.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            label,
-            style: AppTypography.tiny.copyWith(
-              color: AppColors.white.withValues(alpha: 0.72),
-              fontWeight: FontWeight.w700,
-              letterSpacing: 0.4,
-            ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            value,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: AppTypography.body.copyWith(
-              color: AppColors.white,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          const SizedBox(height: 3),
-          Text(
-            secondary,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: AppTypography.small.copyWith(
-              color: AppColors.white.withValues(alpha: 0.86),
-            ),
-          ),
-        ],
-      ),
     );
   }
 }

@@ -1,7 +1,14 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { randomUUID } from 'crypto';
-import { WALLET_LEDGER_TYPES, WalletLedgerType } from '../pricing/pricing.types';
+import {
+  WALLET_LEDGER_TYPES,
+  WalletLedgerType,
+} from '../pricing/pricing.types';
 
 type WalletViewOptions = {
   includeHiddenBenefit?: boolean;
@@ -10,6 +17,14 @@ type WalletViewOptions = {
 @Injectable()
 export class WalletService {
   constructor(private readonly prisma: PrismaService) {}
+
+  async walletBelongsToCustomer(walletId: bigint, customerId: bigint) {
+    return (
+      (await this.prisma.wallet.count({
+        where: { id: walletId, customerId },
+      })) > 0
+    );
+  }
 
   async getWalletByCustomerId(
     customerId: bigint,
@@ -32,7 +47,9 @@ export class WalletService {
             shieldBenefitLedger: summary.shieldBenefit,
           }
         : {}),
-      creditAvailable: creditAccount ? Number(creditAccount.availableCredit) : 0,
+      creditAvailable: creditAccount
+        ? Number(creditAccount.availableCredit)
+        : 0,
     };
   }
 
@@ -208,7 +225,9 @@ export class WalletService {
           walletId: wallet.id,
           transactionType: type === 'CREDIT' ? 'APPROVED_CREDIT' : 'REDEEMED',
           actionCode:
-            type === 'CREDIT' ? 'MANUAL_REWARD_ADJUSTMENT' : 'MANUAL_REWARD_DEBIT',
+            type === 'CREDIT'
+              ? 'MANUAL_REWARD_ADJUSTMENT'
+              : 'MANUAL_REWARD_DEBIT',
           points: normalizedAmount,
           reason: remarks || `Manual reward points adjustment (${type})`,
           createdBy: staffUserId,
@@ -255,7 +274,9 @@ export class WalletService {
       orderBy: { createdAt: 'asc' },
     });
     if (!redemptionRule) {
-      throw new BadRequestException('Reward redemption rule is not configured.');
+      throw new BadRequestException(
+        'Reward redemption rule is not configured.',
+      );
     }
 
     const summary = await this.getWalletSummary(wallet.id);
@@ -263,7 +284,9 @@ export class WalletService {
     const normalizedPoints = this.assertPositiveAmount(requestedPoints);
 
     if (normalizedPoints > availablePoints) {
-      throw new BadRequestException('Insufficient reward points for redemption.');
+      throw new BadRequestException(
+        'Insufficient reward points for redemption.',
+      );
     }
     if (normalizedPoints < Number(redemptionRule.minimumPoints || 0)) {
       throw new BadRequestException(
@@ -274,13 +297,14 @@ export class WalletService {
     const currentMonthStart = new Date();
     currentMonthStart.setDate(1);
     currentMonthStart.setHours(0, 0, 0, 0);
-    const currentMonthRedeemed = await this.prisma.rewardPointTransaction.findMany({
-      where: {
-        walletId: wallet.id,
-        transactionType: 'REDEEMED',
-        createdAt: { gte: currentMonthStart },
-      },
-    });
+    const currentMonthRedeemed =
+      await this.prisma.rewardPointTransaction.findMany({
+        where: {
+          walletId: wallet.id,
+          transactionType: 'REDEEMED',
+          createdAt: { gte: currentMonthStart },
+        },
+      });
     const redeemedThisMonth = currentMonthRedeemed.reduce(
       (sum, txn) => sum + Number(txn.points || 0),
       0,
@@ -347,7 +371,9 @@ export class WalletService {
       this.prisma.cashWalletTransaction.findMany({
         where: {
           walletId,
-          ...(filters.type ? { transactionType: filters.type.toUpperCase() } : {}),
+          ...(filters.type
+            ? { transactionType: filters.type.toUpperCase() }
+            : {}),
           ...(dateFilter ? { createdAt: dateFilter } : {}),
         },
         orderBy: { createdAt: 'desc' },
@@ -355,7 +381,9 @@ export class WalletService {
       this.prisma.rewardPointTransaction.findMany({
         where: {
           walletId,
-          ...(filters.type ? { transactionType: filters.type.toUpperCase() } : {}),
+          ...(filters.type
+            ? { transactionType: filters.type.toUpperCase() }
+            : {}),
           ...(dateFilter ? { createdAt: dateFilter } : {}),
         },
         orderBy: { createdAt: 'desc' },
@@ -394,7 +422,9 @@ export class WalletService {
     const legacyTransactions = await this.prisma.walletTransaction.findMany({
       where: {
         walletId,
-        ...(filters.type ? { transactionType: filters.type.toUpperCase() } : {}),
+        ...(filters.type
+          ? { transactionType: filters.type.toUpperCase() }
+          : {}),
         ...(dateFilter ? { createdAt: dateFilter } : {}),
       },
       orderBy: { createdAt: 'desc' },
@@ -412,7 +442,10 @@ export class WalletService {
     }));
   }
 
-  async ensureSufficientCashBalance(customerId: bigint, requiredAmount: number) {
+  async ensureSufficientCashBalance(
+    customerId: bigint,
+    requiredAmount: number,
+  ) {
     const wallet = await this.requireWallet(customerId);
     const summary = await this.getWalletSummary(wallet.id);
     if (summary.cashWallet.available < requiredAmount) {
@@ -632,7 +665,9 @@ export class WalletService {
       where: { customerId },
     });
     if (!wallet) {
-      throw new NotFoundException(`Wallet not found for customer ID ${customerId}`);
+      throw new NotFoundException(
+        `Wallet not found for customer ID ${customerId}`,
+      );
     }
     return wallet;
   }
@@ -660,8 +695,13 @@ export class WalletService {
   }
 
   private isPositiveCashEntry(transactionType: string) {
-    return ['CREDIT', 'RECHARGE', 'OPENING_BALANCE', 'POINT_REDEMPTION_CREDIT', 'REVERSAL_CREDIT']
-      .includes(transactionType.toUpperCase());
+    return [
+      'CREDIT',
+      'RECHARGE',
+      'OPENING_BALANCE',
+      'POINT_REDEMPTION_CREDIT',
+      'REVERSAL_CREDIT',
+    ].includes(transactionType.toUpperCase());
   }
 
   private isPositiveRewardEntry(transactionType: string) {
@@ -671,6 +711,8 @@ export class WalletService {
   }
 
   private isPositiveBenefitEntry(transactionType: string) {
-    return ['GRANT', 'PRELOAD', 'REVERSAL_CREDIT'].includes(transactionType.toUpperCase());
+    return ['GRANT', 'PRELOAD', 'REVERSAL_CREDIT'].includes(
+      transactionType.toUpperCase(),
+    );
   }
 }

@@ -9562,3 +9562,153 @@ Fixed the OTP login failure observed against a local database that has not yet r
 ### Verification
 - `nx tsc --noEmit --pretty false` passed in `backend`.
 - No schema-apply, seed, or database mutation command was run.
+
+## 280. Customer UI Audit and Shared Shell Foundation (2026-08-04 18:35:00 IST)
+
+Completed the required read-only customer application audit before visual implementation. The customer shell now has reusable presentation tokens and a responsive authenticated header backed by the existing dashboard repository; dashboard membership information is shown without duplicating cash/reward values from the header. The static Flutter marketing carousel was removed from the live dashboard because Operations-managed content requires a backend contract.
+
+### Frontend Files
+- `frontend/lib/features/customer/shared/theme/customer_design_tokens.dart`
+- `frontend/lib/features/customer/shared/widgets/customer_app_bar.dart`
+- `frontend/lib/features/customer/shared/widgets/customer_scaffold.dart`
+- `frontend/lib/features/customer/dashboard/presentation/screens/dashboard_screen.dart`
+- `frontend/lib/features/customer/dashboard/presentation/widgets/greeting_header.dart`
+
+### Documentation
+- Added the required CUSTOMER_UI route, screen, component, token, API, state, accessibility, visual QA, and implementation-status documents under `docs/`.
+
+### Verification
+- Targeted `flutter analyze` passed for the shared shell and dashboard changes.
+- No schema application, seed, or database mutation was run.
+
+## 281. Operations-Owned Customer Banner Contract (2026-08-04 19:10:00 IST)
+
+Replaced the removed static Flutter carousel with a database-backed Operations configuration contract using the existing commercial-settings table. Customer dashboard banners are now parsed from `OPERATIONS_CUSTOMER_BANNERS`, filtered to published, audience-eligible, in-date dashboard placements, and restricted to internal customer routes. No schema change or demo data was introduced.
+
+### Frontend Files
+- `frontend/lib/features/customer/dashboard/domain/entities/dashboard_entity.dart`
+- `frontend/lib/features/customer/dashboard/data/models/dashboard_model.dart`
+- `frontend/lib/features/customer/dashboard/presentation/widgets/marketing_banner_carousel.dart`
+- `frontend/lib/features/customer/dashboard/presentation/screens/dashboard_screen.dart`
+
+### Backend Files
+- `backend/src/dashboard/dashboard.service.ts`
+
+### Verification
+- `npx tsc --noEmit --pretty false` passed in `backend`.
+- Targeted Flutter analysis passed for the dashboard banner widget and model bindings.
+- No schema application, seed, or database mutation was run.
+
+## 282. Customer reward-points ledger screen
+**Timestamp:** 2026-08-04 12:45:00 IST
+
+### Frontend Files
+- `frontend/lib/features/customer/wallet/presentation/screens/reward_points_screen.dart`
+  - Added the authenticated customer reward-points view using the existing wallet controller and only `REWARD_POINTS` ledger entries.
+  - Uses real available balance, loading/error/empty states, pull-to-refresh, and transaction balance calculation; no seeded or cross-account customer values are displayed.
+- `frontend/lib/features/portal/presentation/portal_role_data.dart`
+- `frontend/lib/features/portal/presentation/screens/portal_shell.dart`
+- `frontend/lib/features/customer/shared/widgets/customer_app_bar.dart`
+  - Registered the customer-only Reward Points route and made the authenticated header reward chip navigate to it.
+
+### Backend Files
+- None. The screen deliberately reuses `GET /customer/wallet`, preserving existing server-side identity and ledger scope.
+
+### Verification
+- `flutter analyze lib/features/customer/wallet/presentation/screens/reward_points_screen.dart lib/features/portal/presentation/screens/portal_shell.dart` passed with no issues.
+## 283. Customer privilege-card contract and route
+**Timestamp:** 2026-08-04 14:20:00 IST
+
+### Frontend Files
+- `frontend/lib/features/customer/membership/presentation/screens/privilege_card_screen.dart`
+  - Added a customer-only privilege card that renders the issued card number, status, validity, customer name, and actual backend QR payload.
+  - Shows unavailable/error states when a card or profile is not returned; no generated card, QR token, subscription amount, or physical-card status is invented.
+- `frontend/lib/shared/models/membership.dart`
+- `frontend/lib/features/customer/membership/data/models/membership_model.dart`
+  - Preserve the existing membership bundle's `shieldCard` fields through cache and presentation layers.
+- `frontend/lib/features/portal/presentation/portal_role_data.dart`
+- `frontend/lib/features/portal/presentation/screens/portal_shell.dart`
+- `frontend/lib/features/customer/membership/presentation/screens/membership_screen.dart`
+  - Added the authenticated privilege-card route and only exposes its entry point when the membership bundle has an issued QR payload.
+
+### Backend Files
+- None. Existing `GET /customer/membership` already returns the customer-scoped membership and digital-card fields.
+
+### Documentation
+- Added `docs/customer-ui/CUSTOMER_MEMBERSHIP_API_MATRIX.md` documenting verified customer-safe and unsupported membership/card operations.
+
+### Verification
+- `flutter pub get` passed.
+- Targeted `flutter analyze` passed with no issues.
+### Membership entitlement state
+- The customer membership page explicitly renders subscription entitlement as unavailable until a customer-safe API returns configured plan values. This prevents management-demo constants or inferred financial values from leaking into authenticated customer screens.
+- Targeted Flutter analysis and the membership DTO test passed.
+## 284. Physical-card customer self-scope and status flow
+**Timestamp:** 2026-08-04 14:45:00 IST
+
+### Backend Files
+- `backend/src/customer/customer.controller.ts` applies the shared customer-self authorization guard to card-profile and card-request routes.
+- `backend/src/customer/customer.controller.spec.ts` proves cross-customer card reads and requests are rejected before service access.
+
+### Frontend Files
+- `frontend/lib/features/customer/membership/presentation/screens/privilege_card_screen.dart` renders issued digital cards or real physical-card request/status data.
+- `frontend/lib/shared/services/api_service.dart` requires the authenticated customer ID for card-profile and card-request calls.
+
+### Verification
+- Targeted backend TypeScript validation and `customer.controller.spec.ts` passed.
+- Targeted Flutter analysis and the membership DTO test passed.
+### Physical-card availability wording
+- Corrected the membership screen to advertise the verified physical-card request/status route while retaining explicit unavailable messaging for history and replacement workflows.
+### Privilege-card state correction
+- Corrected the issued-card state so backend action `VIEW_CARD` is not displayed to customers as a physical-card request status.
+### Physical-card request confirmation
+- Replaced the generic success toast with a confirmation dialog that renders the request status returned by the physical-card API, then reloads the customer card profile.
+### Membership screen test coverage
+- Added deterministic widget tests for API-backed membership rendering and membership API errors.
+- The populated test also caught and corrected a missing visible membership-number field in the membership hero.
+## 285. Customer wallet transaction ownership guard
+**Timestamp:** 2026-08-04 15:15:00 IST
+
+### Backend Files
+- `backend/src/wallet/wallet.controller.ts` verifies that a customer owns a wallet before returning transaction rows.
+- `backend/src/wallet/wallet.service.ts` adds the ownership check against the wallet record.
+- `backend/src/wallet/wallet.controller.spec.ts` proves cross-customer wallet transaction access is rejected.
+
+### Frontend Files
+- `frontend/lib/features/customer/wallet/presentation/screens/wallet_screen.dart` removes the unsupported statement-preview action and links to the existing Reward Points route instead.
+
+### Verification
+- Backend TypeScript validation and wallet controller test passed.
+- Targeted Flutter analysis passed.
+## 286. Ledger-authoritative transaction details
+**Timestamp:** 2026-08-04 15:30:00 IST
+
+### Frontend Files
+- `frontend/lib/features/customer/wallet/presentation/widgets/transaction_list.dart` and `transaction_tile.dart` no longer accept or display a client-calculated historical balance.
+- Wallet and Reward Points screens now pass backend transaction records directly to the shared detail renderer.
+- Transaction details show only backend-provided ledger, type, amount, timestamp, remarks and optional reference metadata.
+
+### Verification
+- Targeted Flutter analysis passed with no issues.
+### Customer UI foundation validation
+- Full `flutter analyze` passed with no issues after validating the shared wallet/reward renderer change.
+- Customer membership widget and DTO tests passed (3 tests).
+### Wallet customer-context hardening
+- Wallet transaction access now fails closed when a customer principal lacks a customer ID. The wallet controller test covers this malformed-session path.
+### Reward-points activity normalization
+- Corrected the reward screen filter to use the normalized `POINTS` ledger value emitted by `WalletTransaction.fromJson`, restoring real reward activity rendering.
+## 287. Customer Wallet History Route — 2026-08-04 18:30:00 IST
+- Frontend Files:
+  - Added the customer-scoped `wallet-history` route using the existing wallet response, with the Wallet preview linking only when additional visible records exist.
+  - Removed unsupported recharge and statement action labels instead of presenting placeholder workflows.
+  - Added focused widget coverage for preview and full-history transaction rendering.
+- Why: the existing endpoint already returns customer-scoped transactions; reusing it keeps the flow database-backed and avoids inventing a statement API or client-calculated ledger balance.
+
+## 288. Customer Wellness Catalogue Contract — 2026-08-04 19:00:00 IST
+- Backend Files:
+  - Added authenticated GET /customer/wellness-products, restricted to customer principals and returning only the existing seeded demo catalogue.
+  - Added controller tests for customer access and non-customer rejection.
+- Frontend Files:
+  - Replaced visible hardcoded pharmacy product cards with API-derived catalogue cards and loading, empty, error, and retry states.
+  - Removed visible hardcoded laboratory, home-care, diet-plan, and local-only medicine-request content; unsupported categories now state that no customer-safe catalogue contract exists.
+- Why: customer screens must not simulate products, prices, or persisted requests. The existing idempotent demo seed remains the sole source for demo catalogue records.

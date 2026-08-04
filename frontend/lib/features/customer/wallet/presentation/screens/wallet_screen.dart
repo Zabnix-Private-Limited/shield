@@ -4,12 +4,10 @@ import 'package:go_router/go_router.dart';
 import '../../../../../app/theme/app_colors.dart';
 import '../../../../../app/theme/app_typography.dart';
 import '../../../../../shared/models/customer.dart';
-import '../../../../../shared/models/wallet.dart';
 import '../../../../../shared/services/api_service.dart';
 import '../../../../../shared/utils/app_display_formatters.dart';
 import '../../../../../shared/widgets/app_card.dart';
 import '../../../shared/domain/customer_access_state.dart';
-import '../../../../../shared/widgets/portal_support.dart';
 import '../../../../customer/shared/widgets/error_card.dart';
 import '../controllers/wallet_controller.dart';
 import '../widgets/balance_card.dart';
@@ -19,7 +17,9 @@ import '../widgets/wallet_filters.dart';
 import '../widgets/wallet_shimmer.dart';
 
 class CustomerWalletScreen extends StatefulWidget {
-  const CustomerWalletScreen({super.key});
+  const CustomerWalletScreen({super.key, this.showFullHistory = false});
+
+  final bool showFullHistory;
 
   @override
   State<CustomerWalletScreen> createState() => _CustomerWalletScreenState();
@@ -127,7 +127,12 @@ class _CustomerWalletScreenState extends State<CustomerWalletScreen> {
                     rewardCredits: wallet.statistics.rewardCredits,
                   ),
                   const SizedBox(height: 20),
-                  Text('Recent activity', style: AppTypography.h4),
+                  Text(
+                    widget.showFullHistory
+                        ? 'Wallet history'
+                        : 'Recent activity',
+                    style: AppTypography.h4,
+                  ),
                   const SizedBox(height: 10),
                   WalletFilters(
                     selectedLedger: _selectedLedger,
@@ -140,9 +145,18 @@ class _CustomerWalletScreenState extends State<CustomerWalletScreen> {
                   const SizedBox(height: 12),
                   TransactionList(
                     transactions: visibleTransactions,
-                    ledgerBalanceAfter: (txn) =>
-                        _ledgerBalanceAfter(wallet.recentTransactions, txn),
+                    maxItems: widget.showFullHistory ? null : 6,
                   ),
+                  if (!widget.showFullHistory && visibleTransactions.length > 6)
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: TextButton.icon(
+                        onPressed: () =>
+                            context.go('/portal/customer/wallet-history'),
+                        icon: const Icon(Icons.history_rounded),
+                        label: const Text('View full history'),
+                      ),
+                    ),
                 ],
               ),
             );
@@ -150,25 +164,6 @@ class _CustomerWalletScreenState extends State<CustomerWalletScreen> {
         );
       },
     );
-  }
-
-  double _ledgerBalanceAfter(
-    List<WalletTransaction> transactions,
-    WalletTransaction target,
-  ) {
-    final sameLedger =
-        transactions
-            .where((txn) => txn.subLedgerType == target.subLedgerType)
-            .toList()
-          ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
-    var balance = 0.0;
-    for (final txn in sameLedger) {
-      balance += txn.isCredit ? txn.amount : -txn.amount;
-      if (txn.id == target.id) {
-        return balance;
-      }
-    }
-    return balance;
   }
 }
 
@@ -564,14 +559,13 @@ class _WalletActions extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final singleWidth = constraints.maxWidth;
         final twoColumnWidth = constraints.maxWidth >= 280
             ? (constraints.maxWidth - 12) / 2
-            : singleWidth;
+            : constraints.maxWidth;
 
-        Widget action(String label, VoidCallback onTap, {bool full = false}) {
+        Widget action(String label, VoidCallback onTap) {
           return SizedBox(
-            width: full ? singleWidth : twoColumnWidth,
+            width: twoColumnWidth,
             child: Material(
               color: AppColors.white.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(14),
@@ -608,35 +602,8 @@ class _WalletActions extends StatelessWidget {
               () => context.go('/portal/customer/profile'),
             ),
             action(
-              'Open statement',
-              () => showPortalDetailsSheet(
-                context,
-                title: 'Wallet statement preview',
-                subtitle:
-                    'Detailed statements stay grouped inside the customer wallet flow until export APIs are wired.',
-                meta: 'Customer wallet',
-                status: 'Live ledger',
-                highlights: const [
-                  'Cash and points entries remain separated by sub-ledger type.',
-                  'Statement export can later connect here without changing the customer route structure.',
-                ],
-              ),
-            ),
-            action(
-              'Points rules',
-              () => showPortalDetailsSheet(
-                context,
-                title: 'Points wallet rules',
-                subtitle:
-                    'Referral, loyalty, and promotional points stay separate from cash.',
-                meta: 'Customer wallet',
-                status: 'Policy',
-                highlights: const [
-                  'Referral points credit only after the referred member is approved.',
-                  'Wallet cash remains branch-restricted only for Hyper Pharmacy usage where applicable.',
-                ],
-              ),
-              full: true,
+              'View reward points',
+              () => context.go('/portal/customer/rewards'),
             ),
           ],
         );

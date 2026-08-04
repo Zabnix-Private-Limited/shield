@@ -410,6 +410,15 @@ class ApiService {
     ).map((item) => Map<String, dynamic>.from(item as Map)).toList();
   }
 
+  static Future<List<Map<String, dynamic>>>
+  getCustomerWellnessProducts() async {
+    _requireCustomerId();
+    final response = await _dio.get('/customer/wellness-products');
+    return _readEnvelopeList(
+      response,
+    ).map((item) => Map<String, dynamic>.from(item as Map)).toList();
+  }
+
   static Future<Map<String, dynamic>> saveAppointmentPrescriptionDraft(
     String appointmentId,
     Map<String, dynamic> payload,
@@ -787,13 +796,21 @@ class ApiService {
 
   static Future<Map<String, dynamic>> getCustomerCardProfile(
     String customerId,
-  ) async =>
-      _readEnvelope(await _dio.get('/customers/$customerId/card-profile'));
+  ) async {
+    final resolvedCustomerId = _requireCustomerId(customerId);
+    return _readEnvelope(
+      await _dio.get('/customers/$resolvedCustomerId/card-profile'),
+    );
+  }
 
   static Future<Map<String, dynamic>> requestCustomerPhysicalCard(
     String customerId,
-  ) async =>
-      _readEnvelope(await _dio.post('/customers/$customerId/card-requests'));
+  ) async {
+    final resolvedCustomerId = _requireCustomerId(customerId);
+    return _readEnvelope(
+      await _dio.post('/customers/$resolvedCustomerId/card-requests'),
+    );
+  }
 
   static Future<Map<String, dynamic>> createCustomer(
     Map<String, dynamic> payload,

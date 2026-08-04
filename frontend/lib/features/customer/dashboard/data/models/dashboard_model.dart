@@ -19,6 +19,7 @@ class DashboardModel extends DashboardEntity with EquatableMixin {
     required super.recentActivity,
     required super.documents,
     required super.notifications,
+    required super.banners,
     required super.quickActions,
     required super.services,
   });
@@ -74,6 +75,19 @@ class DashboardModel extends DashboardEntity with EquatableMixin {
           .map(
             (item) => NotificationModel.fromJson(
               Map<String, dynamic>.from(item as Map),
+            ),
+          )
+          .toList(),
+      banners: (json['banners'] as List? ?? const [])
+          .map(
+            (item) => DashboardBannerEntity(
+              id: (item as Map)['id'].toString(),
+              title: item['title'].toString(),
+              subtitle: item['subtitle'].toString(),
+              imageUrl: item['imageUrl'].toString(),
+              altText: item['altText'].toString(),
+              ctaLabel: item['ctaLabel'].toString(),
+              ctaRoute: item['ctaRoute'].toString(),
             ),
           )
           .toList(),
@@ -218,6 +232,19 @@ class DashboardModel extends DashboardEntity with EquatableMixin {
             },
           )
           .toList(),
+      'banners': banners
+          .map(
+            (item) => {
+              'id': item.id,
+              'title': item.title,
+              'subtitle': item.subtitle,
+              'imageUrl': item.imageUrl,
+              'altText': item.altText,
+              'ctaLabel': item.ctaLabel,
+              'ctaRoute': item.ctaRoute,
+            },
+          )
+          .toList(),
       'quickActions': quickActions
           .map(
             (item) => {
@@ -255,6 +282,7 @@ class DashboardModel extends DashboardEntity with EquatableMixin {
     recentActivity,
     documents,
     notifications,
+    banners,
     quickActions,
     services,
   ];

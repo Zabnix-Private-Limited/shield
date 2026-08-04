@@ -13,6 +13,7 @@ class DashboardEntity {
   final List<WalletTransaction> recentActivity;
   final List<Document> documents;
   final List<NotificationModel> notifications;
+  final List<DashboardBannerEntity> banners;
   final List<DashboardQuickActionEntity> quickActions;
   final List<DashboardServiceEntity> services;
 
@@ -24,9 +25,30 @@ class DashboardEntity {
     required this.recentActivity,
     required this.documents,
     required this.notifications,
+    required this.banners,
     required this.quickActions,
     required this.services,
   });
+}
+
+class DashboardBannerEntity {
+  const DashboardBannerEntity({
+    required this.id,
+    required this.title,
+    required this.subtitle,
+    required this.imageUrl,
+    required this.altText,
+    required this.ctaLabel,
+    required this.ctaRoute,
+  });
+
+  final String id;
+  final String title;
+  final String subtitle;
+  final String imageUrl;
+  final String altText;
+  final String ctaLabel;
+  final String ctaRoute;
 }
 
 class DashboardWalletSummary {

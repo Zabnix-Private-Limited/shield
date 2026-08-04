@@ -1,10 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_typography.dart';
+import '../../../../shared/utils/app_display_formatters.dart';
+import '../../../../shared/widgets/shield_brand_lockup.dart';
+import '../../dashboard/presentation/controllers/dashboard_controller.dart';
 import '../../../portal/presentation/portal_role_data.dart';
+import '../theme/customer_design_tokens.dart';
 
-class CustomerAppBar extends StatelessWidget {
+class CustomerAppBar extends StatefulWidget {
   final PortalRoleData portal;
   final PortalSectionData section;
   final VoidCallback? onMenuPressed;
@@ -19,30 +24,293 @@ class CustomerAppBar extends StatelessWidget {
   });
 
   @override
+  State<CustomerAppBar> createState() => _CustomerAppBarState();
+}
+
+class _CustomerAppBarState extends State<CustomerAppBar> {
+  late final DashboardController _dashboardController;
+
+  bool get _isMainPage => const {
+    'dashboard',
+    'services',
+    'appointments',
+    'profile',
+  }.contains(widget.section.key);
+
+  @override
+  void initState() {
+    super.initState();
+    _dashboardController = DashboardController()..load();
+  }
+
+  @override
+  void dispose() {
+    _dashboardController.dispose();
+    super.dispose();
+  }
+
+  void _goBack(BuildContext context) {
+    if (context.canPop()) {
+      context.pop();
+      return;
+    }
+    context.go('/portal/customer/dashboard');
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!_isMainPage) {
+      return _SubPageHeader(
+        title: widget.section.title,
+        onBack: () => _goBack(context),
+        trailing: widget.trailing,
+      );
+    }
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 8),
+      child: ListenableBuilder(
+        listenable: _dashboardController,
+        builder: (context, _) => _CustomerMainHeader(
+          onMenuPressed: widget.onMenuPressed,
+          onNotificationsPressed: () =>
+              context.go('/portal/customer/notifications'),
+          onWalletPressed: () => context.go('/portal/customer/wallet'),
+          onRewardsPressed: () => context.go('/portal/customer/rewards'),
+          cashBalance: _dashboardController.dashboard?.wallet.cashBalance,
+          rewardPoints: _dashboardController.dashboard?.wallet.pointsBalance,
+          unreadNotifications: _dashboardController.dashboard?.notifications
+              .where((item) => !item.isRead)
+              .length,
+          isLoading:
+              _dashboardController.isLoading && !_dashboardController.hasData,
+          hasError:
+              _dashboardController.error != null &&
+              !_dashboardController.hasData,
+          onRetry: _dashboardController.load,
+        ),
+      ),
+    );
+  }
+}
+
+class _SubPageHeader extends StatelessWidget {
+  const _SubPageHeader({
+    required this.title,
+    required this.onBack,
+    this.trailing,
+  });
+
+  final String title;
+  final VoidCallback onBack;
+  final Widget? trailing;
+
+  @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
+      padding: const EdgeInsets.fromLTRB(8, 10, 16, 8),
       child: Row(
         children: [
           IconButton(
-            onPressed: onMenuPressed,
-            icon: const Icon(Icons.menu_rounded),
-            style: IconButton.styleFrom(
-              backgroundColor: AppColors.white,
-              foregroundColor: AppColors.shieldNavy,
-            ),
+            onPressed: onBack,
+            icon: const Icon(Icons.arrow_back_rounded),
+            tooltip: 'Back',
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 4),
           Expanded(
             child: Text(
-              section.title,
+              title,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: AppTypography.h4.copyWith(fontWeight: FontWeight.w700),
+              style: CustomerDesignTokens.sectionTitle,
             ),
           ),
-          if (trailing != null) ...[const SizedBox(width: 12), trailing!],
+          if (trailing != null) trailing!,
         ],
+      ),
+    );
+  }
+}
+
+class _CustomerMainHeader extends StatelessWidget {
+  const _CustomerMainHeader({
+    required this.onMenuPressed,
+    required this.onNotificationsPressed,
+    required this.onWalletPressed,
+    required this.onRewardsPressed,
+    required this.cashBalance,
+    required this.rewardPoints,
+    required this.unreadNotifications,
+    required this.isLoading,
+    required this.hasError,
+    required this.onRetry,
+  });
+
+  final VoidCallback? onMenuPressed;
+  final VoidCallback onNotificationsPressed;
+  final VoidCallback onWalletPressed;
+  final VoidCallback onRewardsPressed;
+  final double? cashBalance;
+  final double? rewardPoints;
+  final int? unreadNotifications;
+  final bool isLoading;
+  final bool hasError;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final narrow = MediaQuery.sizeOf(context).width < 430;
+    final cashLabel = cashBalance == null
+        ? (isLoading ? 'Loading' : '₹0')
+        : AppDisplayFormatters.formatCurrencyString(
+            cashBalance!.toStringAsFixed(0),
+          );
+    final rewardLabel = rewardPoints == null
+        ? (isLoading ? 'Loading' : '0')
+        : rewardPoints!.toStringAsFixed(0);
+
+    return Row(
+      children: [
+        IconButton(
+          onPressed: onMenuPressed,
+          icon: const Icon(Icons.menu_rounded),
+          tooltip: 'Open navigation menu',
+          style: IconButton.styleFrom(
+            backgroundColor: CustomerDesignTokens.surface,
+            foregroundColor: AppColors.shieldNavy,
+          ),
+        ),
+        const SizedBox(width: 8),
+        const ShieldBrandLockup(compact: true),
+        const Spacer(),
+        _HeaderBalanceChip(
+          icon: Icons.account_balance_wallet_rounded,
+          label: narrow ? null : 'Cash Wallet',
+          value: cashLabel,
+          color: CustomerDesignTokens.cash,
+          onTap: onWalletPressed,
+        ),
+        const SizedBox(width: 8),
+        _HeaderBalanceChip(
+          icon: Icons.workspace_premium_rounded,
+          label: narrow ? null : 'Reward Points',
+          value: narrow ? rewardLabel : '$rewardLabel pts',
+          color: CustomerDesignTokens.reward,
+          onTap: onRewardsPressed,
+        ),
+        Stack(
+          clipBehavior: Clip.none,
+          children: [
+            IconButton(
+              onPressed: hasError ? onRetry : onNotificationsPressed,
+              icon: Icon(
+                hasError
+                    ? Icons.refresh_rounded
+                    : Icons.notifications_none_rounded,
+              ),
+              tooltip: hasError ? 'Retry account summary' : 'Notifications',
+              color: AppColors.shieldNavy,
+            ),
+            if (!hasError && (unreadNotifications ?? 0) > 0)
+              Positioned(
+                right: 6,
+                top: 4,
+                child: Container(
+                  constraints: const BoxConstraints(
+                    minWidth: 17,
+                    minHeight: 17,
+                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  alignment: Alignment.center,
+                  decoration: const BoxDecoration(
+                    color: AppColors.shieldBlue,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Text(
+                    '${(unreadNotifications ?? 0).clamp(0, 9)}',
+                    style: AppTypography.tiny.copyWith(
+                      color: AppColors.white,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _HeaderBalanceChip extends StatelessWidget {
+  const _HeaderBalanceChip({
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.color,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String? label;
+  final String value;
+  final Color color;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: CustomerDesignTokens.surface,
+      borderRadius: BorderRadius.circular(CustomerDesignTokens.controlRadius),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(CustomerDesignTokens.controlRadius),
+        child: Container(
+          constraints: const BoxConstraints(minHeight: 48),
+          padding: EdgeInsets.symmetric(
+            horizontal: label == null ? 10 : 12,
+            vertical: 7,
+          ),
+          decoration: BoxDecoration(
+            border: Border.all(color: CustomerDesignTokens.border),
+            borderRadius: BorderRadius.circular(
+              CustomerDesignTokens.controlRadius,
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 20, color: color),
+              if (label != null) ...[
+                const SizedBox(width: 7),
+                Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(label!, style: CustomerDesignTokens.caption),
+                    Text(
+                      value,
+                      style: AppTypography.small.copyWith(
+                        color: color,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ],
+                ),
+              ] else ...[
+                const SizedBox(width: 5),
+                Text(
+                  value,
+                  style: AppTypography.tiny.copyWith(
+                    color: color,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
       ),
     );
   }

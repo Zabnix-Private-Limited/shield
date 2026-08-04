@@ -17,9 +17,11 @@ import '../../../admin/presentation/screens/admin_portal_workspace.dart';
 import '../../../customer/dashboard/presentation/screens/dashboard_screen.dart';
 import '../../../customer/documents/presentation/screens/customer_documents_screen.dart';
 import '../../../customer/membership/presentation/screens/membership_screen.dart';
+import '../../../customer/membership/presentation/screens/privilege_card_screen.dart';
 import '../../../customer/prescriptions/presentation/screens/customer_prescriptions_screen.dart';
 import '../../../customer/shared/domain/customer_access_state.dart';
 import '../../../customer/wallet/presentation/screens/wallet_screen.dart';
+import '../../../customer/wallet/presentation/screens/reward_points_screen.dart';
 import '../../../provider/customers/presentation/screens/provider_customers_screen.dart';
 import '../../../provider/dashboard/presentation/screens/provider_dashboard_screen.dart';
 import '../../../provider/profile/presentation/screens/provider_profile_screen.dart';
@@ -509,6 +511,8 @@ class _RoleContent extends StatelessWidget {
         portal.role == SHIELDRole.customer && section.key == 'dashboard';
     final isCustomerMembership =
         portal.role == SHIELDRole.customer && section.key == 'membership';
+    final isCustomerPrivilegeCard =
+        portal.role == SHIELDRole.customer && section.key == 'privilege-card';
     final isCustomerServices =
         portal.role == SHIELDRole.customer && section.key == 'services';
     final isCustomerAppointments =
@@ -521,6 +525,10 @@ class _RoleContent extends StatelessWidget {
         portal.role == SHIELDRole.customer && section.key == 'prescriptions';
     final isCustomerWallet =
         portal.role == SHIELDRole.customer && section.key == 'wallet';
+    final isCustomerWalletHistory =
+        portal.role == SHIELDRole.customer && section.key == 'wallet-history';
+    final isCustomerRewards =
+        portal.role == SHIELDRole.customer && section.key == 'rewards';
     final isCustomerSettings =
         portal.role == SHIELDRole.customer && section.key == 'settings';
     final isAgentRole = portal.role == SHIELDRole.agent;
@@ -553,6 +561,8 @@ class _RoleContent extends StatelessWidget {
       content = const CustomerDashboardScreen();
     } else if (isCustomerMembership) {
       content = const CustomerMembershipScreen();
+    } else if (isCustomerPrivilegeCard) {
+      content = const CustomerPrivilegeCardScreen();
     } else if (isCustomerServices) {
       content = const _CustomerServicesView();
     } else if (isCustomerAppointments) {
@@ -574,6 +584,10 @@ class _RoleContent extends StatelessWidget {
       );
     } else if (isCustomerWallet) {
       content = const CustomerWalletScreen();
+    } else if (isCustomerWalletHistory) {
+      content = const CustomerWalletScreen(showFullHistory: true);
+    } else if (isCustomerRewards) {
+      content = const CustomerRewardPointsScreen();
     } else if (isCustomerSettings) {
       content = const _CustomerSettingsView();
     } else if (isAgentRole) {
@@ -597,7 +611,12 @@ class _RoleContent extends StatelessWidget {
     }
 
     final customerContentOwnsScroll =
-        isCustomerDashboard || isCustomerMembership || isCustomerWallet;
+        isCustomerDashboard ||
+        isCustomerMembership ||
+        isCustomerPrivilegeCard ||
+        isCustomerWallet ||
+        isCustomerWalletHistory ||
+        isCustomerRewards;
 
     if (portal.role == SHIELDRole.customer && customerContentOwnsScroll) {
       return AppPageFrame(
@@ -1004,32 +1023,25 @@ class _CustomerPortalNav extends StatelessWidget {
     required this.inDrawer,
   });
 
-  static const List<List<String>> _groups = [
-    ['dashboard', 'wallet', 'services', 'appointments', 'documents'],
-    ['membership', 'profile', 'prescriptions'],
-    ['notifications', 'settings'],
+  static const List<MapEntry<String, List<String>>> _groups = [
+    MapEntry('Main', ['dashboard', 'membership', 'wallet', 'rewards']),
+    MapEntry('Healthcare', [
+      'services',
+      'appointments',
+      'documents',
+      'prescriptions',
+    ]),
+    MapEntry('Account', ['profile', 'notifications', 'settings']),
   ];
 
   @override
   Widget build(BuildContext context) {
-    final content = FutureBuilder<List<dynamic>>(
-      future: Future.wait<dynamic>([
-        ApiService.getCustomerProfile(
-          ApiService.requireAuthenticatedCustomerId(),
-        ),
-        ApiService.getWalletProfile(
-          ApiService.requireAuthenticatedCustomerId(),
-        ),
-      ]),
+    final content = FutureBuilder<Customer>(
+      future: ApiService.getCustomerProfile(
+        ApiService.requireAuthenticatedCustomerId(),
+      ),
       builder: (context, snapshot) {
-        final customer = snapshot.hasData
-            ? snapshot.data![0] as Customer
-            : null;
-        final wallet = snapshot.hasData
-            ? snapshot.data![1] as Map<String, dynamic>
-            : const <String, dynamic>{};
-        final balance =
-            double.tryParse(wallet['balance']?.toString() ?? '0') ?? 0.0;
+        final customer = snapshot.data;
         final accessState = customer == null
             ? null
             : CustomerAccessState(
@@ -1084,44 +1096,6 @@ class _CustomerPortalNav extends StatelessWidget {
                         color: AppColors.darkGray,
                       ),
                     ),
-                    const SizedBox(height: 10),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 10,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppColors.lightGray,
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: Row(
-                        children: [
-                          const Icon(
-                            Icons.account_balance_wallet_outlined,
-                            color: AppColors.shieldBlue,
-                            size: 18,
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              accessState?.serviceAccessEnabled == true
-                                  ? 'Wallet balance'
-                                  : 'Wallet unlocks after card issue',
-                              style: AppTypography.tiny.copyWith(
-                                color: AppColors.gray,
-                              ),
-                            ),
-                          ),
-                          Text(
-                            '₹${balance.toStringAsFixed(0)}',
-                            style: AppTypography.small.copyWith(
-                              color: AppColors.shieldBlue,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
                   ],
                 ),
               ),
@@ -1135,7 +1109,8 @@ class _CustomerPortalNav extends StatelessWidget {
                     child: Divider(height: 1),
                   ),
                   itemBuilder: (context, groupIndex) {
-                    final groupKeys = _groups[groupIndex];
+                    final group = _groups[groupIndex];
+                    final groupKeys = group.value;
                     final items = groupKeys
                         .map(
                           (key) => portal.sections.firstWhere(
@@ -1147,50 +1122,66 @@ class _CustomerPortalNav extends StatelessWidget {
                         .toList();
 
                     return Column(
-                      children: items.map((section) {
-                        final isActive = section.key == activeSectionKey;
-                        return Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 2,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(26, 0, 20, 6),
+                          child: Text(
+                            group.key.toUpperCase(),
+                            style: AppTypography.tiny.copyWith(
+                              color: AppColors.gray,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 0.8,
+                            ),
                           ),
-                          child: InkWell(
-                            borderRadius: BorderRadius.circular(16),
-                            onTap: () {
-                              if (inDrawer) {
-                                Navigator.pop(context);
-                              }
-                              context.go(
-                                '/portal/${portal.role.routeKey}/${section.key}',
-                              );
-                            },
-                            child: Container(
-                              width: double.infinity,
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 14,
-                                vertical: 12,
-                              ),
-                              decoration: BoxDecoration(
-                                color: isActive
-                                    ? portal.accentColor.withValues(alpha: 0.12)
-                                    : AppColors.transparent,
-                                borderRadius: BorderRadius.circular(16),
-                              ),
-                              child: Text(
-                                section.title,
-                                style: AppTypography.body.copyWith(
+                        ),
+                        ...items.map((section) {
+                          final isActive = section.key == activeSectionKey;
+                          return Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 2,
+                            ),
+                            child: InkWell(
+                              borderRadius: BorderRadius.circular(16),
+                              onTap: () {
+                                if (inDrawer) {
+                                  Navigator.pop(context);
+                                }
+                                context.go(
+                                  '/portal/${portal.role.routeKey}/${section.key}',
+                                );
+                              },
+                              child: Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 14,
+                                  vertical: 12,
+                                ),
+                                decoration: BoxDecoration(
                                   color: isActive
-                                      ? portal.accentColor
-                                      : AppColors.darkGray,
-                                  fontWeight: isActive
-                                      ? FontWeight.w700
-                                      : FontWeight.w500,
+                                      ? portal.accentColor.withValues(
+                                          alpha: 0.12,
+                                        )
+                                      : AppColors.transparent,
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                                child: Text(
+                                  section.title,
+                                  style: AppTypography.body.copyWith(
+                                    color: isActive
+                                        ? portal.accentColor
+                                        : AppColors.darkGray,
+                                    fontWeight: isActive
+                                        ? FontWeight.w700
+                                        : FontWeight.w500,
+                                  ),
                                 ),
                               ),
                             ),
-                          ),
-                        );
-                      }).toList(),
+                          );
+                        }),
+                      ],
                     );
                   },
                 ),
@@ -5969,6 +5960,7 @@ class _CustomerServicesView extends StatefulWidget {
 class _CustomerServicesViewState extends State<_CustomerServicesView> {
   late Future<Customer> _customerFuture;
   late Future<List<Map<String, dynamic>>> _providersFuture;
+  late Future<List<Map<String, dynamic>>> _wellnessProductsFuture;
   String _activeTab =
       'PHARMACY'; // 'PHARMACY', 'LAB', 'HOMECARE', 'CONSULTATION'
   String _uploadStatus = 'No files selected';
@@ -5995,6 +5987,7 @@ class _CustomerServicesViewState extends State<_CustomerServicesView> {
       ApiService.requireAuthenticatedCustomerId(),
     );
     _providersFuture = ApiService.getProviders();
+    _wellnessProductsFuture = ApiService.getCustomerWellnessProducts();
   }
 
   @override
@@ -6169,6 +6162,7 @@ class _CustomerServicesViewState extends State<_CustomerServicesView> {
     );
   }
 
+  // ignore: unused_element
   Widget _buildManualMedicineComposer() {
     return Container(
       width: double.infinity,
@@ -6240,6 +6234,7 @@ class _CustomerServicesViewState extends State<_CustomerServicesView> {
     );
   }
 
+  // ignore: unused_element
   Widget _buildEditablePrescriptionList() {
     if (_editablePrescriptionItems.isEmpty) {
       return const SizedBox.shrink();
@@ -6693,24 +6688,6 @@ class _CustomerServicesViewState extends State<_CustomerServicesView> {
   }
 
   Widget _buildPendingProductPreview() {
-    const products = [
-      {
-        'name': 'Omega-3 Fish Oil',
-        'price': '₹650.00',
-        'desc': 'Heart and joint health',
-      },
-      {
-        'name': 'Vitamin D3 60K',
-        'price': '₹150.00',
-        'desc': 'Bone strength support',
-      },
-      {
-        'name': 'Multi-Vitamin Daily',
-        'price': '₹240.00',
-        'desc': 'Loaded wellness support',
-      },
-    ];
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -6724,61 +6701,123 @@ class _CustomerServicesViewState extends State<_CustomerServicesView> {
           secondaryRoute: '/portal/customer/profile',
         ),
         const SizedBox(height: 18),
-        Text('Loaded products', style: AppTypography.h4),
+        Text('Wellness catalogue', style: AppTypography.h4),
         const SizedBox(height: 12),
-        ...products.map(
-          (product) => Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: AppCard(
-              padding: const EdgeInsets.all(16),
-              child: Row(
-                children: [
-                  Container(
-                    width: 44,
-                    height: 44,
-                    decoration: BoxDecoration(
-                      color: AppColors.shieldBlue.withValues(alpha: 0.08),
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    child: const Icon(
-                      Icons.local_pharmacy_outlined,
-                      color: AppColors.shieldBlue,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          product['name']!,
-                          style: AppTypography.body.copyWith(
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          product['desc']!,
-                          style: AppTypography.small.copyWith(
-                            color: AppColors.gray,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Text(
-                    product['price']!,
-                    style: AppTypography.small.copyWith(
-                      color: AppColors.shieldNavy,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
+        _buildWellnessCatalogue(),
       ],
+    );
+  }
+
+  Widget _buildWellnessCatalogue() {
+    return FutureBuilder<List<Map<String, dynamic>>>(
+      future: _wellnessProductsFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const LinearProgressIndicator(minHeight: 2);
+        }
+        if (snapshot.hasError) {
+          return AppCard(
+            child: Row(
+              children: [
+                const Icon(Icons.cloud_off_outlined, color: AppColors.gray),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'The wellness catalogue could not be loaded.',
+                    style: AppTypography.small.copyWith(color: AppColors.gray),
+                  ),
+                ),
+                TextButton(
+                  onPressed: () => setState(
+                    () => _wellnessProductsFuture =
+                        ApiService.getCustomerWellnessProducts(),
+                  ),
+                  child: const Text('Retry'),
+                ),
+              ],
+            ),
+          );
+        }
+
+        final products = snapshot.data ?? const <Map<String, dynamic>>[];
+        if (products.isEmpty) {
+          return AppCard(
+            child: Text(
+              'No wellness products are available right now.',
+              style: AppTypography.small.copyWith(color: AppColors.gray),
+            ),
+          );
+        }
+
+        return Column(
+          children: products.map((product) {
+            final name =
+                product['productName']?.toString() ?? 'Wellness product';
+            final unit = product['unit']?.toString();
+            final price = num.tryParse(
+              product['sellingPrice']?.toString() ?? '',
+            );
+            final priceLabel = price == null
+                ? 'Price unavailable'
+                : NumberFormat.currency(
+                    locale: 'en_IN',
+                    symbol: '₹',
+                  ).format(price);
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: AppCard(
+                padding: const EdgeInsets.all(14),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 42,
+                      height: 42,
+                      decoration: BoxDecoration(
+                        color: AppColors.shieldBlue.withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: const Icon(
+                        Icons.health_and_safety_outlined,
+                        color: AppColors.shieldBlue,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            name,
+                            style: AppTypography.body.copyWith(
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          if (unit != null && unit.isNotEmpty) ...[
+                            const SizedBox(height: 3),
+                            Text(
+                              unit,
+                              style: AppTypography.tiny.copyWith(
+                                color: AppColors.gray,
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                    Text(
+                      priceLabel,
+                      style: AppTypography.small.copyWith(
+                        color: AppColors.shieldNavy,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }).toList(),
+        );
+      },
     );
   }
 
@@ -6798,30 +6837,8 @@ class _CustomerServicesViewState extends State<_CustomerServicesView> {
   }
 
   Widget _buildPharmacyContent() {
-    final regularProducts = [
-      {'name': 'Paracetamol 650mg', 'qty': '15 tablets', 'price': '₹45.00'},
-      {'name': 'Metformin 500mg', 'qty': '30 tablets', 'price': '₹90.00'},
-      {'name': 'Atorvastatin 10mg', 'qty': '10 tablets', 'price': '₹120.00'},
-      {'name': 'Multi-Vitamin Daily', 'qty': '30 capsules', 'price': '₹240.00'},
-    ];
-
-    final recommendedProducts = [
-      {
-        'name': 'Omega-3 Fish Oil',
-        'price': '₹650.00',
-        'desc': 'Heart and joint health',
-      },
-      {
-        'name': 'Vitamin D3 60K',
-        'price': '₹150.00',
-        'desc': 'Bone strength support',
-      },
-      {
-        'name': 'Probiotics Active',
-        'price': '₹380.00',
-        'desc': 'Digestive health boost',
-      },
-    ];
+    const regularProducts = <Map<String, String>>[];
+    const recommendedProducts = <Map<String, String>>[];
 
     return Column(
       key: const ValueKey('PHARMACY_VIEW'),
@@ -6988,7 +7005,7 @@ class _CustomerServicesViewState extends State<_CustomerServicesView> {
                         ),
                         const SizedBox(height: 12),
                         Text(
-                          'Upload a prescription above, or add the medicines and products you want below.',
+                          'Prescription uploads are saved to your customer records for review.',
                           style: AppTypography.tiny.copyWith(
                             color: AppColors.gray,
                           ),
@@ -6996,12 +7013,6 @@ class _CustomerServicesViewState extends State<_CustomerServicesView> {
                       ],
                     ),
                   ),
-                  const SizedBox(height: 14),
-                  _buildManualMedicineComposer(),
-                  if (_editablePrescriptionItems.isNotEmpty) ...[
-                    const SizedBox(height: 16),
-                    _buildEditablePrescriptionList(),
-                  ],
                 ],
               );
             },
@@ -7010,7 +7021,7 @@ class _CustomerServicesViewState extends State<_CustomerServicesView> {
         const SizedBox(height: 24),
 
         // Regularly purchased products
-        Text('Regularly Purchased Products', style: AppTypography.h4),
+        const SizedBox.shrink(),
         const SizedBox(height: 12),
         LayoutBuilder(
           builder: (context, constraints) {
@@ -7106,10 +7117,10 @@ class _CustomerServicesViewState extends State<_CustomerServicesView> {
         const SizedBox(height: 24),
 
         // Patient recommendations slider
-        Text('Suggestions Other Patients Buy', style: AppTypography.h4),
+        const SizedBox.shrink(),
         const SizedBox(height: 12),
         SizedBox(
-          height: 160,
+          height: 0,
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
             physics: const BouncingScrollPhysics(),
@@ -7178,45 +7189,25 @@ class _CustomerServicesViewState extends State<_CustomerServicesView> {
             },
           ),
         ),
+        const SizedBox(height: 12),
+        _buildWellnessCatalogue(),
       ],
     );
   }
 
   Widget _buildLabContent() {
-    final labTests = [
-      {
-        'name': 'Complete Blood Count (CBC)',
-        'price': '₹350.00',
-        'time': 'Reports in 12 hours',
-      },
-      {
-        'name': 'Lipid Profile (Cholesterol)',
-        'price': '₹600.00',
-        'time': 'Reports in 12 hours',
-      },
-      {
-        'name': 'HbA1c (Diabetic Sugar)',
-        'price': '₹450.00',
-        'time': 'Reports in 8 hours',
-      },
-      {
-        'name': 'Thyroid Profile (T3, T4, TSH)',
-        'price': '₹550.00',
-        'time': 'Reports in 24 hours',
-      },
-      {
-        'name': 'Renal/Kidney Function Test',
-        'price': '₹500.00',
-        'time': 'Reports in 12 hours',
-      },
-    ];
+    const labTests = <Map<String, String>>[];
 
     return Column(
       key: const ValueKey('LAB_VIEW'),
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Laboratory Services Directory', style: AppTypography.h4),
+        Text('Laboratory services unavailable', style: AppTypography.h4),
         const SizedBox(height: 12),
+        Text(
+          'A customer-safe laboratory catalogue is not configured yet.',
+          style: AppTypography.small.copyWith(color: AppColors.gray),
+        ),
         ...labTests.map((test) {
           return Padding(
             padding: const EdgeInsets.only(bottom: 12),
@@ -7298,35 +7289,18 @@ class _CustomerServicesViewState extends State<_CustomerServicesView> {
   }
 
   Widget _buildHomeCareContent() {
-    final homeServices = [
-      {
-        'name': 'Nursing Home Visit',
-        'desc': 'General nursing care, vital checks, injections',
-        'price': '₹500 / visit',
-      },
-      {
-        'name': 'Diabetic Wound Dressing',
-        'desc': 'Surgical dressing + blood glucose monitoring',
-        'price': '₹600 / visit',
-      },
-      {
-        'name': 'Physiotherapy Session',
-        'desc': 'Post-stroke, orthopaedic rehabilitation',
-        'price': '₹800 / session',
-      },
-      {
-        'name': 'Elderly Care Companion',
-        'desc': 'Assisted checkups and medicine management',
-        'price': '₹400 / visit',
-      },
-    ];
+    const homeServices = <Map<String, String>>[];
 
     return Column(
       key: const ValueKey('HOMECARE_VIEW'),
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Home Care Services Directory', style: AppTypography.h4),
+        Text('Home care services unavailable', style: AppTypography.h4),
         const SizedBox(height: 12),
+        Text(
+          'A customer-safe home-care catalogue is not configured yet.',
+          style: AppTypography.small.copyWith(color: AppColors.gray),
+        ),
         ...homeServices.map((srv) {
           return Padding(
             padding: const EdgeInsets.only(bottom: 12),
@@ -7427,28 +7401,7 @@ class _CustomerServicesViewState extends State<_CustomerServicesView> {
       },
     ];
 
-    final dietPlans = [
-      {
-        'name': 'Diabetic-Friendly Diet',
-        'cal': '1600 kcal',
-        'focus': 'Low Glycemic Index, fiber rich',
-      },
-      {
-        'name': 'Hypertension Management Plan',
-        'cal': '1800 kcal',
-        'focus': 'Low sodium, DASH-compliant',
-      },
-      {
-        'name': 'Weight Loss Plan',
-        'cal': '1400 kcal',
-        'focus': 'Caloric deficit, high protein',
-      },
-      {
-        'name': 'High-Protein Active Diet',
-        'cal': '2200 kcal',
-        'focus': 'Muscle recovery, complex carbs',
-      },
-    ];
+    const dietPlans = <Map<String, String>>[];
 
     return Column(
       key: const ValueKey('CONSULTATION_VIEW'),

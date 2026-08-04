@@ -8,11 +8,11 @@ class TransactionList extends StatelessWidget {
   const TransactionList({
     super.key,
     required this.transactions,
-    required this.ledgerBalanceAfter,
+    this.maxItems = 6,
   });
 
   final List<WalletTransaction> transactions;
-  final double Function(WalletTransaction transaction) ledgerBalanceAfter;
+  final int? maxItems;
 
   @override
   Widget build(BuildContext context) {
@@ -21,15 +21,11 @@ class TransactionList extends StatelessWidget {
     }
 
     return Column(
-      children: transactions
-          .take(6)
+      children: (maxItems == null ? transactions : transactions.take(maxItems!))
           .map(
             (txn) => Padding(
               padding: const EdgeInsets.only(bottom: 10),
-              child: TransactionTile(
-                transaction: txn,
-                ledgerBalanceAfter: ledgerBalanceAfter,
-              ),
+              child: TransactionTile(transaction: txn),
             ),
           )
           .toList(),

@@ -12,7 +12,9 @@ import '../../../../customer/shared/widgets/error_card.dart';
 import '../controllers/membership_controller.dart';
 
 class CustomerMembershipScreen extends StatefulWidget {
-  const CustomerMembershipScreen({super.key});
+  const CustomerMembershipScreen({super.key, this.controller});
+
+  final MembershipController? controller;
 
   @override
   State<CustomerMembershipScreen> createState() =>
@@ -21,16 +23,21 @@ class CustomerMembershipScreen extends StatefulWidget {
 
 class _CustomerMembershipScreenState extends State<CustomerMembershipScreen> {
   late final MembershipController _controller;
+  late final bool _ownsController;
 
   @override
   void initState() {
     super.initState();
-    _controller = MembershipController()..load();
+    _ownsController = widget.controller == null;
+    _controller = widget.controller ?? MembershipController();
+    _controller.load();
   }
 
   @override
   void dispose() {
-    _controller.dispose();
+    if (_ownsController) {
+      _controller.dispose();
+    }
     super.dispose();
   }
 
@@ -137,6 +144,67 @@ class _CustomerMembershipScreenState extends State<CustomerMembershipScreen> {
                     ],
                   );
                 },
+              ),
+              const SizedBox(height: 24),
+              AppCard(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: AppColors.warning.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: const Icon(
+                        Icons.info_outline_rounded,
+                        color: AppColors.warning,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Subscription entitlement',
+                            style: AppTypography.h5,
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Monthly entitlement, carry-forward, customer contribution and SHIELD Benefit are not available in your customer membership contract yet.',
+                            style: AppTypography.small.copyWith(
+                              color: AppColors.gray,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+              AppCard(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.credit_card_off_outlined,
+                      color: AppColors.gray,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        'Use Card status to request or track a physical card. Card history, replacement, lost and damaged-card actions are not available yet.',
+                        style: AppTypography.small.copyWith(
+                          color: AppColors.gray,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
               const SizedBox(height: 24),
               Text('Benefits', style: AppTypography.h4),
@@ -342,6 +410,12 @@ class _MembershipHero extends StatelessWidget {
             spacing: 10,
             runSpacing: 10,
             children: [
+              _HeroChip(
+                label: 'Membership no.',
+                value: membership.customerCode.isEmpty
+                    ? 'Pending issue'
+                    : membership.customerCode,
+              ),
               if (accessState.serviceAccessEnabled) ...[
                 _HeroChip(
                   label: 'Valid from',
@@ -522,6 +596,12 @@ class _MembershipActions extends StatelessWidget {
           spacing: 12,
           runSpacing: 10,
           children: [
+            action(
+              membership.cardQrPayload?.isNotEmpty == true
+                  ? 'View privilege card'
+                  : 'Check card status',
+              () => context.go('/portal/customer/privilege-card'),
+            ),
             action(
               accessState.serviceAccessEnabled
                   ? 'Open wallet'

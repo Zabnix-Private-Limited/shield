@@ -81,15 +81,19 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> {
             ),
             shrinkWrap: true,
             children: [
-              const MarketingBannerCarousel(),
+              Text('Dashboard', style: AppTypography.h2),
+              const SizedBox(height: 4),
+              Text(
+                'Welcome back, ${dashboard.customer.firstName}',
+                style: AppTypography.body.copyWith(color: AppColors.gray),
+              ),
               const SizedBox(height: 20),
+              OperationsBannerCarousel(banners: dashboard.banners),
+              if (dashboard.banners.isNotEmpty) const SizedBox(height: 20),
               GreetingHeader(
                 customer: dashboard.customer,
                 membership: dashboard.membership,
                 accessState: accessState,
-                wallet: dashboard.wallet,
-                upcomingVisits: upcomingVisits,
-                documentCount: documentCount,
                 quickActions: dashboard.quickActions,
               ),
               const SizedBox(height: 20),
