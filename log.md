@@ -9847,3 +9847,13 @@ Replaced the removed static Flutter carousel with a database-backed Operations c
   - `docs/CUSTOMER_UI_API_BINDINGS.md` and `docs/customer-ui/CUSTOMER_UI_AUDIT.md`: record the self-scoped alternative-contact contract.
 - Why:
   - Alternative contact details are customer data. This mutation must enforce the same ownership boundary as profile and card mutations.
+## 306. Database-backed customer alternative contacts — 2026-08-04 21:40:53 IST
+- Backend Files:
+  - `backend/src/customer/customer.service.ts` and `backend/src/customer/customer.controller.ts`: add a customer-contact list operation using the existing `customer_contacts` table, guarded by the authenticated customer self scope.
+  - `backend/src/customer/customer.controller.spec.ts`: covers rejection of a cross-customer contact-list read.
+- Frontend Files:
+  - `frontend/lib/shared/services/api_service.dart` and `frontend/lib/features/portal/presentation/screens/portal_shell.dart`: add a Profile card that lists persisted alternative contacts and saves new contacts through the existing API before reloading the database state.
+- Documentation Files:
+  - `docs/CUSTOMER_UI_API_BINDINGS.md`, `docs/CUSTOMER_UI_STATE_MATRIX.md`, `docs/CUSTOMER_UI_IMPLEMENTATION_STATUS.md`, and `docs/customer-ui/CUSTOMER_UI_AUDIT.md`: record the supported list/add contract and states.
+- Why:
+  - The existing write endpoint alone could not provide a reliable customer view after refresh. Reusing the schema-backed contact table completes the self-scoped read/write flow without mock state or a schema migration.

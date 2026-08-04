@@ -5,6 +5,7 @@ describe('CustomerController card scope', () => {
     getCardProfile: jest.fn(),
     requestPhysicalCard: jest.fn(),
     saveAlternativeContact: jest.fn(),
+    listAlternativeContacts: jest.fn(),
   };
   const agentScope = { assertAgentCanAccessCustomer: jest.fn() };
   const providerScope = { assertProviderCanAccessCustomer: jest.fn() };
@@ -43,5 +44,12 @@ describe('CustomerController card scope', () => {
       ),
     ).rejects.toThrow('Customers can only access their own customer record.');
     expect(service.saveAlternativeContact).not.toHaveBeenCalled();
+  });
+
+  it('rejects a customer reading another customer alternative contacts', async () => {
+    await expect(controller.listAlternativeContacts('12', customer)).rejects.toThrow(
+      'Customers can only access their own customer record.',
+    );
+    expect(service.listAlternativeContacts).not.toHaveBeenCalled();
   });
 });

@@ -3895,6 +3895,8 @@ class _CustomerProfilePortalViewState
               ],
             ),
           ),
+          const SizedBox(height: 14),
+          _CustomerAlternativeContactsCard(customerId: customer.id),
           if (_error != null) ...[
             const SizedBox(height: 14),
             Text(
@@ -3918,6 +3920,178 @@ class _CustomerProfilePortalViewState
             ],
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _CustomerAlternativeContactsCard extends StatefulWidget {
+  const _CustomerAlternativeContactsCard({required this.customerId});
+
+  final String customerId;
+
+  @override
+  State<_CustomerAlternativeContactsCard> createState() =>
+      _CustomerAlternativeContactsCardState();
+}
+
+class _CustomerAlternativeContactsCardState
+    extends State<_CustomerAlternativeContactsCard> {
+  late Future<List<Map<String, dynamic>>> _contactsFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadContacts();
+  }
+
+  @override
+  void didUpdateWidget(covariant _CustomerAlternativeContactsCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.customerId != widget.customerId) _loadContacts();
+  }
+
+  void _loadContacts() {
+    _contactsFuture = ApiService.getAlternativeCustomerContacts(
+      widget.customerId,
+    );
+  }
+
+  Future<void> _addContact() async {
+    final nameController = TextEditingController();
+    final mobileController = TextEditingController();
+    final relationshipController = TextEditingController();
+    final values = await showDialog<Map<String, String>>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Add alternative contact'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: nameController,
+              textCapitalization: TextCapitalization.words,
+              decoration: const InputDecoration(labelText: 'Name (optional)'),
+            ),
+            TextField(
+              controller: mobileController,
+              keyboardType: TextInputType.phone,
+              decoration: const InputDecoration(labelText: 'Mobile number'),
+            ),
+            TextField(
+              controller: relationshipController,
+              textCapitalization: TextCapitalization.words,
+              decoration: const InputDecoration(
+                labelText: 'Relationship (optional)',
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              final mobile = mobileController.text.trim();
+              if (mobile.isEmpty) return;
+              Navigator.pop(context, {
+                'mobile': mobile,
+                'name': nameController.text.trim(),
+                'relationship': relationshipController.text.trim(),
+              });
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+    nameController.dispose();
+    mobileController.dispose();
+    relationshipController.dispose();
+    if (!mounted || values == null) return;
+
+    try {
+      await ApiService.saveAlternativeCustomerContact(
+        widget.customerId,
+        values,
+      );
+      if (!mounted) return;
+      setState(_loadContacts);
+      showPortalSnackBar(context, 'Alternative contact saved.');
+    } catch (_) {
+      if (!mounted) return;
+      showPortalSnackBar(
+        context,
+        'Alternative contact could not be saved. Please check the number and retry.',
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AppCard(
+      child: FutureBuilder<List<Map<String, dynamic>>>(
+        future: _contactsFuture,
+        builder: (context, snapshot) {
+          final contacts = snapshot.data ?? const <Map<String, dynamic>>[];
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'Alternative contacts',
+                      style: AppTypography.h4,
+                    ),
+                  ),
+                  TextButton.icon(
+                    onPressed: _addContact,
+                    icon: const Icon(Icons.add, size: 18),
+                    label: const Text('Add'),
+                  ),
+                ],
+              ),
+              if (snapshot.connectionState == ConnectionState.waiting)
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 12),
+                  child: LinearProgressIndicator(),
+                )
+              else if (snapshot.hasError)
+                TextButton(
+                  onPressed: () => setState(_loadContacts),
+                  child: const Text('Retry loading contacts'),
+                )
+              else if (contacts.isEmpty)
+                Text(
+                  'No alternative contacts added.',
+                  style: AppTypography.small.copyWith(color: AppColors.gray),
+                )
+              else
+                ...contacts.map(
+                  (contact) => Padding(
+                    padding: const EdgeInsets.only(top: 10),
+                    child: _ProfileFactRow(
+                      label:
+                          contact['name']?.toString().trim().isNotEmpty == true
+                          ? contact['name'].toString()
+                          : 'Alternative contact',
+                      value:
+                          [
+                                contact['mobile']?.toString(),
+                                contact['relation']?.toString(),
+                              ]
+                              .whereType<String>()
+                              .where((value) => value.trim().isNotEmpty)
+                              .join(' • '),
+                    ),
+                  ),
+                ),
+            ],
+          );
+        },
       ),
     );
   }

@@ -373,8 +373,21 @@ export class CustomerService {
           data: values,
         })
       : this.prisma.customerContact.create({
-          data: { customerId, mobile: data.mobile, ...values },
-        });
+        data: { customerId, mobile: data.mobile, ...values },
+      });
+  }
+
+  async listAlternativeContacts(customerId: bigint) {
+    return this.prisma.customerContact.findMany({
+      where: { customerId, isPrimary: false },
+      select: {
+        id: true,
+        name: true,
+        mobile: true,
+        relation: true,
+      },
+      orderBy: { id: 'desc' },
+    });
   }
 
   async requestPhysicalCard(customerId: bigint, requestedBy?: bigint) {

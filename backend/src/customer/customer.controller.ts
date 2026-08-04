@@ -157,6 +157,27 @@ export class CustomerController {
     };
   }
 
+  @RequirePermissions('customers.view')
+  @Get(':id/alternative-contacts')
+  async listAlternativeContacts(
+    @Param('id') id: string,
+    @CurrentPrincipal() principal?: ShieldPrincipal,
+  ) {
+    this.assertCustomerSelfScope(id, principal);
+    await this.providerScopeService.assertProviderCanAccessCustomer(
+      BigInt(id),
+      principal,
+    );
+    await this.agentScopeService.assertAgentCanAccessCustomer(
+      BigInt(id),
+      principal,
+    );
+    return {
+      success: true,
+      data: await this.customerService.listAlternativeContacts(BigInt(id)),
+    };
+  }
+
   @RequirePermissions('customers.create')
   @Post(':id/convert-to-membership')
   async convertToMembership(

@@ -801,6 +801,18 @@ class ApiService {
     return _readEnvelope(response);
   }
 
+  static Future<List<Map<String, dynamic>>> getAlternativeCustomerContacts(
+    String customerId,
+  ) async {
+    final resolvedCustomerId = _requireCustomerId(customerId);
+    final response = await _dio.get(
+      '/customers/$resolvedCustomerId/alternative-contacts',
+    );
+    return _readEnvelopeList(
+      response,
+    ).map((item) => Map<String, dynamic>.from(item as Map)).toList();
+  }
+
   static Future<Map<String, dynamic>> getCustomerCardProfile(
     String customerId,
   ) async {
