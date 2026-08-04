@@ -7,6 +7,7 @@ Completed:
 - Customer route, feature, API, state, and visual audit.
 - Reusable customer design tokens.
 - Data-backed responsive authenticated header.
+- Header widget coverage verifies the dense main-header layout at the reported 480px viewport and its no-summary retry state without a layout overflow.
 - Membership-first dashboard hierarchy using existing dashboard data.
 - Static Flutter marketing carousel removed from the live dashboard pending an Operations-owned API contract.
 - Operations-owned carousel contract added through the existing commercial-settings table; no schema change or seed required.

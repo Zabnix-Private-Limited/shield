@@ -9971,3 +9971,11 @@ Replaced the removed static Flutter carousel with a database-backed Operations c
   - docs/customer-ui/CUSTOMER_MEMBERSHIP_API_MATRIX.md and docs/CUSTOMER_UI_IMPLEMENTATION_STATUS.md record concrete customer membership/card verification coverage.
 - Why:
   - The card route had no way to exercise its customer-scoped API states without a live session. Minimal loader injection permits the required tests without replacing any repository or contract.
+
+## 321. Narrow customer header regression coverage — 2026-08-04 22:48:00 IST
+- Frontend Files:
+  - frontend/test/customer_app_bar_test.dart: mounts the shared authenticated header at the reported 480px viewport and verifies there is no rendering exception plus the safe retry state when the account summary is unavailable.
+- Documentation Files:
+  - docs/CUSTOMER_UI_IMPLEMENTATION_STATUS.md records the narrow-header and failure-state coverage.
+- Why:
+  - The prior live RenderFlex error occurred in the shared header. A small widget regression test now protects the dense responsive branch rather than relying only on static analysis.
