@@ -354,7 +354,7 @@ export class CustomerService {
     const customer = await this.findOne(customerId);
     const normalized = data.mobile.replace(/\D/g, '').slice(-10);
     const primary = customer.mobile.replace(/\D/g, '').slice(-10);
-    if (!normalized || normalized === primary) {
+    if (normalized.length !== 10 || normalized === primary) {
       throw new BadRequestException(
         'Alternative mobile number must differ from the primary login number.',
       );

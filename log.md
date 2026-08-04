@@ -9887,3 +9887,11 @@ Replaced the removed static Flutter carousel with a database-backed Operations c
   - `docs/CUSTOMER_UI_API_BINDINGS.md`: records mobile normalization for the self-scoped contact flow.
 - Why:
   - Phone formatting is not an identity change. Normalization keeps customer contact records idempotent without a schema migration or a client-side duplicate list.
+## 311. Alternative-contact mobile validation — 2026-08-04 21:51:56 IST
+- Backend Files:
+  - `backend/src/customer/customer.service.ts`: requires a valid 10-digit alternative mobile number before querying or writing contact records.
+  - `backend/src/customer/customer.service.spec.ts`: regression coverage rejects a short mobile value without issuing a contact query.
+- Documentation Files:
+  - `docs/CUSTOMER_UI_API_BINDINGS.md`: records the backend validation rule.
+- Why:
+  - Alternative contact data is a persisted operational record. The API, rather than a best-effort Flutter form, must enforce the minimum mobile identifier requirement.

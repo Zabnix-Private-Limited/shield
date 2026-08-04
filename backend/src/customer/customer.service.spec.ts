@@ -39,4 +39,17 @@ describe('CustomerService alternative contacts', () => {
     );
     expect(prisma.customerContact.create).not.toHaveBeenCalled();
   });
+
+  it('rejects a short alternative mobile number', async () => {
+    jest
+      .spyOn(service, 'findOne')
+      .mockResolvedValue({ mobile: '9876500000' } as any);
+
+    await expect(
+      service.saveAlternativeContact(1n, { mobile: '98765' }),
+    ).rejects.toThrow(
+      'Alternative mobile number must differ from the primary login number.',
+    );
+    expect(prisma.customerContact.findMany).not.toHaveBeenCalled();
+  });
 });
