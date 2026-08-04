@@ -12,7 +12,9 @@ import '../../../../../shared/widgets/portal_support.dart';
 import '../../../shared/widgets/error_card.dart';
 
 class CustomerPrescriptionsScreen extends StatefulWidget {
-  const CustomerPrescriptionsScreen({super.key});
+  const CustomerPrescriptionsScreen({super.key, this.loadDocuments});
+
+  final Future<List<Document>> Function()? loadDocuments;
 
   @override
   State<CustomerPrescriptionsScreen> createState() =>
@@ -32,14 +34,16 @@ class _CustomerPrescriptionsScreenState
   void _loadPrescriptions() {
     setState(() {
       _prescriptionsFuture =
-          ApiService.getCustomerDocumentsStrict(
-            ApiService.requireAuthenticatedCustomerId(),
-          ).then(
-            (documents) => documents
-              ..retainWhere(
-                (document) => document.type == DocumentType.prescription,
-              ),
-          );
+          (widget.loadDocuments?.call() ??
+                  ApiService.getCustomerDocumentsStrict(
+                    ApiService.requireAuthenticatedCustomerId(),
+                  ))
+              .then(
+                (documents) => documents
+                  ..retainWhere(
+                    (document) => document.type == DocumentType.prescription,
+                  ),
+              );
     });
   }
 

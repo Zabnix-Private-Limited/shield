@@ -10151,3 +10151,12 @@ Replaced the removed static Flutter carousel with a database-backed Operations c
   - docs/customer-ui/CUSTOMER_UI_AUDIT.md and docs/CUSTOMER_UI_IMPLEMENTATION_STATUS.md: record the verified document failure behavior.
 - Why:
   - A customer must never infer that their medical archive is empty merely because the archive request failed.
+
+## 343. Customer prescription archive failure coverage — 2026-08-05 02:10:00 IST
+- Frontend Files:
+  - frontend/lib/features/customer/prescriptions/presentation/screens/customer_prescriptions_screen.dart: adds an optional screen-loader seam for widget verification while retaining the authenticated documents API as the production default.
+  - frontend/test/customer_prescriptions_screen_test.dart: verifies a prescription archive API failure remains a retryable unavailable state with no false empty-state data.
+- Documentation Files:
+  - docs/customer-ui/CUSTOMER_UI_AUDIT.md and docs/CUSTOMER_UI_IMPLEMENTATION_STATUS.md: record the verified prescription failure behavior.
+- Why:
+  - A customer must never infer that their prescription history is empty merely because its authenticated archive request failed.
