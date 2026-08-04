@@ -196,6 +196,9 @@ class _ActivityEventCard extends StatelessWidget {
     'MEMBERSHIP' => AppColors.shieldBlue,
     'WALLET' => AppColors.shieldGreen,
     'DOCUMENT' || 'PRESCRIPTION' => AppColors.shieldLightBlue,
+    'LAB' => AppColors.shieldLightBlue,
+    'BILLING' => AppColors.warning,
+    'NOTIFICATION' => AppColors.shieldBlue,
     'APPOINTMENT' || 'VISIT' => AppColors.warning,
     _ => AppColors.shieldNavy,
   };
@@ -204,6 +207,9 @@ class _ActivityEventCard extends StatelessWidget {
     'MEMBERSHIP' => Icons.workspace_premium_outlined,
     'WALLET' => Icons.account_balance_wallet_outlined,
     'DOCUMENT' || 'PRESCRIPTION' => Icons.description_outlined,
+    'LAB' => Icons.science_outlined,
+    'BILLING' => Icons.receipt_long_outlined,
+    'NOTIFICATION' => Icons.notifications_active_outlined,
     'APPOINTMENT' || 'VISIT' => Icons.calendar_month_outlined,
     _ => Icons.timeline_outlined,
   };

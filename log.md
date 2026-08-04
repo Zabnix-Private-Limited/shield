@@ -9833,3 +9833,9 @@ Replaced the removed static Flutter carousel with a database-backed Operations c
   - `docs/CUSTOMER_UI_API_BINDINGS.md`, `docs/CUSTOMER_UI_STATE_MATRIX.md`, `docs/CUSTOMER_UI_IMPLEMENTATION_STATUS.md`, `docs/customer-ui/CUSTOMER_UI_AUDIT.md`, and `docs/CUSTOMER_UI_VISUAL_QA.md`: record the self-only contract and visual-verification status.
 - Why:
   - The provider patient endpoint must not be reused by customers because it accepts a target ID. A self-only route preserves the existing database timeline while making the customer Activity screen safe and functional.
+## 304. Activity category visual mapping — 2026-08-04 21:34:35 IST
+- Frontend Files:
+  - `frontend/lib/features/customer/activity/presentation/screens/customer_activity_screen.dart`: maps lab, billing, and notification event categories to their own approved icons and accents.
+  - `frontend/lib/features/portal/presentation/screens/portal_shell.dart`: adds the Activity Timeline navigation icon.
+- Why:
+  - The backend already supplies event categories. Rendering those categories directly improves scanability without adding a second event model or client-side business logic.

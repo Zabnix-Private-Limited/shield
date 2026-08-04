@@ -402,6 +402,8 @@ IconData _portalSectionIcon(String key) {
       return Icons.shopping_bag_outlined;
     case 'referrals':
       return Icons.account_tree_outlined;
+    case 'activity':
+      return Icons.timeline_outlined;
     case 'appointments':
     case 'book-appointment':
       return Icons.event_note_outlined;
