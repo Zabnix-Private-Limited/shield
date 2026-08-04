@@ -79,6 +79,28 @@ class AgentPortalRepository {
   Future<Map<String, dynamic>> createCustomer(Map<String, dynamic> payload) =>
       ApiService.createCustomer(payload);
 
+  Future<Map<String, dynamic>?> findExistingCustomerByMobile(String mobile) =>
+      ApiService.findExistingCustomerByMobile(mobile);
+
+  Future<Map<String, dynamic>> convertExistingCustomerToMembership(
+    String customerId, {
+    String? membershipTypeCode,
+  }) => ApiService.convertExistingCustomerToMembership(
+    customerId,
+    membershipTypeCode: membershipTypeCode,
+  );
+
+  Future<Map<String, dynamic>> saveAlternativeCustomerContact(
+    String customerId,
+    Map<String, dynamic> payload,
+  ) => ApiService.saveAlternativeCustomerContact(customerId, payload);
+
+  Future<Map<String, dynamic>> getCustomerCardProfile(String customerId) =>
+      ApiService.getCustomerCardProfile(customerId);
+
+  Future<Map<String, dynamic>> requestCustomerPhysicalCard(String customerId) =>
+      ApiService.requestCustomerPhysicalCard(customerId);
+
   Future<Map<String, dynamic>> updateCustomer(
     String customerId,
     Map<String, dynamic> payload,

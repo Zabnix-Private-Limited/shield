@@ -1,6 +1,6 @@
 # SHIELD Repo Context
 
-Last updated: 2026-07-08
+Last updated: 2026-08-04
 
 ## 1. What This Repository Is
 
@@ -182,6 +182,20 @@ Major flows:
 - logout and session revocation
 - profile fetch
 - session history and login history
+
+### Local web phone OTP
+
+`localhost` is authorized in Firebase for this project, but SHIELD deliberately
+blocks browser phone OTP there unless the Flutter app is compiled in debug mode
+with `ALLOW_LOCAL_WEB_PHONE_AUTH=true`. This switch enables the real Firebase
+OTP flow only; it does not bypass Firebase verification, backend JWT issuance,
+or authorization. It defaults to `false` and release builds remain blocked by
+the `kDebugMode` requirement.
+
+```powershell
+cd frontend
+flutter run -d chrome --dart-define=ALLOW_LOCAL_WEB_PHONE_AUTH=true
+```
 
 Important backend auth types live in `backend/src/auth/auth.types.ts`.
 

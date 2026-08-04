@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../../../app/theme/app_colors.dart';
 import '../../../../../app/theme/app_typography.dart';
@@ -8,6 +9,7 @@ import '../controllers/dashboard_controller.dart';
 import '../widgets/appointment_card.dart';
 import '../widgets/dashboard_shimmer.dart';
 import '../widgets/greeting_header.dart';
+import '../widgets/marketing_banner_carousel.dart';
 import '../widgets/recent_activity.dart';
 import '../widgets/wallet_summary_card.dart';
 
@@ -79,6 +81,8 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> {
             ),
             shrinkWrap: true,
             children: [
+              const MarketingBannerCarousel(),
+              const SizedBox(height: 20),
               GreetingHeader(
                 customer: dashboard.customer,
                 membership: dashboard.membership,
@@ -103,24 +107,28 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> {
                       value: '₹${walletBalance.toStringAsFixed(0)}',
                       icon: Icons.account_balance_wallet_outlined,
                       color: AppColors.shieldBlue,
+                      onTap: () => context.go('/portal/customer/wallet'),
                     ),
                     WalletSummaryCard(
                       title: 'Visits',
                       value: '$upcomingVisits',
                       icon: Icons.calendar_month_outlined,
                       color: AppColors.shieldGreen,
+                      onTap: () => context.go('/portal/customer/appointments'),
                     ),
                     WalletSummaryCard(
                       title: 'Docs',
                       value: '$documentCount',
                       icon: Icons.description_outlined,
                       color: AppColors.shieldNavy,
+                      onTap: () => context.go('/portal/customer/documents'),
                     ),
                     WalletSummaryCard(
                       title: 'Points',
                       value: '${pointsBalance.toStringAsFixed(0)} pts',
                       icon: Icons.workspace_premium_outlined,
                       color: AppColors.warning,
+                      onTap: () => context.go('/portal/customer/membership'),
                     ),
                   ],
                 ),

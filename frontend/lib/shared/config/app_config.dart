@@ -24,6 +24,13 @@ class AppConfig {
     defaultValue: true,
   );
 
+  /// Allows real Firebase web phone OTP from localhost in debug builds only.
+  /// Release builds remain blocked by the repository auth guard.
+  static const bool allowLocalWebPhoneAuth = bool.fromEnvironment(
+    'ALLOW_LOCAL_WEB_PHONE_AUTH',
+    defaultValue: false,
+  );
+
   static const String firebaseWebVapidKey = String.fromEnvironment(
     'FIREBASE_WEB_VAPID_KEY',
     defaultValue:

@@ -28,6 +28,7 @@ import { ServiceProviderModule } from './service-provider/service-provider.modul
 import { TimelineModule } from './timeline/timeline.module';
 import { PlatformCapabilitiesModule } from './platform-capabilities/platform-capabilities.module';
 import { AdminGovernanceModule } from './admin-governance/admin-governance.module';
+import { ManagementDemoModule } from './management-demo/management-demo.module';
 
 @Module({
   imports: [
@@ -37,6 +38,7 @@ import { AdminGovernanceModule } from './admin-governance/admin-governance.modul
     PlatformMetadataModule,
     PlatformCapabilitiesModule,
     AdminGovernanceModule,
+    ManagementDemoModule,
     OperationsQueueModule,
     ServiceProviderModule,
     TimelineModule,

@@ -1,4 +1,54 @@
 CREATE SCHEMA "public";
+CREATE TABLE "activity_events" (
+	"id" bigserial PRIMARY KEY,
+	"uuid" uuid NOT NULL CONSTRAINT "activity_events_uuid_key" UNIQUE,
+	"customer_id" bigint,
+	"activity_type" varchar(80) NOT NULL,
+	"related_entity_type" varchar(100),
+	"related_entity_id" bigint,
+	"business_id" bigint,
+	"provider_id" bigint,
+	"agent_user_id" bigint,
+	"crm_user_id" bigint,
+	"status" varchar(50) DEFAULT 'PENDING' NOT NULL,
+	"description" text NOT NULL,
+	"created_by" bigint,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL
+);
+CREATE TABLE "agent_branch_assignments" (
+	"id" bigserial PRIMARY KEY,
+	"uuid" uuid NOT NULL,
+	"user_id" bigint NOT NULL,
+	"business_id" bigint NOT NULL,
+	"status" varchar(50) DEFAULT 'PENDING' NOT NULL,
+	"is_primary" boolean DEFAULT false NOT NULL,
+	"requested_at" timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+	"approved_at" timestamp with time zone,
+	"transferred_at" timestamp with time zone,
+	"inactive_at" timestamp with time zone,
+	"notes" text,
+	"created_at" timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+	"updated_at" timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+CREATE TABLE "agent_preferences" (
+	"id" bigserial PRIMARY KEY,
+	"uuid" uuid NOT NULL,
+	"user_id" bigint NOT NULL,
+	"theme_preference" varchar(50),
+	"language_preference" varchar(20),
+	"timezone" varchar(100),
+	"availability" jsonb,
+	"working_hours" jsonb,
+	"working_area" jsonb,
+	"emergency_contact" jsonb,
+	"notification_preferences" jsonb,
+	"dashboard_layout" jsonb,
+	"profile_preferences" jsonb,
+	"device_preferences" jsonb,
+	"created_at" timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+	"updated_at" timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+	"deleted_at" timestamp with time zone
+);
 CREATE TABLE "appointments" (
 	"id" bigserial PRIMARY KEY,
 	"uuid" uuid,
@@ -98,6 +148,19 @@ CREATE TABLE "businesses" (
 	"created_at" timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
+CREATE TABLE "card_requests" (
+	"id" bigserial PRIMARY KEY,
+	"uuid" uuid NOT NULL CONSTRAINT "card_requests_uuid_key" UNIQUE,
+	"customer_id" bigint NOT NULL,
+	"membership_id" bigint,
+	"business_id" bigint,
+	"status" varchar(50) DEFAULT 'REQUESTED' NOT NULL,
+	"requested_by" bigint,
+	"reviewed_by" bigint,
+	"requested_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"reviewed_at" timestamp with time zone,
+	"remarks" text
+);
 CREATE TABLE "cash_wallet_transactions" (
 	"id" bigserial PRIMARY KEY,
 	"uuid" uuid NOT NULL,
@@ -122,6 +185,30 @@ CREATE TABLE "commercial_settings" (
 	"status" varchar(50) DEFAULT 'ACTIVE' NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
+);
+CREATE TABLE "commission_allocations" (
+	"id" bigserial PRIMARY KEY,
+	"commission_event_id" bigint NOT NULL,
+	"recipient_level" varchar(30) NOT NULL,
+	"recipient_user_id" bigint,
+	"percentage" numeric(5, 2) NOT NULL,
+	"amount_paise" bigint NOT NULL,
+	"status" varchar(50) DEFAULT 'PENDING' NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "commission_allocations_amount_paise_check" CHECK ((amount_paise >= 0)),
+	CONSTRAINT "commission_allocations_percentage_check" CHECK ((percentage >= (0)::numeric))
+);
+CREATE TABLE "commission_events" (
+	"id" bigserial PRIMARY KEY,
+	"uuid" uuid NOT NULL CONSTRAINT "commission_events_uuid_key" UNIQUE,
+	"customer_id" bigint,
+	"source_type" varchar(80) NOT NULL,
+	"originating_level" varchar(30) NOT NULL,
+	"pool_paise" bigint NOT NULL,
+	"status" varchar(50) DEFAULT 'PENDING' NOT NULL,
+	"created_by" bigint,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "commission_events_pool_paise_check" CHECK ((pool_paise >= 0))
 );
 CREATE TABLE "complaints" (
 	"id" bigserial PRIMARY KEY,
@@ -182,6 +269,32 @@ CREATE TABLE "customer_contacts" (
 	"is_primary" boolean DEFAULT false,
 	"created_at" timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
+CREATE TABLE "customer_import_batches" (
+	"id" bigserial PRIMARY KEY,
+	"uuid" uuid NOT NULL CONSTRAINT "customer_import_batches_uuid_key" UNIQUE,
+	"business_id" bigint NOT NULL,
+	"status" varchar(50) DEFAULT 'PENDING_APPROVAL' NOT NULL,
+	"requested_by" bigint,
+	"approved_by" bigint,
+	"requested_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"approved_at" timestamp with time zone,
+	"imported_at" timestamp with time zone,
+	"source_file_name" varchar(255),
+	"row_count" integer DEFAULT 0 NOT NULL,
+	"notes" text
+);
+CREATE TABLE "customer_import_rows" (
+	"id" bigserial PRIMARY KEY,
+	"batch_id" bigint NOT NULL,
+	"external_customer_id" varchar(100) NOT NULL,
+	"mobile" varchar(20) NOT NULL,
+	"full_name" varchar(255),
+	"payload" jsonb DEFAULT '{}' NOT NULL,
+	"matched_customer_id" bigint,
+	"status" varchar(50) DEFAULT 'PENDING' NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "customer_import_rows_batch_id_external_customer_id_key" UNIQUE("batch_id","external_customer_id")
+);
 CREATE TABLE "customer_status_history" (
 	"id" bigserial PRIMARY KEY,
 	"uuid" uuid NOT NULL,
@@ -220,7 +333,8 @@ CREATE TABLE "customers" (
 	"referral_code" varchar(50),
 	"referred_by_id" bigint,
 	"firebase_uid" varchar(128),
-	"last_login_at" timestamp with time zone
+	"last_login_at" timestamp with time zone,
+	"onboarding_source" varchar(50) DEFAULT 'NEW_REGISTRATION' NOT NULL
 );
 CREATE TABLE "dental_records" (
 	"id" bigserial PRIMARY KEY,
@@ -310,6 +424,24 @@ CREATE TABLE "login_history" (
 	"user_agent" text,
 	"created_at" timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
+CREATE TABLE "membership_subscriptions" (
+	"id" bigserial PRIMARY KEY,
+	"uuid" uuid NOT NULL CONSTRAINT "membership_subscriptions_uuid_key" UNIQUE,
+	"customer_id" bigint NOT NULL CONSTRAINT "membership_subscriptions_customer_id_key" UNIQUE,
+	"membership_id" bigint,
+	"plan_name" varchar(255) NOT NULL,
+	"customer_contribution_paise" bigint DEFAULT 1000000 NOT NULL,
+	"shield_benefit_paise" bigint DEFAULT 100000 NOT NULL,
+	"total_entitlement_paise" bigint DEFAULT 1100000 NOT NULL,
+	"status" varchar(50) DEFAULT 'DRAFT' NOT NULL,
+	"starts_on" date,
+	"ends_on" date,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "membership_subscriptions_check" CHECK ((total_entitlement_paise = (customer_contribution_paise + shield_benefit_paise))),
+	CONSTRAINT "membership_subscriptions_customer_contribution_paise_check" CHECK ((customer_contribution_paise >= 0)),
+	CONSTRAINT "membership_subscriptions_shield_benefit_paise_check" CHECK ((shield_benefit_paise >= 0))
+);
 CREATE TABLE "membership_types" (
 	"id" bigserial PRIMARY KEY,
 	"uuid" uuid,
@@ -386,41 +518,15 @@ CREATE TABLE "products" (
 	"product_name" varchar(255),
 	"brand" varchar(255),
 	"category_id" bigint,
-	"unit" varchar(50)
-);
-CREATE TABLE "agent_preferences" (
-	"id" bigserial PRIMARY KEY,
-	"uuid" uuid NOT NULL,
-	"user_id" bigint NOT NULL,
-	"theme_preference" varchar(50),
-	"language_preference" varchar(20),
-	"timezone" varchar(100),
-	"availability" jsonb,
-	"working_hours" jsonb,
-	"working_area" jsonb,
-	"emergency_contact" jsonb,
-	"notification_preferences" jsonb,
-	"dashboard_layout" jsonb,
-	"profile_preferences" jsonb,
-	"device_preferences" jsonb,
-	"created_at" timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
-	"updated_at" timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
-	"deleted_at" timestamp with time zone
-);
-CREATE TABLE "agent_branch_assignments" (
-	"id" bigserial PRIMARY KEY,
-	"uuid" uuid NOT NULL,
-	"user_id" bigint NOT NULL,
-	"business_id" bigint NOT NULL,
-	"status" varchar(50) DEFAULT 'PENDING' NOT NULL,
-	"is_primary" boolean DEFAULT false NOT NULL,
-	"requested_at" timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
-	"approved_at" timestamp with time zone,
-	"transferred_at" timestamp with time zone,
-	"inactive_at" timestamp with time zone,
-	"notes" text,
-	"created_at" timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
-	"updated_at" timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+	"unit" varchar(50),
+	"mrp" numeric(15, 2),
+	"selling_price" numeric(15, 2),
+	"cost_price" numeric(15, 2),
+	"margin_percentage" numeric(5, 2),
+	"stock_quantity" numeric(12, 2) DEFAULT '0' NOT NULL,
+	"is_demo_available" boolean DEFAULT false NOT NULL,
+	"data_source" varchar(50) DEFAULT 'PRIMARY' NOT NULL,
+	"status" varchar(50) DEFAULT 'ACTIVE' NOT NULL
 );
 CREATE TABLE "provider_profile_branch_assignments" (
 	"provider_profile_id" bigint,
@@ -480,7 +586,8 @@ CREATE TABLE "purchases" (
 	"purchase_kind" varchar(50) DEFAULT 'GENERAL',
 	"payment_status" varchar(50) DEFAULT 'PENDING',
 	"payment_summary" jsonb,
-	"billing_snapshot" jsonb
+	"billing_snapshot" jsonb,
+	"order_status" varchar(50) DEFAULT 'PLACED' NOT NULL
 );
 CREATE TABLE "referral_reward_events" (
 	"id" bigserial PRIMARY KEY,
@@ -593,6 +700,19 @@ CREATE TABLE "shield_cards" (
 	"issued_business_id" bigint,
 	"issued_at" timestamp with time zone
 );
+CREATE TABLE "subscription_monthly_allocations" (
+	"id" bigserial PRIMARY KEY,
+	"subscription_id" bigint NOT NULL,
+	"month_start" date NOT NULL,
+	"allocation_paise" bigint NOT NULL,
+	"carry_forward_paise" bigint DEFAULT 0 NOT NULL,
+	"used_paise" bigint DEFAULT 0 NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "subscription_monthly_allocation_subscription_id_month_start_key" UNIQUE("subscription_id","month_start"),
+	CONSTRAINT "subscription_monthly_allocations_allocation_paise_check" CHECK ((allocation_paise >= 0)),
+	CONSTRAINT "subscription_monthly_allocations_carry_forward_paise_check" CHECK ((carry_forward_paise >= 0)),
+	CONSTRAINT "subscription_monthly_allocations_used_paise_check" CHECK ((used_paise >= 0))
+);
 CREATE TABLE "users" (
 	"id" bigserial PRIMARY KEY,
 	"uuid" uuid NOT NULL,
@@ -638,17 +758,21 @@ CREATE TABLE "wallets" (
 	"status" varchar(50),
 	"created_at" timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
-CREATE UNIQUE INDEX "appointments_pkey" ON "appointments" ("id");
-CREATE UNIQUE INDEX "appointments_uuid_key" ON "appointments" ("uuid");
-CREATE INDEX "idx_agent_branch_assignment_business" ON "agent_branch_assignments" ("business_id");
-CREATE INDEX "idx_agent_branch_assignment_status" ON "agent_branch_assignments" ("status");
-CREATE INDEX "idx_agent_branch_assignment_user" ON "agent_branch_assignments" ("user_id");
+CREATE UNIQUE INDEX "activity_events_pkey" ON "activity_events" ("id");
+CREATE UNIQUE INDEX "activity_events_uuid_key" ON "activity_events" ("uuid");
+CREATE INDEX "idx_activity_events_customer" ON "activity_events" ("customer_id","created_at");
+CREATE INDEX "idx_activity_events_type" ON "activity_events" ("activity_type","created_at");
 CREATE UNIQUE INDEX "agent_branch_assignments_pkey" ON "agent_branch_assignments" ("id");
 CREATE UNIQUE INDEX "agent_branch_assignments_user_business_key" ON "agent_branch_assignments" ("user_id","business_id");
 CREATE UNIQUE INDEX "agent_branch_assignments_uuid_key" ON "agent_branch_assignments" ("uuid");
+CREATE INDEX "idx_agent_branch_assignment_business" ON "agent_branch_assignments" ("business_id");
+CREATE INDEX "idx_agent_branch_assignment_status" ON "agent_branch_assignments" ("status");
+CREATE INDEX "idx_agent_branch_assignment_user" ON "agent_branch_assignments" ("user_id");
 CREATE UNIQUE INDEX "agent_preferences_pkey" ON "agent_preferences" ("id");
 CREATE UNIQUE INDEX "agent_preferences_user_id_key" ON "agent_preferences" ("user_id");
 CREATE UNIQUE INDEX "agent_preferences_uuid_key" ON "agent_preferences" ("uuid");
+CREATE UNIQUE INDEX "appointments_pkey" ON "appointments" ("id");
+CREATE UNIQUE INDEX "appointments_uuid_key" ON "appointments" ("uuid");
 CREATE INDEX "idx_appointment_customer" ON "appointments" ("customer_id");
 CREATE INDEX "idx_appointment_date" ON "appointments" ("appointment_date");
 CREATE INDEX "idx_appointment_provider" ON "appointments" ("provider_id");
@@ -678,6 +802,9 @@ CREATE INDEX "idx_benefit_ledger_transactions_wallet" ON "benefit_ledger_transac
 CREATE UNIQUE INDEX "businesses_code_key" ON "businesses" ("code");
 CREATE UNIQUE INDEX "businesses_pkey" ON "businesses" ("id");
 CREATE UNIQUE INDEX "businesses_uuid_key" ON "businesses" ("uuid");
+CREATE UNIQUE INDEX "card_requests_pkey" ON "card_requests" ("id");
+CREATE UNIQUE INDEX "card_requests_uuid_key" ON "card_requests" ("uuid");
+CREATE INDEX "idx_card_requests_customer" ON "card_requests" ("customer_id","status");
 CREATE UNIQUE INDEX "cash_wallet_transactions_pkey" ON "cash_wallet_transactions" ("id");
 CREATE UNIQUE INDEX "cash_wallet_transactions_uuid_key" ON "cash_wallet_transactions" ("uuid");
 CREATE INDEX "idx_cash_wallet_transactions_date" ON "cash_wallet_transactions" ("created_at");
@@ -686,6 +813,10 @@ CREATE INDEX "idx_cash_wallet_transactions_wallet" ON "cash_wallet_transactions"
 CREATE UNIQUE INDEX "commercial_settings_code_key" ON "commercial_settings" ("code");
 CREATE UNIQUE INDEX "commercial_settings_pkey" ON "commercial_settings" ("id");
 CREATE UNIQUE INDEX "commercial_settings_uuid_key" ON "commercial_settings" ("uuid");
+CREATE UNIQUE INDEX "commission_allocations_pkey" ON "commission_allocations" ("id");
+CREATE UNIQUE INDEX "commission_events_pkey" ON "commission_events" ("id");
+CREATE UNIQUE INDEX "commission_events_uuid_key" ON "commission_events" ("uuid");
+CREATE INDEX "idx_commission_events_status" ON "commission_events" ("status","created_at");
 CREATE UNIQUE INDEX "complaints_pkey" ON "complaints" ("id");
 CREATE UNIQUE INDEX "consultations_pkey" ON "consultations" ("id");
 CREATE UNIQUE INDEX "credit_accounts_customer_id_key" ON "credit_accounts" ("customer_id");
@@ -696,6 +827,12 @@ CREATE UNIQUE INDEX "credit_transactions_uuid_key" ON "credit_transactions" ("uu
 CREATE UNIQUE INDEX "crm_activities_pkey" ON "crm_activities" ("id");
 CREATE UNIQUE INDEX "crm_tasks_pkey" ON "crm_tasks" ("id");
 CREATE UNIQUE INDEX "customer_contacts_pkey" ON "customer_contacts" ("id");
+CREATE UNIQUE INDEX "customer_import_batches_pkey" ON "customer_import_batches" ("id");
+CREATE UNIQUE INDEX "customer_import_batches_uuid_key" ON "customer_import_batches" ("uuid");
+CREATE INDEX "idx_customer_import_batches_business" ON "customer_import_batches" ("business_id","status");
+CREATE UNIQUE INDEX "customer_import_rows_batch_id_external_customer_id_key" ON "customer_import_rows" ("batch_id","external_customer_id");
+CREATE UNIQUE INDEX "customer_import_rows_pkey" ON "customer_import_rows" ("id");
+CREATE INDEX "idx_customer_import_rows_mobile" ON "customer_import_rows" ("mobile");
 CREATE UNIQUE INDEX "customer_status_history_pkey" ON "customer_status_history" ("id");
 CREATE UNIQUE INDEX "customer_status_history_uuid_key" ON "customer_status_history" ("uuid");
 CREATE INDEX "idx_customer_status_history_customer" ON "customer_status_history" ("customer_id");
@@ -730,6 +867,9 @@ CREATE INDEX "idx_login_history_owner" ON "login_history" ("owner_type","owner_i
 CREATE INDEX "idx_login_history_user" ON "login_history" ("user_id");
 CREATE UNIQUE INDEX "login_history_pkey" ON "login_history" ("id");
 CREATE UNIQUE INDEX "login_history_uuid_key" ON "login_history" ("uuid");
+CREATE UNIQUE INDEX "membership_subscriptions_customer_id_key" ON "membership_subscriptions" ("customer_id");
+CREATE UNIQUE INDEX "membership_subscriptions_pkey" ON "membership_subscriptions" ("id");
+CREATE UNIQUE INDEX "membership_subscriptions_uuid_key" ON "membership_subscriptions" ("uuid");
 CREATE UNIQUE INDEX "membership_types_code_key" ON "membership_types" ("code");
 CREATE UNIQUE INDEX "membership_types_pkey" ON "membership_types" ("id");
 CREATE UNIQUE INDEX "membership_types_uuid_key" ON "membership_types" ("uuid");
@@ -792,6 +932,9 @@ CREATE UNIQUE INDEX "shield_cards_card_number_key" ON "shield_cards" ("card_numb
 CREATE UNIQUE INDEX "shield_cards_customer_id_key" ON "shield_cards" ("customer_id");
 CREATE UNIQUE INDEX "shield_cards_pkey" ON "shield_cards" ("id");
 CREATE UNIQUE INDEX "shield_cards_uuid_key" ON "shield_cards" ("uuid");
+CREATE INDEX "idx_subscription_allocations_month" ON "subscription_monthly_allocations" ("month_start");
+CREATE UNIQUE INDEX "subscription_monthly_allocation_subscription_id_month_start_key" ON "subscription_monthly_allocations" ("subscription_id","month_start");
+CREATE UNIQUE INDEX "subscription_monthly_allocations_pkey" ON "subscription_monthly_allocations" ("id");
 CREATE INDEX "idx_user_branch_business" ON "users" ("branch_business_id");
 CREATE INDEX "idx_user_email" ON "users" ("email");
 CREATE UNIQUE INDEX "idx_user_firebase_uid" ON "users" ("firebase_uid");
@@ -809,16 +952,31 @@ CREATE UNIQUE INDEX "wallet_transactions_uuid_key" ON "wallet_transactions" ("uu
 CREATE UNIQUE INDEX "wallets_customer_id_key" ON "wallets" ("customer_id");
 CREATE UNIQUE INDEX "wallets_pkey" ON "wallets" ("id");
 CREATE UNIQUE INDEX "wallets_uuid_key" ON "wallets" ("uuid");
-ALTER TABLE "appointments" ADD CONSTRAINT "appointments_customer_id_fkey" FOREIGN KEY ("customer_id") REFERENCES "customers"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-ALTER TABLE "appointments" ADD CONSTRAINT "appointments_provider_id_fkey" FOREIGN KEY ("provider_id") REFERENCES "service_providers"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "activity_events" ADD CONSTRAINT "activity_events_agent_user_id_fkey" FOREIGN KEY ("agent_user_id") REFERENCES "users"("id");
+ALTER TABLE "activity_events" ADD CONSTRAINT "activity_events_business_id_fkey" FOREIGN KEY ("business_id") REFERENCES "businesses"("id");
+ALTER TABLE "activity_events" ADD CONSTRAINT "activity_events_created_by_fkey" FOREIGN KEY ("created_by") REFERENCES "users"("id");
+ALTER TABLE "activity_events" ADD CONSTRAINT "activity_events_crm_user_id_fkey" FOREIGN KEY ("crm_user_id") REFERENCES "users"("id");
+ALTER TABLE "activity_events" ADD CONSTRAINT "activity_events_customer_id_fkey" FOREIGN KEY ("customer_id") REFERENCES "customers"("id");
+ALTER TABLE "activity_events" ADD CONSTRAINT "activity_events_provider_id_fkey" FOREIGN KEY ("provider_id") REFERENCES "service_providers"("id");
 ALTER TABLE "agent_branch_assignments" ADD CONSTRAINT "agent_branch_assignments_business_id_fkey" FOREIGN KEY ("business_id") REFERENCES "businesses"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 ALTER TABLE "agent_branch_assignments" ADD CONSTRAINT "agent_branch_assignments_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 ALTER TABLE "agent_preferences" ADD CONSTRAINT "agent_preferences_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "appointments" ADD CONSTRAINT "appointments_customer_id_fkey" FOREIGN KEY ("customer_id") REFERENCES "customers"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "appointments" ADD CONSTRAINT "appointments_provider_id_fkey" FOREIGN KEY ("provider_id") REFERENCES "service_providers"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 ALTER TABLE "audit_logs" ADD CONSTRAINT "audit_logs_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 ALTER TABLE "benefit_ledger_transactions" ADD CONSTRAINT "benefit_ledger_transactions_created_by_fkey" FOREIGN KEY ("created_by") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 ALTER TABLE "benefit_ledger_transactions" ADD CONSTRAINT "benefit_ledger_transactions_wallet_id_fkey" FOREIGN KEY ("wallet_id") REFERENCES "wallets"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "card_requests" ADD CONSTRAINT "card_requests_business_id_fkey" FOREIGN KEY ("business_id") REFERENCES "businesses"("id");
+ALTER TABLE "card_requests" ADD CONSTRAINT "card_requests_customer_id_fkey" FOREIGN KEY ("customer_id") REFERENCES "customers"("id");
+ALTER TABLE "card_requests" ADD CONSTRAINT "card_requests_membership_id_fkey" FOREIGN KEY ("membership_id") REFERENCES "memberships"("id");
+ALTER TABLE "card_requests" ADD CONSTRAINT "card_requests_requested_by_fkey" FOREIGN KEY ("requested_by") REFERENCES "users"("id");
+ALTER TABLE "card_requests" ADD CONSTRAINT "card_requests_reviewed_by_fkey" FOREIGN KEY ("reviewed_by") REFERENCES "users"("id");
 ALTER TABLE "cash_wallet_transactions" ADD CONSTRAINT "cash_wallet_transactions_created_by_fkey" FOREIGN KEY ("created_by") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 ALTER TABLE "cash_wallet_transactions" ADD CONSTRAINT "cash_wallet_transactions_wallet_id_fkey" FOREIGN KEY ("wallet_id") REFERENCES "wallets"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "commission_allocations" ADD CONSTRAINT "commission_allocations_commission_event_id_fkey" FOREIGN KEY ("commission_event_id") REFERENCES "commission_events"("id") ON DELETE CASCADE;
+ALTER TABLE "commission_allocations" ADD CONSTRAINT "commission_allocations_recipient_user_id_fkey" FOREIGN KEY ("recipient_user_id") REFERENCES "users"("id");
+ALTER TABLE "commission_events" ADD CONSTRAINT "commission_events_created_by_fkey" FOREIGN KEY ("created_by") REFERENCES "users"("id");
+ALTER TABLE "commission_events" ADD CONSTRAINT "commission_events_customer_id_fkey" FOREIGN KEY ("customer_id") REFERENCES "customers"("id");
 ALTER TABLE "complaints" ADD CONSTRAINT "complaints_customer_id_fkey" FOREIGN KEY ("customer_id") REFERENCES "customers"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 ALTER TABLE "consultations" ADD CONSTRAINT "consultations_appointment_id_fkey" FOREIGN KEY ("appointment_id") REFERENCES "appointments"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 ALTER TABLE "consultations" ADD CONSTRAINT "consultations_customer_id_fkey" FOREIGN KEY ("customer_id") REFERENCES "customers"("id") ON DELETE SET NULL ON UPDATE CASCADE;
@@ -829,6 +987,11 @@ ALTER TABLE "crm_activities" ADD CONSTRAINT "crm_activities_customer_id_fkey" FO
 ALTER TABLE "crm_tasks" ADD CONSTRAINT "crm_tasks_assigned_to_fkey" FOREIGN KEY ("assigned_to") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 ALTER TABLE "crm_tasks" ADD CONSTRAINT "crm_tasks_customer_id_fkey" FOREIGN KEY ("customer_id") REFERENCES "customers"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 ALTER TABLE "customer_contacts" ADD CONSTRAINT "customer_contacts_customer_id_fkey" FOREIGN KEY ("customer_id") REFERENCES "customers"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "customer_import_batches" ADD CONSTRAINT "customer_import_batches_approved_by_fkey" FOREIGN KEY ("approved_by") REFERENCES "users"("id");
+ALTER TABLE "customer_import_batches" ADD CONSTRAINT "customer_import_batches_business_id_fkey" FOREIGN KEY ("business_id") REFERENCES "businesses"("id");
+ALTER TABLE "customer_import_batches" ADD CONSTRAINT "customer_import_batches_requested_by_fkey" FOREIGN KEY ("requested_by") REFERENCES "users"("id");
+ALTER TABLE "customer_import_rows" ADD CONSTRAINT "customer_import_rows_batch_id_fkey" FOREIGN KEY ("batch_id") REFERENCES "customer_import_batches"("id") ON DELETE CASCADE;
+ALTER TABLE "customer_import_rows" ADD CONSTRAINT "customer_import_rows_matched_customer_id_fkey" FOREIGN KEY ("matched_customer_id") REFERENCES "customers"("id");
 ALTER TABLE "customer_status_history" ADD CONSTRAINT "customer_status_history_changed_by_fkey" FOREIGN KEY ("changed_by") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 ALTER TABLE "customer_status_history" ADD CONSTRAINT "customer_status_history_customer_id_fkey" FOREIGN KEY ("customer_id") REFERENCES "customers"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 ALTER TABLE "customers" ADD CONSTRAINT "customers_approved_by_fkey" FOREIGN KEY ("approved_by") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
@@ -845,6 +1008,8 @@ ALTER TABLE "documents" ADD CONSTRAINT "documents_uploaded_by_fkey" FOREIGN KEY 
 ALTER TABLE "lab_reports" ADD CONSTRAINT "lab_reports_appointment_id_fkey" FOREIGN KEY ("appointment_id") REFERENCES "appointments"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 ALTER TABLE "lab_reports" ADD CONSTRAINT "lab_reports_customer_id_fkey" FOREIGN KEY ("customer_id") REFERENCES "customers"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 ALTER TABLE "lab_reports" ADD CONSTRAINT "lab_reports_document_id_fkey" FOREIGN KEY ("document_id") REFERENCES "documents"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "membership_subscriptions" ADD CONSTRAINT "membership_subscriptions_customer_id_fkey" FOREIGN KEY ("customer_id") REFERENCES "customers"("id");
+ALTER TABLE "membership_subscriptions" ADD CONSTRAINT "membership_subscriptions_membership_id_fkey" FOREIGN KEY ("membership_id") REFERENCES "memberships"("id");
 ALTER TABLE "memberships" ADD CONSTRAINT "memberships_customer_id_fkey" FOREIGN KEY ("customer_id") REFERENCES "customers"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 ALTER TABLE "memberships" ADD CONSTRAINT "memberships_membership_type_id_fkey" FOREIGN KEY ("membership_type_id") REFERENCES "membership_types"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 ALTER TABLE "notifications" ADD CONSTRAINT "notifications_customer_id_fkey" FOREIGN KEY ("customer_id") REFERENCES "customers"("id") ON DELETE SET NULL ON UPDATE CASCADE;
@@ -870,10 +1035,9 @@ ALTER TABLE "role_permissions" ADD CONSTRAINT "role_permissions_role_id_fkey" FO
 ALTER TABLE "service_providers" ADD CONSTRAINT "service_providers_business_id_fkey" FOREIGN KEY ("business_id") REFERENCES "businesses"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 ALTER TABLE "shield_cards" ADD CONSTRAINT "shield_cards_customer_id_fkey" FOREIGN KEY ("customer_id") REFERENCES "customers"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 ALTER TABLE "shield_cards" ADD CONSTRAINT "shield_cards_issued_business_id_fkey" FOREIGN KEY ("issued_business_id") REFERENCES "businesses"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "subscription_monthly_allocations" ADD CONSTRAINT "subscription_monthly_allocations_subscription_id_fkey" FOREIGN KEY ("subscription_id") REFERENCES "membership_subscriptions"("id") ON DELETE CASCADE;
 ALTER TABLE "users" ADD CONSTRAINT "users_department_id_fkey" FOREIGN KEY ("department_id") REFERENCES "departments"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 ALTER TABLE "users" ADD CONSTRAINT "users_role_id_fkey" FOREIGN KEY ("role_id") REFERENCES "roles"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 ALTER TABLE "wallet_transactions" ADD CONSTRAINT "wallet_transactions_created_by_fkey" FOREIGN KEY ("created_by") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 ALTER TABLE "wallet_transactions" ADD CONSTRAINT "wallet_transactions_wallet_id_fkey" FOREIGN KEY ("wallet_id") REFERENCES "wallets"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 ALTER TABLE "wallets" ADD CONSTRAINT "wallets_customer_id_fkey" FOREIGN KEY ("customer_id") REFERENCES "customers"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-
-

@@ -69,12 +69,11 @@ export class CustomerController {
     });
     const data =
       this.providerScopeService.isProviderPrincipal(principal) ||
-          this.agentScopeService.isAgentPrincipal(principal)
-      ? await (async () => {
-          const customerIds = results.map((item) => item.id);
-          const allowedIds = new Set(
-            (
-              this.providerScopeService.isProviderPrincipal(principal)
+      this.agentScopeService.isAgentPrincipal(principal)
+        ? await (async () => {
+            const customerIds = results.map((item) => item.id);
+            const allowedIds = new Set(
+              (this.providerScopeService.isProviderPrincipal(principal)
                 ? await this.providerScopeService.listAccessibleCustomerIds(
                     principal,
                     customerIds,
@@ -83,15 +82,137 @@ export class CustomerController {
                     principal,
                     customerIds,
                   )
-            ).map((id) => id.toString()),
-          );
-          return results.filter((item) => allowedIds.has(item.id.toString()));
-        })()
-      : results;
+              ).map((id) => id.toString()),
+            );
+            return results.filter((item) => allowedIds.has(item.id.toString()));
+          })()
+        : results;
     return {
       success: true,
       message: 'Search completed',
       data,
+    };
+  }
+
+  @RequirePermissions('customers.view')
+  @Get('existing-by-mobile')
+  async existingByMobile(
+    @Query('mobile') mobile?: string,
+    @CurrentPrincipal() principal?: ShieldPrincipal,
+  ) {
+    if (!mobile?.trim())
+      throw new ForbiddenException('Mobile number is required.');
+    const customer =
+      await this.customerService.findExistingCustomerByMobile(mobile);
+    if (customer) {
+      await this.providerScopeService.assertProviderCanAccessCustomer(
+        customer.id,
+        principal,
+      );
+      await this.agentScopeService.assertAgentCanAccessCustomer(
+        customer.id,
+        principal,
+      );
+    }
+    return {
+      success: true,
+      data: customer,
+    };
+  }
+
+  @RequirePermissions('customers.update')
+  @Post(':id/alternative-contact')
+  async saveAlternativeContact(
+    @Param('id') id: string,
+    @Body() body: any,
+    @CurrentPrincipal() principal?: ShieldPrincipal,
+  ) {
+    await this.providerScopeService.assertProviderCanAccessCustomer(
+      BigInt(id),
+      principal,
+    );
+    await this.agentScopeService.assertAgentCanAccessCustomer(
+      BigInt(id),
+      principal,
+    );
+    return {
+      success: true,
+      data: await this.customerService.saveAlternativeContact(BigInt(id), {
+        mobile: body.mobile,
+        name: body.name,
+        relationship: body.relationship,
+      }),
+    };
+  }
+
+  @RequirePermissions('customers.create')
+  @Post(':id/convert-to-membership')
+  async convertToMembership(
+    @Param('id') id: string,
+    @Body() body: any,
+    @CurrentPrincipal() principal?: ShieldPrincipal,
+  ) {
+    await this.providerScopeService.assertProviderCanAccessCustomer(
+      BigInt(id),
+      principal,
+    );
+    await this.agentScopeService.assertAgentCanAccessCustomer(
+      BigInt(id),
+      principal,
+    );
+    const agentCode = this.agentScopeService.isAgentPrincipal(principal)
+      ? await this.agentScopeService.resolveAgentCode(principal)
+      : undefined;
+    return {
+      success: true,
+      data: await this.customerService.convertExistingCustomerToMembership(
+        BigInt(id),
+        { membershipTypeCode: body.membership_type_code, agentCode },
+        principal?.userId ? BigInt(principal.userId) : undefined,
+      ),
+    };
+  }
+
+  @RequirePermissions('customers.view')
+  @Get(':id/card-profile')
+  async cardProfile(
+    @Param('id') id: string,
+    @CurrentPrincipal() principal?: ShieldPrincipal,
+  ) {
+    await this.providerScopeService.assertProviderCanAccessCustomer(
+      BigInt(id),
+      principal,
+    );
+    await this.agentScopeService.assertAgentCanAccessCustomer(
+      BigInt(id),
+      principal,
+    );
+    return {
+      success: true,
+      data: await this.customerService.getCardProfile(BigInt(id)),
+    };
+  }
+
+  @RequirePermissions('customers.update')
+  @Post(':id/card-requests')
+  async requestCard(
+    @Param('id') id: string,
+    @CurrentPrincipal() principal?: ShieldPrincipal,
+  ) {
+    await this.providerScopeService.assertProviderCanAccessCustomer(
+      BigInt(id),
+      principal,
+    );
+    await this.agentScopeService.assertAgentCanAccessCustomer(
+      BigInt(id),
+      principal,
+    );
+    return {
+      success: true,
+      data: await this.customerService.requestPhysicalCard(
+        BigInt(id),
+        principal?.userId ? BigInt(principal.userId) : undefined,
+      ),
     };
   }
 
@@ -102,7 +223,9 @@ export class CustomerController {
       throw new ForbiddenException('Only customers can use /customers/me.');
     }
 
-    const customer = await this.customerService.findOne(BigInt(principal.customerId));
+    const customer = await this.customerService.findOne(
+      BigInt(principal.customerId),
+    );
     return {
       success: true,
       message: 'Customer details retrieved',
@@ -120,14 +243,19 @@ export class CustomerController {
       principal?.principalType === 'CUSTOMER' &&
       principal.customerId !== id
     ) {
-      throw new ForbiddenException('Customers can only view their own profile.');
+      throw new ForbiddenException(
+        'Customers can only view their own profile.',
+      );
     }
 
     await this.providerScopeService.assertProviderCanAccessCustomer(
       BigInt(id),
       principal,
     );
-    await this.agentScopeService.assertAgentCanAccessCustomer(BigInt(id), principal);
+    await this.agentScopeService.assertAgentCanAccessCustomer(
+      BigInt(id),
+      principal,
+    );
     const customer = await this.customerService.findOne(BigInt(id));
     return {
       success: true,
@@ -147,14 +275,19 @@ export class CustomerController {
       principal?.principalType === 'CUSTOMER' &&
       principal.customerId !== id
     ) {
-      throw new ForbiddenException('Customers can only update their own profile.');
+      throw new ForbiddenException(
+        'Customers can only update their own profile.',
+      );
     }
 
     await this.providerScopeService.assertProviderCanAccessCustomer(
       BigInt(id),
       principal,
     );
-    await this.agentScopeService.assertAgentCanAccessCustomer(BigInt(id), principal);
+    await this.agentScopeService.assertAgentCanAccessCustomer(
+      BigInt(id),
+      principal,
+    );
     const customer = await this.customerService.update(BigInt(id), body);
     return {
       success: true,

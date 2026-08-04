@@ -1,4 +1,10 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { randomUUID } from 'crypto';
 import { ReferralService } from '../referral/referral.service';
@@ -21,7 +27,10 @@ export class CustomerService {
     const result = await this.createCustomerAggregate(data, staffUserId);
     const preloadConfig = await this.getSafePreloadConfig();
 
-    if (preloadConfig.cashPreloadEnabled && preloadConfig.cashPreloadAmount > 0) {
+    if (
+      preloadConfig.cashPreloadEnabled &&
+      preloadConfig.cashPreloadAmount > 0
+    ) {
       await this.walletService.createLedgerEntry({
         walletId: result.walletId,
         transactionType: 'OPENING_BALANCE',
@@ -36,7 +45,10 @@ export class CustomerService {
       });
     }
 
-    if (preloadConfig.benefitPreloadEnabled && preloadConfig.benefitPreloadAmount > 0) {
+    if (
+      preloadConfig.benefitPreloadEnabled &&
+      preloadConfig.benefitPreloadAmount > 0
+    ) {
       await this.walletService.createLedgerEntry({
         walletId: result.walletId,
         transactionType: 'PRELOAD',
@@ -226,6 +238,191 @@ export class CustomerService {
     });
   }
 
+  async findExistingCustomerByMobile(mobile: string) {
+    const normalized = mobile.replace(/\D/g, '').slice(-10);
+    const customer = await this.prisma.customer.findFirst({
+      where: { mobile: { endsWith: normalized }, deletedAt: null },
+      include: {
+        membership: true,
+        shieldCard: true,
+        customerContacts: { where: { isPrimary: false } },
+      },
+    });
+    if (!customer) return null;
+    const imported = await this.prisma.customerImportRow.findFirst({
+      where: { matchedCustomerId: customer.id },
+      orderBy: { createdAt: 'desc' },
+    });
+    const batch = imported
+      ? await this.prisma.customerImportBatch.findUnique({
+          where: { id: imported.batchId },
+        })
+      : null;
+    const existingBusiness = batch
+      ? await this.prisma.business.findUnique({
+          where: { id: batch.businessId },
+          select: { id: true, name: true, code: true },
+        })
+      : null;
+    return { ...customer, existingBusiness };
+  }
+
+  async convertExistingCustomerToMembership(
+    customerId: bigint,
+    data: { membershipTypeCode?: string; agentCode?: string },
+    staffUserId?: bigint,
+  ) {
+    return this.prisma.$transaction(async (tx) => {
+      const customer = await tx.customer.findFirst({
+        where: { id: customerId, deletedAt: null },
+        include: { membership: true, wallet: true, creditAccount: true },
+      });
+      if (!customer) {
+        throw new NotFoundException(`Customer with ID ${customerId} not found`);
+      }
+      if (customer.membership) {
+        throw new ConflictException(
+          'Membership already exists for this customer.',
+        );
+      }
+
+      const membershipType = await tx.membershipType.findFirst({
+        where: data.membershipTypeCode
+          ? { code: data.membershipTypeCode.trim().toUpperCase() }
+          : { code: 'STANDARD' },
+      });
+      if (!membershipType) {
+        throw new BadRequestException('A valid membership plan is required.');
+      }
+
+      const membership = await tx.membership.create({
+        data: {
+          uuid: randomUUID(),
+          customerId,
+          membershipTypeId: membershipType.id,
+          membershipNumber: `SHLD-${new Date().getFullYear()}-${customer.customerCode?.split('-')[1] ?? customerId}`,
+          joiningFee: membershipType.joiningFee,
+          status: 'INACTIVE',
+        },
+      });
+      const wallet =
+        customer.wallet ??
+        (await tx.wallet.create({
+          data: { uuid: randomUUID(), customerId, status: 'ACTIVE' },
+        }));
+      if (!customer.creditAccount) {
+        await tx.creditAccount.create({
+          data: {
+            uuid: randomUUID(),
+            customerId,
+            creditLimit: 3000.0,
+            availableCredit: 3000.0,
+            outstandingAmount: 0.0,
+            status: 'ACTIVE',
+          },
+        });
+      }
+      const converted = await tx.customer.update({
+        where: { id: customerId },
+        data: {
+          onboardingSource: 'EXISTING_CUSTOMER_CONVERSION',
+          ...(data.agentCode ? { agentCode: data.agentCode } : {}),
+          ...(staffUserId ? { createdBy: staffUserId } : {}),
+        },
+      });
+      await tx.activityEvent.create({
+        data: {
+          uuid: randomUUID(),
+          customerId,
+          activityType: 'MEMBERSHIP_CREATED',
+          relatedEntityType: 'membership',
+          relatedEntityId: membership.id,
+          agentUserId: staffUserId,
+          status: 'RECORDED',
+          description: 'Existing customer converted to a SHIELD member.',
+          createdBy: staffUserId,
+        },
+      });
+      return { customer: converted, membership, walletId: wallet.id };
+    });
+  }
+
+  async saveAlternativeContact(
+    customerId: bigint,
+    data: { mobile: string; name?: string; relationship?: string },
+  ) {
+    const customer = await this.findOne(customerId);
+    const normalized = data.mobile.replace(/\D/g, '').slice(-10);
+    const primary = customer.mobile.replace(/\D/g, '').slice(-10);
+    if (!normalized || normalized === primary) {
+      throw new BadRequestException(
+        'Alternative mobile number must differ from the primary login number.',
+      );
+    }
+    const existing = await this.prisma.customerContact.findFirst({
+      where: { customerId, mobile: data.mobile },
+    });
+    const values = {
+      name: data.name?.trim() || null,
+      relation: data.relationship?.trim() || null,
+      isPrimary: false,
+    };
+    return existing
+      ? this.prisma.customerContact.update({
+          where: { id: existing.id },
+          data: values,
+        })
+      : this.prisma.customerContact.create({
+          data: { customerId, mobile: data.mobile, ...values },
+        });
+  }
+
+  async requestPhysicalCard(customerId: bigint, requestedBy?: bigint) {
+    const customer = await this.findOne(customerId);
+    if (!customer.membership) {
+      throw new BadRequestException(
+        'Create or activate membership before requesting a physical card.',
+      );
+    }
+    const existing = await this.prisma.cardRequest.findFirst({
+      where: {
+        customerId,
+        status: { in: ['REQUESTED', 'APPROVED', 'PRINTING', 'READY'] },
+      },
+      orderBy: { requestedAt: 'desc' },
+    });
+    if (existing) return existing;
+    return this.prisma.cardRequest.create({
+      data: {
+        uuid: randomUUID(),
+        customerId,
+        membershipId: customer.membership.id,
+        status: 'REQUESTED',
+        requestedBy,
+      },
+    });
+  }
+
+  async getCardProfile(customerId: bigint) {
+    const customer = await this.findOne(customerId);
+    const request = await this.prisma.cardRequest.findFirst({
+      where: { customerId },
+      orderBy: { requestedAt: 'desc' },
+    });
+    return {
+      membership: customer.membership,
+      digitalCard: customer.shieldCard,
+      physicalCardRequest: request,
+      action: customer.shieldCard
+        ? 'VIEW_CARD'
+        : request
+          ? request.status
+          : customer.membership
+            ? 'REQUEST_PHYSICAL_CARD'
+            : 'CREATE_OR_ACTIVATE_MEMBERSHIP',
+    };
+  }
+
   async approve(id: bigint, staffUserId: bigint) {
     const customer = await this.findOne(id);
 
@@ -331,7 +528,8 @@ export class CustomerService {
 
     await this.referralService.rejectReferral({
       referredCustomerId: customer.id,
-      reason: 'Customer onboarding or membership became inactive before qualification.',
+      reason:
+        'Customer onboarding or membership became inactive before qualification.',
     });
 
     return suspendedCustomer;
@@ -434,6 +632,21 @@ export class CustomerService {
     const customerCode = `CUST-${Math.floor(100000 + Math.random() * 900000)}`;
 
     return this.prisma.$transaction(async (tx) => {
+      const normalizedMobile = data.mobile?.replace(/\D/g, '').slice(-10);
+      if (!normalizedMobile) {
+        throw new BadRequestException(
+          'A valid primary mobile number is required.',
+        );
+      }
+      const existingCustomer = await tx.customer.findFirst({
+        where: { mobile: { endsWith: normalizedMobile }, deletedAt: null },
+        select: { id: true },
+      });
+      if (existingCustomer) {
+        throw new ConflictException(
+          'Customer already exists. Use existing-customer conversion instead.',
+        );
+      }
       let referredById: bigint | null = null;
       if (data.referred_by_code) {
         const referrer = await tx.customer.findFirst({
@@ -444,7 +657,10 @@ export class CustomerService {
         }
       }
 
-      const desiredStatus = (data.status ?? 'PENDING').toString().trim().toUpperCase();
+      const desiredStatus = (data.status ?? 'PENDING')
+        .toString()
+        .trim()
+        .toUpperCase();
       const customer = await tx.customer.create({
         data: {
           uuid: customerUuid,

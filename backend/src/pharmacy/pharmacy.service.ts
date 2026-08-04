@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { randomUUID } from 'crypto';
 import type { ShieldPrincipal } from '../auth/auth.types';
@@ -18,7 +22,12 @@ export class PharmacyService {
     private readonly walletService: WalletService,
   ) {}
 
-  async createProduct(data: { productName: string; brand: string; productCode: string; unit?: string }) {
+  async createProduct(data: {
+    productName: string;
+    brand: string;
+    productCode: string;
+    unit?: string;
+  }) {
     return this.prisma.product.create({
       data: {
         uuid: randomUUID(),
@@ -54,6 +63,13 @@ export class PharmacyService {
     });
   }
 
+  async listWellnessDemoProducts() {
+    return this.prisma.product.findMany({
+      where: { isDemoAvailable: true, status: 'DEMO' },
+      orderBy: { productName: 'asc' },
+    });
+  }
+
   async createPurchase(data: {
     customerId: bigint;
     providerId: bigint;
@@ -69,14 +85,21 @@ export class PharmacyService {
     // 2. Fetch customer, membership, and wallet
     const customer = await this.prisma.customer.findUnique({
       where: { id: data.customerId },
-      include: { membership: { include: { membershipType: true } }, wallet: true },
+      include: {
+        membership: { include: { membershipType: true } },
+        wallet: true,
+      },
     });
 
     if (!customer) {
-      throw new NotFoundException(`Customer with ID ${data.customerId} not found`);
+      throw new NotFoundException(
+        `Customer with ID ${data.customerId} not found`,
+      );
     }
     if (!customer.wallet) {
-      throw new BadRequestException('Customer does not have a wallet configured.');
+      throw new BadRequestException(
+        'Customer does not have a wallet configured.',
+      );
     }
 
     const evaluation = await this.pricingService.evaluateServicePrice({
@@ -92,66 +115,68 @@ export class PharmacyService {
       evaluation.finalPayableAmount,
     );
 
-    return this.prisma.$transaction(async (tx) => {
-      const purchase = await tx.purchase.create({
-        data: {
-          uuid: randomUUID(),
-          customerId: customer.id,
-          providerId: data.providerId,
-          invoiceNumber: data.invoiceNumber,
-          totalAmount,
-          discountAmount: Number(
-            (
-              evaluation.benefitApplied +
-              evaluation.membershipDiscountApplied +
-              evaluation.rewardPointCreditValue
-            ).toFixed(2),
-          ),
-          payableAmount: evaluation.finalPayableAmount,
-          purchaseDate: new Date(),
-        },
-      });
-
-      for (const item of data.items) {
-        await tx.purchaseItem.create({
+    return this.prisma
+      .$transaction(async (tx) => {
+        const purchase = await tx.purchase.create({
           data: {
-            purchaseId: purchase.id,
-            productId: item.productId,
-            quantity: item.quantity,
-            unitPrice: item.unitPrice,
-            totalPrice: item.quantity * item.unitPrice,
+            uuid: randomUUID(),
+            customerId: customer.id,
+            providerId: data.providerId,
+            invoiceNumber: data.invoiceNumber,
+            totalAmount,
+            discountAmount: Number(
+              (
+                evaluation.benefitApplied +
+                evaluation.membershipDiscountApplied +
+                evaluation.rewardPointCreditValue
+              ).toFixed(2),
+            ),
+            payableAmount: evaluation.finalPayableAmount,
+            purchaseDate: new Date(),
           },
         });
-      }
 
-      await tx.cashWalletTransaction.create({
-        data: {
-          uuid: randomUUID(),
-          walletId: customer.wallet!.id,
-          transactionType: 'PURCHASE',
-          amount: evaluation.finalPayableAmount,
-          remarks: `Pharmacy purchase (Invoice: ${data.invoiceNumber})`,
-          createdBy: data.staffUserId,
+        for (const item of data.items) {
+          await tx.purchaseItem.create({
+            data: {
+              purchaseId: purchase.id,
+              productId: item.productId,
+              quantity: item.quantity,
+              unitPrice: item.unitPrice,
+              totalPrice: item.quantity * item.unitPrice,
+            },
+          });
+        }
+
+        await tx.cashWalletTransaction.create({
+          data: {
+            uuid: randomUUID(),
+            walletId: customer.wallet!.id,
+            transactionType: 'PURCHASE',
+            amount: evaluation.finalPayableAmount,
+            remarks: `Pharmacy purchase (Invoice: ${data.invoiceNumber})`,
+            createdBy: data.staffUserId,
+            referenceType: 'PURCHASE',
+            referenceId: purchase.id,
+            metadata: {
+              customerVisibleLines: evaluation.customerVisibleLines,
+            },
+          },
+        });
+
+        return purchase;
+      })
+      .then(async (purchase) => {
+        await this.referralService.qualifyRewardFromTransaction({
+          customerId: customer.id,
+          serviceType: 'PHARMACY',
           referenceType: 'PURCHASE',
           referenceId: purchase.id,
-          metadata: {
-            customerVisibleLines: evaluation.customerVisibleLines,
-          },
-        },
-      });
+          performedBy: data.staffUserId,
+        });
 
-      return purchase;
-    }).then(async (purchase) => {
-      await this.referralService.qualifyRewardFromTransaction({
-        customerId: customer.id,
-        serviceType: 'PHARMACY',
-        referenceType: 'PURCHASE',
-        referenceId: purchase.id,
-        performedBy: data.staffUserId,
+        return purchase;
       });
-
-      return purchase;
-    });
   }
 
   async listPurchases(customerId?: bigint, principal?: ShieldPrincipal) {
@@ -160,7 +185,10 @@ export class PharmacyService {
       whereClause.customerId = customerId;
     }
     return this.prisma.purchase.findMany({
-      where: this.providerScopeService.scopePurchaseWhere(whereClause, principal),
+      where: this.providerScopeService.scopePurchaseWhere(
+        whereClause,
+        principal,
+      ),
       include: {
         customer: true,
         provider: true,

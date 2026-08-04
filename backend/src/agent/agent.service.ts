@@ -73,7 +73,9 @@ export class AgentService {
     ] = await Promise.all([
       this.prisma.appointment.count({
         where: {
-          customerId: { in: customerIds.length > 0 ? customerIds : [BigInt(-1)] },
+          customerId: {
+            in: customerIds.length > 0 ? customerIds : [BigInt(-1)],
+          },
           appointmentDate: { gte: startOfToday, lte: endOfToday },
         },
       }),
@@ -131,7 +133,9 @@ export class AgentService {
       }),
       this.prisma.appointment.findMany({
         where: {
-          customerId: { in: customerIds.length > 0 ? customerIds : [BigInt(-1)] },
+          customerId: {
+            in: customerIds.length > 0 ? customerIds : [BigInt(-1)],
+          },
         },
         include: { customer: true, provider: true },
         orderBy: [{ appointmentDate: 'asc' }, { id: 'desc' }],
@@ -168,7 +172,10 @@ export class AgentService {
     const referralCountByCustomer = new Map<string, number>();
     for (const event of referralEvents) {
       const key = event.referrerCustomerId.toString();
-      referralCountByCustomer.set(key, (referralCountByCustomer.get(key) ?? 0) + 1);
+      referralCountByCustomer.set(
+        key,
+        (referralCountByCustomer.get(key) ?? 0) + 1,
+      );
     }
 
     const activeCustomerCount = customers.filter(
@@ -189,7 +196,9 @@ export class AgentService {
     const conversionRate =
       monthlyCustomersAdded === 0
         ? 0
-        : Number(((monthlyActiveCustomers / monthlyCustomersAdded) * 100).toFixed(1));
+        : Number(
+            ((monthlyActiveCustomers / monthlyCustomersAdded) * 100).toFixed(1),
+          );
 
     return {
       generatedAt: today.toISOString(),
@@ -209,18 +218,17 @@ export class AgentService {
         }).length,
         pendingRegistrations,
         appointmentsToday,
-        newReferrals:
-            referralEvents.filter((event: any) => event.createdAt >= startOfMonth)
-                .length,
+        newReferrals: referralEvents.filter(
+          (event: any) => event.createdAt >= startOfMonth,
+        ).length,
         monthlyCustomersAdded,
         monthlyActiveCustomers,
         retentionRate,
         pendingDocuments,
-        tasksOpen:
-            tasks.filter(
-              (task: any) =>
-                  (task.status ?? '').trim().toUpperCase() !== 'COMPLETED',
-            ).length,
+        tasksOpen: tasks.filter(
+          (task: any) =>
+            (task.status ?? '').trim().toUpperCase() !== 'COMPLETED',
+        ).length,
         unreadNotifications: notifications.filter(
           (notification: any) =>
             (notification.status ?? '').trim().toUpperCase() !== 'READ',
@@ -234,11 +242,10 @@ export class AgentService {
         appointmentsGenerated,
         completedFollowUps,
         conversionRate,
-        monthlyIncentives:
-            referralEvents.filter(
-              (event: any) =>
-                  (event.status ?? '').trim().toUpperCase() === 'REWARDED',
-            ).length,
+        monthlyIncentives: referralEvents.filter(
+          (event: any) =>
+            (event.status ?? '').trim().toUpperCase() === 'REWARDED',
+        ).length,
       },
       customers: customers.map((customer) => ({
         id: customer.id.toString(),
@@ -252,8 +259,9 @@ export class AgentService {
         membershipStatus: customer.membership?.status ?? 'PENDING',
         referralCount: referralCountByCustomer.get(customer.id.toString()) ?? 0,
         lastVisitAt:
-          latestAppointmentByCustomer.get(customer.id.toString())?.toISOString() ??
-          null,
+          latestAppointmentByCustomer
+            .get(customer.id.toString())
+            ?.toISOString() ?? null,
         upcomingAppointmentAt:
           upcomingAppointmentByCustomer
             .get(customer.id.toString())
@@ -307,11 +315,11 @@ export class AgentService {
     };
   }
 
-  async getCustomerWorkspace(
-    customerId: bigint,
-    principal?: ShieldPrincipal,
-  ) {
-    await this.agentScopeService.assertAgentCanAccessCustomer(customerId, principal);
+  async getCustomerWorkspace(customerId: bigint, principal?: ShieldPrincipal) {
+    await this.agentScopeService.assertAgentCanAccessCustomer(
+      customerId,
+      principal,
+    );
     const tasksAssignedTo =
       principal?.userId != null ? BigInt(principal.userId) : undefined;
 
@@ -325,6 +333,7 @@ export class AgentService {
       summary,
       tree,
       activities,
+      managementActivities,
       tasks,
       contacts,
       purchases,
@@ -332,62 +341,69 @@ export class AgentService {
       labReports,
       dentalRecords,
       statusHistory,
-    ] =
-      await Promise.all([
-        this.customerService.findOne(customerId),
-        this.customerService.getCustomerPortalMembership(customerId),
-        this.walletService.getCustomerWalletBundle(customerId),
-        this.documentService.list(customerId, principal),
-        this.appointmentService.list(customerId, principal),
-        this.notificationService.list(customerId, principal),
-        this.referralService.getReferralSummary(customerId),
-        this.referralService.getReferralTree(customerId),
-        this.crmService.listActivities(customerId),
-        this.crmService.listTasks(customerId, tasksAssignedTo),
-        this.prisma.customerContact.findMany({
+    ] = await Promise.all([
+      this.customerService.findOne(customerId),
+      this.customerService.getCustomerPortalMembership(customerId),
+      this.walletService.getCustomerWalletBundle(customerId),
+      this.documentService.list(customerId, principal),
+      this.appointmentService.list(customerId, principal),
+      this.notificationService.list(customerId, principal),
+      this.referralService.getReferralSummary(customerId),
+      this.referralService.getReferralTree(customerId),
+      this.crmService.listActivities(customerId),
+      this.prisma.activityEvent
+        .findMany({
           where: { customerId },
-          orderBy: [{ isPrimary: 'desc' }, { id: 'asc' }],
-        }),
-        this.prisma.purchase.findMany({
-          where: { customerId },
-          include: {
-            provider: true,
-            purchaseItems: {
-              include: {
-                product: true,
-              },
+          orderBy: { createdAt: 'desc' },
+          take: 30,
+        })
+        // ponytail: legacy databases lack this prepared table; remove once migration is mandatory.
+        .catch(() => []),
+      this.crmService.listTasks(customerId, tasksAssignedTo),
+      this.prisma.customerContact.findMany({
+        where: { customerId },
+        orderBy: [{ isPrimary: 'desc' }, { id: 'asc' }],
+      }),
+      this.prisma.purchase.findMany({
+        where: { customerId },
+        include: {
+          provider: true,
+          purchaseItems: {
+            include: {
+              product: true,
             },
           },
-          orderBy: [{ purchaseDate: 'desc' }, { id: 'desc' }],
-          take: 8,
-        }),
-        this.prisma.consultation.findMany({
-          where: { customerId },
-          include: {
-            prescriptions: true,
-          },
-          orderBy: [{ appointmentId: 'desc' }, { id: 'desc' }],
-          take: 8,
-        }),
-        this.prisma.labReport.findMany({
-          where: { customerId },
-          include: {
-            document: true,
-          },
-          orderBy: [{ reportDate: 'desc' }, { id: 'desc' }],
-          take: 8,
-        }),
-        this.prisma.dentalRecord.findMany({
-          where: { customerId },
-          orderBy: [{ id: 'desc' }],
-          take: 8,
-        }),
-        this.prisma.customerStatusHistory.findMany({
-          where: { customerId },
-          orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
-          take: 10,
-        }),
-      ]);
+        },
+        orderBy: [{ purchaseDate: 'desc' }, { id: 'desc' }],
+        take: 8,
+      }),
+      this.prisma.consultation.findMany({
+        where: { customerId },
+        include: {
+          prescriptions: true,
+        },
+        orderBy: [{ appointmentId: 'desc' }, { id: 'desc' }],
+        take: 8,
+      }),
+      this.prisma.labReport.findMany({
+        where: { customerId },
+        include: {
+          document: true,
+        },
+        orderBy: [{ reportDate: 'desc' }, { id: 'desc' }],
+        take: 8,
+      }),
+      this.prisma.dentalRecord.findMany({
+        where: { customerId },
+        orderBy: [{ id: 'desc' }],
+        take: 8,
+      }),
+      this.prisma.customerStatusHistory.findMany({
+        where: { customerId },
+        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+        take: 10,
+      }),
+    ]);
 
     const timeline = [
       ...activities.map((activity) => ({
@@ -398,13 +414,20 @@ export class AgentService {
         timestamp: activity.createdAt.toISOString(),
         status: 'RECORDED',
       })),
+      ...managementActivities.map((activity) => ({
+        id: `management:${activity.id.toString()}`,
+        type: activity.activityType,
+        title: activity.activityType,
+        description: activity.description,
+        timestamp: activity.createdAt.toISOString(),
+        status: activity.status,
+      })),
       ...tasks.map((task) => ({
         id: `task:${task.id.toString()}`,
         type: 'TASK',
         title: task.status ?? 'Task',
         description: task.notes ?? '',
-        timestamp:
-          task.dueDate?.toISOString() ?? new Date(0).toISOString(),
+        timestamp: task.dueDate?.toISOString() ?? new Date(0).toISOString(),
         status: task.status ?? 'PENDING',
       })),
     ].sort((left, right) => right.timestamp.localeCompare(left.timestamp));
@@ -415,7 +438,9 @@ export class AgentService {
         category: 'Consultation',
         title: consultation.diagnosis?.trim() || 'Consultation note',
         date: consultation.appointmentId?.toString() ?? null,
-        status: consultation.prescriptions?.length ? 'Prescription linked' : 'Recorded',
+        status: consultation.prescriptions?.length
+          ? 'Prescription linked'
+          : 'Recorded',
       })),
       ...labReports.map((report: any) => ({
         id: `lab:${report.id.toString()}`,
@@ -519,7 +544,10 @@ export class AgentService {
     };
   }
 
-  async updateCurrentProfile(principal: ShieldPrincipal | undefined, data: any) {
+  async updateCurrentProfile(
+    principal: ShieldPrincipal | undefined,
+    data: any,
+  ) {
     const context = await this.resolveCurrentAgentUserContext(principal);
     const updated = await this.prisma.user.update({
       where: { id: context.userId },
@@ -552,7 +580,10 @@ export class AgentService {
     data: any,
   ) {
     const context = await this.resolveCurrentAgentUserContext(principal);
-    const normalized = await this.normalizeAgentPreferenceInput(data, context.user);
+    const normalized = await this.normalizeAgentPreferenceInput(
+      data,
+      context.user,
+    );
 
     const user = await this.prisma.$transaction(async (tx) => {
       await tx.agentPreference.upsert({
@@ -600,7 +631,9 @@ export class AgentService {
         const sameAsCurrentPrimary =
           context.user.branchBusinessId != null &&
           context.user.branchBusinessId === normalized.requestedBranchId;
-        const nextStatus = sameAsCurrentPrimary ? 'ASSIGNED' : 'REGIONAL_APPROVAL';
+        const nextStatus = sameAsCurrentPrimary
+          ? 'ASSIGNED'
+          : 'REGIONAL_APPROVAL';
 
         await tx.agentBranchAssignment.upsert({
           where: {
@@ -614,11 +647,13 @@ export class AgentService {
             isPrimary: sameAsCurrentPrimary,
             approvedAt:
               nextStatus === 'ASSIGNED'
-                ? existing?.approvedAt ?? new Date()
-                : existing?.approvedAt ?? null,
+                ? (existing?.approvedAt ?? new Date())
+                : (existing?.approvedAt ?? null),
             requestedAt: existing?.requestedAt ?? new Date(),
             transferredAt:
-              nextStatus === 'REGIONAL_APPROVAL' ? new Date() : existing?.transferredAt ?? null,
+              nextStatus === 'REGIONAL_APPROVAL'
+                ? new Date()
+                : (existing?.transferredAt ?? null),
             inactiveAt: null,
             notes: normalized.branchNotes,
           },
@@ -629,7 +664,8 @@ export class AgentService {
             status: nextStatus,
             isPrimary: sameAsCurrentPrimary,
             approvedAt: nextStatus === 'ASSIGNED' ? new Date() : null,
-            transferredAt: nextStatus === 'REGIONAL_APPROVAL' ? new Date() : null,
+            transferredAt:
+              nextStatus === 'REGIONAL_APPROVAL' ? new Date() : null,
             notes: normalized.branchNotes,
           },
         });
@@ -662,7 +698,9 @@ export class AgentService {
   private async requireAgentContext(principal?: ShieldPrincipal) {
     const context = await this.agentScopeService.resolveAgentContext(principal);
     if (!context) {
-      throw new ForbiddenException('Only SHIELD agents can access this workspace.');
+      throw new ForbiddenException(
+        'Only SHIELD agents can access this workspace.',
+      );
     }
     return context;
   }
@@ -685,7 +723,9 @@ export class AgentService {
   private async resolveCurrentAgentUserContext(principal?: ShieldPrincipal) {
     const context = await this.requireAgentContext(principal);
     if (!principal?.userId) {
-      throw new UnauthorizedException('Authenticated agent context is required.');
+      throw new UnauthorizedException(
+        'Authenticated agent context is required.',
+      );
     }
     const user = await this.prisma.user.findUnique({
       where: { id: BigInt(principal.userId) },
@@ -719,27 +759,29 @@ export class AgentService {
       },
     });
 
-    const assignments = (user.agentBranchAssignments ?? []).map((assignment: any) => ({
-      id: assignment.id.toString(),
-      businessId: assignment.businessId.toString(),
-      status: assignment.status ?? 'PENDING',
-      isPrimary: assignment.isPrimary === true,
-      requestedAt: assignment.requestedAt?.toISOString() ?? null,
-      approvedAt: assignment.approvedAt?.toISOString() ?? null,
-      transferredAt: assignment.transferredAt?.toISOString() ?? null,
-      inactiveAt: assignment.inactiveAt?.toISOString() ?? null,
-      notes: assignment.notes ?? null,
-      business: assignment.business
-        ? {
-            id: assignment.business.id.toString(),
-            uuid: assignment.business.uuid,
-            code: assignment.business.code,
-            name: assignment.business.name,
-            businessType: assignment.business.businessType,
-            status: assignment.business.status,
-          }
-        : null,
-    }));
+    const assignments = (user.agentBranchAssignments ?? []).map(
+      (assignment: any) => ({
+        id: assignment.id.toString(),
+        businessId: assignment.businessId.toString(),
+        status: assignment.status ?? 'PENDING',
+        isPrimary: assignment.isPrimary === true,
+        requestedAt: assignment.requestedAt?.toISOString() ?? null,
+        approvedAt: assignment.approvedAt?.toISOString() ?? null,
+        transferredAt: assignment.transferredAt?.toISOString() ?? null,
+        inactiveAt: assignment.inactiveAt?.toISOString() ?? null,
+        notes: assignment.notes ?? null,
+        business: assignment.business
+          ? {
+              id: assignment.business.id.toString(),
+              uuid: assignment.business.uuid,
+              code: assignment.business.code,
+              name: assignment.business.name,
+              businessType: assignment.business.businessType,
+              status: assignment.business.status,
+            }
+          : null,
+      }),
+    );
 
     const currentPrimary =
       assignments.find(
@@ -749,7 +791,8 @@ export class AgentService {
     const requestedBranch =
       assignments.find(
         (assignment: any) =>
-          assignment.status === 'REGIONAL_APPROVAL' || assignment.status === 'PENDING',
+          assignment.status === 'REGIONAL_APPROVAL' ||
+          assignment.status === 'PENDING',
       ) ?? null;
     const fullName = `${user.firstName ?? ''} ${user.lastName ?? ''}`.trim();
 
@@ -766,7 +809,8 @@ export class AgentService {
         status: user.status,
       },
       display: {
-        fullName: fullName.length > 0 ? fullName : user.email ?? 'SHIELD Agent',
+        fullName:
+          fullName.length > 0 ? fullName : (user.email ?? 'SHIELD Agent'),
         designation: user.role?.name ?? 'SHIELD Agent',
         employeeCode: user.employeeCode,
         branch:
@@ -799,28 +843,43 @@ export class AgentService {
           district: '',
           travelRadiusKm: 15,
         }),
-        emergencyContact: this.normalizeStoredObject(preference?.emergencyContact, {
-          name: '',
-          phone: '',
-          relation: '',
-        }),
-        notifications: this.normalizeStoredObject(preference?.notificationPreferences, {
-          followUpReminders: true,
-          appointmentChanges: true,
-          referralUpdates: true,
-          membershipReminders: true,
-        }),
-        dashboardLayout: this.normalizeStoredObject(preference?.dashboardLayout, {
-          defaultView: 'overview',
-        }),
-        profilePreferences: this.normalizeStoredObject(preference?.profilePreferences, {
-          showCustomerCodes: true,
-          showMembershipBadges: true,
-        }),
-        devicePreferences: this.normalizeStoredObject(preference?.devicePreferences, {
-          preferredDeviceLabel: '',
-          allowPushNotifications: true,
-        }),
+        emergencyContact: this.normalizeStoredObject(
+          preference?.emergencyContact,
+          {
+            name: '',
+            phone: '',
+            relation: '',
+          },
+        ),
+        notifications: this.normalizeStoredObject(
+          preference?.notificationPreferences,
+          {
+            followUpReminders: true,
+            appointmentChanges: true,
+            referralUpdates: true,
+            membershipReminders: true,
+          },
+        ),
+        dashboardLayout: this.normalizeStoredObject(
+          preference?.dashboardLayout,
+          {
+            defaultView: 'overview',
+          },
+        ),
+        profilePreferences: this.normalizeStoredObject(
+          preference?.profilePreferences,
+          {
+            showCustomerCodes: true,
+            showMembershipBadges: true,
+          },
+        ),
+        devicePreferences: this.normalizeStoredObject(
+          preference?.devicePreferences,
+          {
+            preferredDeviceLabel: '',
+            allowPushNotifications: true,
+          },
+        ),
       },
       branchLifecycle: {
         currentBranch:
@@ -868,9 +927,9 @@ export class AgentService {
     const preferences = this.normalizeObject(data?.preferences);
     const requestedBranchId = this.normalizeOptionalBigInt(
       data?.requestedBranchId ??
-          data?.branchLifecycle?.requestedBranch?.businessId ??
-          data?.branchRequest?.businessId ??
-          data?.primaryBranchId,
+        data?.branchLifecycle?.requestedBranch?.businessId ??
+        data?.branchRequest?.businessId ??
+        data?.primaryBranchId,
     );
     if (requestedBranchId != null) {
       const branch = await this.prisma.business.findUnique({
@@ -884,7 +943,9 @@ export class AgentService {
 
     return {
       themePreference: this.normalizeOptionalText(
-        preferences['theme'] ?? data?.themePreference ?? user.agentPreference?.themePreference,
+        preferences['theme'] ??
+          data?.themePreference ??
+          user.agentPreference?.themePreference,
       ),
       languagePreference: this.normalizeOptionalText(
         preferences['language'] ??
@@ -892,7 +953,9 @@ export class AgentService {
           user.agentPreference?.languagePreference,
       ),
       timezone: this.normalizeOptionalText(
-        preferences['timezone'] ?? data?.timezone ?? user.agentPreference?.timezone,
+        preferences['timezone'] ??
+          data?.timezone ??
+          user.agentPreference?.timezone,
       ),
       availability: this.normalizeObject(
         preferences['availability'] ??
@@ -966,11 +1029,7 @@ export class AgentService {
     value: unknown,
     fallback: Record<string, any> = {},
   ): Record<string, any> {
-    if (
-      value == null ||
-      typeof value !== 'object' ||
-      Array.isArray(value)
-    ) {
+    if (value == null || typeof value !== 'object' || Array.isArray(value)) {
       return { ...fallback };
     }
     return { ...fallback, ...(value as Record<string, any>) };
@@ -1080,8 +1139,7 @@ export class AgentService {
         MEMBERSHIP_CERTIFICATE: {
           customerId: customer.id?.toString(),
           documentTitle: 'Membership Certificate',
-          fileName:
-            `membership-certificate-${membershipSummary['membershipNumber'] ?? customer.customerCode ?? 'member'}.pdf`,
+          fileName: `membership-certificate-${membershipSummary['membershipNumber'] ?? customer.customerCode ?? 'member'}.pdf`,
           patient: {
             id: customer.id?.toString(),
             name:
@@ -1120,8 +1178,7 @@ export class AgentService {
         REGISTRATION_RECEIPT: {
           customerId: customer.id?.toString(),
           documentTitle: 'Registration Receipt',
-          fileName:
-            `registration-receipt-${customer.customerCode ?? customer.id ?? 'registration'}.pdf`,
+          fileName: `registration-receipt-${customer.customerCode ?? customer.id ?? 'registration'}.pdf`,
           patient: {
             id: customer.id?.toString(),
             name:
@@ -1139,8 +1196,7 @@ export class AgentService {
         REFERRAL_FORM: {
           customerId: customer.id?.toString(),
           documentTitle: 'Referral Summary',
-          fileName:
-            `referral-summary-${customer.customerCode ?? customer.id ?? 'referral'}.pdf`,
+          fileName: `referral-summary-${customer.customerCode ?? customer.id ?? 'referral'}.pdf`,
           patient: {
             id: customer.id?.toString(),
             name:
@@ -1180,8 +1236,7 @@ export class AgentService {
           customerId: customer.id?.toString(),
           appointmentId: latestAppointment?.id?.toString(),
           documentTitle: 'Appointment Slip',
-          fileName:
-            `appointment-slip-${latestAppointment?.id ?? customer.customerCode ?? 'appointment'}.pdf`,
+          fileName: `appointment-slip-${latestAppointment?.id ?? customer.customerCode ?? 'appointment'}.pdf`,
           patient: {
             id: customer.id?.toString(),
             name:
@@ -1201,8 +1256,7 @@ export class AgentService {
         PAYMENT_RECEIPT: {
           customerId: customer.id?.toString(),
           documentTitle: 'Payment Receipt',
-          fileName:
-            `payment-receipt-${latestPurchase?.invoiceNumber ?? customer.customerCode ?? 'receipt'}.pdf`,
+          fileName: `payment-receipt-${latestPurchase?.invoiceNumber ?? customer.customerCode ?? 'receipt'}.pdf`,
           patient: {
             id: customer.id?.toString(),
             name:

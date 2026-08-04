@@ -1,11 +1,4 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Param,
-  Body,
-  Query,
-} from '@nestjs/common';
+import { Controller, Get, Post, Param, Body, Query } from '@nestjs/common';
 import { CurrentPrincipal } from '../auth/current-principal.decorator';
 import { RequirePermissions } from '../auth/permissions.decorator';
 import type { ShieldPrincipal } from '../auth/auth.types';
@@ -38,6 +31,16 @@ export class PharmacyController {
       success: true,
       message: 'Product catalog search completed',
       data: prods,
+    };
+  }
+
+  @RequirePermissions('providers.view')
+  @Get('wellness/products')
+  async listWellnessDemoProducts() {
+    return {
+      success: true,
+      message: 'Wellness demo catalog retrieved',
+      data: await this.pharmacyService.listWellnessDemoProducts(),
     };
   }
 

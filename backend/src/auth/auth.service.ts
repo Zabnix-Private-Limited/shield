@@ -99,7 +99,7 @@ export class AuthService {
       );
     }
 
-    await this.prisma.customer.update({
+    await this.prisma.customer.updateMany({
       where: { id: customer.id },
       data: {
         firebaseUid: decoded.uid,

@@ -9282,3 +9282,283 @@ Completed the Android Play Console recovery pass needed to move SHIELD from a re
 - `flutter build appbundle --release` completed successfully after the Kotlin incremental workaround. ✅
 - Final Play upload artifact generated at `frontend/build/app/outputs/bundle/release/app-release.aab`. ✅
 - Console-side follow-up still required: remove the stale rejected bundle from the current Play draft or discard the draft and create a fresh internal-testing release before uploading the new AAB, otherwise Play may keep showing the old “does not add or remove any app bundles” draft-state error. ⚠️
+## 264. Debug Localhost Firebase Web OTP Switch
+**Timestamp:** 2026-08-04 10:55:51 IST
+
+Added a compile-time debug-only switch for real Firebase web phone authentication on localhost.
+
+**Frontend Files**
+- rontend/lib/shared/config/app_config.dart
+- rontend/lib/features/customer/auth/data/customer_auth_repository.dart
+
+**Backend Files**
+- None.
+
+**Why**
+- The customer auth repository deliberately rejected localhost before Firebase could run, which blocked local web OTP even after Firebase domain authorization.
+- ALLOW_LOCAL_WEB_PHONE_AUTH=true permits the real Firebase phone-auth flow only when Flutter is running in debug mode. It does not create a mock user, skip Firebase verification, or bypass backend JWT/session authorization; release builds remain blocked by the kDebugMode gate.
+
+**Verification**
+- dart format --output=none --set-exit-if-changed ... passed. ✅
+- git diff --check passed. ✅
+- Targeted lutter analyze exceeded the local command window without diagnostics; not treated as a pass. ⚠️
+
+## 265. Local Web Firebase OTP Documentation
+**Timestamp:** 2026-08-04 11:54:46 IST
+
+Documented the debug-only localhost Firebase phone-authentication switch in the frontend run instructions and the repository auth context.
+
+**Frontend Files**
+- `frontend/README.md`
+
+**Backend Files**
+- None.
+
+**Documentation Files**
+- `docs/SHIELD Repo Context.md`
+
+**Why**
+- `localhost` is already authorized in Firebase, but the application has its own deliberate local web OTP guard. The docs now distinguish that app-level guard from Firebase authorization and provide the exact enable/disable commands.
+- The instructions explicitly preserve real Firebase verification and backend authorization, and record that release builds cannot enable local browser OTP.
+
+**Verification**
+- Reviewed command syntax against `AppConfig.allowLocalWebPhoneAuth` and the `kDebugMode` guard in `CustomerAuthRepository`. ✅
+
+
+## 266. Customer App Bar Overflow Repair
+**Timestamp:** 2026-08-04 15:00:54 IST
+
+Removed the compact brand lockup from the customer app bar.
+
+**Frontend Files**
+- `frontend/lib/features/customer/shared/widgets/customer_app_bar.dart`
+
+**Backend Files**
+- None.
+
+**Why**
+- The logo lockup, page title, and subtitle were vertically stacked inside a 74px app bar, causing the visible RenderFlex overflow on customer pages. The existing app icon and product branding remain elsewhere; the compact header now prioritizes usable navigation and page context.
+
+**Verification**
+- `dart format --output=none --set-exit-if-changed lib/features/customer/shared/widgets/customer_app_bar.dart` passed. ✅
+- `git diff --check` passed. ✅
+
+
+## 267. Customer App Bar Final Overflow Fix
+**Timestamp:** 2026-08-04 15:03:19 IST
+
+Reduced the customer app bar to a single title line.
+
+**Frontend Files**
+- `frontend/lib/features/customer/shared/widgets/customer_app_bar.dart`
+
+**Backend Files**
+- None.
+
+**Why**
+- Even without the logo, the title and subtitle stack exceeded the 52px content height available inside the 74px safe-area app bar. A single ellipsized page title fits the constrained layout and preserves the primary navigation context.
+
+**Verification**
+- `dart format --output=none --set-exit-if-changed lib/features/customer/shared/widgets/customer_app_bar.dart` passed. ✅
+- `dart analyze lib/features/customer/shared/widgets/customer_app_bar.dart` reported no issues. ✅
+
+
+## 268. Customer Dashboard Campaign Carousel
+**Timestamp:** 2026-08-04 15:10:13 IST
+
+Added a customer-facing campaign carousel above the membership and wallet summary card.
+
+**Frontend Files**
+- `frontend/lib/features/customer/dashboard/presentation/widgets/marketing_banner_carousel.dart`\n- `frontend/lib/features/customer/dashboard/presentation/screens/dashboard_screen.dart`\n
+**Backend Files**
+- None.
+
+**Why**
+- The dashboard now reserves the first content position for campaign messaging, keeping member account status below it where it remains useful but no longer dominates the first scan.
+- The carousel uses temporary remote healthcare and wellness photography with automatic rotation, swipe support, animated page indicators, and a safe visual fallback. Its isolated slide catalog is ready to be replaced by a backend marketing contract without changing dashboard layout code.
+
+**Verification**
+- `dart format lib/features/customer/dashboard/presentation/widgets/marketing_banner_carousel.dart lib/features/customer/dashboard/presentation/screens/dashboard_screen.dart` passed. ✅
+- `dart analyze lib/features/customer/dashboard/presentation/widgets/marketing_banner_carousel.dart lib/features/customer/dashboard/presentation/screens/dashboard_screen.dart` reported no issues. ✅
+
+
+## 269. Campaign Carousel Deep Links
+**Timestamp:** 2026-08-04 15:30:11 IST
+
+Made each customer dashboard campaign banner actionable.
+
+**Frontend Files**
+- `frontend/lib/features/customer/dashboard/presentation/widgets/marketing_banner_carousel.dart`\n
+**Backend Files**
+- None.
+
+**Why**
+- Campaign content should lead customers to a relevant SHIELD task rather than behave as decorative imagery. Preventive care opens Visits, everyday wellness opens Services, and member support opens Documents.
+
+**Verification**
+- `dart format lib/features/customer/dashboard/presentation/widgets/marketing_banner_carousel.dart` passed. ✅
+- `dart analyze lib/features/customer/dashboard/presentation/widgets/marketing_banner_carousel.dart` reported no issues. ✅
+
+
+## 270. Management Demo Data Contract Migration
+**Timestamp:** 2026-08-04 15:40:08 IST
+
+Prepared the additive database migration required for the management-demo workflows. It has not been applied to any database.
+
+**Frontend Files**
+- None.
+
+**Backend Files**
+- `backend/prisma/migrations/20260804_management_demo_workflows/migration.sql`\n
+**Why**
+- The live schema has no approved import batches, card requests, subscription monthly allocations, operational activity events, or commission event/allocation records. These are required to persist the requested workflows safely rather than relying on frontend state.
+- Subscription money is represented in paise and carries a database check that total entitlement equals customer contribution plus SHIELD benefit. The migration does not alter wallet stored-balance policy.
+
+**Verification**
+- Migration reviewed as additive only; no Prisma schema push, migration apply, seed, reset, or direct database write was run. ✅
+
+
+## 271. Management Demo Prisma Contract Alignment
+**Timestamp:** 2026-08-04 15:41:56 IST
+
+Aligned Prisma's target schema with the prepared management-demo migration.
+
+**Frontend Files**
+- None.
+
+**Backend Files**
+- `backend/prisma/schema.prisma`\n
+**Why**
+- The backend now has typed target models for imports, card requests, subscriptions, allocations, activity events, commission events, and commission allocations, plus the required customer onboarding source and wellness product/order fields.
+- The root `current_schema.md` remains the live-database authority until the approved migration is explicitly applied; no schema push or direct database write occurred.
+
+**Verification**
+- `npx prisma format --schema prisma/schema.prisma` passed. ✅
+- `npx prisma validate --schema prisma/schema.prisma` passed. ✅
+
+
+## 272. Management Demo Financial Calculations
+**Timestamp:** 2026-08-04 15:43:27 IST
+
+Added deterministic subscription allocation and commission-breakdown calculations.
+
+**Frontend Files**
+- None.
+
+**Backend Files**
+- `backend/src/common/management-demo-calculations.ts`\n- `backend/src/common/management-demo-calculations.spec.ts`\n
+**Why**
+- The ₹11,000 annual plan is allocated in paise over 12 months so the total stays exact: the first four months receive ₹916.67 and the remaining eight receive ₹916.66.
+- Commission uses the approved hierarchy percentages and assigns any integer-paise remainder to Reserve so each event distributes exactly its configured pool, without assuming a wellness-sales margin.
+
+**Verification**
+- `npx jest src/common/management-demo-calculations.spec.ts --runInBand` passed: 2 tests. ✅
+
+
+## 273. Management Demo Subscription and Commission API
+**Timestamp:** 2026-08-04 15:46:05 IST
+
+Added the authenticated management-demo API module for subscription previews/activation and commission previews/event creation.
+
+**Frontend Files**
+- None.
+
+**Backend Files**
+- `backend/src/management-demo/management-demo.module.ts`\n- `backend/src/management-demo/management-demo.controller.ts`\n- `backend/src/management-demo/management-demo.service.ts`\n- `backend/src/app.module.ts`\n
+**Why**
+- The API uses the exact paise allocation and hierarchy split rules rather than accepting client-provided monthly values or hardcoding a wellness margin. Subscription activation persists the annual schedule only after the approved migration exists.
+
+**Verification**
+- `npx prisma generate --schema prisma/schema.prisma` passed. ✅
+- Backend build was started but exceeded the local command window before returning a result; not treated as a pass. ⚠️
+
+## 274. Existing Customer Conversion Guard and Agent Lookup Flow (2026-08-04 15:57:54 IST)
+
+Prevented duplicate customer creation by checking the normalized primary mobile number in the shared customer aggregate, and added an explicit existing-customer-to-membership conversion path. This lets an ERP-originated customer retain its customer record while receiving a SHIELD membership, wallet/credit account only when absent, and `EXISTING_CUSTOMER_CONVERSION` onboarding source.
+
+### Backend Files
+- `backend/src/customer/customer.service.ts`
+  - Added guarded mobile duplicate detection and an atomic existing-customer membership conversion transaction.
+  - Preserves an already-existing membership and returns a conflict instead of duplicating it.
+- `backend/src/customer/customer.controller.ts`
+  - Added scoped conversion endpoint and applied agent/provider customer-scope enforcement to conversion, lookup, alternative-contact, and card endpoints.
+
+### Frontend Files
+- `frontend/lib/features/agent/registration/presentation/screens/agent_registration_screen.dart`
+  - Added mobile-first existing customer check with the required found details and create-membership/view-profile actions.
+- `frontend/lib/shared/services/api_service.dart`
+- `frontend/lib/features/agent/shared/data/agent_portal_repository.dart`
+- `frontend/lib/features/agent/shared/presentation/controllers/agent_portal_controller.dart`
+  - Added the typed client flow for lookup and conversion.
+
+### Verification
+- `npx tsc --noEmit --pretty false` passed in `backend`.
+- `npx jest src/common/management-demo-calculations.spec.ts --runInBand` passed (2 tests).
+- Targeted `dart analyze` passed for the registration/API/controller files.
+- The prepared management-demo migration remains unapplied; no shared or production database was changed.
+## 275. Optional Alternative Contact in Agent Registration (2026-08-04 16:04:00 IST)
+
+Added the optional alternative mobile/contact fields to the existing agent registration step and persisted them only after the customer record has an ID. The primary mobile remains the sole login/OTP identity; server validation rejects an alternative number matching it.
+
+### Frontend Files
+- `frontend/lib/features/agent/registration/presentation/screens/agent_registration_screen.dart`
+  - Added alternative mobile, contact name, and relationship fields and post-save persistence.
+- `frontend/lib/shared/services/api_service.dart`
+- `frontend/lib/features/agent/shared/data/agent_portal_repository.dart`
+- `frontend/lib/features/agent/shared/presentation/controllers/agent_portal_controller.dart`
+  - Reused the scoped alternative-contact endpoint.
+
+### Verification
+- Targeted `dart analyze` passed for all changed frontend files.
+## 276. Card, Prescription, and Conversion Timeline Slices (2026-08-04 16:12:00 IST)
+
+Completed the customer-facing edges around conversion: agents can inspect live card state and request a physical card, onboarding exposes an explicitly optional prescription upload/skip action after a customer ID exists, and existing-customer conversion writes a timeline activity record.
+
+### Frontend Files
+- `frontend/lib/features/agent/customers/presentation/screens/agent_customers_screen.dart`
+- `frontend/lib/features/agent/registration/presentation/screens/agent_registration_screen.dart`
+- `frontend/lib/shared/services/api_service.dart`
+- `frontend/lib/features/agent/shared/data/agent_portal_repository.dart`
+- `frontend/lib/features/agent/shared/presentation/controllers/agent_portal_controller.dart`
+
+### Backend Files
+- `backend/src/customer/customer.service.ts`
+  - Conversion now records `MEMBERSHIP_CREATED` in the prepared activity timeline model.
+
+### Verification
+- Targeted Flutter analysis passed for the customer-card and registration flows.
+- `npx tsc --noEmit --pretty false` passed in `backend`.
+- Card request and activity-event runtime use remains contingent on applying the prepared migration in an approved database environment.
+## 277. Database-Backed Demo Wellness Catalogue (2026-08-04 16:25:00 IST)
+
+Added a non-destructive, idempotent demo-product seed and a dedicated database-backed catalogue endpoint. Demo records are explicitly marked `DEMO`, no margin rule is invented, and no existing product or customer record is updated.
+
+### Backend Files
+- `backend/prisma/demo-seeds/20260804_wellness_products.sql`
+  - Prepared four public-catalogue-referenced wellness products for an approved demo database only.
+- `backend/src/pharmacy/pharmacy.controller.ts`
+- `backend/src/pharmacy/pharmacy.service.ts`
+  - Added `GET /wellness/products`, returning only `is_demo_available = true` and `status = DEMO` products.
+
+### Verification
+- `npx tsc --noEmit --pretty false` passed in `backend`.
+- Seed was not executed and no production/shared database was modified.
+## 278. Legacy-Schema Agent Workspace 500 Guard (2026-08-04 16:40:00 IST)
+
+Fixed the customer workspace 500 observed after hot reload. The agent workspace was querying the prepared `activity_events` table before the migration had been applied, which caused the entire parallel workspace query to fail. The management-event enrichment now falls back to an empty list only when that optional table is absent, preserving existing CRM/task/customer data on legacy databases.
+
+### Backend Files
+- `backend/src/agent/agent.service.ts`
+
+### Verification
+- `npx tsc --noEmit --pretty false` passed in `backend`.
+- Migration-backed activity records will appear automatically once the prepared migration is applied.## 279. Customer OTP Legacy-Database Compatibility (2026-08-04 16:55:00 IST)
+
+Fixed the OTP login failure observed against a local database that has not yet received the prepared management-demo migration. Prisma `customer.update` returned every mapped customer column, including `onboarding_source`; PostgreSQL correctly rejected that return shape where the column is absent. Login now uses `updateMany` for the existing Firebase UID/last-login timestamp write, which does not return model columns.
+
+### Backend Files
+- `backend/src/auth/auth.service.ts`
+
+### Verification
+- `nx tsc --noEmit --pretty false` passed in `backend`.
+- No schema-apply, seed, or database mutation command was run.

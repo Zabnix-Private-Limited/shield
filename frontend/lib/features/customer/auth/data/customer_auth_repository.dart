@@ -5,6 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 
 import '../../../../../shared/services/api_service.dart';
+import '../../../../../shared/config/app_config.dart';
 import '../../../../../shared/services/customer_auth_session.dart';
 import '../../../../../shared/services/device_identity_service.dart';
 import '../../../../../shared/services/firebase_bootstrap_service.dart';
@@ -43,11 +44,12 @@ class CustomerAuthRepository {
     _webConfirmationResult = null;
 
     if (kIsWeb) {
-      if (_isUnsupportedLocalWebHost(Uri.base.host)) {
+      if (_isUnsupportedLocalWebHost(Uri.base.host) &&
+          !(kDebugMode && AppConfig.allowLocalWebPhoneAuth)) {
         throw FirebaseAuthException(
           code: 'web-phone-auth-domain',
           message:
-              'Firebase web OTP does not work on localhost. Open SHIELD on an authorized domain to continue.',
+              'Firebase web OTP is disabled on localhost. Add localhost to Firebase authorized domains, then start SHIELD with ALLOW_LOCAL_WEB_PHONE_AUTH=true.',
         );
       }
 

@@ -271,6 +271,48 @@ class AgentPortalController extends ChangeNotifier {
     }
   }
 
+  Future<Map<String, dynamic>?> findExistingCustomerByMobile(String mobile) =>
+      _repository.findExistingCustomerByMobile(mobile);
+
+  Future<void> convertExistingCustomerToMembership({
+    required String customerId,
+    String? membershipTypeCode,
+  }) async {
+    _saving = true;
+    _error = null;
+    notifyListeners();
+    try {
+      await _repository.convertExistingCustomerToMembership(
+        customerId,
+        membershipTypeCode: membershipTypeCode,
+      );
+      await refreshWorkspace();
+      await selectCustomer(customerId);
+    } catch (error) {
+      _error = error.toString();
+      rethrow;
+    } finally {
+      _saving = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> saveAlternativeCustomerContact({
+    required String customerId,
+    required Map<String, dynamic> payload,
+  }) async {
+    await _repository.saveAlternativeCustomerContact(customerId, payload);
+    await selectCustomer(customerId);
+  }
+
+  Future<Map<String, dynamic>> getCustomerCardProfile(String customerId) =>
+      _repository.getCustomerCardProfile(customerId);
+
+  Future<void> requestCustomerPhysicalCard(String customerId) async {
+    await _repository.requestCustomerPhysicalCard(customerId);
+    await selectCustomer(customerId);
+  }
+
   Future<void> updateCustomer({
     required String customerId,
     required Map<String, dynamic> payload,

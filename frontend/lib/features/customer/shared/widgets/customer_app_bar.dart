@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_typography.dart';
-import '../../../../shared/widgets/shield_brand_lockup.dart';
 import '../../../portal/presentation/portal_role_data.dart';
 
 class CustomerAppBar extends StatelessWidget {
@@ -35,23 +34,11 @@ class CustomerAppBar extends StatelessWidget {
           ),
           const SizedBox(width: 12),
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const ShieldBrandLockup(compact: true),
-                const SizedBox(height: 10),
-                Text(
-                  section.title,
-                  style: AppTypography.h4.copyWith(fontWeight: FontWeight.w700),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  portal.headline,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppTypography.tiny.copyWith(color: AppColors.gray),
-                ),
-              ],
+            child: Text(
+              section.title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: AppTypography.h4.copyWith(fontWeight: FontWeight.w700),
             ),
           ),
           if (trailing != null) ...[const SizedBox(width: 12), trailing!],

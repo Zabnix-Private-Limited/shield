@@ -748,6 +748,53 @@ class ApiService {
     ).map((item) => Map<String, dynamic>.from(item as Map)).toList();
   }
 
+  static Future<Map<String, dynamic>?> findExistingCustomerByMobile(
+    String mobile,
+  ) async {
+    final response = await _dio.get(
+      '/customers/existing-by-mobile',
+      queryParameters: {'mobile': mobile.trim()},
+    );
+    final body = response.data;
+    final data = body is Map<String, dynamic> ? body['data'] : null;
+    return data is Map<String, dynamic> ? data : null;
+  }
+
+  static Future<Map<String, dynamic>> convertExistingCustomerToMembership(
+    String customerId, {
+    String? membershipTypeCode,
+  }) async {
+    final response = await _dio.post(
+      '/customers/$customerId/convert-to-membership',
+      data: {
+        if (membershipTypeCode != null && membershipTypeCode.trim().isNotEmpty)
+          'membership_type_code': membershipTypeCode.trim(),
+      },
+    );
+    return _readEnvelope(response);
+  }
+
+  static Future<Map<String, dynamic>> saveAlternativeCustomerContact(
+    String customerId,
+    Map<String, dynamic> payload,
+  ) async {
+    final response = await _dio.post(
+      '/customers/$customerId/alternative-contact',
+      data: payload,
+    );
+    return _readEnvelope(response);
+  }
+
+  static Future<Map<String, dynamic>> getCustomerCardProfile(
+    String customerId,
+  ) async =>
+      _readEnvelope(await _dio.get('/customers/$customerId/card-profile'));
+
+  static Future<Map<String, dynamic>> requestCustomerPhysicalCard(
+    String customerId,
+  ) async =>
+      _readEnvelope(await _dio.post('/customers/$customerId/card-requests'));
+
   static Future<Map<String, dynamic>> createCustomer(
     Map<String, dynamic> payload,
   ) async {

@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../../../shared/utils/prescription_file_picker.dart';
 import '../../../shared/presentation/controllers/agent_portal_provider.dart';
@@ -27,6 +28,9 @@ class _AgentRegistrationScreenState
   final _firstNameController = TextEditingController();
   final _lastNameController = TextEditingController();
   final _mobileController = TextEditingController();
+  final _alternativeMobileController = TextEditingController();
+  final _alternativeContactNameController = TextEditingController();
+  final _alternativeRelationshipController = TextEditingController();
   final _emailController = TextEditingController();
   final _aadhaarController = TextEditingController();
   final _referralController = TextEditingController();
@@ -36,6 +40,10 @@ class _AgentRegistrationScreenState
   String? _membershipTypeCode;
   String? _draftCustomerId;
   String? _selectedBusinessId;
+  Map<String, dynamic>? _existingCustomer;
+  bool _existingLookupLoading = false;
+  bool _convertingExistingCustomer = false;
+  bool _prescriptionSkipped = false;
   int _uploadedDocumentCount = 0;
   int _currentStep = 0;
   bool _autoSaving = false;
@@ -56,6 +64,9 @@ class _AgentRegistrationScreenState
     _firstNameController.dispose();
     _lastNameController.dispose();
     _mobileController.dispose();
+    _alternativeMobileController.dispose();
+    _alternativeContactNameController.dispose();
+    _alternativeRelationshipController.dispose();
     _emailController.dispose();
     _aadhaarController.dispose();
     _referralController.dispose();
@@ -262,72 +273,108 @@ class _AgentRegistrationScreenState
             title: 'Customer Information',
             summary:
                 'Capture the identity the agent already knows first: name, phone, email, and gender.',
-            child: Wrap(
-              spacing: 12,
-              runSpacing: 12,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _fieldBox(
-                  TextFormField(
-                    controller: _firstNameController,
-                    decoration: const InputDecoration(labelText: 'First name'),
-                    validator: (value) => value == null || value.trim().isEmpty
-                        ? 'Enter first name'
-                        : null,
-                  ),
+                Wrap(
+                  spacing: 12,
+                  runSpacing: 12,
+                  children: [
+                    _fieldBox(
+                      TextFormField(
+                        controller: _firstNameController,
+                        decoration: const InputDecoration(
+                          labelText: 'First name',
+                        ),
+                        validator: (value) =>
+                            value == null || value.trim().isEmpty
+                            ? 'Enter first name'
+                            : null,
+                      ),
+                    ),
+                    _fieldBox(
+                      TextFormField(
+                        controller: _lastNameController,
+                        decoration: const InputDecoration(
+                          labelText: 'Last name',
+                        ),
+                      ),
+                    ),
+                    _fieldBox(
+                      TextFormField(
+                        controller: _mobileController,
+                        keyboardType: TextInputType.phone,
+                        decoration: const InputDecoration(labelText: 'Phone'),
+                        onChanged: (_) =>
+                            setState(() => _existingCustomer = null),
+                        validator: (value) {
+                          final text = value?.trim() ?? '';
+                          if (text.isEmpty) {
+                            return 'Enter phone number';
+                          }
+                          if (text.length < 10) {
+                            return 'Phone number looks incomplete';
+                          }
+                          return null;
+                        },
+                      ),
+                    ),
+                    _fieldBox(
+                      TextFormField(
+                        controller: _emailController,
+                        keyboardType: TextInputType.emailAddress,
+                        decoration: const InputDecoration(labelText: 'Email'),
+                        validator: (value) {
+                          final text = value?.trim() ?? '';
+                          if (text.isEmpty) {
+                            return null;
+                          }
+                          if (!text.contains('@')) {
+                            return 'Enter a valid email';
+                          }
+                          return null;
+                        },
+                      ),
+                    ),
+                    _fieldBox(
+                      DropdownButtonFormField<String>(
+                        initialValue: _gender,
+                        items: const [
+                          DropdownMenuItem(value: 'MALE', child: Text('Male')),
+                          DropdownMenuItem(
+                            value: 'FEMALE',
+                            child: Text('Female'),
+                          ),
+                          DropdownMenuItem(
+                            value: 'OTHER',
+                            child: Text('Other'),
+                          ),
+                        ],
+                        onChanged: (value) =>
+                            setState(() => _gender = value ?? 'MALE'),
+                        decoration: const InputDecoration(labelText: 'Gender'),
+                      ),
+                    ),
+                  ],
                 ),
-                _fieldBox(
-                  TextFormField(
-                    controller: _lastNameController,
-                    decoration: const InputDecoration(labelText: 'Last name'),
-                  ),
+                const SizedBox(height: 16),
+                AgentSecondaryButton(
+                  onPressed: _existingLookupLoading
+                      ? null
+                      : () => _lookupExistingCustomer(controller),
+                  icon: const Icon(Icons.person_search_outlined),
+                  label: _existingLookupLoading
+                      ? 'Searching existing customers...'
+                      : 'Check existing customer',
                 ),
-                _fieldBox(
-                  TextFormField(
-                    controller: _mobileController,
-                    keyboardType: TextInputType.phone,
-                    decoration: const InputDecoration(labelText: 'Phone'),
-                    validator: (value) {
-                      final text = value?.trim() ?? '';
-                      if (text.isEmpty) {
-                        return 'Enter phone number';
-                      }
-                      if (text.length < 10) {
-                        return 'Phone number looks incomplete';
-                      }
-                      return null;
-                    },
+                if (_existingCustomer != null) ...[
+                  const SizedBox(height: 16),
+                  _ExistingCustomerResult(
+                    customer: _existingCustomer!,
+                    isConverting: _convertingExistingCustomer,
+                    onConvert: () => _convertExistingCustomer(controller),
                   ),
-                ),
-                _fieldBox(
-                  TextFormField(
-                    controller: _emailController,
-                    keyboardType: TextInputType.emailAddress,
-                    decoration: const InputDecoration(labelText: 'Email'),
-                    validator: (value) {
-                      final text = value?.trim() ?? '';
-                      if (text.isEmpty) {
-                        return null;
-                      }
-                      if (!text.contains('@')) {
-                        return 'Enter a valid email';
-                      }
-                      return null;
-                    },
-                  ),
-                ),
-                _fieldBox(
-                  DropdownButtonFormField<String>(
-                    initialValue: _gender,
-                    items: const [
-                      DropdownMenuItem(value: 'MALE', child: Text('Male')),
-                      DropdownMenuItem(value: 'FEMALE', child: Text('Female')),
-                      DropdownMenuItem(value: 'OTHER', child: Text('Other')),
-                    ],
-                    onChanged: (value) =>
-                        setState(() => _gender = value ?? 'MALE'),
-                    decoration: const InputDecoration(labelText: 'Gender'),
-                  ),
-                ),
+                ],
               ],
             ),
           ),
@@ -353,6 +400,32 @@ class _AgentRegistrationScreenState
                     decoration: const InputDecoration(
                       labelText: 'SHIELD customer ID',
                       hintText: 'Generated automatically after registration',
+                    ),
+                  ),
+                ),
+                _fieldBox(
+                  TextFormField(
+                    controller: _alternativeMobileController,
+                    keyboardType: TextInputType.phone,
+                    decoration: const InputDecoration(
+                      labelText: 'Alternative mobile (optional)',
+                      helperText: 'Never used for login or OTP',
+                    ),
+                  ),
+                ),
+                _fieldBox(
+                  TextFormField(
+                    controller: _alternativeContactNameController,
+                    decoration: const InputDecoration(
+                      labelText: 'Alternative contact name',
+                    ),
+                  ),
+                ),
+                _fieldBox(
+                  TextFormField(
+                    controller: _alternativeRelationshipController,
+                    decoration: const InputDecoration(
+                      labelText: 'Relationship to customer',
                     ),
                   ),
                 ),
@@ -542,6 +615,21 @@ class _AgentRegistrationScreenState
                           ? 'Save draft before upload'
                           : 'Upload Document',
                     ),
+                    AgentSecondaryButton(
+                      onPressed: _draftCustomerId == null
+                          ? null
+                          : () =>
+                                _uploadStepDocument(controller, 'PRESCRIPTION'),
+                      icon: const Icon(Icons.medical_services_outlined),
+                      label: 'Upload Prescription',
+                    ),
+                    AgentSecondaryButton(
+                      onPressed: () =>
+                          setState(() => _prescriptionSkipped = true),
+                      label: _prescriptionSkipped
+                          ? 'Prescription skipped'
+                          : 'Skip for Now',
+                    ),
                     if (_draftCustomerId != null)
                       AgentSecondaryButton(
                         onPressed: () =>
@@ -651,6 +739,62 @@ class _AgentRegistrationScreenState
     }
   }
 
+  Future<void> _lookupExistingCustomer(dynamic controller) async {
+    final mobile = _mobileController.text.trim();
+    if (mobile.length < 10) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Enter a complete mobile number first.')),
+      );
+      return;
+    }
+    setState(() => _existingLookupLoading = true);
+    try {
+      final customer = await controller.findExistingCustomerByMobile(mobile);
+      if (!mounted) return;
+      setState(() => _existingCustomer = customer);
+      if (customer == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('No existing customer found. Continue registration.'),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _existingLookupLoading = false);
+    }
+  }
+
+  Future<void> _convertExistingCustomer(dynamic controller) async {
+    final customerId = _existingCustomer?['id']?.toString();
+    if (customerId == null || customerId.isEmpty) return;
+    if (_existingCustomer?['membership'] != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Membership already exists. Open the customer profile.',
+          ),
+        ),
+      );
+      return;
+    }
+    setState(() => _convertingExistingCustomer = true);
+    try {
+      await controller.convertExistingCustomerToMembership(
+        customerId: customerId,
+        membershipTypeCode: _membershipTypeCode,
+      );
+      if (!mounted) return;
+      setState(() => _draftCustomerId = customerId);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('SHIELD membership linked to existing customer.'),
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _convertingExistingCustomer = false);
+    }
+  }
+
   Future<bool> _goToNextStep(dynamic controller) async {
     if (!_validateCurrentStep()) {
       return false;
@@ -738,6 +882,9 @@ class _AgentRegistrationScreenState
       return;
     }
     setState(() => _uploadedDocumentCount += 1);
+    if (documentType == 'PRESCRIPTION') {
+      setState(() => _prescriptionSkipped = false);
+    }
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Document uploaded successfully.')),
     );
@@ -774,6 +921,18 @@ class _AgentRegistrationScreenState
       );
     }
 
+    final alternativeMobile = _alternativeMobileController.text.trim();
+    if (alternativeMobile.isNotEmpty && _draftCustomerId != null) {
+      await controller.saveAlternativeCustomerContact(
+        customerId: _draftCustomerId!,
+        payload: {
+          'mobile': alternativeMobile,
+          'name': _alternativeContactNameController.text.trim(),
+          'relationship': _alternativeRelationshipController.text.trim(),
+        },
+      );
+    }
+
     if (showFeedback && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -801,12 +960,17 @@ class _AgentRegistrationScreenState
     _firstNameController.clear();
     _lastNameController.clear();
     _mobileController.clear();
+    _alternativeMobileController.clear();
+    _alternativeContactNameController.clear();
+    _alternativeRelationshipController.clear();
     _emailController.clear();
     _aadhaarController.clear();
     _referralController.clear();
     _addressController.clear();
     _uploadedDocumentCount = 0;
     _currentStep = 0;
+    _existingCustomer = null;
+    _prescriptionSkipped = false;
     _autoSaveMessage = 'Draft autosaves when you move between steps.';
   }
 
@@ -837,6 +1001,72 @@ class _AgentRegistrationScreenState
 }
 
 const _steps = ['Personal', 'Identity', 'Membership', 'Documents', 'Review'];
+
+class _ExistingCustomerResult extends StatelessWidget {
+  const _ExistingCustomerResult({
+    required this.customer,
+    required this.isConverting,
+    required this.onConvert,
+  });
+
+  final Map<String, dynamic> customer;
+  final bool isConverting;
+  final VoidCallback onConvert;
+
+  @override
+  Widget build(BuildContext context) {
+    final membership = customer['membership'];
+    final hasMembership = membership is Map;
+    final name = '${customer['firstName'] ?? ''} ${customer['lastName'] ?? ''}'
+        .trim();
+    return AgentPanelCard(
+      title: hasMembership
+          ? 'Membership Already Exists'
+          : 'Existing Customer Found',
+      subtitle: hasMembership
+          ? 'Do not register this mobile number again.'
+          : 'Link a SHIELD membership to this existing customer.',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _ReviewItem(
+            label: 'Existing customer ID',
+            value:
+                customer['customerCode']?.toString() ??
+                customer['id']?.toString() ??
+                'Unknown',
+          ),
+          _ReviewItem(
+            label: 'Name',
+            value: name.isEmpty ? 'Not recorded' : name,
+          ),
+          _ReviewItem(
+            label: 'Mobile number',
+            value: customer['mobile']?.toString() ?? 'Not recorded',
+          ),
+          _ReviewItem(
+            label: 'Existing branch/business',
+            value:
+                customer['existingBusiness']?['name']?.toString() ??
+                'Not recorded',
+          ),
+          const SizedBox(height: 12),
+          hasMembership
+              ? AgentSecondaryButton(
+                  onPressed: () => context.go('/portal/agent/customers'),
+                  label: 'View customer/member profile',
+                )
+              : AgentPrimaryButton(
+                  onPressed: isConverting ? null : onConvert,
+                  label: isConverting
+                      ? 'Creating membership...'
+                      : 'Create SHIELD Membership',
+                ),
+        ],
+      ),
+    );
+  }
+}
 
 String _stepSubtitle(int index) {
   switch (index) {

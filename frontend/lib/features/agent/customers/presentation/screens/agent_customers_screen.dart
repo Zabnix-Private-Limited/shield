@@ -432,6 +432,8 @@ class _CustomerWorkspaceDetail extends ConsumerWidget {
               ],
             ),
             const SizedBox(height: 12),
+            _CardActionPanel(customerId: customerId, controller: controller),
+            const SizedBox(height: 12),
             const TabBar(
               isScrollable: true,
               tabAlignment: TabAlignment.start,
@@ -983,6 +985,84 @@ class _CustomerHero extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+class _CardActionPanel extends StatelessWidget {
+  const _CardActionPanel({required this.customerId, required this.controller});
+
+  final String customerId;
+  final dynamic controller;
+
+  @override
+  Widget build(BuildContext context) => AgentPanelCard(
+    title: 'SHIELD card',
+    subtitle: 'View the digital card or manage the physical-card request.',
+    child: AgentSecondaryButton(
+      onPressed: customerId.isEmpty ? null : () => _openCardProfile(context),
+      icon: const Icon(Icons.badge_outlined),
+      label: 'View card status',
+    ),
+  );
+
+  Future<void> _openCardProfile(BuildContext context) async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final profile = await controller.getCustomerCardProfile(customerId);
+      if (!context.mounted) return;
+      final action = profile['action']?.toString() ?? 'NOT_REQUESTED';
+      final card = profile['digitalCard'];
+      final request = profile['physicalCardRequest'];
+      await showModalBottomSheet<void>(
+        context: context,
+        builder: (sheetContext) => Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'SHIELD card',
+                style: Theme.of(sheetContext).textTheme.titleLarge,
+              ),
+              const SizedBox(height: 12),
+              Text(
+                card is Map
+                    ? 'Digital card: ${card['cardNumber'] ?? 'Active'}'
+                    : 'Digital card not issued',
+              ),
+              Text(
+                'Physical card status: ${request is Map ? _humanize(request['status']) : _humanize(action)}',
+              ),
+              const SizedBox(height: 16),
+              if (action == 'REQUEST_PHYSICAL_CARD')
+                AgentPrimaryButton(
+                  onPressed: () async {
+                    await controller.requestCustomerPhysicalCard(customerId);
+                    if (sheetContext.mounted) Navigator.pop(sheetContext);
+                    messenger.showSnackBar(
+                      const SnackBar(
+                        content: Text('Physical card request submitted.'),
+                      ),
+                    );
+                  },
+                  label: 'Request Physical Card',
+                )
+              else if (action == 'VIEW_CARD')
+                const Text(
+                  'Digital card is available in the customer membership profile.',
+                )
+              else
+                Text(_humanize(action)),
+            ],
+          ),
+        ),
+      );
+    } catch (_) {
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Card status is unavailable right now.')),
+      );
+    }
   }
 }
 
