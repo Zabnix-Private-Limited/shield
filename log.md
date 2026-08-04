@@ -10217,3 +10217,10 @@ Replaced the removed static Flutter carousel with a database-backed Operations c
   - docs/customer-ui/CUSTOMER_UI_AUDIT.md and docs/CUSTOMER_UI_IMPLEMENTATION_STATUS.md: record the corrected dashboard hierarchy.
 - Why:
   - Cash and reward totals belong in the global header. Repeating them below the membership summary consumes customer dashboard space without adding information.
+
+## 350. Local Operations banner seed applied — 2026-08-05 03:39:00 IST
+- Database (non-production):
+  - commercial_settings.OPERATIONS_CUSTOMER_BANNERS was verified absent, then populated with the existing idempotent 20260805_operations_customer_banners.sql seed.
+  - Post-apply verification returned ACTIVE JSON configuration with three published dashboard banner records.
+- Why:
+  - The customer Home carousel is API/database-driven and deliberately renders nothing when Operations has not configured a banner. This local review database now has the explicit demo configuration required to exercise the real carousel.
