@@ -9910,3 +9910,10 @@ Replaced the removed static Flutter carousel with a database-backed Operations c
   - `docs/CUSTOMER_UI_VISUAL_QA.md`: records the local Flutter web capture attempt and the absence of a served local port; no screenshot is represented as captured.
 - Why:
   - Visual QA must distinguish actual rendered evidence from static checks. The app did not become reachable at the requested local port during this attempt, so device/browser capture remains an explicit pending gate.
+## 314. Alternative-contact dialog validation — 2026-08-04 22:02:58 IST
+- Frontend Files:
+  - `frontend/lib/features/portal/presentation/screens/portal_shell.dart`: validates a normalized 10-digit mobile number in the Profile contact dialog before making the persisted API request.
+- Documentation Files:
+  - `docs/CUSTOMER_UI_STATE_MATRIX.md`: records local validation alongside backend enforcement and retry feedback.
+- Why:
+  - The backend remains authoritative, but immediate form feedback prevents an avoidable request and makes the persisted-contact requirement clear to the customer.

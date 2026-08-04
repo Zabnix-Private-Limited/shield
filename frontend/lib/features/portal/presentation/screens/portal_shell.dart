@@ -3961,50 +3961,61 @@ class _CustomerAlternativeContactsCardState
     final nameController = TextEditingController();
     final mobileController = TextEditingController();
     final relationshipController = TextEditingController();
+    String? mobileError;
     final values = await showDialog<Map<String, String>>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Add alternative contact'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: nameController,
-              textCapitalization: TextCapitalization.words,
-              decoration: const InputDecoration(labelText: 'Name (optional)'),
-            ),
-            TextField(
-              controller: mobileController,
-              keyboardType: TextInputType.phone,
-              decoration: const InputDecoration(labelText: 'Mobile number'),
-            ),
-            TextField(
-              controller: relationshipController,
-              textCapitalization: TextCapitalization.words,
-              decoration: const InputDecoration(
-                labelText: 'Relationship (optional)',
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('Add alternative contact'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: nameController,
+                textCapitalization: TextCapitalization.words,
+                decoration: const InputDecoration(labelText: 'Name (optional)'),
               ),
+              TextField(
+                controller: mobileController,
+                keyboardType: TextInputType.phone,
+                decoration: InputDecoration(
+                  labelText: 'Mobile number',
+                  errorText: mobileError,
+                ),
+              ),
+              TextField(
+                controller: relationshipController,
+                textCapitalization: TextCapitalization.words,
+                decoration: const InputDecoration(
+                  labelText: 'Relationship (optional)',
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () {
+                final mobile = mobileController.text.trim();
+                if (mobile.replaceAll(RegExp(r'\D'), '').length != 10) {
+                  setDialogState(
+                    () => mobileError = 'Enter a valid 10-digit mobile number',
+                  );
+                  return;
+                }
+                Navigator.pop(context, {
+                  'mobile': mobile,
+                  'name': nameController.text.trim(),
+                  'relationship': relationshipController.text.trim(),
+                });
+              },
+              child: const Text('Save'),
             ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () {
-              final mobile = mobileController.text.trim();
-              if (mobile.isEmpty) return;
-              Navigator.pop(context, {
-                'mobile': mobile,
-                'name': nameController.text.trim(),
-                'relationship': relationshipController.text.trim(),
-              });
-            },
-            child: const Text('Save'),
-          ),
-        ],
       ),
     );
     nameController.dispose();
