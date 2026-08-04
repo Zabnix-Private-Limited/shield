@@ -5,6 +5,7 @@
 | Dashboard | `DashboardShimmer` | Explicit unavailable state | Retry `ErrorCard` | Per-customer dashboard cache |
 | Wallet | `WalletShimmer` | Zero ledger values/list empty | Retry `ErrorCard` | Per-customer wallet cache |
 | Membership | Membership skeleton | Pending/unissued membership state | Retry `ErrorCard` | Per-customer membership cache |
+| Visits | Section skeleton | Upcoming/history-specific empty state | Retry `ErrorCard` | Backend response only |
 | Documents | Skeleton | `No documents yet` | Retry state | Backend response only |
 | Prescriptions | Skeleton | `No prescriptions yet` | Retry state | Backend response only |
 | Protected customer sections (appointments, documents, prescriptions) | Profile-access skeleton | Access rules/section empty states | `Access status unavailable` with retry | No shared fallback data |

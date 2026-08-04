@@ -9815,3 +9815,10 @@ Replaced the removed static Flutter carousel with a database-backed Operations c
   - `docs/CUSTOMER_UI_IMPLEMENTATION_STATUS.md` and `docs/customer-ui/CUSTOMER_UI_AUDIT.md`: record the safe generic error behavior for customer-owned archives.
 - Why:
   - A customer-facing archive should communicate a recoverable loading failure without leaking backend or transport details. The existing shared error component keeps the retry behavior and visual language consistent.
+## 302. Customer Visits empty and retry states — 2026-08-04 21:28:07 IST
+- Frontend Files:
+  - `frontend/lib/features/portal/presentation/screens/portal_shell.dart`: gives the customer appointment list explicit upcoming/history empty states and reuses the shared retryable error card.
+- Documentation Files:
+  - `docs/CUSTOMER_UI_STATE_MATRIX.md`, `docs/CUSTOMER_UI_IMPLEMENTATION_STATUS.md`, and `docs/customer-ui/CUSTOMER_UI_AUDIT.md`: record supported Visit loading, empty, and failure behavior.
+- Why:
+  - A customer appointment response can be valid but empty. Making that state explicit is clearer than rendering an empty section, while the generic retry failure preserves existing scope and avoids leaking transport details.

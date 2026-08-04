@@ -4893,23 +4893,10 @@ class _CustomerAppointmentsViewState extends State<_CustomerAppointmentsView> {
         }
 
         if (snapshot.hasError || !snapshot.hasData) {
-          return AppCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Appointments unavailable', style: AppTypography.h4),
-                const SizedBox(height: 8),
-                Text(
-                  'The customer appointment feed could not be loaded.',
-                  style: AppTypography.small.copyWith(color: AppColors.gray),
-                ),
-                const SizedBox(height: 16),
-                AppButton(
-                  text: 'Retry',
-                  onPressed: () => setState(_loadAppointments),
-                ),
-              ],
-            ),
+          return ErrorCard(
+            title: 'Appointments unavailable',
+            message: 'Your customer appointment feed could not be loaded.',
+            onRetry: () => setState(_loadAppointments),
           );
         }
 
@@ -5073,93 +5060,106 @@ class _CustomerAppointmentsViewState extends State<_CustomerAppointmentsView> {
               style: AppTypography.h4,
             ),
             const SizedBox(height: 12),
-            ...visibleList.map(
-              (appointment) => Padding(
-                padding: const EdgeInsets.only(bottom: 10),
-                child: AppCard(
-                  padding: const EdgeInsets.all(14),
-                  onTap: () => showPortalDetailsSheet(
-                    context,
-                    title: appointment.doctorName ?? appointment.typeLabel,
-                    subtitle: appointment.notes ?? 'Customer appointment entry',
-                    meta: DateFormat(
-                      'dd MMM yyyy • hh:mm a',
-                    ).format(appointment.appointmentDate),
-                    status: appointment.statusLabel,
-                    highlights: [
-                      'Provider: ${appointment.department ?? appointment.typeLabel}',
-                      'This appointment remains inside the mobile-first customer portal flow.',
-                    ],
-                  ),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Container(
-                        width: 42,
-                        height: 42,
-                        decoration: BoxDecoration(
-                          color: _appointmentAccent(
-                            appointment.status,
-                          ).withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                        child: Icon(
-                          _appointmentIcon(appointment.status),
-                          color: _appointmentAccent(appointment.status),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              appointment.doctorName ?? appointment.typeLabel,
-                              style: AppTypography.body.copyWith(
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              '${DateFormat('dd MMM yyyy • hh:mm a').format(appointment.appointmentDate)} • ${appointment.department ?? appointment.typeLabel}',
-                              style: AppTypography.small.copyWith(
-                                color: AppColors.gray,
-                              ),
-                            ),
-                            if ((appointment.notes ?? '').isNotEmpty) ...[
-                              const SizedBox(height: 4),
-                              Text(
-                                appointment.notes!,
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                                style: AppTypography.tiny.copyWith(
-                                  color: AppColors.darkGray,
-                                ),
-                              ),
-                            ],
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          _StatusPill(
-                            label: appointment.statusLabel,
+            if (visibleList.isEmpty)
+              AppCard(
+                child: Text(
+                  _showUpcomingOnly
+                      ? 'No upcoming visits are scheduled yet.'
+                      : 'No appointment history is available yet.',
+                  style: AppTypography.body.copyWith(color: AppColors.gray),
+                ),
+              )
+            else
+              ...visibleList.map(
+                (appointment) => Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: AppCard(
+                    padding: const EdgeInsets.all(14),
+                    onTap: () => showPortalDetailsSheet(
+                      context,
+                      title: appointment.doctorName ?? appointment.typeLabel,
+                      subtitle:
+                          appointment.notes ?? 'Customer appointment entry',
+                      meta: DateFormat(
+                        'dd MMM yyyy • hh:mm a',
+                      ).format(appointment.appointmentDate),
+                      status: appointment.statusLabel,
+                      highlights: [
+                        'Provider: ${appointment.department ?? appointment.typeLabel}',
+                        'This appointment remains inside the mobile-first customer portal flow.',
+                      ],
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          width: 42,
+                          height: 42,
+                          decoration: BoxDecoration(
+                            color: _appointmentAccent(
+                              appointment.status,
+                            ).withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          child: Icon(
+                            _appointmentIcon(appointment.status),
                             color: _appointmentAccent(appointment.status),
                           ),
-                          if (appointment.status == AppointmentStatus.scheduled)
-                            TextButton(
-                              onPressed: () => _cancelAppointment(appointment),
-                              child: const Text('Cancel'),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                appointment.doctorName ?? appointment.typeLabel,
+                                style: AppTypography.body.copyWith(
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                '${DateFormat('dd MMM yyyy • hh:mm a').format(appointment.appointmentDate)} • ${appointment.department ?? appointment.typeLabel}',
+                                style: AppTypography.small.copyWith(
+                                  color: AppColors.gray,
+                                ),
+                              ),
+                              if ((appointment.notes ?? '').isNotEmpty) ...[
+                                const SizedBox(height: 4),
+                                Text(
+                                  appointment.notes!,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: AppTypography.tiny.copyWith(
+                                    color: AppColors.darkGray,
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            _StatusPill(
+                              label: appointment.statusLabel,
+                              color: _appointmentAccent(appointment.status),
                             ),
-                        ],
-                      ),
-                    ],
+                            if (appointment.status ==
+                                AppointmentStatus.scheduled)
+                              TextButton(
+                                onPressed: () =>
+                                    _cancelAppointment(appointment),
+                                child: const Text('Cancel'),
+                              ),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
-            ),
           ],
         );
       },
