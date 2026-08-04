@@ -10134,3 +10134,11 @@ Replaced the removed static Flutter carousel with a database-backed Operations c
   - docs/customer-ui/CUSTOMER_UI_AUDIT.md and docs/CUSTOMER_UI_IMPLEMENTATION_STATUS.md: record the retained explicit unavailable states.
 - Why:
   - There is no customer-safe laboratory or home-care catalogue/request contract. Keeping unreachable local request code invites a fake workflow when data is later introduced.
+
+## 341. Ignore generated Flutter golden diffs — 2026-08-05 01:48:00 IST
+- Repository Files:
+  - .gitignore: ignores frontend/test/failures/, which Flutter creates for failed golden comparisons.
+- Verification:
+  - Full flutter test reached 145 passing tests but has one unrelated Agent Portal registration golden mismatch (1.03% pixel difference); generated diff images are now excluded from the worktree.
+- Why:
+  - Golden failure artifacts are diagnostic output, not source assets. Ignoring them prevents a verification failure from contaminating unrelated customer commits.
