@@ -9879,3 +9879,11 @@ Replaced the removed static Flutter carousel with a database-backed Operations c
   - `docs/CUSTOMER_UI_IMPLEMENTATION_STATUS.md` and `docs/customer-ui/CUSTOMER_UI_AUDIT.md`: record the safe failure behavior.
 - Why:
   - Backend responses and transport exceptions are operational details. Customer UI needs a useful recovery message without disclosing those implementation details.
+## 310. Alternative-contact mobile normalization — 2026-08-04 21:50:21 IST
+- Backend Files:
+  - `backend/src/customer/customer.service.ts`: compares normalized mobile values against existing contact rows and persists the canonical 10-digit mobile value, including null-safe handling of legacy rows.
+  - `backend/src/customer/customer.service.spec.ts`: proves a differently formatted copy of an existing contact updates the same row rather than creating a duplicate.
+- Documentation Files:
+  - `docs/CUSTOMER_UI_API_BINDINGS.md`: records mobile normalization for the self-scoped contact flow.
+- Why:
+  - Phone formatting is not an identity change. Normalization keeps customer contact records idempotent without a schema migration or a client-side duplicate list.

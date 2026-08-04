@@ -359,9 +359,15 @@ export class CustomerService {
         'Alternative mobile number must differ from the primary login number.',
       );
     }
-    const existing = await this.prisma.customerContact.findFirst({
-      where: { customerId, mobile: data.mobile },
-    });
+    const existing = (
+      await this.prisma.customerContact.findMany({
+        where: { customerId },
+        select: { id: true, mobile: true },
+      })
+    ).find(
+      (contact) =>
+        (contact.mobile ?? '').replace(/\D/g, '').slice(-10) === normalized,
+    );
     const values = {
       name: data.name?.trim() || null,
       relation: data.relationship?.trim() || null,
@@ -373,8 +379,8 @@ export class CustomerService {
           data: values,
         })
       : this.prisma.customerContact.create({
-        data: { customerId, mobile: data.mobile, ...values },
-      });
+          data: { customerId, mobile: normalized, ...values },
+        });
   }
 
   async listAlternativeContacts(customerId: bigint) {
