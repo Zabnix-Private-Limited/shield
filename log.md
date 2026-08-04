@@ -10142,3 +10142,12 @@ Replaced the removed static Flutter carousel with a database-backed Operations c
   - Full flutter test reached 145 passing tests but has one unrelated Agent Portal registration golden mismatch (1.03% pixel difference); generated diff images are now excluded from the worktree.
 - Why:
   - Golden failure artifacts are diagnostic output, not source assets. Ignoring them prevents a verification failure from contaminating unrelated customer commits.
+
+## 342. Customer document archive failure coverage — 2026-08-05 02:02:00 IST
+- Frontend Files:
+  - frontend/lib/features/customer/documents/presentation/screens/customer_documents_screen.dart: adds an optional screen-loader seam for widget verification while retaining the authenticated document API as the production default.
+  - frontend/test/customer_documents_screen_test.dart: verifies an archive API failure remains a retryable unavailable state with no false empty-state data.
+- Documentation Files:
+  - docs/customer-ui/CUSTOMER_UI_AUDIT.md and docs/CUSTOMER_UI_IMPLEMENTATION_STATUS.md: record the verified document failure behavior.
+- Why:
+  - A customer must never infer that their medical archive is empty merely because the archive request failed.

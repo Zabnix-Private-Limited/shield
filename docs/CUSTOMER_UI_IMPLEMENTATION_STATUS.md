@@ -52,6 +52,7 @@ Completed:
 - Added the customer API-binding and state-matrix references to make scope, empty, and error semantics explicit across the redesign.
 - Added the shared customer design-token, component, and accessibility references for consistent follow-on feature work.
 - Removed unreachable local lab/home-care request snippets; unavailable catalogue states remain explicit until the backend provides customer-safe contracts.
+- Customer document archive coverage now verifies a backend failure is retryable and never presented as an empty customer archive.
 
 Not complete:
 

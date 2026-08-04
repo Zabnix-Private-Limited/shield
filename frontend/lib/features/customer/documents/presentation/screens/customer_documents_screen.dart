@@ -12,7 +12,9 @@ import '../../../../../shared/widgets/portal_support.dart';
 import '../../../shared/widgets/error_card.dart';
 
 class CustomerDocumentsScreen extends StatefulWidget {
-  const CustomerDocumentsScreen({super.key});
+  const CustomerDocumentsScreen({super.key, this.loadDocuments});
+
+  final Future<List<Document>> Function()? loadDocuments;
 
   @override
   State<CustomerDocumentsScreen> createState() =>
@@ -31,9 +33,11 @@ class _CustomerDocumentsScreenState extends State<CustomerDocumentsScreen> {
 
   void _loadDocuments() {
     setState(() {
-      _documentsFuture = ApiService.getCustomerDocumentsStrict(
-        ApiService.requireAuthenticatedCustomerId(),
-      );
+      _documentsFuture =
+          widget.loadDocuments?.call() ??
+          ApiService.getCustomerDocumentsStrict(
+            ApiService.requireAuthenticatedCustomerId(),
+          );
     });
   }
 
