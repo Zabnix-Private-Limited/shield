@@ -123,8 +123,11 @@ class _CustomerPrivilegeCardScreenState
                   FutureBuilder<Map<String, dynamic>>(
                     future: _cardProfile,
                     builder: (context, cardSnapshot) {
-                      if (cardSnapshot.hasError) {
-                        return const SizedBox.shrink();
+                      if (cardSnapshot.data?['_unavailable'] == true) {
+                        return _PhysicalCardUnavailable(
+                          onRetry: () =>
+                              setState(() => _cardProfile = _loadCardProfile()),
+                        );
                       }
                       if (!cardSnapshot.hasData) {
                         return const Padding(
@@ -159,11 +162,16 @@ class _CustomerPrivilegeCardScreenState
         ApiService.requireAuthenticatedCustomerId(),
       );
 
-  Future<Map<String, dynamic>> _loadCardProfile() =>
-      widget.loadCardProfile?.call() ??
-      ApiService.getCustomerCardProfile(
-        ApiService.requireAuthenticatedCustomerId(),
-      );
+  Future<Map<String, dynamic>> _loadCardProfile() async {
+    try {
+      return await (widget.loadCardProfile?.call() ??
+          ApiService.getCustomerCardProfile(
+            ApiService.requireAuthenticatedCustomerId(),
+          ));
+    } catch (_) {
+      return const {'_unavailable': true};
+    }
+  }
 
   Future<void> _refresh() async {
     await _membershipController.refresh();
@@ -446,4 +454,34 @@ class _PhysicalCardPanel extends StatelessWidget {
       ),
     );
   }
+}
+
+class _PhysicalCardUnavailable extends StatelessWidget {
+  const _PhysicalCardUnavailable({required this.onRetry});
+
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    width: double.infinity,
+    padding: const EdgeInsets.all(16),
+    decoration: BoxDecoration(
+      color: const Color(0xFFF6F8FC),
+      border: Border.all(color: const Color(0xFFE3E9F2)),
+      borderRadius: BorderRadius.circular(16),
+    ),
+    child: Row(
+      children: [
+        const Icon(Icons.credit_card_off_outlined, color: AppColors.gray),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Text(
+            'Physical card status is unavailable right now.',
+            style: AppTypography.small.copyWith(color: AppColors.gray),
+          ),
+        ),
+        TextButton(onPressed: onRetry, child: const Text('Retry')),
+      ],
+    ),
+  );
 }

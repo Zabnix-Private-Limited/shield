@@ -10060,3 +10060,11 @@ Replaced the removed static Flutter carousel with a database-backed Operations c
   - docs/customer-ui/CUSTOMER_UI_AUDIT.md and docs/CUSTOMER_UI_IMPLEMENTATION_STATUS.md: record the supported support action and its backing contract.
 - Why:
   - Settings must not imply an unsupported customer workflow has succeeded. Reusing the existing support-contact API preserves the real request path and its verification controls.
+
+## 332. Retryable customer physical-card status — 2026-08-05 00:14:00 IST
+- Frontend Files:
+  - frontend/lib/features/customer/membership/presentation/screens/privilege_card_screen.dart: shows a retryable unavailable state when the customer-scoped card-profile request fails, instead of silently dropping the physical-card panel.
+- Documentation Files:
+  - docs/customer-ui/CUSTOMER_MEMBERSHIP_API_MATRIX.md, docs/CUSTOMER_UI_IMPLEMENTATION_STATUS.md, and docs/CUSTOMER_UI_VISUAL_QA.md: record the supported failure behavior and pending device capture.
+- Why:
+  - Card-profile is a verified customer-self API. A temporary failure must be distinct from no physical-card history or an unavailable customer entitlement contract.

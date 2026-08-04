@@ -62,6 +62,27 @@ void main() {
       expect(requests, 1);
     },
   );
+
+  testWidgets('shows retryable physical-card status failure', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: CustomerPrivilegeCardScreen(
+            controller: _controller(),
+            loadCustomer: () async => _customer(),
+            loadCardProfile: () async => throw StateError('Unavailable'),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('Physical card status is unavailable right now.'),
+      findsOneWidget,
+    );
+    expect(find.text('Retry'), findsOneWidget);
+  });
 }
 
 MembershipController _controller() => MembershipController(

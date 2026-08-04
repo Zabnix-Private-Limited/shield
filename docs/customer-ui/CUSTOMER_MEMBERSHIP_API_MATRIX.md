@@ -28,7 +28,7 @@ Audited: 2026-08-04. `current_schema.md` is authoritative for persisted models; 
 
 ## Current customer presentation
 
-The membership screen presents identity, validity, plan and actual cash-ledger summary. It renders subscription entitlement as unavailable; it does not derive contribution, SHIELD Benefit, total entitlement, carry-forward or monthly allocation on the client. The privilege-card route shows an issued digital card or the real physical-card request/status state.
+The membership screen presents identity, validity, plan and actual cash-ledger summary. It renders subscription entitlement as unavailable; it does not derive contribution, SHIELD Benefit, total entitlement, carry-forward or monthly allocation on the client. The privilege-card route shows an issued digital card or the real physical-card request/status state. If the card-profile request fails, it keeps the card screen usable and shows a retryable physical-card-status state instead of silently removing the section.
 
 ## Verification coverage
 

@@ -32,4 +32,6 @@ Reference images were inspected from `Design reference/`; they are visual refere
 
 Known difference: the current backend does not expose subscription entitlement or physical-card-history data to a customer-safe contract, so those panels are intentionally absent rather than represented with reference-only values.
 
+| Privilege Card reference | `/portal/customer/privilege-card` physical-card panel | Not captured in this environment | Card-profile API failures previously made this panel disappear | Retains a bordered unavailable panel with a Retry action; authenticated device capture remains required |
+
 | Customer Settings | `/portal/customer/settings` | Not captured in this environment | Replaced the frontend-only Help Center action with the existing support-contact sheet; no visual-only shell was added | Authenticated device capture remains required |
