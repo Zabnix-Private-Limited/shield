@@ -10180,3 +10180,13 @@ Replaced the removed static Flutter carousel with a database-backed Operations c
   - docs/customer-ui/OPERATIONS_BANNER_DEMO_ASSETS.md, CUSTOMER_UI_AUDIT.md, CUSTOMER_UI_API_BINDINGS.md, and CUSTOMER_UI_IMPLEMENTATION_STATUS.md: document ownership, assets, and the explicit non-production seed path.
 - Why:
   - The Home carousel already had a customer-safe backend contract. Seeding its existing database setting makes it demonstrable without introducing a static Flutter campaign list or touching customer records.
+
+## 346. Customer dashboard empty states — 2026-08-05 02:44:00 IST
+- Frontend Files:
+  - frontend/lib/features/customer/dashboard/presentation/screens/dashboard_screen.dart: renders a customer-safe no-upcoming-appointments state with a route to the existing services flow.
+  - frontend/lib/features/customer/dashboard/presentation/widgets/recent_activity.dart: renders the shared empty-state component when the authenticated dashboard response has no wallet activity.
+  - frontend/test/recent_activity_test.dart: verifies the activity area is not blank for an empty backend response.
+- Documentation Files:
+  - docs/customer-ui/CUSTOMER_UI_AUDIT.md and docs/CUSTOMER_UI_IMPLEMENTATION_STATUS.md: record the dashboard empty-state behavior.
+- Why:
+  - A successful empty response is distinct from an error and should give the customer a clear next action rather than unexplained blank space.

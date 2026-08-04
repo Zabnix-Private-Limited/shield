@@ -5,6 +5,7 @@ import '../../../../../app/theme/app_colors.dart';
 import '../../../../../app/theme/app_typography.dart';
 import '../../../shared/domain/customer_access_state.dart';
 import '../../../../customer/shared/widgets/error_card.dart';
+import '../../../../customer/shared/widgets/empty_state.dart';
 import '../controllers/dashboard_controller.dart';
 import '../widgets/appointment_card.dart';
 import '../widgets/dashboard_shimmer.dart';
@@ -140,14 +141,25 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> {
               const SizedBox(height: 24),
               Text('Upcoming Appointments', style: AppTypography.h4),
               const SizedBox(height: 12),
-              ...dashboard.appointments
-                  .take(3)
-                  .map(
-                    (appointment) => Padding(
-                      padding: const EdgeInsets.only(bottom: 10),
-                      child: AppointmentCard(appointment: appointment),
-                    ),
+              if (dashboard.appointments.isEmpty)
+                EmptyState(
+                  title: 'No upcoming appointments',
+                  message: 'Book a visit when you are ready to see a provider.',
+                  icon: Icons.calendar_month_outlined,
+                  action: OutlinedButton(
+                    onPressed: () => context.go('/portal/customer/services'),
+                    child: const Text('Browse services'),
                   ),
+                )
+              else
+                ...dashboard.appointments
+                    .take(3)
+                    .map(
+                      (appointment) => Padding(
+                        padding: const EdgeInsets.only(bottom: 10),
+                        child: AppointmentCard(appointment: appointment),
+                      ),
+                    ),
               const SizedBox(height: 14),
               Text('Recent Activity', style: AppTypography.h4),
               const SizedBox(height: 12),

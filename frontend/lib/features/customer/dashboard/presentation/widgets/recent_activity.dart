@@ -5,6 +5,7 @@ import '../../../../../app/theme/app_colors.dart';
 import '../../../../../app/theme/app_typography.dart';
 import '../../../../../shared/models/wallet.dart';
 import '../../../../../shared/widgets/app_card.dart';
+import '../../../shared/widgets/empty_state.dart';
 
 class RecentActivity extends StatelessWidget {
   const RecentActivity({super.key, required this.transactions});
@@ -13,6 +14,14 @@ class RecentActivity extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (transactions.isEmpty) {
+      return const EmptyState(
+        title: 'No recent activity',
+        message: 'Wallet activity will appear here after a completed entry.',
+        icon: Icons.timeline_outlined,
+      );
+    }
+
     return Column(
       children: transactions
           .map(
