@@ -33,5 +33,5 @@ The membership screen presents identity, validity, plan and actual cash-ledger s
 ## Verification coverage
 
 - `frontend/test/customer_membership_model_test.dart` verifies that the membership bundle retains the server-issued card number, QR payload, and status.
-- `frontend/test/customer_membership_screen_test.dart` verifies populated identity/entitlement-gap and API-error states without inventing a contribution or SHIELD Benefit.
+- `frontend/test/customer_membership_screen_test.dart` verifies loading, populated identity/entitlement-gap, and API-error states without inventing a contribution or SHIELD Benefit.
 - `frontend/test/customer_privilege_card_screen_test.dart` verifies QR rendering from the supported payload, hides the request action when the card-profile contract says `VIEW_CARD`, and submits the request only when it says `REQUEST_PHYSICAL_CARD`.

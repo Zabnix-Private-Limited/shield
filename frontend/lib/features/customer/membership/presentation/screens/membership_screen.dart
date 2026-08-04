@@ -667,6 +667,7 @@ class _MembershipLoadingView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListView(
+      key: const Key('membership-loading-skeleton'),
       physics: const NeverScrollableScrollPhysics(),
       children: [
         Container(

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shield/features/customer/membership/data/models/membership_model.dart';
@@ -6,6 +8,29 @@ import 'package:shield/features/customer/membership/presentation/controllers/mem
 import 'package:shield/features/customer/membership/presentation/screens/membership_screen.dart';
 
 void main() {
+  testWidgets('renders the membership loading state before the API resolves', (
+    tester,
+  ) async {
+    final pending = Completer<MembershipModel>();
+    final controller = MembershipController(
+      customerId: '42',
+      repository: _PendingMembershipRepository(pending),
+    );
+    await tester.pumpWidget(
+      MaterialApp(home: CustomerMembershipScreen(controller: controller)),
+    );
+    await tester.pump();
+
+    expect(
+      find.byKey(const Key('membership-loading-skeleton')),
+      findsOneWidget,
+    );
+
+    pending.complete(_membership());
+    await tester.pumpAndSettle();
+    expect(find.text('SHLD-00042'), findsWidgets);
+  });
+
   testWidgets(
     'renders the API-backed membership identity and entitlement gap',
     (tester) async {
@@ -53,6 +78,19 @@ class _MembershipTestRepository extends MembershipRepository {
     if (value == null) throw StateError('Membership API unavailable');
     return value!;
   }
+}
+
+class _PendingMembershipRepository extends MembershipRepository {
+  _PendingMembershipRepository(this.pending);
+
+  final Completer<MembershipModel> pending;
+
+  @override
+  Future<MembershipModel?> loadCachedMembership(String customerId) async =>
+      null;
+
+  @override
+  Future<MembershipModel> loadMembership(String customerId) => pending.future;
 }
 
 MembershipModel _membership() => MembershipModel.fromJson(const {

@@ -10068,3 +10068,12 @@ Replaced the removed static Flutter carousel with a database-backed Operations c
   - docs/customer-ui/CUSTOMER_MEMBERSHIP_API_MATRIX.md, docs/CUSTOMER_UI_IMPLEMENTATION_STATUS.md, and docs/CUSTOMER_UI_VISUAL_QA.md: record the supported failure behavior and pending device capture.
 - Why:
   - Card-profile is a verified customer-self API. A temporary failure must be distinct from no physical-card history or an unavailable customer entitlement contract.
+
+## 333. Membership loading-state coverage — 2026-08-05 00:25:00 IST
+- Frontend Files:
+  - frontend/lib/features/customer/membership/presentation/screens/membership_screen.dart: adds a stable semantic test key to the existing membership loading skeleton.
+  - frontend/test/customer_membership_screen_test.dart: verifies the real controller keeps the skeleton visible until its membership API future resolves.
+- Documentation Files:
+  - docs/customer-ui/CUSTOMER_MEMBERSHIP_API_MATRIX.md and docs/CUSTOMER_UI_IMPLEMENTATION_STATUS.md: record the verified loading state.
+- Why:
+  - Loading, unavailable, and API-error states must remain distinct so a delayed database-backed membership response is never misrepresented as no membership.

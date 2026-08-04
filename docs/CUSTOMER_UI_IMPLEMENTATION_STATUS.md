@@ -44,6 +44,7 @@ Completed:
 - Profile and prescription-upload failures now show safe customer messages instead of raw backend or transport exception text.
 - Customer Settings now routes its Get support action to the existing persisted support-contact request instead of displaying a frontend-only Help Center message.
 - Privilege Card now exposes a retryable physical-card-status failure state instead of silently hiding the supported request/status panel when its API is unavailable.
+- Membership widget coverage now verifies that the persisted screen displays its loading skeleton until the API resolves, distinct from populated and unavailable states.
 
 Not complete:
 
