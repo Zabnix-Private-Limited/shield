@@ -17,9 +17,16 @@ import '../widgets/wallet_filters.dart';
 import '../widgets/wallet_shimmer.dart';
 
 class CustomerWalletScreen extends StatefulWidget {
-  const CustomerWalletScreen({super.key, this.showFullHistory = false});
+  const CustomerWalletScreen({
+    super.key,
+    this.showFullHistory = false,
+    this.controller,
+    this.loadCustomer,
+  });
 
   final bool showFullHistory;
+  final WalletController? controller;
+  final Future<Customer> Function()? loadCustomer;
 
   @override
   State<CustomerWalletScreen> createState() => _CustomerWalletScreenState();
@@ -27,21 +34,24 @@ class CustomerWalletScreen extends StatefulWidget {
 
 class _CustomerWalletScreenState extends State<CustomerWalletScreen> {
   late final WalletController _controller;
+  late final bool _ownsController;
   late Future<Customer> _customerFuture;
   String _selectedLedger = 'ALL';
 
   @override
   void initState() {
     super.initState();
-    _controller = WalletController()..load();
-    _customerFuture = ApiService.getCustomerProfile(
-      ApiService.requireAuthenticatedCustomerId(),
-    );
+    _ownsController = widget.controller == null;
+    _controller = widget.controller ?? WalletController();
+    _controller.load();
+    _customerFuture = _loadCustomer();
   }
 
   @override
   void dispose() {
-    _controller.dispose();
+    if (_ownsController) {
+      _controller.dispose();
+    }
     super.dispose();
   }
 
@@ -60,9 +70,7 @@ class _CustomerWalletScreenState extends State<CustomerWalletScreen> {
             message: 'The customer access state could not be loaded.',
             onRetry: () {
               setState(() {
-                _customerFuture = ApiService.getCustomerProfile(
-                  ApiService.requireAuthenticatedCustomerId(),
-                );
+                _customerFuture = _loadCustomer();
               });
             },
           );
@@ -73,10 +81,6 @@ class _CustomerWalletScreenState extends State<CustomerWalletScreen> {
         return ListenableBuilder(
           listenable: _controller,
           builder: (context, _) {
-            final accessState = CustomerAccessState(
-              customer: customer,
-              customerStatus: customer.status,
-            );
             if (_controller.isLoading && !_controller.hasData) {
               return const WalletShimmer();
             }
@@ -97,6 +101,12 @@ class _CustomerWalletScreenState extends State<CustomerWalletScreen> {
                 onRetry: _controller.load,
               );
             }
+
+            final accessState = CustomerAccessState(
+              customer: customer,
+              customerStatus: customer.status,
+              membership: wallet.membership,
+            );
 
             if (!accessState.serviceAccessEnabled) {
               return _LockedWalletView(customer: customer);
@@ -165,6 +175,12 @@ class _CustomerWalletScreenState extends State<CustomerWalletScreen> {
       },
     );
   }
+
+  Future<Customer> _loadCustomer() =>
+      widget.loadCustomer?.call() ??
+      ApiService.getCustomerProfile(
+        ApiService.requireAuthenticatedCustomerId(),
+      );
 }
 
 class _LockedWalletView extends StatelessWidget {

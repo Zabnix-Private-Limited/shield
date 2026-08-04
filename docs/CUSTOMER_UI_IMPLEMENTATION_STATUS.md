@@ -18,6 +18,7 @@ Completed:
 - Privilege Card widget coverage verifies the actual QR payload is rendered and that physical-card actions follow the backend card-profile action rather than a client-side assumption.
 - Membership widget coverage verifies populated identity/entitlement-gap rendering and the membership API-error state.
 - Wallet now has a real full-history route backed by the existing customer wallet response. The preview links there only when the customer has more than six visible transactions; unsupported recharge/export actions are not advertised.
+- Wallet access now uses the issued membership returned by the wallet bundle. This prevents active members from being shown the pending-wallet screen solely because the profile response does not carry membership data.
 - Customer Services now reads the seeded wellness demo catalogue from an authenticated customer endpoint. Unsupported hardcoded pharmacy, laboratory, home-care, and diet-plan content was removed from the visible flow.
 - Customer Notifications now uses the authenticated bulk-read endpoint instead of issuing one mutation per unread record.
 - My Orders is now a customer-scoped, read-only pharmacy purchase-history route with loading, empty, error/retry, and refresh states. Customer cart, checkout, tracking, returns, and payments remain unavailable because no verified customer contracts exist.

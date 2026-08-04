@@ -9985,3 +9985,12 @@ Replaced the removed static Flutter carousel with a database-backed Operations c
   - docs/CUSTOMER_UI_VISUAL_QA.md records the reachable localhost:53431 browser check at 480 by 800 and its blank Flutter surface result; it does not represent that attempt as authenticated visual proof.
 - Why:
   - Runtime visual QA needs an actual rendered customer route. The local server responded, but Chrome showed no application content or console errors, so a project screenshot artifact would be misleading.
+
+## 323. Active customer wallet access fix — 2026-08-04 23:02:00 IST
+- Frontend Files:
+  - frontend/lib/features/customer/wallet/presentation/screens/wallet_screen.dart: supplies the membership returned by the existing wallet bundle to the customer access gate, instead of evaluating that gate with profile data alone.
+  - frontend/test/customer_wallet_screen_test.dart: proves an active issued membership reaches the cash wallet and a SHIELD Benefit ledger entry is not rendered.
+- Documentation Files:
+  - docs/customer-ui/CUSTOMER_UI_AUDIT.md and docs/CUSTOMER_UI_IMPLEMENTATION_STATUS.md record the contract source for wallet access.
+- Why:
+  - CustomerAccessState requires an issued membership card. The wallet bundle already provides that membership, while the profile does not, so omitting it incorrectly locked every otherwise active customer wallet.
