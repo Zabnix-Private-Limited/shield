@@ -9,7 +9,9 @@ import '../../../../customer/shared/widgets/error_card.dart';
 import '../../domain/customer_order_summary.dart';
 
 class CustomerOrdersScreen extends StatefulWidget {
-  const CustomerOrdersScreen({super.key});
+  const CustomerOrdersScreen({super.key, this.loadOrders});
+
+  final Future<List<CustomerOrderSummary>> Function()? loadOrders;
 
   @override
   State<CustomerOrdersScreen> createState() => _CustomerOrdersScreenState();
@@ -25,9 +27,11 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
   }
 
   void _loadOrders() {
-    _ordersFuture = ApiService.getCustomerPurchases(
-      ApiService.requireAuthenticatedCustomerId(),
-    ).then((items) => items.map(CustomerOrderSummary.fromJson).toList());
+    _ordersFuture =
+        widget.loadOrders?.call() ??
+        ApiService.getCustomerPurchases(
+          ApiService.requireAuthenticatedCustomerId(),
+        ).then((items) => items.map(CustomerOrderSummary.fromJson).toList());
   }
 
   @override

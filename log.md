@@ -10198,3 +10198,12 @@ Replaced the removed static Flutter carousel with a database-backed Operations c
   - docs/customer-ui/CUSTOMER_UI_AUDIT.md and docs/CUSTOMER_UI_IMPLEMENTATION_STATUS.md: record the visible demo-data disclosure.
 - Why:
   - Seeded wellness products are permitted for the review build, but they must not appear to be genuine inventory or replace real product master data.
+
+## 348. Customer order-history failure coverage — 2026-08-05 03:08:00 IST
+- Frontend Files:
+  - frontend/lib/features/customer/orders/presentation/screens/customer_orders_screen.dart: adds a widget-test loader seam while retaining the authenticated customer purchase API as the production default.
+  - frontend/test/customer_orders_screen_test.dart: verifies a failed purchase-history read stays retryable and does not render the no-orders state.
+- Documentation Files:
+  - docs/customer-ui/CUSTOMER_UI_AUDIT.md and docs/CUSTOMER_UI_IMPLEMENTATION_STATUS.md: record the verified order-history failure behavior.
+- Why:
+  - A missing order history and an unavailable customer purchase API have different meanings and must remain visibly distinct.
