@@ -6736,19 +6736,22 @@ class _CustomerServicesViewState extends State<_CustomerServicesView> {
     };
 
     try {
+      final selectedProviderId = _selectedProviderId;
+      if (selectedProviderId == null || selectedProviderId.trim().isEmpty) {
+        throw StateError('Select a provider before booking your consultation.');
+      }
       final providers = await _providersFuture;
       final matchingProviders = _filterConsultationProviders(providers);
       final selectedProvider = matchingProviders
           .cast<Map<String, dynamic>?>()
           .firstWhere(
-            (provider) => provider?['id']?.toString() == _selectedProviderId,
-            orElse: () =>
-                matchingProviders.isEmpty ? null : matchingProviders.first,
+            (provider) => provider?['id']?.toString() == selectedProviderId,
+            orElse: () => null,
           );
 
       if (selectedProvider == null) {
         throw StateError(
-          'No active provider is configured yet for this consultation type.',
+          'The selected provider is no longer available. Please choose another provider.',
         );
       }
 

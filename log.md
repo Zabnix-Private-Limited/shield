@@ -10029,3 +10029,10 @@ Replaced the removed static Flutter carousel with a database-backed Operations c
   - docs/customer-ui/CUSTOMER_UI_AUDIT.md, docs/CUSTOMER_UI_IMPLEMENTATION_STATUS.md, and docs/CUSTOMER_UI_VISUAL_QA.md record the supported flow and pending authenticated visual capture.
 - Why:
   - The Nest appointment controller already enforces customer ownership before rescheduling. Reusing that endpoint restores the customer UI action without copying appointment data or adding a client-side authorization rule.
+\n## 328. Explicit customer provider selection — 2026-08-04 23:38:00 IST
+- Frontend Files:
+  - frontend/lib/features/portal/presentation/screens/portal_shell.dart: requires a customer to select an active backend provider before creating a consultation appointment and rejects stale selections instead of silently booking the first provider.
+- Documentation Files:
+  - docs/customer-ui/CUSTOMER_UI_AUDIT.md and docs/CUSTOMER_UI_IMPLEMENTATION_STATUS.md record the provider API and explicit selection rule.
+- Why:
+  - Appointment creation is customer-scoped on the backend, but a UI fallback could still create an unintended booking. Requiring the displayed provider selection keeps the request aligned with the customers intent.
