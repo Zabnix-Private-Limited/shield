@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../../../app/theme/app_colors.dart';
 import '../../../../../app/theme/app_typography.dart';
@@ -150,6 +151,16 @@ class _CustomerPrescriptionsScreenState
                         icon: Icons.medication_outlined,
                       ),
                     ],
+                  ),
+                  const SizedBox(height: 12),
+                  OutlinedButton.icon(
+                    onPressed: () => context.go('/portal/customer/documents'),
+                    icon: const Icon(Icons.upload_file_outlined),
+                    label: const Text('Upload prescription'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.white,
+                      side: const BorderSide(color: AppColors.white),
+                    ),
                   ),
                 ],
               ),

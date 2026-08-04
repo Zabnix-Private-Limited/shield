@@ -9954,3 +9954,11 @@ Replaced the removed static Flutter carousel with a database-backed Operations c
   - docs/customer-ui/CUSTOMER_UI_AUDIT.md, docs/CUSTOMER_UI_IMPLEMENTATION_STATUS.md, and docs/CUSTOMER_UI_STATE_MATRIX.md record the persisted upload behavior and states.
 - Why:
   - The multipart API and platform file picker already existed. Reusing them gives the archive a real upload flow without locally creating document records or adding a second uploader.
+
+## 319. Prescription upload entry point — 2026-08-04 22:32:00 IST
+- Frontend Files:
+  - frontend/lib/features/customer/prescriptions/presentation/screens/customer_prescriptions_screen.dart: adds an upload action that routes to the shared customer document archive uploader.
+- Documentation Files:
+  - docs/customer-ui/CUSTOMER_UI_AUDIT.md and docs/CUSTOMER_UI_IMPLEMENTATION_STATUS.md record the single persisted upload path.
+- Why:
+  - A second picker and multipart client would duplicate an already supported workflow. The Prescription screen now provides the expected entry point while Documents remains the one implementation that uploads and refreshes from the backend.
