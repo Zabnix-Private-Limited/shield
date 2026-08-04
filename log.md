@@ -10160,3 +10160,11 @@ Replaced the removed static Flutter carousel with a database-backed Operations c
   - docs/customer-ui/CUSTOMER_UI_AUDIT.md and docs/CUSTOMER_UI_IMPLEMENTATION_STATUS.md: record the verified prescription failure behavior.
 - Why:
   - A customer must never infer that their prescription history is empty merely because its authenticated archive request failed.
+
+## 344. Customer navigation wordmark overflow fix — 2026-08-05 02:18:00 IST
+- Frontend Files:
+  - frontend/lib/features/customer/shared/widgets/customer_app_bar.dart: keeps only the compact shield mark in the main navigation header and removes the repeated full SHIELD wordmark.
+- Verification:
+  - flutter analyze customer_app_bar.dart and customer_app_bar_test.dart pass at 480 px and 448 px, including the SafeArea header layout.
+- Why:
+  - The second written logo added unnecessary vertical content and caused the visible header overflow on narrow customer views.

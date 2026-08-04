@@ -196,7 +196,9 @@ class _CustomerMainHeader extends StatelessWidget {
             ),
             if (!dense) ...[
               const SizedBox(width: 8),
-              ShieldBrandLockup(compact: true, showWordmark: !compact),
+              // The shield mark establishes the app identity without repeating
+              // the full wordmark in the compact navigation header.
+              const ShieldBrandLockup(compact: true, showWordmark: false),
             ],
             const Spacer(),
             _HeaderBalanceChip(
