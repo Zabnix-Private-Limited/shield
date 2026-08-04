@@ -5,6 +5,7 @@ import '../../../../../app/theme/app_typography.dart';
 import '../../../../../shared/models/document.dart';
 import '../../../../../shared/services/api_service.dart';
 import '../../../../../shared/services/platform_file_actions.dart';
+import '../../../../../shared/utils/prescription_file_picker.dart';
 import '../../../../../shared/widgets/app_card.dart';
 import '../../../../../shared/widgets/app_skeleton.dart';
 import '../../../../../shared/widgets/portal_support.dart';
@@ -20,6 +21,7 @@ class CustomerDocumentsScreen extends StatefulWidget {
 
 class _CustomerDocumentsScreenState extends State<CustomerDocumentsScreen> {
   late Future<List<Document>> _documentsFuture;
+  var _isUploading = false;
 
   @override
   void initState() {
@@ -69,6 +71,41 @@ class _CustomerDocumentsScreenState extends State<CustomerDocumentsScreen> {
           ),
         );
       }
+    }
+  }
+
+  Future<void> _uploadPrescription() async {
+    final picked = await pickPrescriptionFile();
+    if (!mounted || picked == null) return;
+
+    setState(() => _isUploading = true);
+    try {
+      await ApiService.uploadCustomerDocument(
+        fileName: picked.name.isEmpty ? 'prescription.pdf' : picked.name,
+        documentType: 'PRESCRIPTION',
+        fileBytes: picked.bytes,
+        mimeType: picked.mimeType ?? 'application/pdf',
+        fileSize: picked.size <= 0 ? 1024 : picked.size,
+      );
+      if (!mounted) return;
+      _loadDocuments();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Prescription uploaded and saved to your records.'),
+        ),
+      );
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Prescription upload could not be completed. Please retry.',
+            ),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isUploading = false);
     }
   }
 
@@ -150,6 +187,27 @@ class _CustomerDocumentsScreenState extends State<CustomerDocumentsScreen> {
                         icon: Icons.cloud_done_outlined,
                       ),
                     ],
+                  ),
+                  const SizedBox(height: 12),
+                  OutlinedButton.icon(
+                    onPressed: _isUploading ? null : _uploadPrescription,
+                    icon: _isUploading
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: AppColors.white,
+                            ),
+                          )
+                        : const Icon(Icons.upload_file_outlined),
+                    label: Text(
+                      _isUploading ? 'Uploading…' : 'Upload prescription',
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.white,
+                      side: const BorderSide(color: AppColors.white),
+                    ),
                   ),
                 ],
               ),

@@ -9946,3 +9946,11 @@ Replaced the removed static Flutter carousel with a database-backed Operations c
   - docs/customer-ui/CUSTOMER_UI_AUDIT.md, docs/CUSTOMER_UI_IMPLEMENTATION_STATUS.md, and docs/CUSTOMER_UI_STATE_MATRIX.md record the signed open/download behavior.
 - Why:
   - The backend already owns signed document access and the frontend already has a platform file-action adapter. Wiring those existing paths completes the supported customer viewer/download workflow without public storage paths or a new dependency.
+
+## 318. Customer archive prescription upload — 2026-08-04 22:27:00 IST
+- Frontend Files:
+  - frontend/lib/features/customer/documents/presentation/screens/customer_documents_screen.dart: exposes the existing customer-authenticated prescription picker/upload and reloads the archive from the API after success.
+- Documentation Files:
+  - docs/customer-ui/CUSTOMER_UI_AUDIT.md, docs/CUSTOMER_UI_IMPLEMENTATION_STATUS.md, and docs/CUSTOMER_UI_STATE_MATRIX.md record the persisted upload behavior and states.
+- Why:
+  - The multipart API and platform file picker already existed. Reusing them gives the archive a real upload flow without locally creating document records or adding a second uploader.
