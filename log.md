@@ -9712,3 +9712,28 @@ Replaced the removed static Flutter carousel with a database-backed Operations c
   - Replaced visible hardcoded pharmacy product cards with API-derived catalogue cards and loading, empty, error, and retry states.
   - Removed visible hardcoded laboratory, home-care, diet-plan, and local-only medicine-request content; unsupported categories now state that no customer-safe catalogue contract exists.
 - Why: customer screens must not simulate products, prices, or persisted requests. The existing idempotent demo seed remains the sole source for demo catalogue records.
+
+## 289. Customer Appointment Scope Hardening — 2026-08-04 19:20:00 IST
+- Backend Files:
+  - Added a shared appointment-to-customer ownership guard for customer appointment reads, cancellations, and reschedules.
+  - Customer principals now fail closed when their customer context is absent; provider consultation, billing, invoice, and prescription actions reject customer principals.
+  - Added regression tests for cross-customer appointment access and staff-only consultation actions.
+- Why: agent scope checks do not constrain customer principals. The ownership guard closes the direct-object-ID authorization gap at the controller boundary.
+
+## 290. Customer notification ownership hardening — 2026-08-04 20:49:00 IST
+- Backend Files:
+  - `backend/src/notification/notification.controller.ts`: customer notification lists fail closed without a customer context; individual read mutations verify notification ownership; bulk read ignores caller-supplied customer IDs and uses only the authenticated customer.
+  - `backend/src/notification/notification.service.ts`: added a database-backed notification/customer ownership check, preserving the existing service and staff scope paths.
+  - `backend/src/notification/notification.controller.spec.ts`: regression coverage rejects cross-customer read attempts and proves bulk read is pinned to the signed-in customer.
+- Documentation Files:
+  - `docs/CUSTOMER_UI_API_BINDINGS.md` and `docs/customer-ui/CUSTOMER_UI_AUDIT.md`: record the enforced notification boundary.
+- Why:
+  - Direct notification identifiers must never allow one authenticated customer to mutate another customer’s inbox, even when the list endpoint is correctly scoped.
+## 291. Customer referral ownership hardening — 2026-08-04 20:51:00 IST
+- Backend Files:
+  - `backend/src/referral/referral.controller.ts`: referral tree and summary requests now reject a customer-supplied ID that differs from the authenticated customer, while preserving the existing agent scope checks.
+  - `backend/src/referral/referral.controller.spec.ts`: regression coverage prevents cross-customer referral reads and confirms self access remains database-backed.
+- Documentation Files:
+  - `docs/CUSTOMER_UI_API_BINDINGS.md` and `docs/customer-ui/CUSTOMER_UI_AUDIT.md`: document the referral ownership boundary.
+- Why:
+  - Referral relationship data is customer-private and must have the same direct-ID protection as cards, wallets, appointments, and notifications.

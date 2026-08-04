@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Post, Body } from '@nestjs/common';
+import { Body, Controller, ForbiddenException, Get, Param, Post } from '@nestjs/common';
 import { AgentScopeService } from '../auth/agent-scope.service';
 import type { ShieldPrincipal } from '../auth/auth.types';
 import { CurrentPrincipal } from '../auth/current-principal.decorator';
@@ -12,20 +12,39 @@ export class ReferralController {
     private readonly agentScopeService: AgentScopeService,
   ) {}
 
+  private assertCustomerOwnReferralData(
+    customerId: bigint,
+    principal?: ShieldPrincipal,
+  ) {
+    if (principal?.principalType !== 'CUSTOMER') {
+      return;
+    }
+    if (!principal.customerId) {
+      throw new ForbiddenException('Authenticated customer context is required.');
+    }
+    if (BigInt(principal.customerId) !== customerId) {
+      throw new ForbiddenException(
+        'Customers can only access their own referral data.',
+      );
+    }
+  }
+
   @RequirePermissions('referrals.view')
   @Get('tree/:customerId')
   async tree(
     @Param('customerId') customerId: string,
     @CurrentPrincipal() principal?: ShieldPrincipal,
   ) {
+    const requestedCustomerId = BigInt(customerId);
+    this.assertCustomerOwnReferralData(requestedCustomerId, principal);
     await this.agentScopeService.assertAgentCanAccessCustomer(
-      BigInt(customerId),
+      requestedCustomerId,
       principal,
     );
     return {
       success: true,
       message: 'Referral tree retrieved successfully.',
-      data: await this.referralService.getReferralTree(BigInt(customerId)),
+      data: await this.referralService.getReferralTree(requestedCustomerId),
     };
   }
 
@@ -35,14 +54,16 @@ export class ReferralController {
     @Param('customerId') customerId: string,
     @CurrentPrincipal() principal?: ShieldPrincipal,
   ) {
+    const requestedCustomerId = BigInt(customerId);
+    this.assertCustomerOwnReferralData(requestedCustomerId, principal);
     await this.agentScopeService.assertAgentCanAccessCustomer(
-      BigInt(customerId),
+      requestedCustomerId,
       principal,
     );
     return {
       success: true,
       message: 'Referral summary retrieved successfully.',
-      data: await this.referralService.getReferralSummary(BigInt(customerId)),
+      data: await this.referralService.getReferralSummary(requestedCustomerId),
     };
   }
 

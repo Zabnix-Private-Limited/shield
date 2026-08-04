@@ -1,5 +1,6 @@
 import {
   Controller,
+  ForbiddenException,
   Get,
   Post,
   Param,
@@ -19,12 +20,47 @@ export class AppointmentController {
     private readonly agentScopeService: AgentScopeService,
   ) {}
 
+  private async assertCustomerOwnAppointment(
+    id: string,
+    principal?: ShieldPrincipal,
+  ) {
+    if (principal?.principalType !== 'CUSTOMER') return;
+    if (!principal.customerId) {
+      throw new ForbiddenException(
+        'Authenticated customer context is required.',
+      );
+    }
+    if (
+      !(await this.appointmentService.appointmentBelongsToCustomer(
+        BigInt(id),
+        BigInt(principal.customerId),
+      ))
+    ) {
+      throw new ForbiddenException(
+        'Customers can only access their own appointments.',
+      );
+    }
+  }
+
+  private assertStaffOnly(principal?: ShieldPrincipal) {
+    if (principal?.principalType === 'CUSTOMER') {
+      throw new ForbiddenException(
+        'This appointment action is for staff only.',
+      );
+    }
+  }
+
   @RequirePermissions('appointments.view')
   @Get()
   async list(
     @Query('customer_id') customerId?: string,
     @CurrentPrincipal() principal?: ShieldPrincipal,
   ) {
+    if (principal?.principalType === 'CUSTOMER' && !principal.customerId) {
+      throw new ForbiddenException(
+        'Authenticated customer context is required.',
+      );
+    }
     const targetCustomerId =
       principal?.principalType === 'CUSTOMER'
         ? BigInt(principal.customerId!)
@@ -37,7 +73,10 @@ export class AppointmentController {
         principal,
       );
     }
-    const appts = await this.appointmentService.list(targetCustomerId, principal);
+    const appts = await this.appointmentService.list(
+      targetCustomerId,
+      principal,
+    );
     return {
       success: true,
       message: 'Appointments list retrieved',
@@ -47,8 +86,16 @@ export class AppointmentController {
 
   @RequirePermissions('appointments.create')
   @Post()
-  async create(@Body() body: any, @CurrentPrincipal() principal?: ShieldPrincipal) {
+  async create(
+    @Body() body: any,
+    @CurrentPrincipal() principal?: ShieldPrincipal,
+  ) {
     if (principal?.principalType === 'CUSTOMER') {
+      if (!principal.customerId) {
+        throw new ForbiddenException(
+          'Authenticated customer context is required.',
+        );
+      }
       body.customer_id = principal.customerId;
     }
     await this.agentScopeService.assertAgentCanAccessCustomer(
@@ -69,6 +116,7 @@ export class AppointmentController {
     @Param('id') id: string,
     @CurrentPrincipal() principal?: ShieldPrincipal,
   ) {
+    await this.assertCustomerOwnAppointment(id, principal);
     await this.agentScopeService.assertAgentCanAccessAppointment(
       BigInt(id),
       principal,
@@ -87,6 +135,7 @@ export class AppointmentController {
     @Param('id') id: string,
     @CurrentPrincipal() principal?: ShieldPrincipal,
   ) {
+    await this.assertCustomerOwnAppointment(id, principal);
     await this.agentScopeService.assertAgentCanAccessAppointment(
       BigInt(id),
       principal,
@@ -105,6 +154,7 @@ export class AppointmentController {
     @Param('id') id: string,
     @CurrentPrincipal() principal?: ShieldPrincipal,
   ) {
+    this.assertStaffOnly(principal);
     await this.agentScopeService.assertAgentCanAccessAppointment(
       BigInt(id),
       principal,
@@ -124,6 +174,7 @@ export class AppointmentController {
     @Body() body: any,
     @CurrentPrincipal() principal?: ShieldPrincipal,
   ) {
+    await this.assertCustomerOwnAppointment(id, principal);
     await this.agentScopeService.assertAgentCanAccessAppointment(
       BigInt(id),
       principal,
@@ -149,6 +200,7 @@ export class AppointmentController {
     @Param('id') id: string,
     @CurrentPrincipal() principal?: ShieldPrincipal,
   ) {
+    this.assertStaffOnly(principal);
     const workspace = await this.appointmentService.getConsultationWorkspace(
       BigInt(id),
       principal,
@@ -166,6 +218,7 @@ export class AppointmentController {
     @Param('id') id: string,
     @CurrentPrincipal() principal?: ShieldPrincipal,
   ) {
+    this.assertStaffOnly(principal);
     const workspace = await this.appointmentService.startConsultation(
       BigInt(id),
       principal,
@@ -188,6 +241,7 @@ export class AppointmentController {
     @Body() body: any,
     @CurrentPrincipal() principal?: ShieldPrincipal,
   ) {
+    this.assertStaffOnly(principal);
     const workspace = await this.appointmentService.saveConsultation(
       BigInt(id),
       {
@@ -221,6 +275,7 @@ export class AppointmentController {
     @Body() body: any,
     @CurrentPrincipal() principal?: ShieldPrincipal,
   ) {
+    this.assertStaffOnly(principal);
     const workspace = await this.appointmentService.completeConsultation(
       BigInt(id),
       {
@@ -255,6 +310,7 @@ export class AppointmentController {
     @Body() body: any,
     @CurrentPrincipal() principal?: ShieldPrincipal,
   ) {
+    this.assertStaffOnly(principal);
     const workspace = await this.appointmentService.saveVisitBillingDraft(
       BigInt(id),
       body.billing_draft ?? body.billingDraft ?? body,
@@ -278,6 +334,7 @@ export class AppointmentController {
     @Body() body: any,
     @CurrentPrincipal() principal?: ShieldPrincipal,
   ) {
+    this.assertStaffOnly(principal);
     const workspace = await this.appointmentService.generateVisitInvoice(
       BigInt(id),
       {
@@ -290,7 +347,8 @@ export class AppointmentController {
           procedures: body.procedures,
           labOrders: body.lab_orders ?? body.labOrders,
           followUp: body.follow_up ?? body.followUp,
-          providerNotes: body.provider_notes ?? body.providerNotes ?? body.notes,
+          providerNotes:
+            body.provider_notes ?? body.providerNotes ?? body.notes,
         },
         billingDraft: body.billing_draft ?? body.billingDraft,
       },
@@ -314,6 +372,7 @@ export class AppointmentController {
     @Body() body: any,
     @CurrentPrincipal() principal?: ShieldPrincipal,
   ) {
+    this.assertStaffOnly(principal);
     const workspace = await this.appointmentService.recordVisitPayment(
       BigInt(id),
       body.billing_draft ?? body.billingDraft ?? body,
@@ -337,6 +396,7 @@ export class AppointmentController {
     @Body() body: any,
     @CurrentPrincipal() principal?: ShieldPrincipal,
   ) {
+    this.assertStaffOnly(principal);
     const workspace = await this.appointmentService.savePrescriptionDraft(
       BigInt(id),
       {
@@ -363,6 +423,7 @@ export class AppointmentController {
     @Param('id') id: string,
     @CurrentPrincipal() principal?: ShieldPrincipal,
   ) {
+    this.assertStaffOnly(principal);
     const workspace = await this.appointmentService.copyPrescriptionToOpenVisit(
       BigInt(id),
       principal,
@@ -373,7 +434,8 @@ export class AppointmentController {
     );
     return {
       success: true,
-      message: 'Historical prescription copied to the active visit successfully',
+      message:
+        'Historical prescription copied to the active visit successfully',
       data: workspace,
     };
   }
@@ -385,6 +447,7 @@ export class AppointmentController {
     @Body() body: any,
     @CurrentPrincipal() principal?: ShieldPrincipal,
   ) {
+    this.assertStaffOnly(principal);
     const workspace = await this.appointmentService.finalizePrescription(
       BigInt(id),
       {
@@ -412,14 +475,16 @@ export class AppointmentController {
     @Param('id') id: string,
     @CurrentPrincipal() principal?: ShieldPrincipal,
   ) {
-    const workspace = await this.appointmentService.duplicatePreviousPrescription(
-      BigInt(id),
-      principal,
-      {
-        userId: principal?.userId ? BigInt(principal.userId) : undefined,
-        roleCode: principal?.roleCode,
-      },
-    );
+    this.assertStaffOnly(principal);
+    const workspace =
+      await this.appointmentService.duplicatePreviousPrescription(
+        BigInt(id),
+        principal,
+        {
+          userId: principal?.userId ? BigInt(principal.userId) : undefined,
+          roleCode: principal?.roleCode,
+        },
+      );
     return {
       success: true,
       message: 'Previous prescription copied successfully',
@@ -434,6 +499,7 @@ export class AppointmentController {
     @Body() body: any,
     @CurrentPrincipal() principal?: ShieldPrincipal,
   ) {
+    this.assertStaffOnly(principal);
     const workspace = await this.appointmentService.voidVisitInvoice(
       BigInt(id),
       body.reason,

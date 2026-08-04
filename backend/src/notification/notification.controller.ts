@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  ForbiddenException,
   Get,
   Param,
   Post,
@@ -21,12 +22,37 @@ export class NotificationController {
     private readonly providerScopeService: ProviderScopeService,
   ) {}
 
+  private async assertCustomerOwnNotification(
+    notificationId: bigint,
+    principal?: ShieldPrincipal,
+  ) {
+    if (principal?.principalType !== 'CUSTOMER') {
+      return;
+    }
+    if (!principal.customerId) {
+      throw new ForbiddenException('Authenticated customer context is required.');
+    }
+    const belongsToCustomer =
+      await this.notificationService.notificationBelongsToCustomer(
+        notificationId,
+        BigInt(principal.customerId),
+      );
+    if (!belongsToCustomer) {
+      throw new ForbiddenException(
+        'Customers can only update their own notifications.',
+      );
+    }
+  }
+
   @RequirePermissions('notifications.view')
   @Get()
   async list(
     @Query('customer_id') customerId?: string,
     @CurrentPrincipal() principal?: ShieldPrincipal,
   ) {
+    if (principal?.principalType === 'CUSTOMER' && !principal.customerId) {
+      throw new ForbiddenException('Authenticated customer context is required.');
+    }
     const targetCustomerId =
       principal?.principalType === 'CUSTOMER'
         ? BigInt(principal.customerId!)
@@ -57,6 +83,7 @@ export class NotificationController {
     @Param('id') id: string,
     @CurrentPrincipal() principal?: ShieldPrincipal,
   ) {
+    await this.assertCustomerOwnNotification(BigInt(id), principal);
     await this.agentScopeService.assertAgentCanAccessNotification(BigInt(id), principal);
     await this.providerScopeService.assertProviderCanAccessNotification(
       BigInt(id),
@@ -76,13 +103,19 @@ export class NotificationController {
     @Body() body: any,
     @CurrentPrincipal() principal?: ShieldPrincipal,
   ) {
-    const customerIds = body.customer_id
+    const customerIds = principal?.principalType === 'CUSTOMER'
+      ? principal.customerId
+        ? [BigInt(principal.customerId)]
+        : (() => {
+            throw new ForbiddenException('Authenticated customer context is required.');
+          })()
+      : body.customer_id
       ? [BigInt(body.customer_id)]
       : this.agentScopeService.isAgentPrincipal(principal)
         ? await this.agentScopeService.listAccessibleCustomerIds(principal)
         : [];
 
-    if (body.customer_id) {
+    if (body.customer_id && principal?.principalType !== 'CUSTOMER') {
       await this.agentScopeService.assertAgentCanAccessCustomer(
         BigInt(body.customer_id),
         principal,

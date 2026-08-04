@@ -55,6 +55,17 @@ export class NotificationService {
     });
   }
 
+  async notificationBelongsToCustomer(
+    notificationId: bigint,
+    customerId: bigint,
+  ): Promise<boolean> {
+    return (
+      (await this.prisma.notification.count({
+        where: { id: notificationId, customerId },
+      })) > 0
+    );
+  }
+
   async markAsRead(id: bigint) {
     const notification = await this.prisma.notification.update({
       where: { id },
