@@ -74,12 +74,18 @@ class _OperationsBannerCarouselState extends State<OperationsBannerCarousel> {
                         child: Stack(
                           fit: StackFit.expand,
                           children: [
-                            Image.network(
-                              banner.imageUrl,
-                              fit: BoxFit.cover,
-                              errorBuilder: (_, _, _) =>
-                                  const ColoredBox(color: AppColors.shieldNavy),
-                            ),
+                            banner.imageUrl.startsWith('assets/')
+                                ? Image.asset(
+                                    banner.imageUrl,
+                                    fit: BoxFit.cover,
+                                  )
+                                : Image.network(
+                                    banner.imageUrl,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (_, _, _) => const ColoredBox(
+                                      color: AppColors.shieldNavy,
+                                    ),
+                                  ),
                             const DecoratedBox(
                               decoration: BoxDecoration(
                                 gradient: LinearGradient(

@@ -10168,3 +10168,15 @@ Replaced the removed static Flutter carousel with a database-backed Operations c
   - flutter analyze customer_app_bar.dart and customer_app_bar_test.dart pass at 480 px and 448 px, including the SafeArea header layout.
 - Why:
   - The second written logo added unnecessary vertical content and caused the visible header overflow on narrow customer views.
+
+## 345. Database-backed Operations dashboard banners — 2026-08-05 02:32:00 IST
+- Frontend Files:
+  - frontend/lib/features/customer/dashboard/presentation/widgets/marketing_banner_carousel.dart: renders an Operations-configured bundled asset path as well as approved network image URLs; banner records still come exclusively from the customer dashboard API.
+  - frontend/assets/images/operations/: contains three downloaded visual-only wellness and care images for non-production Operations banner records.
+  - frontend/test/operations_banner_carousel_test.dart: verifies an API-provided bundled banner image renders in the existing carousel.
+- Backend Files:
+  - backend/prisma/demo-seeds/20260805_operations_customer_banners.sql: adds a non-destructive, idempotent seed for the existing commercial setting and does not overwrite Operations configuration.
+- Documentation Files:
+  - docs/customer-ui/OPERATIONS_BANNER_DEMO_ASSETS.md, CUSTOMER_UI_AUDIT.md, CUSTOMER_UI_API_BINDINGS.md, and CUSTOMER_UI_IMPLEMENTATION_STATUS.md: document ownership, assets, and the explicit non-production seed path.
+- Why:
+  - The Home carousel already had a customer-safe backend contract. Seeding its existing database setting makes it demonstrable without introducing a static Flutter campaign list or touching customer records.

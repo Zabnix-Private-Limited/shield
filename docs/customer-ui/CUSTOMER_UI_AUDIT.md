@@ -33,6 +33,6 @@ Route-level and membership/card screen manifests are maintained in `CUSTOMER_UI_
 ## Known blockers
 
 - No verified customer API contract yet for full rewards, customer wellness cart/checkout, referral/activity, card lifecycle, or family/dependents.
-- Operations carousel is database-backed through `commercial_settings` (`OPERATIONS_CUSTOMER_BANNERS`) and correctly renders an empty state when Operations has published no eligible banners.
+- Operations carousel is database-backed through `commercial_settings` (`OPERATIONS_CUSTOMER_BANNERS`) and correctly renders an empty state when Operations has published no eligible banners. An idempotent non-production banner seed and local demo photos are available without overwriting an Operations-managed setting.
 - The current customer services, visits, profile, notifications, and settings implementations are embedded in the large portal shell and must be extracted incrementally to preserve behavior.
 - The unsupported customer recharge section was removed from the customer portal registry. The wallet has no verified customer top-up/request contract, so it must not claim a submitted recharge request.

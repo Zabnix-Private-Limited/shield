@@ -16,6 +16,10 @@ All entries use the authenticated customer session. Flutter route guards improve
 | Activity/notifications | Customer timeline/inbox views | `GET /timeline/me`; notification read APIs | Timeline resolves self; notification mutations are ownership-scoped |
 | Profile/support | Profile/settings views | Profile/alternative contact/support/feedback APIs | Contacts and mutations are self-scoped; support/feedback persist through their existing APIs |
 
+## Operations banner configuration
+
+`GET /customer/dashboard` returns only eligible `OPERATIONS_CUSTOMER_BANNERS` records from the existing `commercial_settings` table. Each published dashboard record supplies its title, subtitle, image URL or bundled asset path, accessible description, and an internal customer CTA route. For an approved non-production database with no Operations setting, run `backend/prisma/demo-seeds/20260805_operations_customer_banners.sql`; it uses `ON CONFLICT DO NOTHING`, so it never replaces an Operations-managed configuration.
+
 ## Explicitly not bound
 
 - Management-demo subscription APIs, card history/replacement APIs, customer wallet top-up/statements, reward redemption/expiry, cart/checkout/order tracking, and referral sharing are not customer UI bindings until a customer-safe contract exists.

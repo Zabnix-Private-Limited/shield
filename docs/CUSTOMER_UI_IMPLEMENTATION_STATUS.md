@@ -10,7 +10,7 @@ Completed:
 - Header widget coverage verifies the dense main-header layout at the reported 480px viewport and its no-summary retry state without a layout overflow.
 - Membership-first dashboard hierarchy using existing dashboard data.
 - Static Flutter marketing carousel removed from the live dashboard pending an Operations-owned API contract.
-- Operations-owned carousel contract added through the existing commercial-settings table; no schema change or seed required.
+- Operations-owned carousel contract added through the existing commercial-settings table. An explicit idempotent non-production seed now publishes three local-image demo banners only when Operations has not configured the setting.
 - Customer reward-points route added using the existing wallet endpoint and `REWARD_POINTS` transaction ledger; no mock points or shared customer data.
 - Customer transaction tiles now use the normalized ledger credit direction, so `EARNED` reward-point entries render as credits instead of debits.
 - Privilege Card route added from the membership endpoint's actual `shieldCard` payload. It renders only an issued card and its real QR payload; no subscription or physical-card data is fabricated.
