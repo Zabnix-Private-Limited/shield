@@ -11,7 +11,18 @@ import '../../../shared/widgets/error_card.dart';
 import '../controllers/membership_controller.dart';
 
 class CustomerPrivilegeCardScreen extends StatefulWidget {
-  const CustomerPrivilegeCardScreen({super.key});
+  const CustomerPrivilegeCardScreen({
+    super.key,
+    this.controller,
+    this.loadCustomer,
+    this.loadCardProfile,
+    this.requestPhysicalCard,
+  });
+
+  final MembershipController? controller;
+  final Future<Customer> Function()? loadCustomer;
+  final Future<Map<String, dynamic>> Function()? loadCardProfile;
+  final Future<Map<String, dynamic>> Function()? requestPhysicalCard;
 
   @override
   State<CustomerPrivilegeCardScreen> createState() =>
@@ -21,6 +32,7 @@ class CustomerPrivilegeCardScreen extends StatefulWidget {
 class _CustomerPrivilegeCardScreenState
     extends State<CustomerPrivilegeCardScreen> {
   late final MembershipController _membershipController;
+  late final bool _ownsMembershipController;
   late Future<Customer> _customer;
   late Future<Map<String, dynamic>> _cardProfile;
   bool _requestingPhysicalCard = false;
@@ -28,14 +40,18 @@ class _CustomerPrivilegeCardScreenState
   @override
   void initState() {
     super.initState();
-    _membershipController = MembershipController()..load();
+    _ownsMembershipController = widget.controller == null;
+    _membershipController = widget.controller ?? MembershipController();
+    _membershipController.load();
     _customer = _loadCustomer();
     _cardProfile = _loadCardProfile();
   }
 
   @override
   void dispose() {
-    _membershipController.dispose();
+    if (_ownsMembershipController) {
+      _membershipController.dispose();
+    }
     super.dispose();
   }
 
@@ -137,11 +153,14 @@ class _CustomerPrivilegeCardScreenState
     );
   }
 
-  Future<Customer> _loadCustomer() => ApiService.getCustomerProfile(
-    ApiService.requireAuthenticatedCustomerId(),
-  );
+  Future<Customer> _loadCustomer() =>
+      widget.loadCustomer?.call() ??
+      ApiService.getCustomerProfile(
+        ApiService.requireAuthenticatedCustomerId(),
+      );
 
   Future<Map<String, dynamic>> _loadCardProfile() =>
+      widget.loadCardProfile?.call() ??
       ApiService.getCustomerCardProfile(
         ApiService.requireAuthenticatedCustomerId(),
       );
@@ -157,9 +176,11 @@ class _CustomerPrivilegeCardScreenState
   Future<void> _requestPhysicalCard() async {
     setState(() => _requestingPhysicalCard = true);
     try {
-      final request = await ApiService.requestCustomerPhysicalCard(
-        ApiService.requireAuthenticatedCustomerId(),
-      );
+      final request = widget.requestPhysicalCard != null
+          ? await widget.requestPhysicalCard!()
+          : await ApiService.requestCustomerPhysicalCard(
+              ApiService.requireAuthenticatedCustomerId(),
+            );
       if (!mounted) return;
       setState(() => _cardProfile = _loadCardProfile());
       final status =

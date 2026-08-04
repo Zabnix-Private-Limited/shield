@@ -9962,3 +9962,12 @@ Replaced the removed static Flutter carousel with a database-backed Operations c
   - docs/customer-ui/CUSTOMER_UI_AUDIT.md and docs/CUSTOMER_UI_IMPLEMENTATION_STATUS.md record the single persisted upload path.
 - Why:
   - A second picker and multipart client would duplicate an already supported workflow. The Prescription screen now provides the expected entry point while Documents remains the one implementation that uploads and refreshes from the backend.
+
+## 320. Privilege-card contract coverage — 2026-08-04 22:42:00 IST
+- Frontend Files:
+  - frontend/lib/features/customer/membership/presentation/screens/privilege_card_screen.dart: accepts optional loaders only for widget verification while retaining authenticated API defaults in production.
+  - frontend/test/customer_privilege_card_screen_test.dart: verifies the server-issued QR code, unavailable physical-card action, and supported physical-card request callback.
+- Documentation Files:
+  - docs/customer-ui/CUSTOMER_MEMBERSHIP_API_MATRIX.md and docs/CUSTOMER_UI_IMPLEMENTATION_STATUS.md record concrete customer membership/card verification coverage.
+- Why:
+  - The card route had no way to exercise its customer-scoped API states without a live session. Minimal loader injection permits the required tests without replacing any repository or contract.

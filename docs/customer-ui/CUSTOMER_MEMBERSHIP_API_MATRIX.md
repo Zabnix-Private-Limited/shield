@@ -29,3 +29,9 @@ Audited: 2026-08-04. `current_schema.md` is authoritative for persisted models; 
 ## Current customer presentation
 
 The membership screen presents identity, validity, plan and actual cash-ledger summary. It renders subscription entitlement as unavailable; it does not derive contribution, SHIELD Benefit, total entitlement, carry-forward or monthly allocation on the client. The privilege-card route shows an issued digital card or the real physical-card request/status state.
+
+## Verification coverage
+
+- `frontend/test/customer_membership_model_test.dart` verifies that the membership bundle retains the server-issued card number, QR payload, and status.
+- `frontend/test/customer_membership_screen_test.dart` verifies populated identity/entitlement-gap and API-error states without inventing a contribution or SHIELD Benefit.
+- `frontend/test/customer_privilege_card_screen_test.dart` verifies QR rendering from the supported payload, hides the request action when the card-profile contract says `VIEW_CARD`, and submits the request only when it says `REQUEST_PHYSICAL_CARD`.

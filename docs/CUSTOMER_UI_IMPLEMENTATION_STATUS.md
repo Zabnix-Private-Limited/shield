@@ -14,6 +14,7 @@ Completed:
 - Privilege Card route added from the membership endpoint's actual `shieldCard` payload. It renders only an issued card and its real QR payload; no subscription or physical-card data is fabricated.
 - Membership screen now renders a clear entitlement-unavailable state until a customer-safe subscription contract returns contribution, SHIELD Benefit, monthly allocation and carry-forward values.
 - Privilege Card supports the verified physical-card request/status contract. Backend and Flutter both reject attempts to target another customer ID.
+- Privilege Card widget coverage verifies the actual QR payload is rendered and that physical-card actions follow the backend card-profile action rather than a client-side assumption.
 - Membership widget coverage verifies populated identity/entitlement-gap rendering and the membership API-error state.
 - Wallet now has a real full-history route backed by the existing customer wallet response. The preview links there only when the customer has more than six visible transactions; unsupported recharge/export actions are not advertised.
 - Customer Services now reads the seeded wellness demo catalogue from an authenticated customer endpoint. Unsupported hardcoded pharmacy, laboratory, home-care, and diet-plan content was removed from the visible flow.
