@@ -10190,3 +10190,11 @@ Replaced the removed static Flutter carousel with a database-backed Operations c
   - docs/customer-ui/CUSTOMER_UI_AUDIT.md and docs/CUSTOMER_UI_IMPLEMENTATION_STATUS.md: record the dashboard empty-state behavior.
 - Why:
   - A successful empty response is distinct from an error and should give the customer a clear next action rather than unexplained blank space.
+
+## 347. Wellness demo catalogue disclosure — 2026-08-05 02:53:00 IST
+- Frontend Files:
+  - frontend/lib/features/portal/presentation/screens/portal_shell.dart: labels the authenticated wellness catalogue as demo-only and not live Sahakar inventory while retaining its database/API-derived product records.
+- Documentation Files:
+  - docs/customer-ui/CUSTOMER_UI_AUDIT.md and docs/CUSTOMER_UI_IMPLEMENTATION_STATUS.md: record the visible demo-data disclosure.
+- Why:
+  - Seeded wellness products are permitted for the review build, but they must not appear to be genuine inventory or replace real product master data.

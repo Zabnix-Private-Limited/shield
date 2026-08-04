@@ -6973,7 +6973,7 @@ class _CustomerServicesViewState extends State<_CustomerServicesView> {
           secondaryRoute: '/portal/customer/profile',
         ),
         const SizedBox(height: 18),
-        Text('Wellness catalogue', style: AppTypography.h4),
+        Text('Wellness demo catalogue', style: AppTypography.h4),
         const SizedBox(height: 12),
         _buildWellnessCatalogue(),
       ],
@@ -7022,72 +7022,80 @@ class _CustomerServicesViewState extends State<_CustomerServicesView> {
         }
 
         return Column(
-          children: products.map((product) {
-            final name =
-                product['productName']?.toString() ?? 'Wellness product';
-            final unit = product['unit']?.toString();
-            final price = num.tryParse(
-              product['sellingPrice']?.toString() ?? '',
-            );
-            final priceLabel = price == null
-                ? 'Price unavailable'
-                : NumberFormat.currency(
-                    locale: 'en_IN',
-                    symbol: '₹',
-                  ).format(price);
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: AppCard(
-                padding: const EdgeInsets.all(14),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 42,
-                      height: 42,
-                      decoration: BoxDecoration(
-                        color: AppColors.shieldBlue.withValues(alpha: 0.08),
-                        borderRadius: BorderRadius.circular(14),
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Demo products only — not live Sahakar inventory.',
+              style: AppTypography.tiny.copyWith(color: AppColors.gray),
+            ),
+            const SizedBox(height: 10),
+            ...products.map((product) {
+              final name =
+                  product['productName']?.toString() ?? 'Wellness product';
+              final unit = product['unit']?.toString();
+              final price = num.tryParse(
+                product['sellingPrice']?.toString() ?? '',
+              );
+              final priceLabel = price == null
+                  ? 'Price unavailable'
+                  : NumberFormat.currency(
+                      locale: 'en_IN',
+                      symbol: '₹',
+                    ).format(price);
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: AppCard(
+                  padding: const EdgeInsets.all(14),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 42,
+                        height: 42,
+                        decoration: BoxDecoration(
+                          color: AppColors.shieldBlue.withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        child: const Icon(
+                          Icons.health_and_safety_outlined,
+                          color: AppColors.shieldBlue,
+                        ),
                       ),
-                      child: const Icon(
-                        Icons.health_and_safety_outlined,
-                        color: AppColors.shieldBlue,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            name,
-                            style: AppTypography.body.copyWith(
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                          if (unit != null && unit.isNotEmpty) ...[
-                            const SizedBox(height: 3),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
                             Text(
-                              unit,
-                              style: AppTypography.tiny.copyWith(
-                                color: AppColors.gray,
+                              name,
+                              style: AppTypography.body.copyWith(
+                                fontWeight: FontWeight.w700,
                               ),
                             ),
+                            if (unit != null && unit.isNotEmpty) ...[
+                              const SizedBox(height: 3),
+                              Text(
+                                unit,
+                                style: AppTypography.tiny.copyWith(
+                                  color: AppColors.gray,
+                                ),
+                              ),
+                            ],
                           ],
-                        ],
+                        ),
                       ),
-                    ),
-                    Text(
-                      priceLabel,
-                      style: AppTypography.small.copyWith(
-                        color: AppColors.shieldNavy,
-                        fontWeight: FontWeight.w700,
+                      Text(
+                        priceLabel,
+                        style: AppTypography.small.copyWith(
+                          color: AppColors.shieldNavy,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-            );
-          }).toList(),
+              );
+            }),
+          ],
         );
       },
     );
