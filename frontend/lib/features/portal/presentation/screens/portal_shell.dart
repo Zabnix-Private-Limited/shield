@@ -58,6 +58,21 @@ import '../../../../shared/widgets/customer_support_sheet.dart';
 import '../../../../shared/widgets/portal_support.dart';
 import '../portal_role_data.dart';
 
+Future<_CustomerAccessContext> _loadCustomerAccessContext() async {
+  final customerId = ApiService.requireAuthenticatedCustomerId();
+  final results = await Future.wait<Object>([
+    ApiService.getCustomerProfile(customerId),
+    ApiService.getCustomerMembershipBundle(customerId),
+  ]);
+
+  return _CustomerAccessContext(
+    customer: results[0] as Customer,
+    membership: MembershipModel.fromJson(
+      Map<String, dynamic>.from(results[1] as Map),
+    ),
+  );
+}
+
 class PortalShell extends StatefulWidget {
   final SHIELDRole role;
   final String? sectionKey;
@@ -1061,17 +1076,17 @@ class _CustomerPortalNav extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final content = FutureBuilder<Customer>(
-      future: ApiService.getCustomerProfile(
-        ApiService.requireAuthenticatedCustomerId(),
-      ),
+    final content = FutureBuilder<_CustomerAccessContext>(
+      future: _loadCustomerAccessContext(),
       builder: (context, snapshot) {
-        final customer = snapshot.data;
-        final accessState = customer == null
+        final accessContext = snapshot.data;
+        final customer = accessContext?.customer;
+        final accessState = accessContext == null
             ? null
             : CustomerAccessState(
-                customer: customer,
-                customerStatus: customer.status,
+                customer: accessContext.customer,
+                customerStatus: accessContext.customer.status,
+                membership: accessContext.membership,
               );
 
         return Container(
@@ -5034,22 +5049,7 @@ class _CustomerProtectedSectionState extends State<_CustomerProtectedSection> {
   }
 
   void _loadCustomer() {
-    _accessFuture = _loadAccessContext();
-  }
-
-  Future<_CustomerAccessContext> _loadAccessContext() async {
-    final customerId = ApiService.requireAuthenticatedCustomerId();
-    final results = await Future.wait<Object>([
-      ApiService.getCustomerProfile(customerId),
-      ApiService.getCustomerMembershipBundle(customerId),
-    ]);
-
-    return _CustomerAccessContext(
-      customer: results[0] as Customer,
-      membership: MembershipModel.fromJson(
-        Map<String, dynamic>.from(results[1] as Map),
-      ),
-    );
+    _accessFuture = _loadCustomerAccessContext();
   }
 
   @override
@@ -6163,7 +6163,7 @@ class _CustomerServicesView extends StatefulWidget {
 }
 
 class _CustomerServicesViewState extends State<_CustomerServicesView> {
-  late Future<Customer> _customerFuture;
+  late Future<_CustomerAccessContext> _accessFuture;
   late Future<List<Map<String, dynamic>>> _providersFuture;
   late Future<List<Map<String, dynamic>>> _wellnessProductsFuture;
   String _activeTab =
@@ -6188,9 +6188,7 @@ class _CustomerServicesViewState extends State<_CustomerServicesView> {
   @override
   void initState() {
     super.initState();
-    _customerFuture = ApiService.getCustomerProfile(
-      ApiService.requireAuthenticatedCustomerId(),
-    );
+    _accessFuture = _loadCustomerAccessContext();
     _providersFuture = ApiService.getProviders();
     _wellnessProductsFuture = ApiService.getCustomerWellnessProducts();
   }
@@ -6825,10 +6823,10 @@ class _CustomerServicesViewState extends State<_CustomerServicesView> {
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<Customer>(
-      future: _customerFuture,
+    return FutureBuilder<_CustomerAccessContext>(
+      future: _accessFuture,
       builder: (context, snapshot) {
-        if (!snapshot.hasData) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
           return const AppPortalSectionSkeleton(
             showHero: true,
             statCards: 2,
@@ -6836,10 +6834,21 @@ class _CustomerServicesViewState extends State<_CustomerServicesView> {
           );
         }
 
-        final customer = snapshot.data!;
+        if (snapshot.hasError || !snapshot.hasData) {
+          return ErrorCard(
+            title: 'Services unavailable',
+            message:
+                'Your membership access status could not be verified. Please try again.',
+            onRetry: () =>
+                setState(() => _accessFuture = _loadCustomerAccessContext()),
+          );
+        }
+
+        final accessContext = snapshot.data!;
         final accessState = CustomerAccessState(
-          customer: customer,
-          customerStatus: customer.status,
+          customer: accessContext.customer,
+          customerStatus: accessContext.customer.status,
+          membership: accessContext.membership,
         );
 
         if (!accessState.serviceAccessEnabled) {

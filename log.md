@@ -10013,3 +10013,10 @@ Replaced the removed static Flutter carousel with a database-backed Operations c
   - docs/customer-ui/CUSTOMER_UI_AUDIT.md, docs/CUSTOMER_UI_IMPLEMENTATION_STATUS.md, and docs/CUSTOMER_UI_VISUAL_QA.md record the corrected contract and the remaining device-only visual check.
 - Why:
   - CustomerAccessState requires an active membership number, but the profile payload does not include it. Loading the customer-safe membership contract avoids a false lockout without loosening authorization. The smaller header layout removes fixed-width competition at the reported narrow viewport.
+\n## 326. Shared customer membership-access context — 2026-08-04 23:24:00 IST
+- Frontend Files:
+  - frontend/lib/features/portal/presentation/screens/portal_shell.dart: centralizes the existing authenticated profile plus customer-membership reads for the drawer, protected customer routes, and Services gate. Services now gives membership-read failures a retryable error state.
+- Documentation Files:
+  - docs/customer-ui/CUSTOMER_UI_AUDIT.md and docs/CUSTOMER_UI_IMPLEMENTATION_STATUS.md record the database-backed Services access source.
+- Why:
+  - CustomerAccessState cannot establish issued-card eligibility from the profile payload alone. Reusing the one membership contract prevents false pending status in every remaining caller without weakening backend authorization.
