@@ -10045,3 +10045,10 @@ Replaced the removed static Flutter carousel with a database-backed Operations c
   - docs/customer-ui/CUSTOMER_UI_AUDIT.md and docs/CUSTOMER_UI_IMPLEMENTATION_STATUS.md record the route-to-contract correction.
 - Why:
   - The prior recharge renderer reported a frontend-only submitted request with no persisted customer API. Removing that route is safer than pretending a financial workflow completed, while the supported appointment route now reaches the real provider-backed booking UI.
+\n## 330. Customer notification mutation failures — 2026-08-04 23:56:00 IST
+- Frontend Files:
+  - frontend/lib/features/portal/presentation/screens/portal_shell.dart: catches customer notification read and bulk-read mutation failures, preserving the database-backed inbox and showing a generic retry message instead of an unhandled exception.
+- Documentation Files:
+  - docs/customer-ui/CUSTOMER_UI_AUDIT.md and docs/CUSTOMER_UI_IMPLEMENTATION_STATUS.md record the live customer notification read contract and failure behavior.
+- Why:
+  - Both backend routes enforce notification ownership. The UI now handles a temporary failure without treating a notification as read locally or exposing transport details.

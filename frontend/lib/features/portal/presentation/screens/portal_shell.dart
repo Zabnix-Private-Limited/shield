@@ -5514,10 +5514,42 @@ class _CustomerNotificationsViewState
 
   Future<void> _markAllRead(List<NotificationModel> notifications) async {
     if (!notifications.any((notification) => !notification.isRead)) return;
-    await ApiService.markAllNotificationsRead();
-    if (!mounted) return;
-    setState(_loadNotifications);
-    showPortalSnackBar(context, 'All unread notifications marked as read.');
+    try {
+      await ApiService.markAllNotificationsRead();
+      if (!mounted) return;
+      setState(_loadNotifications);
+      showPortalSnackBar(context, 'All unread notifications marked as read.');
+    } catch (_) {
+      if (!mounted) return;
+      showPortalSnackBar(
+        context,
+        'Notifications could not be marked as read. Please try again.',
+      );
+    }
+  }
+
+  Future<void> _openUnreadNotification(NotificationModel notification) async {
+    try {
+      await ApiService.markNotificationRead(notification.id);
+      if (!mounted) return;
+      setState(_loadNotifications);
+      showPortalDetailsSheet(
+        context,
+        title: notification.title,
+        subtitle: notification.body,
+        meta: notification.typeLabel,
+        status: 'Read',
+        highlights: const [
+          'This alert remains inside the compact customer app inbox.',
+        ],
+      );
+    } catch (_) {
+      if (!mounted) return;
+      showPortalSnackBar(
+        context,
+        'Notification could not be opened. Please try again.',
+      );
+    }
   }
 
   @override
@@ -5717,21 +5749,7 @@ class _CustomerNotificationsViewState
                   meta:
                       '${notification.typeLabel} • ${DateFormat('dd MMM • hh:mm a').format(notification.createdAt)}',
                   highlightUnread: true,
-                  onTap: () async {
-                    await ApiService.markNotificationRead(notification.id);
-                    if (!context.mounted) return;
-                    setState(_loadNotifications);
-                    showPortalDetailsSheet(
-                      context,
-                      title: notification.title,
-                      subtitle: notification.body,
-                      meta: notification.typeLabel,
-                      status: 'Read',
-                      highlights: const [
-                        'This alert remains inside the compact customer app inbox.',
-                      ],
-                    );
-                  },
+                  onTap: () => _openUnreadNotification(notification),
                 ),
               ),
             ),
