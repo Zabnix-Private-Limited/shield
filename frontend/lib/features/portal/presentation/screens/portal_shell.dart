@@ -3436,7 +3436,7 @@ class _CustomerProfilePortalViewState
     } catch (error) {
       if (!mounted) return;
       setState(() {
-        _error = error.toString();
+        _error = 'Profile details could not be loaded. Please retry.';
         _isLoading = false;
       });
     }
@@ -3516,7 +3516,7 @@ class _CustomerProfilePortalViewState
       if (!mounted) return;
       setState(() {
         _isSaving = false;
-        _error = error.toString();
+        _error = 'Profile changes could not be saved. Please retry.';
       });
       showPortalSnackBar(
         context,
@@ -6132,24 +6132,15 @@ class _CustomerServicesViewState extends State<_CustomerServicesView> {
 
   String _buildUploadErrorMessage(Object error) {
     if (error is DioException) {
-      final responseMessage = error.response?.data is Map<String, dynamic>
-          ? (error.response!.data['message']?.toString() ??
-                error.response!.data['error']?.toString())
-          : null;
-      if (responseMessage != null && responseMessage.trim().isNotEmpty) {
-        return responseMessage.trim();
-      }
       if (error.type == DioExceptionType.connectionTimeout ||
           error.type == DioExceptionType.sendTimeout ||
           error.type == DioExceptionType.receiveTimeout) {
         return 'Prescription upload is taking longer than expected. Please check your connection and retry.';
       }
-      return error.message ?? 'Upload failed unexpectedly.';
+      return 'Prescription upload could not be completed. Please retry.';
     }
 
-    return error.toString().replaceFirst('Exception: ', '').trim().isEmpty
-        ? 'Upload failed unexpectedly.'
-        : error.toString().replaceFirst('Exception: ', '').trim();
+    return 'Prescription upload could not be completed. Please retry.';
   }
 
   Future<void> _handlePrescriptionUpload() async {

@@ -9872,3 +9872,10 @@ Replaced the removed static Flutter carousel with a database-backed Operations c
   - `docs/CUSTOMER_UI_API_BINDINGS.md`: distinguishes the customer self-profile permission from staff customer-discovery operations.
 - Why:
   - `customers.view` lets customers read their own profile through self-scoped routes. It must not imply permission to enumerate or look up other customer records.
+## 309. Safe profile and prescription-upload errors — 2026-08-04 21:47:40 IST
+- Frontend Files:
+  - `frontend/lib/features/portal/presentation/screens/portal_shell.dart`: replaces raw Profile and prescription-upload exception rendering with generic retryable customer messages while preserving the timeout-specific upload guidance.
+- Documentation Files:
+  - `docs/CUSTOMER_UI_IMPLEMENTATION_STATUS.md` and `docs/customer-ui/CUSTOMER_UI_AUDIT.md`: record the safe failure behavior.
+- Why:
+  - Backend responses and transport exceptions are operational details. Customer UI needs a useful recovery message without disclosing those implementation details.

@@ -26,6 +26,7 @@ Completed:
 - Customer Visits now has explicit upcoming/history empty states and the shared retryable failure state while retaining the existing customer-scoped appointment and cancellation workflows.
 - Activity Timeline is now a customer-self route backed by `GET /timeline/me`; it has loading, empty, retry, refresh, and data-derived category filter states and never accepts an arbitrary customer ID.
 - Profile now lists and adds database-backed alternative contacts. Both reads and writes are self-scoped, and no contact is retained only in Flutter state.
+- Profile and prescription-upload failures now show safe customer messages instead of raw backend or transport exception text.
 
 Not complete:
 
