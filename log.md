@@ -9994,3 +9994,12 @@ Replaced the removed static Flutter carousel with a database-backed Operations c
   - docs/customer-ui/CUSTOMER_UI_AUDIT.md and docs/CUSTOMER_UI_IMPLEMENTATION_STATUS.md record the contract source for wallet access.
 - Why:
   - CustomerAccessState requires an issued membership card. The wallet bundle already provides that membership, while the profile does not, so omitting it incorrectly locked every otherwise active customer wallet.
+
+## 324. Reward ledger credit rendering — 2026-08-04 23:08:00 IST
+- Frontend Files:
+  - frontend/lib/features/customer/wallet/presentation/widgets/transaction_tile.dart: derives credit or debit presentation from the normalized WalletTransaction isCredit property instead of one raw backend type string.
+  - frontend/test/customer_transaction_tile_test.dart: proves an EARNED REWARD_POINTS entry displays as a credit with the reward ledger badge.
+- Documentation Files:
+  - docs/customer-ui/CUSTOMER_UI_AUDIT.md and docs/CUSTOMER_UI_IMPLEMENTATION_STATUS.md record the normalized reward presentation.
+- Why:
+  - Reward ledger sources use business types such as EARNED, not only CREDIT. The domain model already normalizes that rule, so the shared renderer now reuses it instead of duplicating an incomplete condition.

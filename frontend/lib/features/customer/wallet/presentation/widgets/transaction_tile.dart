@@ -14,7 +14,7 @@ class TransactionTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isCredit = transaction.transactionType == 'CREDIT';
+    final isCredit = transaction.isCredit;
     final accent = isCredit ? AppColors.shieldGreen : AppColors.error;
 
     return AppCard(

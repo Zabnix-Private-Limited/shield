@@ -12,6 +12,7 @@ Completed:
 - Static Flutter marketing carousel removed from the live dashboard pending an Operations-owned API contract.
 - Operations-owned carousel contract added through the existing commercial-settings table; no schema change or seed required.
 - Customer reward-points route added using the existing wallet endpoint and `REWARD_POINTS` transaction ledger; no mock points or shared customer data.
+- Customer transaction tiles now use the normalized ledger credit direction, so `EARNED` reward-point entries render as credits instead of debits.
 - Privilege Card route added from the membership endpoint's actual `shieldCard` payload. It renders only an issued card and its real QR payload; no subscription or physical-card data is fabricated.
 - Membership screen now renders a clear entitlement-unavailable state until a customer-safe subscription contract returns contribution, SHIELD Benefit, monthly allocation and carry-forward values.
 - Privilege Card supports the verified physical-card request/status contract. Backend and Flutter both reject attempts to target another customer ID.
