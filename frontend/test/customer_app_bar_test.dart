@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shield/app/theme/app_colors.dart';
 import 'package:shield/features/customer/shared/widgets/customer_app_bar.dart';
+import 'package:shield/features/customer/shared/widgets/customer_scaffold.dart';
 import 'package:shield/features/portal/presentation/portal_role_data.dart';
 import 'package:shield/shared/models/shield_role.dart';
 
@@ -33,6 +34,32 @@ void main() {
       expect(find.byTooltip('Open navigation menu'), findsOneWidget);
       expect(find.byTooltip('Retry account summary'), findsOneWidget);
     }
+  });
+
+  testWidgets('fits inside the customer scaffold SafeArea at 448 pixels', (
+    tester,
+  ) async {
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.binding.setSurfaceSize(const Size(448, 800));
+    await tester.pumpWidget(
+      MaterialApp(
+        home: MediaQuery(
+          data: const MediaQueryData(
+            size: Size(448, 800),
+            padding: EdgeInsets.only(top: 24),
+          ),
+          child: CustomerScaffold(
+            portal: _portal,
+            section: _dashboardSection,
+            activeSectionKey: 'dashboard',
+            body: const SizedBox.expand(),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    expect(tester.takeException(), isNull);
   });
 }
 

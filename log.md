@@ -10077,3 +10077,11 @@ Replaced the removed static Flutter carousel with a database-backed Operations c
   - docs/customer-ui/CUSTOMER_MEMBERSHIP_API_MATRIX.md and docs/CUSTOMER_UI_IMPLEMENTATION_STATUS.md: record the verified loading state.
 - Why:
   - Loading, unavailable, and API-error states must remain distinct so a delayed database-backed membership response is never misrepresented as no membership.
+
+## 334. Customer header SafeArea regression — 2026-08-05 00:36:00 IST
+- Frontend Files:
+  - frontend/test/customer_app_bar_test.dart: verifies the dense customer header inside CustomerScaffold at the reported 448px width with a 24px top SafeArea inset.
+- Documentation Files:
+  - docs/CUSTOMER_UI_IMPLEMENTATION_STATUS.md and docs/CUSTOMER_UI_VISUAL_QA.md: record the exact layout regression evidence and pending authenticated screenshot.
+- Why:
+  - The runtime trace constrained the app-bar child to 52px after SafeArea. Testing the standalone app bar alone could not prove the deployed scaffold geometry fits.
