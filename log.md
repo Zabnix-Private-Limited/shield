@@ -9839,3 +9839,11 @@ Replaced the removed static Flutter carousel with a database-backed Operations c
   - `frontend/lib/features/portal/presentation/screens/portal_shell.dart`: adds the Activity Timeline navigation icon.
 - Why:
   - The backend already supplies event categories. Rendering those categories directly improves scanability without adding a second event model or client-side business logic.
+## 305. Alternative-contact customer ownership guard — 2026-08-04 21:37:42 IST
+- Backend Files:
+  - `backend/src/customer/customer.controller.ts`: applies the existing customer self-scope check before saving an alternative contact.
+  - `backend/src/customer/customer.controller.spec.ts`: proves a customer cannot write an alternative contact against another customer ID.
+- Documentation Files:
+  - `docs/CUSTOMER_UI_API_BINDINGS.md` and `docs/customer-ui/CUSTOMER_UI_AUDIT.md`: record the self-scoped alternative-contact contract.
+- Why:
+  - Alternative contact details are customer data. This mutation must enforce the same ownership boundary as profile and card mutations.

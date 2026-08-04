@@ -138,6 +138,7 @@ export class CustomerController {
     @Body() body: any,
     @CurrentPrincipal() principal?: ShieldPrincipal,
   ) {
+    this.assertCustomerSelfScope(id, principal);
     await this.providerScopeService.assertProviderCanAccessCustomer(
       BigInt(id),
       principal,
