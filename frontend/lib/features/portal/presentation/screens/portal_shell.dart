@@ -17,6 +17,7 @@ import '../../../admin/presentation/screens/admin_portal_workspace.dart';
 import '../../../customer/dashboard/presentation/screens/dashboard_screen.dart';
 import '../../../customer/activity/presentation/screens/customer_activity_screen.dart';
 import '../../../customer/documents/presentation/screens/customer_documents_screen.dart';
+import '../../../customer/membership/data/models/membership_model.dart';
 import '../../../customer/membership/presentation/screens/membership_screen.dart';
 import '../../../customer/membership/presentation/screens/privilege_card_screen.dart';
 import '../../../customer/orders/presentation/screens/customer_orders_screen.dart';
@@ -5024,7 +5025,7 @@ class _CustomerProtectedSection extends StatefulWidget {
 }
 
 class _CustomerProtectedSectionState extends State<_CustomerProtectedSection> {
-  late Future<Customer> _customerFuture;
+  late Future<_CustomerAccessContext> _accessFuture;
 
   @override
   void initState() {
@@ -5033,15 +5034,28 @@ class _CustomerProtectedSectionState extends State<_CustomerProtectedSection> {
   }
 
   void _loadCustomer() {
-    _customerFuture = ApiService.getCustomerProfile(
-      ApiService.requireAuthenticatedCustomerId(),
+    _accessFuture = _loadAccessContext();
+  }
+
+  Future<_CustomerAccessContext> _loadAccessContext() async {
+    final customerId = ApiService.requireAuthenticatedCustomerId();
+    final results = await Future.wait<Object>([
+      ApiService.getCustomerProfile(customerId),
+      ApiService.getCustomerMembershipBundle(customerId),
+    ]);
+
+    return _CustomerAccessContext(
+      customer: results[0] as Customer,
+      membership: MembershipModel.fromJson(
+        Map<String, dynamic>.from(results[1] as Map),
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<Customer>(
-      future: _customerFuture,
+    return FutureBuilder<_CustomerAccessContext>(
+      future: _accessFuture,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const AppPortalSectionSkeleton(
@@ -5060,10 +5074,11 @@ class _CustomerProtectedSectionState extends State<_CustomerProtectedSection> {
           );
         }
 
-        final customer = snapshot.data!;
+        final accessContext = snapshot.data!;
         final accessState = CustomerAccessState(
-          customer: customer,
-          customerStatus: customer.status,
+          customer: accessContext.customer,
+          customerStatus: accessContext.customer.status,
+          membership: accessContext.membership,
         );
 
         if (accessState.serviceAccessEnabled) {
@@ -5087,6 +5102,16 @@ class _CustomerProtectedSectionState extends State<_CustomerProtectedSection> {
       },
     );
   }
+}
+
+class _CustomerAccessContext {
+  const _CustomerAccessContext({
+    required this.customer,
+    required this.membership,
+  });
+
+  final Customer customer;
+  final Membership membership;
 }
 
 class _CustomerAppointmentsView extends StatefulWidget {

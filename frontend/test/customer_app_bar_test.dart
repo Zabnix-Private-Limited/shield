@@ -6,31 +6,33 @@ import 'package:shield/features/portal/presentation/portal_role_data.dart';
 import 'package:shield/shared/models/shield_role.dart';
 
 void main() {
-  testWidgets('fits the main customer header in the reported narrow viewport', (
+  testWidgets('fits the main customer header at 480 and 448 pixel widths', (
     tester,
   ) async {
-    await tester.binding.setSurfaceSize(const Size(480, 800));
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
-    await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
-          appBar: PreferredSize(
-            preferredSize: const Size.fromHeight(76),
-            child: CustomerAppBar(
-              portal: _portal,
-              section: _dashboardSection,
-              onMenuPressed: () {},
+    for (final width in <double>[480, 448]) {
+      await tester.binding.setSurfaceSize(Size(width, 800));
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            appBar: PreferredSize(
+              preferredSize: const Size.fromHeight(76),
+              child: CustomerAppBar(
+                portal: _portal,
+                section: _dashboardSection,
+                onMenuPressed: () {},
+              ),
             ),
           ),
         ),
-      ),
-    );
-    await tester.pumpAndSettle();
+      );
+      await tester.pumpAndSettle();
 
-    expect(tester.takeException(), isNull);
-    expect(find.byTooltip('Open navigation menu'), findsOneWidget);
-    expect(find.byTooltip('Retry account summary'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+      expect(find.byTooltip('Open navigation menu'), findsOneWidget);
+      expect(find.byTooltip('Retry account summary'), findsOneWidget);
+    }
   });
 }
 

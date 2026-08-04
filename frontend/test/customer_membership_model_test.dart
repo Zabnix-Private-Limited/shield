@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shield/features/customer/membership/data/models/membership_model.dart';
+import 'package:shield/features/customer/shared/domain/customer_access_state.dart';
 
 void main() {
   test('keeps issued privilege-card fields from the membership bundle', () {
@@ -32,5 +33,12 @@ void main() {
     expect(membership.cardNumber, 'SHLD-CARD-00042');
     expect(membership.cardQrPayload, 'server-issued-qr-payload');
     expect(membership.cardStatus, 'ACTIVE');
+    expect(
+      CustomerAccessState(
+        customerStatus: 'ACTIVE',
+        membership: membership,
+      ).serviceAccessEnabled,
+      isTrue,
+    );
   });
 }

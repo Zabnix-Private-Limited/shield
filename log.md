@@ -10003,3 +10003,13 @@ Replaced the removed static Flutter carousel with a database-backed Operations c
   - docs/customer-ui/CUSTOMER_UI_AUDIT.md and docs/CUSTOMER_UI_IMPLEMENTATION_STATUS.md record the normalized reward presentation.
 - Why:
   - Reward ledger sources use business types such as EARNED, not only CREDIT. The domain model already normalizes that rule, so the shared renderer now reuses it instead of duplicating an incomplete condition.
+
+## 325. Customer protected-access and narrow-header regression fix — 2026-08-04 23:15:00 IST
+- Frontend Files:
+  - frontend/lib/features/portal/presentation/screens/portal_shell.dart: loads the existing authenticated membership bundle with the profile before evaluating appointment, document, and prescription eligibility.
+  - frontend/lib/features/customer/shared/widgets/customer_app_bar.dart: collapses wallet and rewards to icon controls below 480 logical pixels while preserving their routes.
+  - frontend/test/customer_app_bar_test.dart and frontend/test/customer_membership_model_test.dart: cover the reported 480 and 448 width header cases plus the issued-membership access invariant.
+- Documentation Files:
+  - docs/customer-ui/CUSTOMER_UI_AUDIT.md, docs/CUSTOMER_UI_IMPLEMENTATION_STATUS.md, and docs/CUSTOMER_UI_VISUAL_QA.md record the corrected contract and the remaining device-only visual check.
+- Why:
+  - CustomerAccessState requires an active membership number, but the profile payload does not include it. Loading the customer-safe membership contract avoids a false lockout without loosening authorization. The smaller header layout removes fixed-width competition at the reported narrow viewport.

@@ -175,6 +175,7 @@ class _CustomerMainHeader extends StatelessWidget {
         // same horizontal row on narrow web viewports.
         final compact = constraints.maxWidth < 560;
         final dense = constraints.maxWidth < 520;
+        final iconOnly = constraints.maxWidth < 480;
         final controlSize = dense ? 40.0 : 48.0;
 
         return Row(
@@ -205,6 +206,7 @@ class _CustomerMainHeader extends StatelessWidget {
               color: CustomerDesignTokens.cash,
               onTap: onWalletPressed,
               dense: dense,
+              iconOnly: iconOnly,
             ),
             SizedBox(width: dense ? 5 : 8),
             _HeaderBalanceChip(
@@ -214,6 +216,7 @@ class _CustomerMainHeader extends StatelessWidget {
               color: CustomerDesignTokens.reward,
               onTap: onRewardsPressed,
               dense: dense,
+              iconOnly: iconOnly,
             ),
             Stack(
               clipBehavior: Clip.none,
@@ -275,6 +278,7 @@ class _HeaderBalanceChip extends StatelessWidget {
     required this.color,
     required this.onTap,
     required this.dense,
+    required this.iconOnly,
   });
 
   final IconData icon;
@@ -283,6 +287,7 @@ class _HeaderBalanceChip extends StatelessWidget {
   final Color color;
   final VoidCallback onTap;
   final bool dense;
+  final bool iconOnly;
 
   @override
   Widget build(BuildContext context) {
@@ -294,10 +299,12 @@ class _HeaderBalanceChip extends StatelessWidget {
         borderRadius: BorderRadius.circular(CustomerDesignTokens.controlRadius),
         child: Container(
           constraints: BoxConstraints(minHeight: dense ? 40 : 48),
-          padding: EdgeInsets.symmetric(
-            horizontal: label == null ? (dense ? 6 : 10) : 12,
-            vertical: dense ? 4 : 7,
-          ),
+          padding: iconOnly
+              ? EdgeInsets.zero
+              : EdgeInsets.symmetric(
+                  horizontal: label == null ? (dense ? 6 : 10) : 12,
+                  vertical: dense ? 4 : 7,
+                ),
           decoration: BoxDecoration(
             border: Border.all(color: CustomerDesignTokens.border),
             borderRadius: BorderRadius.circular(
@@ -307,8 +314,11 @@ class _HeaderBalanceChip extends StatelessWidget {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(icon, size: dense ? 18 : 20, color: color),
-              if (label != null) ...[
+              Padding(
+                padding: iconOnly ? const EdgeInsets.all(10) : EdgeInsets.zero,
+                child: Icon(icon, size: dense ? 18 : 20, color: color),
+              ),
+              if (!iconOnly && label != null) ...[
                 const SizedBox(width: 7),
                 Column(
                   mainAxisSize: MainAxisSize.min,
@@ -324,7 +334,7 @@ class _HeaderBalanceChip extends StatelessWidget {
                     ),
                   ],
                 ),
-              ] else ...[
+              ] else if (!iconOnly) ...[
                 SizedBox(width: dense ? 3 : 5),
                 ConstrainedBox(
                   constraints: BoxConstraints(maxWidth: dense ? 62 : 96),
