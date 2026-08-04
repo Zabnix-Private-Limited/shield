@@ -4,6 +4,7 @@ Last audited: 2026-08-04. The customer portal is protected by the customer JWT/s
 
 Route-level and membership/card screen manifests are maintained in `CUSTOMER_UI_ROUTE_INVENTORY.md` and `CUSTOMER_UI_SCREEN_MANIFEST.md`.
 `CUSTOMER_UI_API_BINDINGS.md` and `CUSTOMER_UI_STATE_MATRIX.md` record the customer-safe API ownership and screen-state rules.
+`CUSTOMER_UI_DESIGN_TOKENS.md`, `CUSTOMER_UI_COMPONENT_GUIDE.md`, and `CUSTOMER_UI_ACCESSIBILITY_CHECKLIST.md` record the shared customer visual and accessibility baseline.
 
 | Route/section | Current screen | Binding | Redesign/gap |
 |---|---|---|---|

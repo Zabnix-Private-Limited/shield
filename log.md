@@ -10118,3 +10118,11 @@ Replaced the removed static Flutter carousel with a database-backed Operations c
   - docs/customer-ui/CUSTOMER_UI_AUDIT.md and docs/CUSTOMER_UI_IMPLEMENTATION_STATUS.md: link the documents into the redesign audit.
 - Why:
   - These references prevent future UI work from using staff-only endpoints, shared records, fabricated balances, or false empty states.
+
+## 339. Customer design and accessibility references — 2026-08-05 01:26:00 IST
+- Documentation Files:
+  - docs/customer-ui/CUSTOMER_UI_DESIGN_TOKENS.md: records the active customer design tokens from the shared Flutter source.
+  - docs/customer-ui/CUSTOMER_UI_COMPONENT_GUIDE.md: maps reusable shell, navigation, state, surface, and action components.
+  - docs/customer-ui/CUSTOMER_UI_ACCESSIBILITY_CHECKLIST.md: records completed baseline checks and remaining authenticated device accessibility verification.
+- Why:
+  - Customer screen work now has one reusable visual/accessibility source rather than duplicating presentation rules in feature modules.
