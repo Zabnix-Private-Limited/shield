@@ -9917,3 +9917,23 @@ Replaced the removed static Flutter carousel with a database-backed Operations c
   - `docs/CUSTOMER_UI_STATE_MATRIX.md`: records local validation alongside backend enforcement and retry feedback.
 - Why:
   - The backend remains authoritative, but immediate form feedback prevents an avoidable request and makes the persisted-contact requirement clear to the customer.
+## 315. Customer document ownership enforcement — 2026-08-04 22:12:16 IST
+- Backend Files:
+  - ackend/src/document/document.controller.ts and ackend/src/document/document.service.ts: require customer ownership before document reads, signed downloads, extraction, prescription review, or processing-log access; omit private storage paths from customer document responses.
+  - ackend/src/document/document.controller.spec.ts: regression coverage rejects cross-customer reads for all exposed customer document operations and confirms storage paths are not returned.
+- Frontend Files:
+  - rontend/lib/features/customer/shared/widgets/customer_app_bar.dart: uses a dense, single-row mobile header that hides the mark before balances and controls can overflow the narrow app bar.
+- Documentation Files:
+  - docs/CUSTOMER_UI_API_BINDINGS.md, docs/customer-ui/CUSTOMER_UI_AUDIT.md, and docs/CUSTOMER_UI_IMPLEMENTATION_STATUS.md: record customer document ownership and signed-download behavior.
+- Why:
+  - A customer-held document identifier must not become an authorization mechanism. The server now proves ownership and returns only a signed download URL, while the compact header remains usable at the viewport width reported by runtime diagnostics.
+## 316. Corrected document-ownership log entry — 2026-08-04 22:14:00 IST
+- Backend Files:
+  - backend/src/document/document.controller.ts and backend/src/document/document.service.ts require customer ownership before document reads, signed downloads, extraction, prescription review, or processing-log access; they omit private storage paths from customer document responses.
+  - backend/src/document/document.controller.spec.ts rejects cross-customer reads for all exposed customer document operations and confirms storage paths are not returned.
+- Frontend Files:
+  - frontend/lib/features/customer/shared/widgets/customer_app_bar.dart uses a dense, single-row mobile header that hides the mark before balances and controls can overflow the narrow app bar.
+- Documentation Files:
+  - docs/CUSTOMER_UI_API_BINDINGS.md, docs/customer-ui/CUSTOMER_UI_AUDIT.md, and docs/CUSTOMER_UI_IMPLEMENTATION_STATUS.md record customer document ownership and signed-download behavior.
+- Why:
+  - This clean entry corrects terminal-escaping characters in entry 315 without altering append-only project history. The customer document endpoints now prove ownership and return signed downloads rather than private storage paths, while the compact header remains usable at the reported viewport width.

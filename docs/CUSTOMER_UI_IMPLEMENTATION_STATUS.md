@@ -23,6 +23,7 @@ Completed:
 - Customer Settings no longer presents local-only notification, privacy, wallet, or PIN controls as saved preferences. Supported profile, policy, support, feedback, and sign-out actions remain available.
 - Profile-gated customer sections now distinguish access-status loading from an API failure and provide a retryable error state instead of a permanent skeleton.
 - Customer document and prescription archive failures now use the shared customer error card with a generic retry message; transport and server details are not rendered to the customer.
+- Customer document, signed-download, prescription-review, extraction, and processing-log reads now verify the authenticated customer owns the document. Private object-storage paths are stripped from customer document responses.
 - Customer Visits now has explicit upcoming/history empty states and the shared retryable failure state while retaining the existing customer-scoped appointment and cancellation workflows.
 - Activity Timeline is now a customer-self route backed by `GET /timeline/me`; it has loading, empty, retry, refresh, and data-derived category filter states and never accepts an arbitrary customer ID.
 - Profile now lists, adds, and confirms removal of database-backed alternative contacts. Reads and mutations are self-scoped, and no contact is retained only in Flutter state.

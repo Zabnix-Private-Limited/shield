@@ -8,7 +8,7 @@
 | Wallet history | `GET /customer/wallet` | `WalletRepository` / `CustomerWalletScreen(showFullHistory: true)` | Customer-scoped API transaction list; no client-side running balance |
 | Membership | `GET /customer/membership` | `MembershipRepository` / `MembershipController` | Membership/card data only |
 | Profile | Customer profile API | `ApiService` | Authenticated customer only |
-| Documents | `GET /documents?customer_id=` | `ApiService` | Customer-scoped archive |
+| Documents | `GET /documents?customer_id=`, `GET /documents/:id`, `GET /documents/:id/download` | `ApiService` | Customer-scoped archive. Customer document IDs are ownership-checked before read/download/intelligence access; list/detail/upload responses omit the private storage path and downloads use a signed URL. |
 | Notifications | `GET /notifications?customer_id=`, `POST /notifications/:id/read`, `POST /notifications/mark-all-read`, `POST /notifications/device-token/deactivate` | `ApiService` | Customer list, individual/bulk read, and device-token deactivation actions are pinned to the authenticated customer |
 | Referrals | `GET /referrals/tree/:customerId`, `GET /referrals/summary/:customerId` | `ApiService` | Customer requests must use the authenticated customer ID; cross-customer referral requests are rejected |
 | Referral & Rewards | `GET /referrals/summary/:customerId` | `ApiService.getReferralSummary` / `CustomerReferralsScreen` | Read-only referral code, counts, available points, and delayed-lifecycle history for the authenticated customer |

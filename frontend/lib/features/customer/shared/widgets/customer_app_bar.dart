@@ -68,7 +68,7 @@ class _CustomerAppBarState extends State<CustomerAppBar> {
     }
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 10, 16, 8),
+      padding: const EdgeInsets.fromLTRB(16, 6, 16, 6),
       child: ListenableBuilder(
         listenable: _dashboardController,
         builder: (context, _) => _CustomerMainHeader(
@@ -159,7 +159,6 @@ class _CustomerMainHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final compact = MediaQuery.sizeOf(context).width < 560;
     final cashLabel = cashBalance == null
         ? (isLoading ? 'Loading' : '₹0')
         : AppDisplayFormatters.formatCurrencyString(
@@ -169,76 +168,101 @@ class _CustomerMainHeader extends StatelessWidget {
         ? (isLoading ? 'Loading' : '0')
         : rewardPoints!.toStringAsFixed(0);
 
-    return Row(
-      children: [
-        IconButton(
-          onPressed: onMenuPressed,
-          icon: const Icon(Icons.menu_rounded),
-          tooltip: 'Open navigation menu',
-          style: IconButton.styleFrom(
-            backgroundColor: CustomerDesignTokens.surface,
-            foregroundColor: AppColors.shieldNavy,
-          ),
-        ),
-        const SizedBox(width: 8),
-        ShieldBrandLockup(compact: true, showWordmark: !compact),
-        const Spacer(),
-        _HeaderBalanceChip(
-          icon: Icons.account_balance_wallet_rounded,
-          label: compact ? null : 'Cash Wallet',
-          value: cashLabel,
-          color: CustomerDesignTokens.cash,
-          onTap: onWalletPressed,
-        ),
-        const SizedBox(width: 8),
-        _HeaderBalanceChip(
-          icon: Icons.workspace_premium_rounded,
-          label: compact ? null : 'Reward Points',
-          value: compact ? rewardLabel : '$rewardLabel pts',
-          color: CustomerDesignTokens.reward,
-          onTap: onRewardsPressed,
-        ),
-        Stack(
-          clipBehavior: Clip.none,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // The preferred app-bar height is intentionally small on mobile.  Do
+        // not let balances, the mark and two action buttons compete for the
+        // same horizontal row on narrow web viewports.
+        final compact = constraints.maxWidth < 560;
+        final dense = constraints.maxWidth < 520;
+        final controlSize = dense ? 40.0 : 48.0;
+
+        return Row(
           children: [
             IconButton(
-              onPressed: hasError ? onRetry : onNotificationsPressed,
-              icon: Icon(
-                hasError
-                    ? Icons.refresh_rounded
-                    : Icons.notifications_none_rounded,
+              onPressed: onMenuPressed,
+              icon: Icon(Icons.menu_rounded, size: dense ? 21 : 24),
+              tooltip: 'Open navigation menu',
+              padding: EdgeInsets.zero,
+              constraints: BoxConstraints.tightFor(
+                width: controlSize,
+                height: controlSize,
               ),
-              tooltip: hasError ? 'Retry account summary' : 'Notifications',
-              color: AppColors.shieldNavy,
+              style: IconButton.styleFrom(
+                backgroundColor: CustomerDesignTokens.surface,
+                foregroundColor: AppColors.shieldNavy,
+              ),
             ),
-            if (!hasError && (unreadNotifications ?? 0) > 0)
-              Positioned(
-                right: 6,
-                top: 4,
-                child: Container(
-                  constraints: const BoxConstraints(
-                    minWidth: 17,
-                    minHeight: 17,
+            if (!dense) ...[
+              const SizedBox(width: 8),
+              ShieldBrandLockup(compact: true, showWordmark: !compact),
+            ],
+            const Spacer(),
+            _HeaderBalanceChip(
+              icon: Icons.account_balance_wallet_rounded,
+              label: compact ? null : 'Cash Wallet',
+              value: cashLabel,
+              color: CustomerDesignTokens.cash,
+              onTap: onWalletPressed,
+              dense: dense,
+            ),
+            SizedBox(width: dense ? 5 : 8),
+            _HeaderBalanceChip(
+              icon: Icons.workspace_premium_rounded,
+              label: compact ? null : 'Reward Points',
+              value: compact ? rewardLabel : '$rewardLabel pts',
+              color: CustomerDesignTokens.reward,
+              onTap: onRewardsPressed,
+              dense: dense,
+            ),
+            Stack(
+              clipBehavior: Clip.none,
+              children: [
+                IconButton(
+                  onPressed: hasError ? onRetry : onNotificationsPressed,
+                  icon: Icon(
+                    hasError
+                        ? Icons.refresh_rounded
+                        : Icons.notifications_none_rounded,
                   ),
-                  padding: const EdgeInsets.symmetric(horizontal: 4),
-                  alignment: Alignment.center,
-                  decoration: const BoxDecoration(
-                    color: AppColors.shieldBlue,
-                    shape: BoxShape.circle,
-                  ),
-                  child: Text(
-                    '${(unreadNotifications ?? 0).clamp(0, 9)}',
-                    style: AppTypography.tiny.copyWith(
-                      color: AppColors.white,
-                      fontSize: 10,
-                      fontWeight: FontWeight.w800,
-                    ),
+                  tooltip: hasError ? 'Retry account summary' : 'Notifications',
+                  color: AppColors.shieldNavy,
+                  padding: EdgeInsets.zero,
+                  constraints: BoxConstraints.tightFor(
+                    width: controlSize,
+                    height: controlSize,
                   ),
                 ),
-              ),
+                if (!hasError && (unreadNotifications ?? 0) > 0)
+                  Positioned(
+                    right: 6,
+                    top: 4,
+                    child: Container(
+                      constraints: const BoxConstraints(
+                        minWidth: 17,
+                        minHeight: 17,
+                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                      alignment: Alignment.center,
+                      decoration: const BoxDecoration(
+                        color: AppColors.shieldBlue,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Text(
+                        '${(unreadNotifications ?? 0).clamp(0, 9)}',
+                        style: AppTypography.tiny.copyWith(
+                          color: AppColors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
           ],
-        ),
-      ],
+        );
+      },
     );
   }
 }
@@ -250,6 +274,7 @@ class _HeaderBalanceChip extends StatelessWidget {
     required this.value,
     required this.color,
     required this.onTap,
+    required this.dense,
   });
 
   final IconData icon;
@@ -257,6 +282,7 @@ class _HeaderBalanceChip extends StatelessWidget {
   final String value;
   final Color color;
   final VoidCallback onTap;
+  final bool dense;
 
   @override
   Widget build(BuildContext context) {
@@ -267,10 +293,10 @@ class _HeaderBalanceChip extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(CustomerDesignTokens.controlRadius),
         child: Container(
-          constraints: const BoxConstraints(minHeight: 48),
+          constraints: BoxConstraints(minHeight: dense ? 40 : 48),
           padding: EdgeInsets.symmetric(
-            horizontal: label == null ? 10 : 12,
-            vertical: 7,
+            horizontal: label == null ? (dense ? 6 : 10) : 12,
+            vertical: dense ? 4 : 7,
           ),
           decoration: BoxDecoration(
             border: Border.all(color: CustomerDesignTokens.border),
@@ -281,7 +307,7 @@ class _HeaderBalanceChip extends StatelessWidget {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(icon, size: 20, color: color),
+              Icon(icon, size: dense ? 18 : 20, color: color),
               if (label != null) ...[
                 const SizedBox(width: 7),
                 Column(
@@ -299,12 +325,17 @@ class _HeaderBalanceChip extends StatelessWidget {
                   ],
                 ),
               ] else ...[
-                const SizedBox(width: 5),
-                Text(
-                  value,
-                  style: AppTypography.tiny.copyWith(
-                    color: color,
-                    fontWeight: FontWeight.w800,
+                SizedBox(width: dense ? 3 : 5),
+                ConstrainedBox(
+                  constraints: BoxConstraints(maxWidth: dense ? 62 : 96),
+                  child: Text(
+                    value,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTypography.tiny.copyWith(
+                      color: color,
+                      fontWeight: FontWeight.w800,
+                    ),
                   ),
                 ),
               ],

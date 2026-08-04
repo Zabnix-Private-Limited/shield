@@ -5,6 +5,7 @@ import {
   Delete,
   Param,
   Body,
+  ForbiddenException,
   Query,
   HttpCode,
   UploadedFile,
@@ -28,6 +29,39 @@ export class DocumentController {
     private readonly providerScopeService: ProviderScopeService,
   ) {}
 
+  private async assertCustomerOwnDocument(
+    documentId: bigint,
+    principal?: ShieldPrincipal,
+  ) {
+    if (principal?.principalType !== 'CUSTOMER') return;
+    if (!principal.customerId) {
+      throw new ForbiddenException(
+        'Authenticated customer context is required.',
+      );
+    }
+    if (
+      !(await this.documentService.documentBelongsToCustomer(
+        documentId,
+        BigInt(principal.customerId),
+      ))
+    ) {
+      throw new ForbiddenException(
+        'Customers can only access their own documents.',
+      );
+    }
+  }
+
+  private customerSafeDocument<T>(value: T, principal?: ShieldPrincipal): T {
+    if (principal?.principalType !== 'CUSTOMER' || !value) return value;
+    if (Array.isArray(value)) {
+      return value.map((item) =>
+        this.customerSafeDocument(item, principal),
+      ) as T;
+    }
+    const { storagePath: _storagePath, ...safeDocument } = value as any;
+    return safeDocument as T;
+  }
+
   @RequirePermissions('documents.create')
   @Post('documents/upload')
   @UseInterceptors(
@@ -48,6 +82,11 @@ export class DocumentController {
           ? BigInt(body.uploaded_by)
           : undefined;
     if (principal?.principalType === 'CUSTOMER') {
+      if (!principal.customerId) {
+        throw new ForbiddenException(
+          'Authenticated customer context is required.',
+        );
+      }
       body.customer_id = principal.customerId;
     }
     await this.agentScopeService.assertAgentCanAccessCustomer(
@@ -70,7 +109,7 @@ export class DocumentController {
     return {
       success: true,
       message: 'Document uploaded successfully',
-      data: doc,
+      data: this.customerSafeDocument(doc, principal),
     };
   }
 
@@ -80,6 +119,11 @@ export class DocumentController {
     @Query('customer_id') customerId?: string,
     @CurrentPrincipal() principal?: ShieldPrincipal,
   ) {
+    if (principal?.principalType === 'CUSTOMER' && !principal.customerId) {
+      throw new ForbiddenException(
+        'Authenticated customer context is required.',
+      );
+    }
     const targetCustomerId =
       principal?.principalType === 'CUSTOMER'
         ? BigInt(principal.customerId!)
@@ -100,7 +144,7 @@ export class DocumentController {
     return {
       success: true,
       message: 'Documents list retrieved',
-      data: docs,
+      data: this.customerSafeDocument(docs, principal),
     };
   }
 
@@ -110,7 +154,11 @@ export class DocumentController {
     @Param('id') id: string,
     @CurrentPrincipal() principal?: ShieldPrincipal,
   ) {
-    await this.agentScopeService.assertAgentCanAccessDocument(BigInt(id), principal);
+    await this.assertCustomerOwnDocument(BigInt(id), principal);
+    await this.agentScopeService.assertAgentCanAccessDocument(
+      BigInt(id),
+      principal,
+    );
     await this.providerScopeService.assertProviderCanAccessDocument(
       BigInt(id),
       principal,
@@ -119,7 +167,7 @@ export class DocumentController {
     return {
       success: true,
       message: 'Document details retrieved',
-      data: doc,
+      data: this.customerSafeDocument(doc, principal),
     };
   }
 
@@ -129,7 +177,11 @@ export class DocumentController {
     @Param('id') id: string,
     @CurrentPrincipal() principal?: ShieldPrincipal,
   ) {
-    await this.agentScopeService.assertAgentCanAccessDocument(BigInt(id), principal);
+    await this.assertCustomerOwnDocument(BigInt(id), principal);
+    await this.agentScopeService.assertAgentCanAccessDocument(
+      BigInt(id),
+      principal,
+    );
     await this.providerScopeService.assertProviderCanAccessDocument(
       BigInt(id),
       principal,
@@ -186,6 +238,7 @@ export class DocumentController {
     @Body() body: any,
     @CurrentPrincipal() principal?: ShieldPrincipal,
   ) {
+    await this.assertCustomerOwnDocument(BigInt(body.document_id), principal);
     await this.providerScopeService.assertProviderCanAccessDocument(
       BigInt(body.document_id),
       principal,
@@ -236,6 +289,7 @@ export class DocumentController {
     @Param('documentId') documentId: string,
     @CurrentPrincipal() principal?: ShieldPrincipal,
   ) {
+    await this.assertCustomerOwnDocument(BigInt(documentId), principal);
     await this.providerScopeService.assertProviderCanAccessDocument(
       BigInt(documentId),
       principal,
@@ -290,6 +344,7 @@ export class DocumentController {
     @Param('documentId') documentId: string,
     @CurrentPrincipal() principal?: ShieldPrincipal,
   ) {
+    await this.assertCustomerOwnDocument(BigInt(documentId), principal);
     await this.providerScopeService.assertProviderCanAccessDocument(
       BigInt(documentId),
       principal,

@@ -158,7 +158,10 @@ export class DocumentService {
         ? 1
         : 1 -
           this.levenshteinDistance(normalizedA, normalizedB) / longestLength;
-    const jaroWinklerScore = this.jaroWinklerSimilarity(normalizedA, normalizedB);
+    const jaroWinklerScore = this.jaroWinklerSimilarity(
+      normalizedA,
+      normalizedB,
+    );
     const containmentBoost =
       normalizedA.includes(normalizedB) || normalizedB.includes(normalizedA)
         ? 0.08
@@ -191,7 +194,8 @@ export class DocumentService {
     }
     items.sort(
       (a, b) =>
-        new Date(a.createdAt ?? 0).getTime() - new Date(b.createdAt ?? 0).getTime(),
+        new Date(a.createdAt ?? 0).getTime() -
+        new Date(b.createdAt ?? 0).getTime(),
     );
     return items[items.length - 1];
   }
@@ -203,31 +207,39 @@ export class DocumentService {
       .filter(Boolean);
 
     const patient =
-      lines.find((line) => line.startsWith('Patient:'))?.split(':')[1]?.trim() ??
-      'Customer';
+      lines
+        .find((line) => line.startsWith('Patient:'))
+        ?.split(':')[1]
+        ?.trim() ?? 'Customer';
     const doctor =
-      lines.find((line) => line.startsWith('Doctor:'))?.split(':')[1]?.trim() ??
-      'Doctor unavailable';
+      lines
+        .find((line) => line.startsWith('Doctor:'))
+        ?.split(':')[1]
+        ?.trim() ?? 'Doctor unavailable';
     const date =
-      lines.find((line) => line.startsWith('Date:'))?.split(':')[1]?.trim() ??
-      new Date().toLocaleDateString('en-GB').replace(/\//g, '-');
+      lines
+        .find((line) => line.startsWith('Date:'))
+        ?.split(':')[1]
+        ?.trim() ?? new Date().toLocaleDateString('en-GB').replace(/\//g, '-');
 
     const medicineLines = lines
       .filter((line) => line.startsWith('- '))
       .map((line) => line.replace(/^- /, '').trim());
 
-    const medicines: ExtractedPrescriptionMedicine[] = medicineLines.map((line) => {
-      const [name = '', dosage = '', frequency = '', duration = ''] = line
-        .split('|')
-        .map((item) => item.trim());
+    const medicines: ExtractedPrescriptionMedicine[] = medicineLines.map(
+      (line) => {
+        const [name = '', dosage = '', frequency = '', duration = ''] = line
+          .split('|')
+          .map((item) => item.trim());
 
-      return {
-        name: name || 'Unknown medicine',
-        dosage: dosage || 'As directed',
-        frequency: frequency || 'As directed',
-        duration: duration || 'Not specified',
-      };
-    });
+        return {
+          name: name || 'Unknown medicine',
+          dosage: dosage || 'As directed',
+          frequency: frequency || 'As directed',
+          duration: duration || 'Not specified',
+        };
+      },
+    );
 
     return {
       patient,
@@ -287,7 +299,10 @@ export class DocumentService {
           ].filter(Boolean);
 
           const bestScore = namesToScore.reduce((highest, candidate) => {
-            return Math.max(highest, this.similarityScore(medicine.name, candidate));
+            return Math.max(
+              highest,
+              this.similarityScore(medicine.name, candidate),
+            );
           }, 0);
 
           return {
@@ -302,14 +317,13 @@ export class DocumentService {
         .slice(0, 3);
 
       const bestCandidate = candidates[0];
-      const status =
-        !bestCandidate
-          ? 'UNMATCHED'
-          : bestCandidate.confidence >= 0.82
-            ? 'MATCHED'
-            : bestCandidate.confidence >= 0.62
-              ? 'REVIEW'
-              : 'UNMATCHED';
+      const status = !bestCandidate
+        ? 'UNMATCHED'
+        : bestCandidate.confidence >= 0.82
+          ? 'MATCHED'
+          : bestCandidate.confidence >= 0.62
+            ? 'REVIEW'
+            : 'UNMATCHED';
 
       return {
         rawName: medicine.name,
@@ -322,7 +336,8 @@ export class DocumentService {
           status === 'UNMATCHED' ? null : (bestCandidate?.productId ?? null),
         matchedProductName:
           status === 'UNMATCHED' ? null : (bestCandidate?.productName ?? null),
-        matchedBrand: status === 'UNMATCHED' ? null : (bestCandidate?.brand ?? null),
+        matchedBrand:
+          status === 'UNMATCHED' ? null : (bestCandidate?.brand ?? null),
         candidates,
       };
     });
@@ -437,11 +452,15 @@ export class DocumentService {
       },
     });
 
-    return this.runAutomatedPrescriptionPipeline(created.id, data.documentType, {
-      buffer: data.fileBuffer,
-      fileName: data.fileName,
-      mimeType: data.mimeType,
-    });
+    return this.runAutomatedPrescriptionPipeline(
+      created.id,
+      data.documentType,
+      {
+        buffer: data.fileBuffer,
+        fileName: data.fileName,
+        mimeType: data.mimeType,
+      },
+    );
   }
 
   async list(customerId?: bigint, principal?: ShieldPrincipal) {
@@ -454,12 +473,16 @@ export class DocumentService {
       const accessibleCustomerIds =
         await this.agentScopeService.listAccessibleCustomerIds(principal);
       whereClause.customerId =
-        accessibleCustomerIds.length > 0 ? { in: accessibleCustomerIds } : { in: [] };
+        accessibleCustomerIds.length > 0
+          ? { in: accessibleCustomerIds }
+          : { in: [] };
     } else if (this.providerScopeService.isProviderPrincipal(principal)) {
       const accessibleCustomerIds =
         await this.providerScopeService.listAccessibleCustomerIds(principal);
       whereClause.customerId =
-        accessibleCustomerIds.length > 0 ? { in: accessibleCustomerIds } : { in: [] };
+        accessibleCustomerIds.length > 0
+          ? { in: accessibleCustomerIds }
+          : { in: [] };
     }
     return this.prisma.document.findMany({
       where: whereClause,
@@ -488,6 +511,15 @@ export class DocumentService {
       throw new NotFoundException(`Document with ID ${id} not found`);
     }
     return doc;
+  }
+
+  async documentBelongsToCustomer(documentId: bigint, customerId: bigint) {
+    return Boolean(
+      await this.prisma.document.findFirst({
+        where: { id: documentId, customerId, status: { not: 'DELETED' } },
+        select: { id: true },
+      }),
+    );
   }
 
   async getDownloadUrl(id: bigint) {
@@ -569,12 +601,14 @@ export class DocumentService {
     let extractionRemarks: string;
 
     if (normalizedType === 'PRESCRIPTION' && uploadedFile?.buffer?.length) {
-      const aiResponse = await this.prescriptionIntelligenceService.analyzeFile({
-        fileName: uploadedFile.fileName,
-        mimeType: uploadedFile.mimeType,
-        buffer: uploadedFile.buffer,
-        products: [],
-      });
+      const aiResponse = await this.prescriptionIntelligenceService.analyzeFile(
+        {
+          fileName: uploadedFile.fileName,
+          mimeType: uploadedFile.mimeType,
+          buffer: uploadedFile.buffer,
+          products: [],
+        },
+      );
 
       extractedText = this.buildCanonicalPrescriptionText({
         patient: aiResponse.patient,
@@ -669,16 +703,16 @@ Summary: Structured extraction is unavailable for this document.`;
     }));
 
     const cartPrefill = structuredJson.medicines.map((medicine, index) => ({
-        productId: `ocr-${documentId.toString()}-${index + 1}`,
-        productName: medicine.name,
-        brand: null,
-        quantity: 1,
-        dosage: medicine.dosage,
-        frequency: medicine.frequency,
-        duration: medicine.duration,
-        confidence: Number(extractionConfidence.toFixed(1)),
-        needsReview: true,
-      }));
+      productId: `ocr-${documentId.toString()}-${index + 1}`,
+      productName: medicine.name,
+      brand: null,
+      quantity: 1,
+      dosage: medicine.dosage,
+      frequency: medicine.frequency,
+      duration: medicine.duration,
+      confidence: Number(extractionConfidence.toFixed(1)),
+      needsReview: true,
+    }));
 
     return {
       documentId: doc.id,
@@ -717,7 +751,11 @@ Summary: Structured extraction is unavailable for this document.`;
     providerId?: bigint,
   ) {
     const review = await this.getPrescriptionReview(documentId);
-    const approvedDocument = await this.validate(documentId, staffUserId, 'APPROVED');
+    const approvedDocument = await this.validate(
+      documentId,
+      staffUserId,
+      'APPROVED',
+    );
 
     await this.prisma.documentProcessingLog.create({
       data: {
