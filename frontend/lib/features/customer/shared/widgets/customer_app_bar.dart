@@ -159,7 +159,7 @@ class _CustomerMainHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final narrow = MediaQuery.sizeOf(context).width < 430;
+    final compact = MediaQuery.sizeOf(context).width < 560;
     final cashLabel = cashBalance == null
         ? (isLoading ? 'Loading' : '₹0')
         : AppDisplayFormatters.formatCurrencyString(
@@ -181,11 +181,11 @@ class _CustomerMainHeader extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 8),
-        const ShieldBrandLockup(compact: true),
+        ShieldBrandLockup(compact: true, showWordmark: !compact),
         const Spacer(),
         _HeaderBalanceChip(
           icon: Icons.account_balance_wallet_rounded,
-          label: narrow ? null : 'Cash Wallet',
+          label: compact ? null : 'Cash Wallet',
           value: cashLabel,
           color: CustomerDesignTokens.cash,
           onTap: onWalletPressed,
@@ -193,8 +193,8 @@ class _CustomerMainHeader extends StatelessWidget {
         const SizedBox(width: 8),
         _HeaderBalanceChip(
           icon: Icons.workspace_premium_rounded,
-          label: narrow ? null : 'Reward Points',
-          value: narrow ? rewardLabel : '$rewardLabel pts',
+          label: compact ? null : 'Reward Points',
+          value: compact ? rewardLabel : '$rewardLabel pts',
           color: CustomerDesignTokens.reward,
           onTap: onRewardsPressed,
         ),

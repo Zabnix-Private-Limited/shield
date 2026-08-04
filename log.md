@@ -9737,3 +9737,11 @@ Replaced the removed static Flutter carousel with a database-backed Operations c
   - `docs/CUSTOMER_UI_API_BINDINGS.md` and `docs/customer-ui/CUSTOMER_UI_AUDIT.md`: document the referral ownership boundary.
 - Why:
   - Referral relationship data is customer-private and must have the same direct-ID protection as cards, wallets, appointments, and notifications.
+## 292. Responsive customer header overflow correction — 2026-08-04 20:54:00 IST
+- Frontend Files:
+  - `frontend/lib/features/customer/shared/widgets/customer_app_bar.dart`: switches the main header to a compact mark-only layout below 560px so both API-derived balance chips and the notification action fit on narrow mobile/web viewports.
+  - `frontend/lib/shared/widgets/shield_brand_lockup.dart`: supports reusing the existing shield mark without its wordmark where layout space is constrained.
+- Documentation Files:
+  - `docs/CUSTOMER_UI_VISUAL_QA.md`: records the reported 448px overflow, correction, and pending device captures.
+- Why:
+  - The previous 430px threshold allowed the full wordmark layout to overflow at 448px; responsive layout must be based on the actual header content width.

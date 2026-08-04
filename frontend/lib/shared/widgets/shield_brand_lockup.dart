@@ -7,11 +7,13 @@ class ShieldBrandLockup extends StatelessWidget {
   const ShieldBrandLockup({
     super.key,
     this.compact = false,
+    this.showWordmark = true,
     this.showTagline = false,
     this.alignment = CrossAxisAlignment.start,
   });
 
   final bool compact;
+  final bool showWordmark;
   final bool showTagline;
   final CrossAxisAlignment alignment;
 
@@ -44,29 +46,31 @@ class ShieldBrandLockup extends StatelessWidget {
             fit: BoxFit.contain,
           ),
         ),
-        const SizedBox(width: 12),
-        Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: alignment,
-          children: [
-            Image.asset(
-              'assets/logos/shield_wordmark.png',
-              width: wordmarkWidth,
-              fit: BoxFit.contain,
-            ),
-            if (showTagline) ...[
-              const SizedBox(height: 4),
-              Text(
-                'Sahakar Healthcare',
-                style: AppTypography.tiny.copyWith(
-                  color: AppColors.gray,
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: 0.2,
-                ),
+        if (showWordmark) ...[
+          const SizedBox(width: 12),
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: alignment,
+            children: [
+              Image.asset(
+                'assets/logos/shield_wordmark.png',
+                width: wordmarkWidth,
+                fit: BoxFit.contain,
               ),
+              if (showTagline) ...[
+                const SizedBox(height: 4),
+                Text(
+                  'Sahakar Healthcare',
+                  style: AppTypography.tiny.copyWith(
+                    color: AppColors.gray,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 0.2,
+                  ),
+                ),
+              ],
             ],
-          ],
-        ),
+          ),
+        ],
       ],
     );
   }
