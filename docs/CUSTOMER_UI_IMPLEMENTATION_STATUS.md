@@ -48,6 +48,7 @@ Completed:
 - Customer header coverage now verifies the reported 448px width inside the real customer-scaffold SafeArea constraint, not only as a standalone app bar.
 - Added the customer route inventory and membership/card screen manifest so supported routes and deliberately unavailable customer workflows are explicit.
 - Wallet API failures now show a retryable unavailable state with no fabricated zero balance; ledger and `SHIELD_BENEFIT` filtering remain unchanged.
+- Consultation provider loading now distinguishes a retryable provider API failure from a genuine empty provider list.
 
 Not complete:
 

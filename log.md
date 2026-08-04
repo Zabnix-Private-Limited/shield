@@ -10102,3 +10102,11 @@ Replaced the removed static Flutter carousel with a database-backed Operations c
   - docs/customer-ui/CUSTOMER_UI_AUDIT.md and docs/CUSTOMER_UI_IMPLEMENTATION_STATUS.md: record the real unavailable-state behavior.
 - Why:
   - A failed ledger response is not a zero-balance response. The existing wallet contract and SHIELD_BENEFIT filtering remain unchanged.
+
+## 337. Customer consultation provider failure state — 2026-08-05 01:07:00 IST
+- Frontend Files:
+  - frontend/lib/features/portal/presentation/screens/portal_shell.dart: renders a retryable provider-load failure instead of treating an API error as an empty active-provider list.
+- Documentation Files:
+  - docs/customer-ui/CUSTOMER_UI_AUDIT.md and docs/CUSTOMER_UI_IMPLEMENTATION_STATUS.md: record the distinct provider failure state.
+- Why:
+  - Booking must remain based on real active backend providers. A temporary list failure must not mislead a customer into thinking the network has no providers.

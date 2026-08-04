@@ -7808,6 +7808,40 @@ class _CustomerServicesViewState extends State<_CustomerServicesView> {
                       const SizedBox(height: 8),
                       if (snapshot.connectionState == ConnectionState.waiting)
                         const LinearProgressIndicator(minHeight: 2)
+                      else if (snapshot.hasError)
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            color: AppColors.lightGray,
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(color: AppColors.divider),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(
+                                Icons.cloud_off_outlined,
+                                color: AppColors.gray,
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  'Providers could not be loaded right now.',
+                                  style: AppTypography.small.copyWith(
+                                    color: AppColors.gray,
+                                  ),
+                                ),
+                              ),
+                              TextButton(
+                                onPressed: () => setState(
+                                  () => _providersFuture =
+                                      ApiService.getProviders(),
+                                ),
+                                child: const Text('Retry'),
+                              ),
+                            ],
+                          ),
+                        )
                       else if (matchingProviders.isEmpty)
                         Container(
                           width: double.infinity,
