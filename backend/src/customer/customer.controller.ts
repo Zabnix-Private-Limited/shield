@@ -72,6 +72,11 @@ export class CustomerController {
     @Query('membership') membership?: string,
     @CurrentPrincipal() principal?: ShieldPrincipal,
   ) {
+    if (principal?.principalType === 'CUSTOMER') {
+      throw new ForbiddenException(
+        'Customer search is not available to customer accounts.',
+      );
+    }
     const results = await this.customerService.search({
       mobile,
       name,
@@ -111,6 +116,11 @@ export class CustomerController {
     @Query('mobile') mobile?: string,
     @CurrentPrincipal() principal?: ShieldPrincipal,
   ) {
+    if (principal?.principalType === 'CUSTOMER') {
+      throw new ForbiddenException(
+        'Customer lookup is not available to customer accounts.',
+      );
+    }
     if (!mobile?.trim())
       throw new ForbiddenException('Mobile number is required.');
     const customer =

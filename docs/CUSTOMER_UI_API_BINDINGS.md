@@ -21,6 +21,8 @@
 
 Do not expose `SHIELD_BENEFIT` as cash. Do not replace these APIs with Flutter lists. Operations banners, catalogue/cart presentation, and full card lifecycle require verified backend contracts before UI implementation.
 
+Customer principals cannot use the staff-only `GET /customers/search` or `GET /customers/existing-by-mobile` lookup endpoints, even though they have `customers.view` for their own profile data.
+
 ## Operations banner configuration
 
 Operations uses the existing `POST /pricing/admin/settings` contract with `code: OPERATIONS_CUSTOMER_BANNERS`, `value_type: JSON`, and a JSON array in `value_text`. Each record must supply `id`, `title`, `subtitle`, `imageUrl`, `altText`, `ctaLabel`, `ctaRoute`, `placement: DASHBOARD`, `audience` (`ALL_CUSTOMERS` or `CUSTOMER`), `priority`, `status: PUBLISHED`, and optional `startAt` / `endAt`. Only internal `/portal/customer/...` CTA routes are accepted.

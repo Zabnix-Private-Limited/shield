@@ -6,6 +6,8 @@ describe('CustomerController card scope', () => {
     requestPhysicalCard: jest.fn(),
     saveAlternativeContact: jest.fn(),
     listAlternativeContacts: jest.fn(),
+    search: jest.fn(),
+    findExistingCustomerByMobile: jest.fn(),
   };
   const agentScope = { assertAgentCanAccessCustomer: jest.fn() };
   const providerScope = { assertProviderCanAccessCustomer: jest.fn() };
@@ -51,5 +53,16 @@ describe('CustomerController card scope', () => {
       'Customers can only access their own customer record.',
     );
     expect(service.listAlternativeContacts).not.toHaveBeenCalled();
+  });
+
+  it('rejects customer access to staff customer lookup endpoints', async () => {
+    await expect(controller.search('9876543210', undefined, undefined, undefined, customer)).rejects.toThrow(
+      'Customer search is not available to customer accounts.',
+    );
+    await expect(controller.existingByMobile('9876543210', customer)).rejects.toThrow(
+      'Customer lookup is not available to customer accounts.',
+    );
+    expect(service.search).not.toHaveBeenCalled();
+    expect(service.findExistingCustomerByMobile).not.toHaveBeenCalled();
   });
 });

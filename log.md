@@ -9864,3 +9864,11 @@ Replaced the removed static Flutter carousel with a database-backed Operations c
   - `docs/CUSTOMER_UI_IMPLEMENTATION_STATUS.md` and `docs/customer-ui/CUSTOMER_UI_AUDIT.md`: record the data-derived filter behavior.
 - Why:
   - Timeline categories already come from the database-backed API. Filtering them locally needs no speculative server query contract and keeps the complete customer event set within the existing self-only response.
+## 308. Block customer access to staff customer lookup — 2026-08-04 21:44:25 IST
+- Backend Files:
+  - `backend/src/customer/customer.controller.ts`: rejects customer principals on the generic customer-search and existing-by-mobile lookup endpoints before any repository call.
+  - `backend/src/customer/customer.controller.spec.ts`: regression coverage proves customer sessions cannot invoke either staff lookup.
+- Documentation Files:
+  - `docs/CUSTOMER_UI_API_BINDINGS.md`: distinguishes the customer self-profile permission from staff customer-discovery operations.
+- Why:
+  - `customers.view` lets customers read their own profile through self-scoped routes. It must not imply permission to enumerate or look up other customer records.
