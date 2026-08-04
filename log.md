@@ -9786,3 +9786,11 @@ Replaced the removed static Flutter carousel with a database-backed Operations c
   - `docs/CUSTOMER_UI_API_BINDINGS.md`, `docs/CUSTOMER_UI_IMPLEMENTATION_STATUS.md`, `docs/customer-ui/CUSTOMER_UI_AUDIT.md`, and `docs/CUSTOMER_UI_VISUAL_QA.md`: record the supported referral scope and unavailable share/create operations.
 - Why:
   - Existing customer-safe read contracts support status visibility, but not customer referral creation, QR sharing, or immediate reward actions.
+## 298. Customer purchase-history fail-closed guard — 2026-08-04 21:16:00 IST
+- Backend Files:
+  - `backend/src/pharmacy/pharmacy.controller.ts`: rejects a purchase-history request when a customer principal lacks its required customer context instead of attempting an unsafe ID conversion.
+  - `backend/src/pharmacy/pharmacy.controller.spec.ts`: regression coverage proves no purchase read occurs for an incomplete customer principal.
+- Documentation Files:
+  - `docs/CUSTOMER_UI_API_BINDINGS.md`: records the fail-closed customer context requirement.
+- Why:
+  - Customer purchase history is scoped data; an incomplete authenticated context must fail explicitly rather than degrade into a server error.

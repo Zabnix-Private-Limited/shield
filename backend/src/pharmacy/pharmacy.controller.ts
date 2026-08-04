@@ -119,6 +119,9 @@ export class PharmacyController {
     @Query('customer_id') customerId?: string,
     @CurrentPrincipal() principal?: ShieldPrincipal,
   ) {
+    if (principal?.principalType === 'CUSTOMER' && !principal.customerId) {
+      throw new ForbiddenException('Authenticated customer context is required.');
+    }
     const targetCustomerId =
       principal?.principalType === 'CUSTOMER'
         ? BigInt(principal.customerId!)
