@@ -10020,3 +10020,12 @@ Replaced the removed static Flutter carousel with a database-backed Operations c
   - docs/customer-ui/CUSTOMER_UI_AUDIT.md and docs/CUSTOMER_UI_IMPLEMENTATION_STATUS.md record the database-backed Services access source.
 - Why:
   - CustomerAccessState cannot establish issued-card eligibility from the profile payload alone. Reusing the one membership contract prevents false pending status in every remaining caller without weakening backend authorization.
+\n## 327. Customer appointment rescheduling — 2026-08-04 23:31:00 IST
+- Frontend Files:
+  - frontend/lib/shared/services/api_service.dart: adds the customer-named wrapper for the already supported appointment reschedule endpoint.
+  - frontend/lib/features/portal/presentation/screens/portal_shell.dart: adds a date-picker reschedule action for scheduled and previously rescheduled customer visits, then refreshes the server-backed appointment list.
+  - frontend/test/customer_appointment_model_test.dart: verifies the server RESCHEDULED response remains a rescheduled customer appointment in the UI model.
+- Documentation Files:
+  - docs/customer-ui/CUSTOMER_UI_AUDIT.md, docs/CUSTOMER_UI_IMPLEMENTATION_STATUS.md, and docs/CUSTOMER_UI_VISUAL_QA.md record the supported flow and pending authenticated visual capture.
+- Why:
+  - The Nest appointment controller already enforces customer ownership before rescheduling. Reusing that endpoint restores the customer UI action without copying appointment data or adding a client-side authorization rule.

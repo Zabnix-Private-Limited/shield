@@ -33,6 +33,7 @@ Completed:
 - The document archive now exposes the existing customer-authenticated prescription upload flow and refreshes the archive from the API after a successful upload.
 - The Prescription screen links directly to that one persisted upload flow instead of duplicating a second file-picker implementation.
 - Customer Visits now has explicit upcoming/history empty states and the shared retryable failure state while retaining the existing customer-scoped appointment and cancellation workflows.
+- Customer Visits now exposes the existing customer-scoped reschedule endpoint through a date picker. The backend remains authoritative for appointment ownership, the actual appointment time, status, notifications, and timeline event.
 - Appointment, document, and prescription access checks now load the authenticated membership bundle alongside the profile. This preserves the issued-card requirement without wrongly blocking active members whose profile payload has no membership field.
 - The main customer header now collapses balance controls to icons below 480 logical pixels, preventing the reported narrow-window horizontal overflow while retaining each route action.
 - Activity Timeline is now a customer-self route backed by `GET /timeline/me`; it has loading, empty, retry, refresh, and data-derived category filter states and never accepts an arbitrary customer ID.

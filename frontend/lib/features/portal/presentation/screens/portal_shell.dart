@@ -5153,6 +5153,40 @@ class _CustomerAppointmentsViewState extends State<_CustomerAppointmentsView> {
     }
   }
 
+  Future<void> _rescheduleAppointment(Appointment appointment) async {
+    final selectedDate = await showDatePicker(
+      context: context,
+      initialDate: appointment.appointmentDate.isAfter(DateTime.now())
+          ? appointment.appointmentDate
+          : DateTime.now().add(const Duration(days: 1)),
+      firstDate: DateTime.now(),
+      lastDate: DateTime.now().add(const Duration(days: 365)),
+    );
+    if (selectedDate == null || !mounted) return;
+
+    try {
+      await ApiService.rescheduleCustomerAppointment(
+        appointmentId: appointment.id,
+        appointmentDate: DateTime(
+          selectedDate.year,
+          selectedDate.month,
+          selectedDate.day,
+          appointment.appointmentDate.hour,
+          appointment.appointmentDate.minute,
+        ),
+      );
+      if (!mounted) return;
+      setState(_loadAppointments);
+      showPortalSnackBar(context, 'Appointment rescheduled successfully.');
+    } catch (_) {
+      if (!mounted) return;
+      showPortalSnackBar(
+        context,
+        'Rescheduling is unavailable right now. Please try again shortly.',
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<List<Appointment>>(
@@ -5421,7 +5455,18 @@ class _CustomerAppointmentsViewState extends State<_CustomerAppointmentsView> {
                               color: _appointmentAccent(appointment.status),
                             ),
                             if (appointment.status ==
-                                AppointmentStatus.scheduled)
+                                    AppointmentStatus.scheduled ||
+                                appointment.status ==
+                                    AppointmentStatus.rescheduled)
+                              TextButton(
+                                onPressed: () =>
+                                    _rescheduleAppointment(appointment),
+                                child: const Text('Reschedule'),
+                              ),
+                            if (appointment.status ==
+                                    AppointmentStatus.scheduled ||
+                                appointment.status ==
+                                    AppointmentStatus.rescheduled)
                               TextButton(
                                 onPressed: () =>
                                     _cancelAppointment(appointment),

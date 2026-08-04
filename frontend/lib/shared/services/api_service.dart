@@ -1257,6 +1257,14 @@ class ApiService {
     return Appointment.fromJson(_readEnvelope(response));
   }
 
+  static Future<Appointment> rescheduleCustomerAppointment({
+    required String appointmentId,
+    required DateTime appointmentDate,
+  }) => rescheduleInternalAppointment(
+    appointmentId: appointmentId,
+    appointmentDate: appointmentDate,
+  );
+
   static Future<Document> uploadCustomerDocument({
     required String fileName,
     required String documentType,

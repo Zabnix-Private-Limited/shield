@@ -23,6 +23,7 @@ Reference images were inspected from `Design reference/`; they are visual refere
 | My Orders | `/portal/customer/orders` | Not captured in this environment | New customer purchase-history route | Uses the shared customer shell, white bordered order cards, navy amounts, and existing status treatment | Device capture remains required |
 | Referral & Rewards | `/portal/customer/referrals` | Not captured in this environment | New customer referral-status route | Uses the shared customer shell, white bordered cards, navy summary values, and lifecycle statuses | Device capture remains required |
 | Activity Timeline | `/portal/customer/activity` | Not captured in this environment | New database-backed customer-self timeline route | Uses the shared customer shell, white bordered event cards, and category accents | Device capture remains required |
+| My Visits | `/portal/customer/appointments` | Not captured in this environment | Existing visit card lacked a customer reschedule action despite the supported endpoint | Added a compact date-picker action beside cancellation, retaining the shared cards and status treatment | Authenticated device capture remains required |
 # Membership batch visual QA
 
 | Reference | Route | Screenshot | Result |
