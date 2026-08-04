@@ -9771,3 +9771,8 @@ Replaced the removed static Flutter carousel with a database-backed Operations c
   - `docs/CUSTOMER_UI_API_BINDINGS.md`, `docs/CUSTOMER_UI_IMPLEMENTATION_STATUS.md`, `docs/customer-ui/CUSTOMER_UI_AUDIT.md`, and `docs/CUSTOMER_UI_VISUAL_QA.md`: record the supported order-history boundary and remaining unsupported commerce operations.
 - Why:
   - The backend already provides scoped purchase history, while customer cart and checkout APIs do not exist. The UI exposes the supported read workflow without simulating an order pipeline.
+## 296. Customer Orders route authorization — 2026-08-04 21:08:00 IST
+- Frontend Files:
+  - `frontend/lib/shared/services/portal_resolver.dart`: permits authenticated customers to resolve the supported `orders` portal section.
+- Why:
+  - A customer route must be allowed by the shared resolver as well as registered in the shell; otherwise the database-backed screen is not reachable through normal navigation.
