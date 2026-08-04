@@ -88,7 +88,7 @@ class _CustomerWalletScreenState extends State<CustomerWalletScreen> {
             if (_controller.error != null && !_controller.hasData) {
               return ErrorCard(
                 title: 'Wallet unavailable',
-                message: 'The local wallet preview could not be loaded.',
+                message: 'The wallet could not be loaded right now.',
                 onRetry: _controller.load,
               );
             }

@@ -10093,3 +10093,12 @@ Replaced the removed static Flutter carousel with a database-backed Operations c
   - docs/customer-ui/CUSTOMER_UI_AUDIT.md and docs/CUSTOMER_UI_IMPLEMENTATION_STATUS.md: link the new source-of-truth inventory.
 - Why:
   - Customer-safe routes and staff-only/unsupported lifecycle work must be distinguishable before further UI redesign, preventing a management-demo entitlement endpoint from being adopted by the customer app.
+
+## 336. Customer wallet unavailable state — 2026-08-05 00:54:00 IST
+- Frontend Files:
+  - frontend/lib/features/customer/wallet/presentation/screens/wallet_screen.dart: replaces misleading local-preview wording with a generic retryable wallet-unavailable message.
+  - frontend/test/customer_wallet_screen_test.dart: verifies a wallet API failure never renders a fabricated zero balance.
+- Documentation Files:
+  - docs/customer-ui/CUSTOMER_UI_AUDIT.md and docs/CUSTOMER_UI_IMPLEMENTATION_STATUS.md: record the real unavailable-state behavior.
+- Why:
+  - A failed ledger response is not a zero-balance response. The existing wallet contract and SHIELD_BENEFIT filtering remain unchanged.

@@ -31,6 +31,33 @@ void main() {
       expect(find.text('SHIELD Benefit grant'), findsNothing);
     },
   );
+
+  testWidgets(
+    'shows a retryable wallet API failure instead of a zero balance',
+    (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: CustomerWalletScreen(
+              controller: WalletController(
+                customerId: '42',
+                repository: _FailingWalletRepository(),
+              ),
+              loadCustomer: () async => _customer(),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Wallet unavailable'), findsOneWidget);
+      expect(
+        find.text('The wallet could not be loaded right now.'),
+        findsOneWidget,
+      );
+      expect(find.text('₹0'), findsNothing);
+    },
+  );
 }
 
 class _WalletTestRepository extends WalletRepository {
@@ -43,6 +70,15 @@ class _WalletTestRepository extends WalletRepository {
 
   @override
   Future<WalletModel> loadWallet(String customerId) async => value;
+}
+
+class _FailingWalletRepository extends WalletRepository {
+  @override
+  Future<WalletModel?> loadCachedWallet(String customerId) async => null;
+
+  @override
+  Future<WalletModel> loadWallet(String customerId) async =>
+      throw StateError('Wallet API unavailable');
 }
 
 WalletModel _wallet() => WalletModel.fromJson(const {
