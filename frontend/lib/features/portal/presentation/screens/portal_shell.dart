@@ -5196,10 +5196,8 @@ class _CustomerNotificationsViewState
   }
 
   Future<void> _markAllRead(List<NotificationModel> notifications) async {
-    final unread = notifications.where((notification) => !notification.isRead);
-    for (final notification in unread) {
-      await ApiService.markNotificationRead(notification.id);
-    }
+    if (!notifications.any((notification) => !notification.isRead)) return;
+    await ApiService.markAllNotificationsRead();
     if (!mounted) return;
     setState(_loadNotifications);
     showPortalSnackBar(context, 'All unread notifications marked as read.');

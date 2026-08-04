@@ -9745,3 +9745,10 @@ Replaced the removed static Flutter carousel with a database-backed Operations c
   - `docs/CUSTOMER_UI_VISUAL_QA.md`: records the reported 448px overflow, correction, and pending device captures.
 - Why:
   - The previous 430px threshold allowed the full wordmark layout to overflow at 448px; responsive layout must be based on the actual header content width.
+## 293. Customer notification bulk-read integration — 2026-08-04 20:57:00 IST
+- Frontend Files:
+  - `frontend/lib/features/portal/presentation/screens/portal_shell.dart`: the customer Inbox now makes one authenticated `mark-all-read` request instead of one write request for every unread notification.
+- Documentation Files:
+  - `docs/CUSTOMER_UI_IMPLEMENTATION_STATUS.md` and `docs/customer-ui/CUSTOMER_UI_AUDIT.md`: record the live bulk-read implementation.
+- Why:
+  - The backend already scopes the bulk operation to the authenticated customer; using it reduces requests and keeps the operation on its intended authorization path.

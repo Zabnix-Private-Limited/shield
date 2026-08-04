@@ -17,6 +17,7 @@ Completed:
 - Membership widget coverage verifies populated identity/entitlement-gap rendering and the membership API-error state.
 - Wallet now has a real full-history route backed by the existing customer wallet response. The preview links there only when the customer has more than six visible transactions; unsupported recharge/export actions are not advertised.
 - Customer Services now reads the seeded wellness demo catalogue from an authenticated customer endpoint. Unsupported hardcoded pharmacy, laboratory, home-care, and diet-plan content was removed from the visible flow.
+- Customer Notifications now uses the authenticated bulk-read endpoint instead of issuing one mutation per unread record.
 
 Not complete:
 
