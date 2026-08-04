@@ -294,7 +294,6 @@ PortalRoleData portalDataForRole(SHIELDRole role) {
           _PortalSectionFactory.customerMembership,
           _PortalSectionFactory.customerPrivilegeCard,
           _PortalSectionFactory.customerPrescriptions,
-          _PortalSectionFactory.customerRecharge,
           _PortalSectionFactory.customerBooking,
           _PortalSectionFactory.customerSettings,
           _PortalSectionFactory.customerNotifications,
@@ -669,11 +668,6 @@ class _PortalSectionFactory {
   static final PortalSectionData customerPrescriptions = _section(
     'prescriptions',
     summary: 'Prescription review, uploads, and pharmacy linkage.',
-  );
-
-  static final PortalSectionData customerRecharge = _section(
-    'recharge',
-    summary: 'Wallet recharge requests and approval trail.',
   );
 
   static final PortalSectionData customerBooking = _section(

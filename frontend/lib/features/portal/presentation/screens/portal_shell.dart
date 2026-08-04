@@ -537,7 +537,8 @@ class _RoleContent extends StatelessWidget {
     final isCustomerPrivilegeCard =
         portal.role == SHIELDRole.customer && section.key == 'privilege-card';
     final isCustomerServices =
-        portal.role == SHIELDRole.customer && section.key == 'services';
+        portal.role == SHIELDRole.customer &&
+        (section.key == 'services' || section.key == 'book-appointment');
     final isCustomerOrders =
         portal.role == SHIELDRole.customer && section.key == 'orders';
     final isCustomerReferrals =

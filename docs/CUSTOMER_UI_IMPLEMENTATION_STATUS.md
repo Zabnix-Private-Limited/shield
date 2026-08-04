@@ -22,6 +22,7 @@ Completed:
 - Wallet access now uses the issued membership returned by the wallet bundle. This prevents active members from being shown the pending-wallet screen solely because the profile response does not carry membership data.
 - Customer Services now reads the seeded wellness demo catalogue from an authenticated customer endpoint. Unsupported hardcoded pharmacy, laboratory, home-care, and diet-plan content was removed from the visible flow.
 - Consultation booking now requires the customer to explicitly select an active backend provider. The selected provider ID is submitted to the existing appointment API; a stale provider selection gets a safe retry message.
+- The legacy Book Appointment route now renders the real customer consultation flow. Unsupported customer recharge is no longer registered as a customer portal section because no persisted top-up request contract exists.
 - Customer navigation and Services now share the authenticated profile-plus-membership access context. Active issued members see their actual access state, while a failed membership read is a retryable unavailable state instead of an indefinite loading or false pending state.
 - Customer Notifications now uses the authenticated bulk-read endpoint instead of issuing one mutation per unread record.
 - My Orders is now a customer-scoped, read-only pharmacy purchase-history route with loading, empty, error/retry, and refresh states. Customer cart, checkout, tracking, returns, and payments remain unavailable because no verified customer contracts exist.

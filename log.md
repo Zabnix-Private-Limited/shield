@@ -10036,3 +10036,12 @@ Replaced the removed static Flutter carousel with a database-backed Operations c
   - docs/customer-ui/CUSTOMER_UI_AUDIT.md and docs/CUSTOMER_UI_IMPLEMENTATION_STATUS.md record the provider API and explicit selection rule.
 - Why:
   - Appointment creation is customer-scoped on the backend, but a UI fallback could still create an unintended booking. Requiring the displayed provider selection keeps the request aligned with the customers intent.
+\n## 329. Customer route contract cleanup — 2026-08-04 23:47:00 IST
+- Frontend Files:
+  - frontend/lib/features/portal/presentation/portal_role_data.dart: removes the unsupported customer recharge section from the portal registry.
+  - frontend/lib/features/portal/presentation/screens/portal_shell.dart: maps the legacy Book Appointment section to the existing database-backed customer consultation screen.
+  - frontend/test/customer_portal_routes_test.dart: verifies Book Appointment remains registered and recharge is absent.
+- Documentation Files:
+  - docs/customer-ui/CUSTOMER_UI_AUDIT.md and docs/CUSTOMER_UI_IMPLEMENTATION_STATUS.md record the route-to-contract correction.
+- Why:
+  - The prior recharge renderer reported a frontend-only submitted request with no persisted customer API. Removing that route is safer than pretending a financial workflow completed, while the supported appointment route now reaches the real provider-backed booking UI.
