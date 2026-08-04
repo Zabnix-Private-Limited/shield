@@ -10052,3 +10052,11 @@ Replaced the removed static Flutter carousel with a database-backed Operations c
   - docs/customer-ui/CUSTOMER_UI_AUDIT.md and docs/CUSTOMER_UI_IMPLEMENTATION_STATUS.md record the live customer notification read contract and failure behavior.
 - Why:
   - Both backend routes enforce notification ownership. The UI now handles a temporary failure without treating a notification as read locally or exposing transport details.
+
+## 331. Customer Settings support routing — 2026-08-04 23:59:00 IST
+- Frontend Files:
+  - frontend/lib/features/portal/presentation/screens/portal_shell.dart: replaces the frontend-only Help Center message with the existing persisted customer support-contact sheet.
+- Documentation Files:
+  - docs/customer-ui/CUSTOMER_UI_AUDIT.md and docs/CUSTOMER_UI_IMPLEMENTATION_STATUS.md: record the supported support action and its backing contract.
+- Why:
+  - Settings must not imply an unsupported customer workflow has succeeded. Reusing the existing support-contact API preserves the real request path and its verification controls.

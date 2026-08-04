@@ -31,3 +31,5 @@ Reference images were inspected from `Design reference/`; they are visual refere
 | Privilege Card reference | `/portal/customer/privilege-card` | Not captured in this environment | Implemented navy card, white QR surface, rounded 24px card and shared shell; device/browser capture remains required |
 
 Known difference: the current backend does not expose subscription entitlement or physical-card-history data to a customer-safe contract, so those panels are intentionally absent rather than represented with reference-only values.
+
+| Customer Settings | `/portal/customer/settings` | Not captured in this environment | Replaced the frontend-only Help Center action with the existing support-contact sheet; no visual-only shell was added | Authenticated device capture remains required |

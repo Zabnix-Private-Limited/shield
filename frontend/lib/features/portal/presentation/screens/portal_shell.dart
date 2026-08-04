@@ -4868,11 +4868,11 @@ class _CustomerSettingsView extends StatelessWidget {
           children: [
             _CompactSettingAction(
               icon: Icons.help_outline,
-              title: 'Help center',
-              subtitle: 'Troubleshooting and FAQs',
-              onTap: () => showPortalSnackBar(
+              title: 'Get support',
+              subtitle: 'Send a membership, service, or app-support request',
+              onTap: () => showCustomerSupportSheet(
                 context,
-                'Help center content is represented as a frontend-only support flow.',
+                type: SupportSheetType.contact,
               ),
             ),
             _CompactSettingAction(

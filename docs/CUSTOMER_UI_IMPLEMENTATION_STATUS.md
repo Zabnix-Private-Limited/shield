@@ -42,6 +42,7 @@ Completed:
 - Activity Timeline is now a customer-self route backed by `GET /timeline/me`; it has loading, empty, retry, refresh, and data-derived category filter states and never accepts an arbitrary customer ID.
 - Profile now lists, adds, and confirms removal of database-backed alternative contacts. Reads and mutations are self-scoped, and no contact is retained only in Flutter state.
 - Profile and prescription-upload failures now show safe customer messages instead of raw backend or transport exception text.
+- Customer Settings now routes its Get support action to the existing persisted support-contact request instead of displaying a frontend-only Help Center message.
 
 Not complete:
 
