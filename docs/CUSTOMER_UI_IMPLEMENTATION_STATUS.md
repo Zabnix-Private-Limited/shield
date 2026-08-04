@@ -8,7 +8,9 @@ Completed:
 - Reusable customer design tokens.
 - Data-backed responsive authenticated header.
 - Header widget coverage verifies the dense main-header layout at the reported 480px viewport and its no-summary retry state without a layout overflow.
+- Header balance chips now retain their compact API-derived numeric totals down to 350px; the dashboard no longer repeats wallet and points below the membership card.
 - Membership-first dashboard hierarchy using existing dashboard data.
+- Operations banners, when published through the existing database setting, render before the membership summary rather than below a duplicate dashboard title.
 - Dashboard visit and activity sections now distinguish an empty authenticated response from a blank screen, with a services entry point when no visit is scheduled.
 - Static Flutter marketing carousel removed from the live dashboard pending an Operations-owned API contract.
 - Operations-owned carousel contract added through the existing commercial-settings table. An explicit idempotent non-production seed now publishes three local-image demo banners only when Operations has not configured the setting.

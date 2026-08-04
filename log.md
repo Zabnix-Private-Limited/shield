@@ -10207,3 +10207,13 @@ Replaced the removed static Flutter carousel with a database-backed Operations c
   - docs/customer-ui/CUSTOMER_UI_AUDIT.md and docs/CUSTOMER_UI_IMPLEMENTATION_STATUS.md: record the verified order-history failure behavior.
 - Why:
   - A missing order history and an unavailable customer purchase API have different meanings and must remain visibly distinct.
+
+## 349. Customer dashboard hierarchy correction — 2026-08-05 03:26:00 IST
+- Frontend Files:
+  - frontend/lib/features/customer/shared/widgets/customer_app_bar.dart: preserves compact customer cash and reward totals down to 350px while retaining the narrow-width overflow guard.
+  - frontend/lib/features/customer/dashboard/presentation/screens/dashboard_screen.dart: places Operations-managed banners first, removes the redundant dashboard title and duplicated wallet/points tiles, and uses the retained summary space for visits, documents, and unread customer updates.
+  - frontend/test/customer_app_bar_test.dart: verifies both balance values remain visible at 448px.
+- Documentation Files:
+  - docs/customer-ui/CUSTOMER_UI_AUDIT.md and docs/CUSTOMER_UI_IMPLEMENTATION_STATUS.md: record the corrected dashboard hierarchy.
+- Why:
+  - Cash and reward totals belong in the global header. Repeating them below the membership summary consumes customer dashboard space without adding information.

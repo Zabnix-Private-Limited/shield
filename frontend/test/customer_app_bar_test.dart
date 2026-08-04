@@ -33,6 +33,8 @@ void main() {
       expect(tester.takeException(), isNull);
       expect(find.byTooltip('Open navigation menu'), findsOneWidget);
       expect(find.byTooltip('Retry account summary'), findsOneWidget);
+      expect(find.text('₹0'), findsOneWidget);
+      expect(find.text('0'), findsOneWidget);
     }
   });
 

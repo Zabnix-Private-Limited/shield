@@ -63,10 +63,11 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> {
           );
         }
 
-        final walletBalance = dashboard.wallet.balance;
-        final pointsBalance = dashboard.wallet.pointsBalance;
         final upcomingVisits = dashboard.appointments.length;
         final documentCount = dashboard.documents.length;
+        final unreadNotificationCount = dashboard.notifications
+            .where((notification) => !notification.isRead)
+            .length;
         final accessState = CustomerAccessState(
           customer: dashboard.customer,
           customerStatus: dashboard.customer.status,
@@ -82,13 +83,6 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> {
             ),
             shrinkWrap: true,
             children: [
-              Text('Dashboard', style: AppTypography.h2),
-              const SizedBox(height: 4),
-              Text(
-                'Welcome back, ${dashboard.customer.firstName}',
-                style: AppTypography.body.copyWith(color: AppColors.gray),
-              ),
-              const SizedBox(height: 20),
               OperationsBannerCarousel(banners: dashboard.banners),
               if (dashboard.banners.isNotEmpty) const SizedBox(height: 20),
               GreetingHeader(
@@ -108,13 +102,6 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> {
                   childAspectRatio: constraints.maxWidth >= 420 ? 2.2 : 2.8,
                   children: [
                     WalletSummaryCard(
-                      title: 'Wallet',
-                      value: '₹${walletBalance.toStringAsFixed(0)}',
-                      icon: Icons.account_balance_wallet_outlined,
-                      color: AppColors.shieldBlue,
-                      onTap: () => context.go('/portal/customer/wallet'),
-                    ),
-                    WalletSummaryCard(
                       title: 'Visits',
                       value: '$upcomingVisits',
                       icon: Icons.calendar_month_outlined,
@@ -129,11 +116,11 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> {
                       onTap: () => context.go('/portal/customer/documents'),
                     ),
                     WalletSummaryCard(
-                      title: 'Points',
-                      value: '${pointsBalance.toStringAsFixed(0)} pts',
-                      icon: Icons.workspace_premium_outlined,
-                      color: AppColors.warning,
-                      onTap: () => context.go('/portal/customer/membership'),
+                      title: 'Updates',
+                      value: '$unreadNotificationCount',
+                      icon: Icons.notifications_none_rounded,
+                      color: AppColors.shieldLightBlue,
+                      onTap: () => context.go('/portal/customer/notifications'),
                     ),
                   ],
                 ),

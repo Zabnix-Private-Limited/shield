@@ -175,7 +175,9 @@ class _CustomerMainHeader extends StatelessWidget {
         // same horizontal row on narrow web viewports.
         final compact = constraints.maxWidth < 560;
         final dense = constraints.maxWidth < 520;
-        final iconOnly = constraints.maxWidth < 480;
+        // Keep the compact numeric totals visible on ordinary mobile widths.
+        // At this point the mark is already hidden, so 448px remains safe.
+        final iconOnly = constraints.maxWidth < 350;
         final controlSize = dense ? 40.0 : 48.0;
 
         return Row(
