@@ -5,6 +5,7 @@ describe('NotificationController customer scope', () => {
     notificationBelongsToCustomer: jest.fn(),
     markAsRead: jest.fn(),
     markAllAsRead: jest.fn(),
+    deactivateDeviceToken: jest.fn(),
   };
   const agentScope = {
     assertAgentCanAccessNotification: jest.fn(),
@@ -42,5 +43,16 @@ describe('NotificationController customer scope', () => {
     expect(notificationService.markAllAsRead).toHaveBeenCalledWith([11n]);
     expect(agentScope.assertAgentCanAccessCustomer).not.toHaveBeenCalled();
     expect(providerScope.assertProviderCanAccessCustomer).not.toHaveBeenCalled();
+  });
+
+  it('pins device-token deactivation to the authenticated customer', async () => {
+    notificationService.deactivateDeviceToken.mockResolvedValue({ count: 1 });
+
+    await controller.deactivateDeviceToken({ token: 'device-token' }, customer);
+
+    expect(notificationService.deactivateDeviceToken).toHaveBeenCalledWith(
+      'device-token',
+      11n,
+    );
   });
 });

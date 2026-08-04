@@ -9752,3 +9752,12 @@ Replaced the removed static Flutter carousel with a database-backed Operations c
   - `docs/CUSTOMER_UI_IMPLEMENTATION_STATUS.md` and `docs/customer-ui/CUSTOMER_UI_AUDIT.md`: record the live bulk-read implementation.
 - Why:
   - The backend already scopes the bulk operation to the authenticated customer; using it reduces requests and keeps the operation on its intended authorization path.
+## 294. Customer device-token isolation — 2026-08-04 21:00:00 IST
+- Backend Files:
+  - `backend/src/notification/notification.controller.ts`: a customer device-token deactivation now requires a valid authenticated customer context.
+  - `backend/src/notification/notification.service.ts`: customer deactivation updates include the customer ID in the database filter, preventing cross-customer token changes.
+  - `backend/src/notification/notification.controller.spec.ts`: verifies the deactivation call is pinned to the current customer.
+- Documentation Files:
+  - `docs/CUSTOMER_UI_API_BINDINGS.md`: records the customer-scoped device-token operation.
+- Why:
+  - Push tokens are customer-owned account data and must have the same database-enforced scope as other customer mutations.

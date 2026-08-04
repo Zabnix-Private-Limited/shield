@@ -166,9 +166,9 @@ export class NotificationService {
     });
   }
 
-  async deactivateDeviceToken(token: string) {
+  async deactivateDeviceToken(token: string, customerId?: bigint) {
     return this.prisma.devicePushToken.updateMany({
-      where: { token },
+      where: { token, ...(customerId == null ? {} : { customerId }) },
       data: {
         isActive: false,
         lastSeenAt: new Date(),

@@ -171,7 +171,10 @@ export class NotificationController {
 
   @RequirePermissions('notifications.update')
   @Post('device-token/deactivate')
-  async deactivateDeviceToken(@Body() body: any) {
+  async deactivateDeviceToken(
+    @Body() body: any,
+    @CurrentPrincipal() principal?: ShieldPrincipal,
+  ) {
     const token = (body.token ?? '').toString().trim();
     if (!token) {
       return {
@@ -180,7 +183,15 @@ export class NotificationController {
       };
     }
 
-    const result = await this.notificationService.deactivateDeviceToken(token);
+    if (principal?.principalType === 'CUSTOMER' && !principal.customerId) {
+      throw new ForbiddenException('Authenticated customer context is required.');
+    }
+    const result = await this.notificationService.deactivateDeviceToken(
+      token,
+      principal?.principalType === 'CUSTOMER'
+          ? BigInt(principal.customerId!)
+          : undefined,
+    );
     return {
       success: true,
       message: 'Device push token deactivated successfully',
