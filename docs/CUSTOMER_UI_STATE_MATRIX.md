@@ -6,8 +6,8 @@
 | Wallet | `WalletShimmer` | Zero ledger values/list empty | Retry `ErrorCard` | Per-customer wallet cache |
 | Membership | Membership skeleton | Pending/unissued membership state | Retry `ErrorCard` | Per-customer membership cache |
 | Visits | Section skeleton | Upcoming/history-specific empty state | Retry `ErrorCard` | Backend response only |
-| Documents | Skeleton | `No documents yet` | Retry state | Backend response only |
-| Prescriptions | Skeleton | `No prescriptions yet` | Retry state | Backend response only |
+| Documents | Skeleton | `No documents yet` | Retry state plus safe open/download failure feedback | Backend response only; document actions request a signed URL |
+| Prescriptions | Skeleton | `No prescriptions yet` | Retry state plus safe open/download failure feedback | Backend response only; document actions request a signed URL |
 | Activity Timeline | Progress indicator | `No activity yet` | Retry `ErrorCard` | Backend response only |
 | Alternative contacts | Inline progress indicator | `No alternative contacts added` | Inline retry; client validation and safe save/remove feedback | Backend response only |
 | Protected customer sections (appointments, documents, prescriptions) | Profile-access skeleton | Access rules/section empty states | `Access status unavailable` with retry | No shared fallback data |

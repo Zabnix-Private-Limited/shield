@@ -77,6 +77,10 @@ Future<void> showPortalDetailsSheet(
   required String meta,
   required String status,
   List<String> highlights = const [],
+  String? actionText,
+  VoidCallback? onAction,
+  String? secondaryActionText,
+  VoidCallback? onSecondaryAction,
 }) {
   return showModalBottomSheet<void>(
     context: context,
@@ -164,6 +168,19 @@ Future<void> showPortalDetailsSheet(
                 ),
               ],
               const SizedBox(height: 20),
+              if (actionText != null && onAction != null) ...[
+                AppButton(text: actionText, onPressed: onAction),
+                if (secondaryActionText != null &&
+                    onSecondaryAction != null) ...[
+                  const SizedBox(height: 10),
+                  AppButton(
+                    text: secondaryActionText,
+                    type: AppButtonType.outline,
+                    onPressed: onSecondaryAction,
+                  ),
+                ],
+                const SizedBox(height: 10),
+              ],
               AppButton(text: 'Close', onPressed: () => Navigator.pop(context)),
             ],
           ),

@@ -9937,3 +9937,12 @@ Replaced the removed static Flutter carousel with a database-backed Operations c
   - docs/CUSTOMER_UI_API_BINDINGS.md, docs/customer-ui/CUSTOMER_UI_AUDIT.md, and docs/CUSTOMER_UI_IMPLEMENTATION_STATUS.md record customer document ownership and signed-download behavior.
 - Why:
   - This clean entry corrects terminal-escaping characters in entry 315 without altering append-only project history. The customer document endpoints now prove ownership and return signed downloads rather than private storage paths, while the compact header remains usable at the reported viewport width.
+## 317. Customer signed document actions — 2026-08-04 22:21:00 IST
+- Frontend Files:
+  - frontend/lib/shared/widgets/portal_support.dart: adds optional primary and secondary actions to the existing detail sheet.
+  - frontend/lib/features/customer/documents/presentation/screens/customer_documents_screen.dart and frontend/lib/features/customer/prescriptions/presentation/screens/customer_prescriptions_screen.dart: open and download only after requesting the existing authenticated signed URL; failures stay generic.
+  - frontend/test/portal_support_test.dart: verifies both optional detail-sheet actions render and execute.
+- Documentation Files:
+  - docs/customer-ui/CUSTOMER_UI_AUDIT.md, docs/CUSTOMER_UI_IMPLEMENTATION_STATUS.md, and docs/CUSTOMER_UI_STATE_MATRIX.md record the signed open/download behavior.
+- Why:
+  - The backend already owns signed document access and the frontend already has a platform file-action adapter. Wiring those existing paths completes the supported customer viewer/download workflow without public storage paths or a new dependency.

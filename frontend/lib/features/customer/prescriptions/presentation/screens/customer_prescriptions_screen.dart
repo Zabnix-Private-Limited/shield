@@ -4,6 +4,7 @@ import '../../../../../app/theme/app_colors.dart';
 import '../../../../../app/theme/app_typography.dart';
 import '../../../../../shared/models/document.dart';
 import '../../../../../shared/services/api_service.dart';
+import '../../../../../shared/services/platform_file_actions.dart';
 import '../../../../../shared/widgets/app_card.dart';
 import '../../../../../shared/widgets/app_skeleton.dart';
 import '../../../../../shared/widgets/portal_support.dart';
@@ -39,6 +40,43 @@ class _CustomerPrescriptionsScreenState
               ),
           );
     });
+  }
+
+  Future<void> _openPrescription(Document prescription) async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final url = await ApiService.getDocumentDownloadUrl(prescription.id);
+      if (url.trim().isEmpty || !await openPlatformUrl(url)) {
+        throw StateError('Prescription link unavailable');
+      }
+    } catch (_) {
+      if (mounted) {
+        messenger.showSnackBar(
+          const SnackBar(
+            content: Text('We could not open that prescription right now.'),
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _downloadPrescription(Document prescription) async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final url = await ApiService.getDocumentDownloadUrl(prescription.id);
+      if (url.trim().isEmpty ||
+          !await downloadPlatformUrl(url, fileName: prescription.fileName)) {
+        throw StateError('Prescription link unavailable');
+      }
+    } catch (_) {
+      if (mounted) {
+        messenger.showSnackBar(
+          const SnackBar(
+            content: Text('We could not download that prescription right now.'),
+          ),
+        );
+      }
+    }
   }
 
   @override
@@ -153,6 +191,11 @@ class _CustomerPrescriptionsScreenState
                             .isNotEmpty)
                           'OCR preview: ${prescription.extractionPreview}',
                       ],
+                      actionText: 'Open secure prescription',
+                      onAction: () => _openPrescription(prescription),
+                      secondaryActionText: 'Download',
+                      onSecondaryAction: () =>
+                          _downloadPrescription(prescription),
                     ),
                     child: Row(
                       children: [

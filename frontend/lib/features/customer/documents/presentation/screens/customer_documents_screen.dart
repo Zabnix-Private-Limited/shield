@@ -4,6 +4,7 @@ import '../../../../../app/theme/app_colors.dart';
 import '../../../../../app/theme/app_typography.dart';
 import '../../../../../shared/models/document.dart';
 import '../../../../../shared/services/api_service.dart';
+import '../../../../../shared/services/platform_file_actions.dart';
 import '../../../../../shared/widgets/app_card.dart';
 import '../../../../../shared/widgets/app_skeleton.dart';
 import '../../../../../shared/widgets/portal_support.dart';
@@ -32,6 +33,43 @@ class _CustomerDocumentsScreenState extends State<CustomerDocumentsScreen> {
         ApiService.requireAuthenticatedCustomerId(),
       );
     });
+  }
+
+  Future<void> _openDocument(Document document) async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final url = await ApiService.getDocumentDownloadUrl(document.id);
+      if (url.trim().isEmpty || !await openPlatformUrl(url)) {
+        throw StateError('Document link unavailable');
+      }
+    } catch (_) {
+      if (mounted) {
+        messenger.showSnackBar(
+          const SnackBar(
+            content: Text('We could not open that document right now.'),
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _downloadDocument(Document document) async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final url = await ApiService.getDocumentDownloadUrl(document.id);
+      if (url.trim().isEmpty ||
+          !await downloadPlatformUrl(url, fileName: document.fileName)) {
+        throw StateError('Document link unavailable');
+      }
+    } catch (_) {
+      if (mounted) {
+        messenger.showSnackBar(
+          const SnackBar(
+            content: Text('We could not download that document right now.'),
+          ),
+        );
+      }
+    }
   }
 
   @override
@@ -155,6 +193,10 @@ class _CustomerDocumentsScreenState extends State<CustomerDocumentsScreen> {
                             .isNotEmpty)
                           'OCR preview: ${document.extractionPreview}',
                       ],
+                      actionText: 'Open secure document',
+                      onAction: () => _openDocument(document),
+                      secondaryActionText: 'Download',
+                      onSecondaryAction: () => _downloadDocument(document),
                     ),
                     child: Row(
                       children: [
