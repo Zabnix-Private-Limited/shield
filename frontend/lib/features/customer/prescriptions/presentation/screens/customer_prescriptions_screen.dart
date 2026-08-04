@@ -4,10 +4,10 @@ import '../../../../../app/theme/app_colors.dart';
 import '../../../../../app/theme/app_typography.dart';
 import '../../../../../shared/models/document.dart';
 import '../../../../../shared/services/api_service.dart';
-import '../../../../../shared/widgets/app_button.dart';
 import '../../../../../shared/widgets/app_card.dart';
 import '../../../../../shared/widgets/app_skeleton.dart';
 import '../../../../../shared/widgets/portal_support.dart';
+import '../../../shared/widgets/error_card.dart';
 
 class CustomerPrescriptionsScreen extends StatefulWidget {
   const CustomerPrescriptionsScreen({super.key});
@@ -55,20 +55,10 @@ class _CustomerPrescriptionsScreenState
         }
 
         if (snapshot.hasError) {
-          return AppCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Prescriptions unavailable', style: AppTypography.h4),
-                const SizedBox(height: 8),
-                Text(
-                  snapshot.error.toString(),
-                  style: AppTypography.small.copyWith(color: AppColors.gray),
-                ),
-                const SizedBox(height: 16),
-                AppButton(text: 'Retry', onPressed: _loadPrescriptions),
-              ],
-            ),
+          return ErrorCard(
+            title: 'Prescriptions unavailable',
+            message: 'Your prescription history could not be loaded.',
+            onRetry: () => setState(_loadPrescriptions),
           );
         }
 

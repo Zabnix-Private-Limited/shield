@@ -13,8 +13,8 @@ Last audited: 2026-08-04. The customer portal is protected by the customer JWT/s
 | `rewards` | `CustomerRewardPointsScreen` | `WalletRepository`, `GET /customer/wallet`, `REWARD_POINTS` ledger only | Live balance and activity are implemented; redemption/expiry require dedicated backend contracts |
 | `services` | Inline `_CustomerServicesView` | Live provider/profile APIs; `GET /customer/wellness-products` | Wellness catalogue is database-backed seeded demo data; laboratory/home-care and diet-plan catalogues remain unavailable until customer-safe contracts exist |
 | `appointments` | Inline `_CustomerAppointmentsView` | Appointment APIs | Customer owns only self-scoped list/read/cancel/reschedule actions; provider consultation and billing workflows are backend staff-only. Booking and visit-detail screens need feature extraction/visual redesign |
-| `documents` | `CustomerDocumentsScreen` | `GET /documents` | Upload/view/share and visual QA remain |
-| `prescriptions` | `CustomerPrescriptionsScreen` | Customer-scoped documents | Upload/viewer/pharmacy linkage refinement remains |
+| `documents` | `CustomerDocumentsScreen` | `GET /documents` | Customer-owned archive with loading, empty, and retryable generic failure states; upload/view/share and visual QA remain |
+| `prescriptions` | `CustomerPrescriptionsScreen` | Customer-scoped documents | Customer-owned prescription archive with loading, empty, and retryable generic failure states; upload/viewer/pharmacy linkage refinement remains |
 | `orders` | `CustomerOrdersScreen` | `GET /pharmacy/purchases?customer_id=` | Database-backed purchase history implemented; cart, checkout, tracking, return and refund APIs remain unavailable |
 | `referrals` | `CustomerReferralsScreen` | `GET /referrals/summary/:customerId` | Database-backed referral status/history implemented; share QR, creation, and activity-timeline APIs remain unavailable |
 | `notifications` | Inline `_CustomerNotificationsView` | `GET /notifications`, `POST /notifications/mark-all-read`; read mutations are ownership-scoped | Filter/read states are live; extract from the portal shell incrementally |

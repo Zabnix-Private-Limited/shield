@@ -9808,3 +9808,10 @@ Replaced the removed static Flutter carousel with a database-backed Operations c
   - `docs/CUSTOMER_UI_STATE_MATRIX.md`, `docs/CUSTOMER_UI_IMPLEMENTATION_STATUS.md`, and `docs/customer-ui/CUSTOMER_UI_AUDIT.md`: record the protected-route loading, error, and no-fallback-data behavior.
 - Why:
   - Protected routes require a verified customer access state. Failing visibly and retrying preserves authorization boundaries and avoids showing stale, shared, or fabricated account data.
+## 301. Safe customer document failure states — 2026-08-04 21:23:49 IST
+- Frontend Files:
+  - `frontend/lib/features/customer/documents/presentation/screens/customer_documents_screen.dart` and `frontend/lib/features/customer/prescriptions/presentation/screens/customer_prescriptions_screen.dart`: replace raw request-error text with the shared retryable customer error card.
+- Documentation Files:
+  - `docs/CUSTOMER_UI_IMPLEMENTATION_STATUS.md` and `docs/customer-ui/CUSTOMER_UI_AUDIT.md`: record the safe generic error behavior for customer-owned archives.
+- Why:
+  - A customer-facing archive should communicate a recoverable loading failure without leaking backend or transport details. The existing shared error component keeps the retry behavior and visual language consistent.
