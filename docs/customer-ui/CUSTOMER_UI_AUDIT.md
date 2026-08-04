@@ -17,7 +17,7 @@ Last audited: 2026-08-04. The customer portal is protected by the customer JWT/s
 | `prescriptions` | `CustomerPrescriptionsScreen` | Customer-scoped documents | Customer-owned prescription archive with loading, empty, and retryable generic failure states; upload/viewer/pharmacy linkage refinement remains |
 | `orders` | `CustomerOrdersScreen` | `GET /pharmacy/purchases?customer_id=` | Database-backed purchase history implemented; cart, checkout, tracking, return and refund APIs remain unavailable |
 | `referrals` | `CustomerReferralsScreen` | `GET /referrals/summary/:customerId` | Database-backed referral status/history implemented; share QR and referral creation APIs remain unavailable |
-| `activity` | `CustomerActivityScreen` | `GET /timeline/me` | Database-backed self timeline for membership, care, documents, wallet, and notifications; the endpoint takes no customer ID |
+| `activity` | `CustomerActivityScreen` | `GET /timeline/me` | Database-backed self timeline for membership, care, documents, wallet, and notifications; data-derived category filters; the endpoint takes no customer ID |
 | `notifications` | Inline `_CustomerNotificationsView` | `GET /notifications`, `POST /notifications/mark-all-read`; read mutations are ownership-scoped | Filter/read states are live; extract from the portal shell incrementally |
 | `profile`, `settings` | Inline portal views | Customer profile API/session; alternative-contact APIs | Profile edits, persisted alternative-contact list/add, policy, support, feedback and sign-out are live. Contact reads/writes are self-scoped; customer preference, PIN, and care-sharing contracts remain unavailable; family/contact screens need extraction |
 

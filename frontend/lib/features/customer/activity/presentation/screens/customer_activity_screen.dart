@@ -16,6 +16,7 @@ class CustomerActivityScreen extends StatefulWidget {
 
 class _CustomerActivityScreenState extends State<CustomerActivityScreen> {
   late Future<List<Map<String, dynamic>>> _timelineFuture;
+  String? _selectedCategory;
 
   @override
   void initState() {
@@ -44,6 +45,22 @@ class _CustomerActivityScreenState extends State<CustomerActivityScreen> {
         }
 
         final events = snapshot.data!;
+        final categories =
+            events
+                .map((event) => event['category']?.toString().trim() ?? '')
+                .where((category) => category.isNotEmpty)
+                .toSet()
+                .toList()
+              ..sort();
+        final visibleEvents = _selectedCategory == null
+            ? events
+            : events
+                  .where(
+                    (event) =>
+                        event['category']?.toString().toUpperCase() ==
+                        _selectedCategory,
+                  )
+                  .toList();
         return RefreshIndicator(
           onRefresh: () async => setState(_loadTimeline),
           color: AppColors.shieldBlue,
@@ -55,17 +72,73 @@ class _CustomerActivityScreenState extends State<CustomerActivityScreen> {
               : ListView.separated(
                   physics: const AlwaysScrollableScrollPhysics(),
                   padding: EdgeInsets.zero,
-                  itemCount: events.length + 1,
+                  itemCount:
+                      2 + (visibleEvents.isEmpty ? 1 : visibleEvents.length),
                   separatorBuilder: (_, __) => const SizedBox(height: 10),
                   itemBuilder: (context, index) {
                     if (index == 0) return const _ActivityIntro();
-                    return _ActivityEventCard(event: events[index - 1]);
+                    if (index == 1) {
+                      return _ActivityFilters(
+                        categories: categories,
+                        selectedCategory: _selectedCategory,
+                        onSelected: (category) =>
+                            setState(() => _selectedCategory = category),
+                      );
+                    }
+                    if (visibleEvents.isEmpty) {
+                      return const _ActivityFilteredEmptyState();
+                    }
+                    return _ActivityEventCard(event: visibleEvents[index - 2]);
                   },
                 ),
         );
       },
     );
   }
+}
+
+class _ActivityFilters extends StatelessWidget {
+  const _ActivityFilters({
+    required this.categories,
+    required this.selectedCategory,
+    required this.onSelected,
+  });
+
+  final List<String> categories;
+  final String? selectedCategory;
+  final ValueChanged<String?> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        ChoiceChip(
+          label: const Text('All'),
+          selected: selectedCategory == null,
+          onSelected: (_) => onSelected(null),
+        ),
+        ...categories.map(
+          (category) => ChoiceChip(
+            label: Text(_displayCategory(category)),
+            selected: selectedCategory == category.toUpperCase(),
+            onSelected: (_) => onSelected(category.toUpperCase()),
+          ),
+        ),
+      ],
+    );
+  }
+
+  String _displayCategory(String value) => value
+      .toLowerCase()
+      .split('_')
+      .map(
+        (part) => part.isEmpty
+            ? part
+            : '${part[0].toUpperCase()}${part.substring(1)}',
+      )
+      .join(' ');
 }
 
 class _ActivityIntro extends StatelessWidget {
@@ -132,6 +205,21 @@ class _ActivityEmptyState extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _ActivityFilteredEmptyState extends StatelessWidget {
+  const _ActivityFilteredEmptyState();
+
+  @override
+  Widget build(BuildContext context) {
+    return const AppCard(
+      child: Text(
+        'No activity matches this filter.',
+        style: AppTypography.body,
+        textAlign: TextAlign.center,
       ),
     );
   }

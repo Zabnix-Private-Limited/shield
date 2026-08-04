@@ -9857,3 +9857,10 @@ Replaced the removed static Flutter carousel with a database-backed Operations c
   - `docs/CUSTOMER_UI_API_BINDINGS.md`, `docs/CUSTOMER_UI_STATE_MATRIX.md`, `docs/CUSTOMER_UI_IMPLEMENTATION_STATUS.md`, and `docs/customer-ui/CUSTOMER_UI_AUDIT.md`: record the supported list/add contract and states.
 - Why:
   - The existing write endpoint alone could not provide a reliable customer view after refresh. Reusing the schema-backed contact table completes the self-scoped read/write flow without mock state or a schema migration.
+## 307. Customer timeline category filters — 2026-08-04 21:42:41 IST
+- Frontend Files:
+  - `frontend/lib/features/customer/activity/presentation/screens/customer_activity_screen.dart`: adds client-side category filters over the authenticated API response and a distinct filtered-empty state.
+- Documentation Files:
+  - `docs/CUSTOMER_UI_IMPLEMENTATION_STATUS.md` and `docs/customer-ui/CUSTOMER_UI_AUDIT.md`: record the data-derived filter behavior.
+- Why:
+  - Timeline categories already come from the database-backed API. Filtering them locally needs no speculative server query contract and keeps the complete customer event set within the existing self-only response.
