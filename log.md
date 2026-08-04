@@ -9761,3 +9761,13 @@ Replaced the removed static Flutter carousel with a database-backed Operations c
   - `docs/CUSTOMER_UI_API_BINDINGS.md`: records the customer-scoped device-token operation.
 - Why:
   - Push tokens are customer-owned account data and must have the same database-enforced scope as other customer mutations.
+## 295. Database-backed customer order history — 2026-08-04 21:05:00 IST
+- Frontend Files:
+  - `frontend/lib/features/customer/orders/domain/customer_order_summary.dart`: maps the existing purchase response into a customer read model without inventing commerce fields.
+  - `frontend/lib/features/customer/orders/presentation/screens/customer_orders_screen.dart`: adds customer-scoped purchase history with loading, empty, retry, and refresh states.
+  - `frontend/lib/features/portal/presentation/portal_role_data.dart` and `frontend/lib/features/portal/presentation/screens/portal_shell.dart`: add the My Orders route to the customer Commerce drawer group and render it in the shared shell.
+  - `frontend/test/customer_order_summary_test.dart`: verifies the returned purchase fields are mapped for display.
+- Documentation Files:
+  - `docs/CUSTOMER_UI_API_BINDINGS.md`, `docs/CUSTOMER_UI_IMPLEMENTATION_STATUS.md`, `docs/customer-ui/CUSTOMER_UI_AUDIT.md`, and `docs/CUSTOMER_UI_VISUAL_QA.md`: record the supported order-history boundary and remaining unsupported commerce operations.
+- Why:
+  - The backend already provides scoped purchase history, while customer cart and checkout APIs do not exist. The UI exposes the supported read workflow without simulating an order pipeline.

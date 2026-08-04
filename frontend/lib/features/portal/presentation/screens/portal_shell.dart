@@ -18,6 +18,7 @@ import '../../../customer/dashboard/presentation/screens/dashboard_screen.dart';
 import '../../../customer/documents/presentation/screens/customer_documents_screen.dart';
 import '../../../customer/membership/presentation/screens/membership_screen.dart';
 import '../../../customer/membership/presentation/screens/privilege_card_screen.dart';
+import '../../../customer/orders/presentation/screens/customer_orders_screen.dart';
 import '../../../customer/prescriptions/presentation/screens/customer_prescriptions_screen.dart';
 import '../../../customer/shared/domain/customer_access_state.dart';
 import '../../../customer/wallet/presentation/screens/wallet_screen.dart';
@@ -395,6 +396,8 @@ IconData _portalSectionIcon(String key) {
       return Icons.account_balance_wallet_outlined;
     case 'services':
       return Icons.medical_services_outlined;
+    case 'orders':
+      return Icons.shopping_bag_outlined;
     case 'appointments':
     case 'book-appointment':
       return Icons.event_note_outlined;
@@ -515,6 +518,8 @@ class _RoleContent extends StatelessWidget {
         portal.role == SHIELDRole.customer && section.key == 'privilege-card';
     final isCustomerServices =
         portal.role == SHIELDRole.customer && section.key == 'services';
+    final isCustomerOrders =
+        portal.role == SHIELDRole.customer && section.key == 'orders';
     final isCustomerAppointments =
         portal.role == SHIELDRole.customer && section.key == 'appointments';
     final isCustomerNotifications =
@@ -565,6 +570,8 @@ class _RoleContent extends StatelessWidget {
       content = const CustomerPrivilegeCardScreen();
     } else if (isCustomerServices) {
       content = const _CustomerServicesView();
+    } else if (isCustomerOrders) {
+      content = const CustomerOrdersScreen();
     } else if (isCustomerAppointments) {
       content = _CustomerProtectedSection(
         sectionKey: section.key,
@@ -616,7 +623,8 @@ class _RoleContent extends StatelessWidget {
         isCustomerPrivilegeCard ||
         isCustomerWallet ||
         isCustomerWalletHistory ||
-        isCustomerRewards;
+        isCustomerRewards ||
+        isCustomerOrders;
 
     if (portal.role == SHIELDRole.customer && customerContentOwnsScroll) {
       return AppPageFrame(
@@ -1031,6 +1039,7 @@ class _CustomerPortalNav extends StatelessWidget {
       'documents',
       'prescriptions',
     ]),
+    MapEntry('Commerce', ['orders']),
     MapEntry('Account', ['profile', 'notifications', 'settings']),
   ];
 

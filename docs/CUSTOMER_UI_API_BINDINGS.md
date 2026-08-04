@@ -13,6 +13,7 @@
 | Referrals | `GET /referrals/tree/:customerId`, `GET /referrals/summary/:customerId` | `ApiService` | Customer requests must use the authenticated customer ID; cross-customer referral requests are rejected |
 | Purchases | `GET /pharmacy/purchases?customer_id=` | `ApiService` | Customer-scoped order history; customer UI incomplete |
 | Wellness catalogue | `GET /customer/wellness-products` | `ApiService.getCustomerWellnessProducts` / customer Services | Authenticated customer only; returns only `is_demo_available=true`, `status=DEMO` seeded records |
+| My Orders | `GET /pharmacy/purchases?customer_id=` | `ApiService.getCustomerPurchases` / `CustomerOrdersScreen` | Customer ID is verified against the authenticated customer by the backend; read-only purchase history only |
 | Appointments | `GET/POST /appointments`, `GET /appointments/:id`, cancellation/reschedule endpoints | `ApiService` | Customer principal is forced to self context; read/cancel/reschedule require appointment ownership. Consultation, billing, invoice, and prescription endpoints are staff-only. |
 
 Do not expose `SHIELD_BENEFIT` as cash. Do not replace these APIs with Flutter lists. Operations banners, catalogue/cart presentation, and full card lifecycle require verified backend contracts before UI implementation.

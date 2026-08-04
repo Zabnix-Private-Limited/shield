@@ -15,7 +15,7 @@ Last audited: 2026-08-04. The customer portal is protected by the customer JWT/s
 | `appointments` | Inline `_CustomerAppointmentsView` | Appointment APIs | Customer owns only self-scoped list/read/cancel/reschedule actions; provider consultation and billing workflows are backend staff-only. Booking and visit-detail screens need feature extraction/visual redesign |
 | `documents` | `CustomerDocumentsScreen` | `GET /documents` | Upload/view/share and visual QA remain |
 | `prescriptions` | `CustomerPrescriptionsScreen` | Customer-scoped documents | Upload/viewer/pharmacy linkage refinement remains |
-| shop/cart/orders | No customer feature routes | `GET /wellness/products`, purchases API exists | Database-backed catalogue/cart/order UI missing |
+| `orders` | `CustomerOrdersScreen` | `GET /pharmacy/purchases?customer_id=` | Database-backed purchase history implemented; cart, checkout, tracking, return and refund APIs remain unavailable |
 | referral/activity | No dedicated customer routes | Referral tree and summary endpoints enforce customer ownership | Customer APIs and screens missing |
 | `notifications` | Inline `_CustomerNotificationsView` | `GET /notifications`, `POST /notifications/mark-all-read`; read mutations are ownership-scoped | Filter/read states are live; extract from the portal shell incrementally |
 | `profile`, `settings` | Inline portal views | Customer profile API/session | Family, contacts, privacy, security and support screens need extraction |
