@@ -9979,3 +9979,9 @@ Replaced the removed static Flutter carousel with a database-backed Operations c
   - docs/CUSTOMER_UI_IMPLEMENTATION_STATUS.md records the narrow-header and failure-state coverage.
 - Why:
   - The prior live RenderFlex error occurred in the shared header. A small widget regression test now protects the dense responsive branch rather than relying only on static analysis.
+
+## 322. Customer browser visual-QA evidence — 2026-08-04 22:54:00 IST
+- Documentation Files:
+  - docs/CUSTOMER_UI_VISUAL_QA.md records the reachable localhost:53431 browser check at 480 by 800 and its blank Flutter surface result; it does not represent that attempt as authenticated visual proof.
+- Why:
+  - Runtime visual QA needs an actual rendered customer route. The local server responded, but Chrome showed no application content or console errors, so a project screenshot artifact would be misleading.
