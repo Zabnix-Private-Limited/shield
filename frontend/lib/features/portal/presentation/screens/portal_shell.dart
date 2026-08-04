@@ -4503,18 +4503,8 @@ class _KpiTile extends StatelessWidget {
   }
 }
 
-class _CustomerSettingsView extends StatefulWidget {
+class _CustomerSettingsView extends StatelessWidget {
   const _CustomerSettingsView();
-
-  @override
-  State<_CustomerSettingsView> createState() => _CustomerSettingsViewState();
-}
-
-class _CustomerSettingsViewState extends State<_CustomerSettingsView> {
-  bool _pushAlerts = true;
-  bool _smsAlerts = true;
-  bool _walletUpdates = true;
-  bool _sharedCare = true;
 
   @override
   Widget build(BuildContext context) {
@@ -4562,22 +4552,10 @@ class _CustomerSettingsViewState extends State<_CustomerSettingsView> {
               Wrap(
                 spacing: 10,
                 runSpacing: 10,
-                children: [
+                children: const [
                   _StatusPill(
-                    label: _pushAlerts ? 'Push alerts on' : 'Push alerts off',
-                    color: _pushAlerts ? AppColors.shieldBlue : AppColors.gray,
-                  ),
-                  _StatusPill(
-                    label: _sharedCare
-                        ? 'Shared care enabled'
-                        : 'Private profile',
-                    color: _sharedCare
-                        ? AppColors.shieldGreen
-                        : AppColors.error,
-                  ),
-                  const _StatusPill(
-                    label: 'Device secured',
-                    color: AppColors.shieldNavy,
+                    label: 'Preferences unavailable',
+                    color: AppColors.gray,
                   ),
                 ],
               ),
@@ -4586,52 +4564,28 @@ class _CustomerSettingsViewState extends State<_CustomerSettingsView> {
         ),
         const SizedBox(height: 18),
         _SettingsGroupCard(
-          title: 'Notifications',
-          subtitle: 'Choose how SHIELD reaches you.',
-          children: [
-            _CompactSettingToggle(
-              icon: Icons.notifications_active_outlined,
-              title: 'Push alerts',
-              subtitle: 'Appointments, wallet credits, and reminders',
-              value: _pushAlerts,
-              onChanged: (value) => setState(() => _pushAlerts = value),
-            ),
-            _CompactSettingToggle(
-              icon: Icons.sms_outlined,
-              title: 'SMS alerts',
-              subtitle: 'OTP and time-sensitive updates',
-              value: _smsAlerts,
-              onChanged: (value) => setState(() => _smsAlerts = value),
-            ),
-            _CompactSettingToggle(
-              icon: Icons.account_balance_wallet_outlined,
-              title: 'Wallet updates',
-              subtitle: 'Recharge, spend, and points changes',
-              value: _walletUpdates,
-              onChanged: (value) => setState(() => _walletUpdates = value),
+          title: 'Notification preferences',
+          subtitle:
+              'Customer preference controls are not yet backed by a SHIELD API.',
+          children: const [
+            _CompactSettingAction(
+              icon: Icons.info_outline_rounded,
+              title: 'Preferences unavailable',
+              subtitle:
+                  'Push, SMS, wallet, and care-sharing preferences will appear when the customer settings contract is available.',
             ),
           ],
         ),
         const SizedBox(height: 16),
         _SettingsGroupCard(
           title: 'Privacy and care',
-          subtitle: 'Manage profile sharing and healthcare access.',
+          subtitle: 'Manage the currently supported account information.',
           children: [
-            _CompactSettingToggle(
-              icon: Icons.health_and_safety_outlined,
-              title: 'Shared care profile',
-              subtitle: 'Allow approved providers to view linked records',
-              value: _sharedCare,
-              onChanged: (value) => setState(() => _sharedCare = value),
-            ),
-            _CompactSettingAction(
+            const _CompactSettingAction(
               icon: Icons.lock_outline,
-              title: 'Change app PIN',
-              subtitle: 'Update your local access code',
-              onTap: () => showPortalSnackBar(
-                context,
-                'PIN change is not available in this version.',
-              ),
+              title: 'Security preferences unavailable',
+              subtitle:
+                  'PIN changes and care-sharing controls need a customer-safe backend contract.',
             ),
             _CompactSettingAction(
               icon: Icons.badge_outlined,
@@ -5713,82 +5667,18 @@ class _SettingsGroupCard extends StatelessWidget {
   }
 }
 
-class _CompactSettingToggle extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final bool value;
-  final ValueChanged<bool> onChanged;
-
-  const _CompactSettingToggle({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-    required this.value,
-    required this.onChanged,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppColors.lightGray,
-        borderRadius: BorderRadius.circular(18),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 42,
-            height: 42,
-            decoration: BoxDecoration(
-              color: AppColors.white,
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: Icon(icon, color: AppColors.shieldBlue, size: 20),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: AppTypography.body.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  subtitle,
-                  style: AppTypography.tiny.copyWith(color: AppColors.gray),
-                ),
-              ],
-            ),
-          ),
-          Switch(
-            value: value,
-            onChanged: onChanged,
-            activeThumbColor: AppColors.shieldBlue,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class _CompactSettingAction extends StatelessWidget {
   final IconData icon;
   final String title;
   final String subtitle;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
   final bool destructive;
 
   const _CompactSettingAction({
     required this.icon,
     required this.title,
     required this.subtitle,
-    required this.onTap,
+    this.onTap,
     this.destructive = false,
   });
 
@@ -5836,7 +5726,7 @@ class _CompactSettingAction extends StatelessWidget {
                 ],
               ),
             ),
-            Icon(Icons.chevron_right_rounded, color: accent),
+            if (onTap != null) Icon(Icons.chevron_right_rounded, color: accent),
           ],
         ),
       ),

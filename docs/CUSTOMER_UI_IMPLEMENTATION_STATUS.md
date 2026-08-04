@@ -20,6 +20,7 @@ Completed:
 - Customer Notifications now uses the authenticated bulk-read endpoint instead of issuing one mutation per unread record.
 - My Orders is now a customer-scoped, read-only pharmacy purchase-history route with loading, empty, error/retry, and refresh states. Customer cart, checkout, tracking, returns, and payments remain unavailable because no verified customer contracts exist.
 - Referral & Rewards now presents the authenticated customer’s referral code, counts, available points, and backend referral lifecycle history. QR sharing and referral creation remain unavailable because no customer-safe contract exists.
+- Customer Settings no longer presents local-only notification, privacy, wallet, or PIN controls as saved preferences. Supported profile, policy, support, feedback, and sign-out actions remain available.
 
 Not complete:
 

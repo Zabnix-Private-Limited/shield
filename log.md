@@ -9794,3 +9794,10 @@ Replaced the removed static Flutter carousel with a database-backed Operations c
   - `docs/CUSTOMER_UI_API_BINDINGS.md`: records the fail-closed customer context requirement.
 - Why:
   - Customer purchase history is scoped data; an incomplete authenticated context must fail explicitly rather than degrade into a server error.
+## 299. Customer settings contract correction — 2026-08-04 21:21:00 IST
+- Frontend Files:
+  - `frontend/lib/features/portal/presentation/screens/portal_shell.dart`: removed local-only notification, wallet, privacy, care-sharing, and PIN toggles from customer Settings. Unsupported preference controls now render as unavailable and non-interactive; live profile, policy, support, feedback, and sign-out actions remain.
+- Documentation Files:
+  - `docs/CUSTOMER_UI_IMPLEMENTATION_STATUS.md` and `docs/customer-ui/CUSTOMER_UI_AUDIT.md`: document the supported account settings boundary and missing customer preference contracts.
+- Why:
+  - Customer settings must not imply a preference was persisted when the backend has no customer preference API.
