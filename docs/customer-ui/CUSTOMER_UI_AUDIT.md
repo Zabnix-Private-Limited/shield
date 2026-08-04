@@ -2,6 +2,8 @@
 
 Last audited: 2026-08-04. The customer portal is protected by the customer JWT/session and rendered through `/portal/customer/:section`.
 
+Route-level and membership/card screen manifests are maintained in `CUSTOMER_UI_ROUTE_INVENTORY.md` and `CUSTOMER_UI_SCREEN_MANIFEST.md`.
+
 | Route/section | Current screen | Binding | Redesign/gap |
 |---|---|---|---|
 | `/customer/login`, `/otp`, `/register` | Customer auth screens | Firebase phone OTP + customer auth repository | Visual alignment and auth-state QA remain |

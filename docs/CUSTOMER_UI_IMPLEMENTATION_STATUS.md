@@ -46,6 +46,7 @@ Completed:
 - Privilege Card now exposes a retryable physical-card-status failure state instead of silently hiding the supported request/status panel when its API is unavailable.
 - Membership widget coverage now verifies that the persisted screen displays its loading skeleton until the API resolves, distinct from populated and unavailable states.
 - Customer header coverage now verifies the reported 448px width inside the real customer-scaffold SafeArea constraint, not only as a standalone app bar.
+- Added the customer route inventory and membership/card screen manifest so supported routes and deliberately unavailable customer workflows are explicit.
 
 Not complete:
 

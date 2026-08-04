@@ -10085,3 +10085,11 @@ Replaced the removed static Flutter carousel with a database-backed Operations c
   - docs/CUSTOMER_UI_IMPLEMENTATION_STATUS.md and docs/CUSTOMER_UI_VISUAL_QA.md: record the exact layout regression evidence and pending authenticated screenshot.
 - Why:
   - The runtime trace constrained the app-bar child to 52px after SafeArea. Testing the standalone app bar alone could not prove the deployed scaffold geometry fits.
+
+## 335. Customer route and membership screen manifest — 2026-08-05 00:44:00 IST
+- Documentation Files:
+  - docs/customer-ui/CUSTOMER_UI_ROUTE_INVENTORY.md: indexes each registered customer section to its actual API contract and supported state.
+  - docs/customer-ui/CUSTOMER_UI_SCREEN_MANIFEST.md: records membership/card scope, states, components, responsive behavior, and test coverage.
+  - docs/customer-ui/CUSTOMER_UI_AUDIT.md and docs/CUSTOMER_UI_IMPLEMENTATION_STATUS.md: link the new source-of-truth inventory.
+- Why:
+  - Customer-safe routes and staff-only/unsupported lifecycle work must be distinguishable before further UI redesign, preventing a management-demo entitlement endpoint from being adopted by the customer app.
