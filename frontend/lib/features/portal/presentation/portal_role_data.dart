@@ -286,6 +286,7 @@ PortalRoleData portalDataForRole(SHIELDRole role) {
           _PortalSectionFactory.customerRewards,
           _PortalSectionFactory.customerServices,
           _PortalSectionFactory.customerOrders,
+          _PortalSectionFactory.customerReferrals,
           _PortalSectionFactory.customerAppointments,
           _PortalSectionFactory.customerDocuments,
           _PortalSectionFactory.customerProfile,
@@ -624,6 +625,12 @@ class _PortalSectionFactory {
     'orders',
     title: 'My Orders',
     summary: 'Customer-scoped pharmacy purchase history.',
+  );
+
+  static final PortalSectionData customerReferrals = _section(
+    'referrals',
+    title: 'Referral & Rewards',
+    summary: 'Customer referral lifecycle and reward status.',
   );
 
   static final PortalSectionData customerAppointments = _section(

@@ -127,7 +127,7 @@ class PortalResolver {
       case 'performance':
         return role == SHIELDRole.agent;
       case 'referrals':
-        return role == SHIELDRole.agent;
+        return role == SHIELDRole.customer || role == SHIELDRole.agent;
       case 'reports':
         return role == SHIELDRole.agent || role == SHIELDRole.manager;
       default:

@@ -11,6 +11,7 @@
 | Documents | `GET /documents?customer_id=` | `ApiService` | Customer-scoped archive |
 | Notifications | `GET /notifications?customer_id=`, `POST /notifications/:id/read`, `POST /notifications/mark-all-read`, `POST /notifications/device-token/deactivate` | `ApiService` | Customer list, individual/bulk read, and device-token deactivation actions are pinned to the authenticated customer |
 | Referrals | `GET /referrals/tree/:customerId`, `GET /referrals/summary/:customerId` | `ApiService` | Customer requests must use the authenticated customer ID; cross-customer referral requests are rejected |
+| Referral & Rewards | `GET /referrals/summary/:customerId` | `ApiService.getReferralSummary` / `CustomerReferralsScreen` | Read-only referral code, counts, available points, and delayed-lifecycle history for the authenticated customer |
 | Purchases | `GET /pharmacy/purchases?customer_id=` | `ApiService` | Customer-scoped order history; customer UI incomplete |
 | Wellness catalogue | `GET /customer/wellness-products` | `ApiService.getCustomerWellnessProducts` / customer Services | Authenticated customer only; returns only `is_demo_available=true`, `status=DEMO` seeded records |
 | My Orders | `GET /pharmacy/purchases?customer_id=` | `ApiService.getCustomerPurchases` / `CustomerOrdersScreen` | Customer ID is verified against the authenticated customer by the backend; read-only purchase history only |

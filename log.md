@@ -9776,3 +9776,13 @@ Replaced the removed static Flutter carousel with a database-backed Operations c
   - `frontend/lib/shared/services/portal_resolver.dart`: permits authenticated customers to resolve the supported `orders` portal section.
 - Why:
   - A customer route must be allowed by the shared resolver as well as registered in the shell; otherwise the database-backed screen is not reachable through normal navigation.
+## 297. Database-backed customer referral status — 2026-08-04 21:12:00 IST
+- Frontend Files:
+  - `frontend/lib/features/customer/referrals/domain/customer_referral_summary.dart`: maps the existing referral summary and delayed lifecycle events without assigning or converting rewards locally.
+  - `frontend/lib/features/customer/referrals/presentation/screens/customer_referrals_screen.dart`: adds a customer referral status view with loading, empty, retry, and refresh states.
+  - `frontend/lib/features/portal/presentation/portal_role_data.dart`, `frontend/lib/features/portal/presentation/screens/portal_shell.dart`, and `frontend/lib/shared/services/portal_resolver.dart`: expose the Referral & Rewards route in the customer engagement navigation while preserving the agent referral route.
+  - `frontend/test/customer_referral_summary_test.dart`: verifies API response mapping for referral status history.
+- Documentation Files:
+  - `docs/CUSTOMER_UI_API_BINDINGS.md`, `docs/CUSTOMER_UI_IMPLEMENTATION_STATUS.md`, `docs/customer-ui/CUSTOMER_UI_AUDIT.md`, and `docs/CUSTOMER_UI_VISUAL_QA.md`: record the supported referral scope and unavailable share/create operations.
+- Why:
+  - Existing customer-safe read contracts support status visibility, but not customer referral creation, QR sharing, or immediate reward actions.

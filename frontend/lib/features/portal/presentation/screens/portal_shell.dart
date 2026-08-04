@@ -19,6 +19,7 @@ import '../../../customer/documents/presentation/screens/customer_documents_scre
 import '../../../customer/membership/presentation/screens/membership_screen.dart';
 import '../../../customer/membership/presentation/screens/privilege_card_screen.dart';
 import '../../../customer/orders/presentation/screens/customer_orders_screen.dart';
+import '../../../customer/referrals/presentation/screens/customer_referrals_screen.dart';
 import '../../../customer/prescriptions/presentation/screens/customer_prescriptions_screen.dart';
 import '../../../customer/shared/domain/customer_access_state.dart';
 import '../../../customer/wallet/presentation/screens/wallet_screen.dart';
@@ -398,6 +399,8 @@ IconData _portalSectionIcon(String key) {
       return Icons.medical_services_outlined;
     case 'orders':
       return Icons.shopping_bag_outlined;
+    case 'referrals':
+      return Icons.account_tree_outlined;
     case 'appointments':
     case 'book-appointment':
       return Icons.event_note_outlined;
@@ -465,8 +468,6 @@ IconData _portalSectionIcon(String key) {
       return Icons.event_available_outlined;
     case 'rewards':
       return Icons.stars_outlined;
-    case 'referrals':
-      return Icons.account_tree_outlined;
     case 'followups':
       return Icons.call_outlined;
     case 'providers':
@@ -520,6 +521,8 @@ class _RoleContent extends StatelessWidget {
         portal.role == SHIELDRole.customer && section.key == 'services';
     final isCustomerOrders =
         portal.role == SHIELDRole.customer && section.key == 'orders';
+    final isCustomerReferrals =
+        portal.role == SHIELDRole.customer && section.key == 'referrals';
     final isCustomerAppointments =
         portal.role == SHIELDRole.customer && section.key == 'appointments';
     final isCustomerNotifications =
@@ -572,6 +575,8 @@ class _RoleContent extends StatelessWidget {
       content = const _CustomerServicesView();
     } else if (isCustomerOrders) {
       content = const CustomerOrdersScreen();
+    } else if (isCustomerReferrals) {
+      content = const CustomerReferralsScreen();
     } else if (isCustomerAppointments) {
       content = _CustomerProtectedSection(
         sectionKey: section.key,
@@ -624,7 +629,8 @@ class _RoleContent extends StatelessWidget {
         isCustomerWallet ||
         isCustomerWalletHistory ||
         isCustomerRewards ||
-        isCustomerOrders;
+        isCustomerOrders ||
+        isCustomerReferrals;
 
     if (portal.role == SHIELDRole.customer && customerContentOwnsScroll) {
       return AppPageFrame(
@@ -1040,7 +1046,8 @@ class _CustomerPortalNav extends StatelessWidget {
       'prescriptions',
     ]),
     MapEntry('Commerce', ['orders']),
-    MapEntry('Account', ['profile', 'notifications', 'settings']),
+    MapEntry('Engagement', ['referrals', 'notifications']),
+    MapEntry('Account', ['profile', 'settings']),
   ];
 
   @override
