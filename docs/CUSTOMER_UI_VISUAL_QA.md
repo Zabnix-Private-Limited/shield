@@ -6,6 +6,7 @@ Reference images were inspected from `Design reference/`; they are visual refere
 
 - Shared customer header: targeted static analysis passed.
 - Dashboard membership-first hierarchy: targeted static analysis passed.
+- 2026-08-04 local web capture attempt: `flutter run -d chrome --web-port 5353` remained in startup/build state and did not expose the local port after a short wait. No screenshot was captured or claimed.
 
 ## Remaining visual evidence
 

@@ -9905,3 +9905,8 @@ Replaced the removed static Flutter carousel with a database-backed Operations c
   - `docs/CUSTOMER_UI_API_BINDINGS.md`, `docs/CUSTOMER_UI_STATE_MATRIX.md`, `docs/CUSTOMER_UI_IMPLEMENTATION_STATUS.md`, and `docs/customer-ui/CUSTOMER_UI_AUDIT.md`: record the supported removal contract and states.
 - Why:
   - A saved alternative contact needs a reversible, explicit management flow. Customer and contact scopes are enforced server-side rather than trusting the displayed Flutter list.
+## 313. Customer visual-QA capture attempt — 2026-08-04 22:00:50 IST
+- Documentation Files:
+  - `docs/CUSTOMER_UI_VISUAL_QA.md`: records the local Flutter web capture attempt and the absence of a served local port; no screenshot is represented as captured.
+- Why:
+  - Visual QA must distinguish actual rendered evidence from static checks. The app did not become reachable at the requested local port during this attempt, so device/browser capture remains an explicit pending gate.
