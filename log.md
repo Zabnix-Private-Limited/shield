@@ -10126,3 +10126,11 @@ Replaced the removed static Flutter carousel with a database-backed Operations c
   - docs/customer-ui/CUSTOMER_UI_ACCESSIBILITY_CHECKLIST.md: records completed baseline checks and remaining authenticated device accessibility verification.
 - Why:
   - Customer screen work now has one reusable visual/accessibility source rather than duplicating presentation rules in feature modules.
+
+## 340. Remove unreachable customer care mocks — 2026-08-05 01:36:00 IST
+- Frontend Files:
+  - frontend/lib/features/portal/presentation/screens/portal_shell.dart: removes dead empty-list lab/home-care cards and local success snackbars that could not represent a persisted customer workflow.
+- Documentation Files:
+  - docs/customer-ui/CUSTOMER_UI_AUDIT.md and docs/CUSTOMER_UI_IMPLEMENTATION_STATUS.md: record the retained explicit unavailable states.
+- Why:
+  - There is no customer-safe laboratory or home-care catalogue/request contract. Keeping unreachable local request code invites a fake workflow when data is later introduced.

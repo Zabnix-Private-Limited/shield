@@ -51,6 +51,7 @@ Completed:
 - Consultation provider loading now distinguishes a retryable provider API failure from a genuine empty provider list.
 - Added the customer API-binding and state-matrix references to make scope, empty, and error semantics explicit across the redesign.
 - Added the shared customer design-token, component, and accessibility references for consistent follow-on feature work.
+- Removed unreachable local lab/home-care request snippets; unavailable catalogue states remain explicit until the backend provides customer-safe contracts.
 
 Not complete:
 

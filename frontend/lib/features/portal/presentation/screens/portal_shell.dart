@@ -7468,8 +7468,6 @@ class _CustomerServicesViewState extends State<_CustomerServicesView> {
   }
 
   Widget _buildLabContent() {
-    const labTests = <Map<String, String>>[];
-
     return Column(
       key: const ValueKey('LAB_VIEW'),
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -7480,89 +7478,11 @@ class _CustomerServicesViewState extends State<_CustomerServicesView> {
           'A customer-safe laboratory catalogue is not configured yet.',
           style: AppTypography.small.copyWith(color: AppColors.gray),
         ),
-        ...labTests.map((test) {
-          return Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: AppCard(
-              padding: const EdgeInsets.all(16),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: AppColors.shieldBlue.withValues(alpha: 0.08),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: const Icon(
-                      Icons.science_outlined,
-                      color: AppColors.shieldBlue,
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          test['name']!,
-                          style: AppTypography.body.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          test['time']!,
-                          style: AppTypography.tiny.copyWith(
-                            color: AppColors.gray,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Text(
-                        test['price']!,
-                        style: AppTypography.body.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.shieldNavy,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.shieldBlue,
-                          foregroundColor: AppColors.white,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 14,
-                            vertical: 8,
-                          ),
-                          minimumSize: Size.zero,
-                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        ),
-                        onPressed: () {
-                          showPortalSnackBar(
-                            context,
-                            'Requested ${test['name']}. Our lab coordinator will contact you.',
-                          );
-                        },
-                        child: const Text('Book Test'),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          );
-        }),
       ],
     );
   }
 
   Widget _buildHomeCareContent() {
-    const homeServices = <Map<String, String>>[];
-
     return Column(
       key: const ValueKey('HOMECARE_VIEW'),
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -7573,82 +7493,6 @@ class _CustomerServicesViewState extends State<_CustomerServicesView> {
           'A customer-safe home-care catalogue is not configured yet.',
           style: AppTypography.small.copyWith(color: AppColors.gray),
         ),
-        ...homeServices.map((srv) {
-          return Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: AppCard(
-              padding: const EdgeInsets.all(16),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: AppColors.shieldGreen.withValues(alpha: 0.08),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: const Icon(
-                      Icons.home_outlined,
-                      color: AppColors.shieldGreen,
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          srv['name']!,
-                          style: AppTypography.body.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          srv['desc']!,
-                          style: AppTypography.small.copyWith(
-                            color: AppColors.gray,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Text(
-                        srv['price']!,
-                        style: AppTypography.body.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.shieldNavy,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.shieldGreen,
-                          foregroundColor: AppColors.white,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 14,
-                            vertical: 8,
-                          ),
-                          minimumSize: Size.zero,
-                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        ),
-                        onPressed: () {
-                          showPortalSnackBar(
-                            context,
-                            'Requested ${srv['name']}. Home care team will schedule a visit.',
-                          );
-                        },
-                        child: const Text('Request'),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          );
-        }),
       ],
     );
   }
