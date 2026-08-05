@@ -10658,3 +10658,12 @@ Replaced the removed static Flutter carousel with a database-backed Operations c
 
 - docs/customer-ui/CUSTOMER_UI_VISUAL_QA.md
 - docs/CUSTOMER_UI_IMPLEMENTATION_STATUS.md
+
+## 27. Customer-account documentation alignment — 2026-08-06 00:17:00 IST
+
+- Updated the customer audit and API binding references to distinguish delivered account capabilities from the still-unavailable secure primary-mobile migration workflow.
+
+### Documentation Files
+
+- docs/customer-ui/CUSTOMER_UI_AUDIT.md
+- docs/CUSTOMER_UI_API_BINDINGS.md
