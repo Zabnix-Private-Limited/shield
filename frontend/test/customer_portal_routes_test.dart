@@ -8,6 +8,7 @@ void main() {
     final keys = sections.map((section) => section.key);
 
     expect(keys, contains('book-appointment'));
+    expect(keys, contains('account'));
     expect(keys, isNot(contains('recharge')));
   });
 }

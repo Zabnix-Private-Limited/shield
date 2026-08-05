@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../../app/theme/app_colors.dart';
@@ -7,24 +8,43 @@ import '../../../../../shared/widgets/app_button.dart';
 import '../../../../../shared/widgets/app_card.dart';
 import '../../data/customer_account_repository.dart';
 
-class CustomerAccountScreen extends StatefulWidget {
+final customerAccountDataProvider = FutureProvider.autoDispose<_AccountData>((
+  ref,
+) async {
+  const repository = CustomerAccountRepository();
+  final results = await Future.wait([
+    repository.addresses(),
+    repository.dependents(),
+    repository.contacts(),
+    repository.pharmacies(),
+    repository.preferredProvider(),
+  ]);
+  return _AccountData(
+    addresses: results[0] as List<Map<String, dynamic>>,
+    dependents: results[1] as List<Map<String, dynamic>>,
+    contacts: results[2] as List<Map<String, dynamic>>,
+    pharmacies: results[3] as List<Map<String, dynamic>>,
+    preferredProvider: results[4] as Map<String, dynamic>?,
+  );
+});
+
+class CustomerAccountScreen extends ConsumerStatefulWidget {
   const CustomerAccountScreen({super.key});
 
   @override
-  State<CustomerAccountScreen> createState() => _CustomerAccountScreenState();
+  ConsumerState<CustomerAccountScreen> createState() =>
+      _CustomerAccountScreenState();
 }
 
-class _CustomerAccountScreenState extends State<CustomerAccountScreen>
+class _CustomerAccountScreenState extends ConsumerState<CustomerAccountScreen>
     with SingleTickerProviderStateMixin {
   final _repository = const CustomerAccountRepository();
   late final TabController _tabs;
-  late Future<_AccountData> _future;
 
   @override
   void initState() {
     super.initState();
     _tabs = TabController(length: 4, vsync: this);
-    _future = _load();
   }
 
   @override
@@ -33,24 +53,7 @@ class _CustomerAccountScreenState extends State<CustomerAccountScreen>
     super.dispose();
   }
 
-  Future<_AccountData> _load() async {
-    final results = await Future.wait([
-      _repository.addresses(),
-      _repository.dependents(),
-      _repository.contacts(),
-      _repository.pharmacies(),
-      _repository.preferredProvider(),
-    ]);
-    return _AccountData(
-      addresses: results[0] as List<Map<String, dynamic>>,
-      dependents: results[1] as List<Map<String, dynamic>>,
-      contacts: results[2] as List<Map<String, dynamic>>,
-      pharmacies: results[3] as List<Map<String, dynamic>>,
-      preferredProvider: results[4] as Map<String, dynamic>?,
-    );
-  }
-
-  void _refresh() => setState(() => _future = _load());
+  void _refresh() => ref.invalidate(customerAccountDataProvider);
 
   Future<void> _remove({
     required String id,
@@ -176,19 +179,16 @@ class _CustomerAccountScreenState extends State<CustomerAccountScreen>
           ),
         ),
         const SizedBox(height: 12),
-        FutureBuilder<_AccountData>(
-          future: _future,
-          builder: (context, snapshot) {
-            if (snapshot.connectionState != ConnectionState.done) {
-              return const Center(
+        ref
+            .watch(customerAccountDataProvider)
+            .when(
+              loading: () => const Center(
                 child: Padding(
                   padding: EdgeInsets.all(32),
                   child: CircularProgressIndicator(),
                 ),
-              );
-            }
-            if (snapshot.hasError) {
-              return AppCard(
+              ),
+              error: (_, _) => AppCard(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -202,74 +202,71 @@ class _CustomerAccountScreenState extends State<CustomerAccountScreen>
                     AppButton(text: 'Retry', onPressed: _refresh),
                   ],
                 ),
-              );
-            }
-            final data = snapshot.data!;
-            return SizedBox(
-              height: 560,
-              child: TabBarView(
-                controller: _tabs,
-                children: [
-                  _RecordList(
-                    empty: 'No saved addresses yet.',
-                    addLabel: 'Add address',
-                    records: data.addresses,
-                    title: (row) => (row['label'] as String?) ?? 'Address',
-                    detail: (row) =>
-                        [
-                              row['addressLine1'],
-                              row['city'],
-                              row['state'],
-                              row['pincode'],
-                            ]
-                            .whereType<String>()
-                            .where((value) => value.isNotEmpty)
-                            .join(', '),
-                    onAdd: () => _editAddress(),
-                    onEdit: _editAddress,
-                    onRemove: (row) =>
-                        _remove(id: row['id'].toString(), address: true),
-                  ),
-                  _RecordList(
-                    empty: 'No family members saved yet.',
-                    addLabel: 'Add family member',
-                    records: data.dependents,
-                    title: (row) =>
-                        '${row['firstName'] ?? ''} ${row['lastName'] ?? ''}'
-                            .trim(),
-                    detail: (row) =>
-                        (row['relation'] as String?) ??
-                        'Relationship not added',
-                    onAdd: () => _editDependent(),
-                    onEdit: _editDependent,
-                    onRemove: (row) =>
-                        _remove(id: row['id'].toString(), address: false),
-                  ),
-                  _RecordList(
-                    empty: 'No emergency or alternative contacts saved yet.',
-                    addLabel: 'Add contact',
-                    records: data.contacts,
-                    title: (row) => (row['name'] as String?) ?? 'Contact',
-                    detail: (row) =>
-                        '${row['contactType'] ?? 'ALTERNATIVE'} • ${row['mobile'] ?? ''}',
-                    onAdd: () => _editContact(),
-                    onEdit: _editContact,
-                    onRemove: (row) => _remove(
-                      id: row['id'].toString(),
-                      address: false,
-                      contact: true,
-                    ),
-                  ),
-                  _PharmacyList(
-                    pharmacies: data.pharmacies,
-                    selectedId: data.preferredProvider?['id']?.toString(),
-                    onSelect: _setPreferredProvider,
-                  ),
-                ],
               ),
-            );
-          },
-        ),
+              data: (data) => SizedBox(
+                height: 560,
+                child: TabBarView(
+                  controller: _tabs,
+                  children: [
+                    _RecordList(
+                      empty: 'No saved addresses yet.',
+                      addLabel: 'Add address',
+                      records: data.addresses,
+                      title: (row) => (row['label'] as String?) ?? 'Address',
+                      detail: (row) =>
+                          [
+                                row['addressLine1'],
+                                row['city'],
+                                row['state'],
+                                row['pincode'],
+                              ]
+                              .whereType<String>()
+                              .where((value) => value.isNotEmpty)
+                              .join(', '),
+                      onAdd: () => _editAddress(),
+                      onEdit: _editAddress,
+                      onRemove: (row) =>
+                          _remove(id: row['id'].toString(), address: true),
+                    ),
+                    _RecordList(
+                      empty: 'No family members saved yet.',
+                      addLabel: 'Add family member',
+                      records: data.dependents,
+                      title: (row) =>
+                          '${row['firstName'] ?? ''} ${row['lastName'] ?? ''}'
+                              .trim(),
+                      detail: (row) =>
+                          (row['relation'] as String?) ??
+                          'Relationship not added',
+                      onAdd: () => _editDependent(),
+                      onEdit: _editDependent,
+                      onRemove: (row) =>
+                          _remove(id: row['id'].toString(), address: false),
+                    ),
+                    _RecordList(
+                      empty: 'No emergency or alternative contacts saved yet.',
+                      addLabel: 'Add contact',
+                      records: data.contacts,
+                      title: (row) => (row['name'] as String?) ?? 'Contact',
+                      detail: (row) =>
+                          '${row['contactType'] ?? 'ALTERNATIVE'} • ${row['mobile'] ?? ''}',
+                      onAdd: () => _editContact(),
+                      onEdit: _editContact,
+                      onRemove: (row) => _remove(
+                        id: row['id'].toString(),
+                        address: false,
+                        contact: true,
+                      ),
+                    ),
+                    _PharmacyList(
+                      pharmacies: data.pharmacies,
+                      selectedId: data.preferredProvider?['id']?.toString(),
+                      onSelect: _setPreferredProvider,
+                    ),
+                  ],
+                ),
+              ),
+            ),
       ],
     );
   }

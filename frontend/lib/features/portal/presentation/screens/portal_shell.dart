@@ -4368,16 +4368,17 @@ class _CustomerAccountCapabilitiesCard extends StatelessWidget {
             subtitle: 'Manage family members linked to your account.',
             onTap: onOpenAccount,
           ),
-          const _CompactSettingAction(
+          _CompactSettingAction(
             icon: Icons.emergency_outlined,
             title: 'Emergency contacts',
-            subtitle:
-                'A dedicated emergency-contact record is not yet available.',
+            subtitle: 'Manage emergency and alternative contacts.',
+            onTap: onOpenAccount,
           ),
-          const _CompactSettingAction(
+          _CompactSettingAction(
             icon: Icons.local_pharmacy_outlined,
             title: 'Preferred pharmacy',
-            subtitle: 'Preferred pharmacy selection is not yet available.',
+            subtitle: 'Choose the pharmacy you prefer to use.',
+            onTap: onOpenAccount,
           ),
           const SizedBox(height: 14),
           Text('Account and support', style: AppTypography.h4),
