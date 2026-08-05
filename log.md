@@ -10273,3 +10273,19 @@ Replaced the removed static Flutter carousel with a database-backed Operations c
 ### Backend Files
 
 - No additional repository file changes; database execution used the controlled activation command.
+
+## 2026-08-05 16:36:00 IST - Codex
+
+## 4. Active Wellness catalogue publication
+
+- Management-directed change replaced the demo-only catalogue filter with active-product catalogue filtering.
+- Published only the approved LEGACY_XLS_20260805 batch: 547 products are ACTIVE and non-demo; the active catalogue now contains 552 products.
+- Targeted pharmacy controller test and TypeScript compilation passed before publication.
+
+### Frontend Files
+
+- None.
+
+### Backend Files
+
+- ackend/src/pharmacy/pharmacy.service.ts and controller now expose active products without demo wording.

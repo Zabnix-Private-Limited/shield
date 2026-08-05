@@ -63,9 +63,9 @@ export class PharmacyService {
     });
   }
 
-  async listWellnessDemoProducts() {
+  async listWellnessProducts() {
     return this.prisma.product.findMany({
-      where: { isDemoAvailable: true, status: 'DEMO' },
+      where: { status: 'ACTIVE' },
       orderBy: { productName: 'asc' },
     });
   }

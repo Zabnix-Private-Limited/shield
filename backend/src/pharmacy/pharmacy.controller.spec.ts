@@ -2,7 +2,7 @@ import { PharmacyController } from './pharmacy.controller';
 
 describe('PharmacyController customer wellness catalogue', () => {
   const pharmacyService = {
-    listWellnessDemoProducts: jest.fn(),
+    listWellnessProducts: jest.fn(),
     listPurchases: jest.fn(),
   };
   const providerScope = { assertProviderCanAccessCustomer: jest.fn() };
@@ -13,8 +13,8 @@ describe('PharmacyController customer wellness catalogue', () => {
 
   beforeEach(() => jest.clearAllMocks());
 
-  it('returns only seeded demo products to an authenticated customer', async () => {
-    pharmacyService.listWellnessDemoProducts.mockResolvedValue([{ id: 1 }]);
+  it('returns active catalogue products to an authenticated customer', async () => {
+    pharmacyService.listWellnessProducts.mockResolvedValue([{ id: 1 }]);
 
     await expect(
       controller.listCustomerWellnessProducts({

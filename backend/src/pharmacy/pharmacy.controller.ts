@@ -44,11 +44,11 @@ export class PharmacyController {
 
   @RequirePermissions('providers.view')
   @Get('wellness/products')
-  async listWellnessDemoProducts() {
+  async listWellnessProducts() {
     return {
       success: true,
-      message: 'Wellness demo catalog retrieved',
-      data: await this.pharmacyService.listWellnessDemoProducts(),
+      message: 'Wellness catalog retrieved',
+      data: await this.pharmacyService.listWellnessProducts(),
     };
   }
 
@@ -65,8 +65,8 @@ export class PharmacyController {
 
     return {
       success: true,
-      message: 'Customer wellness demo catalog retrieved',
-      data: await this.pharmacyService.listWellnessDemoProducts(),
+      message: 'Customer wellness catalog retrieved',
+      data: await this.pharmacyService.listWellnessProducts(),
     };
   }
 
