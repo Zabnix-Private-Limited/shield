@@ -10329,3 +10329,25 @@ Replaced the removed static Flutter carousel with a database-backed Operations c
 
 - flutter analyze lib/features/portal/presentation/screens/portal_shell.dart
 - flutter test test/portal_support_test.dart
+
+## 2026-08-05 20:15:00 IST - Codex
+
+## 7. Customer profile edit-safety refinement
+
+- Added initials identity and verified-primary-mobile context to the authenticated Profile hero.
+- Cancelling edited personal or address details now asks before discarding changed values; unchanged forms still exit immediately.
+- Captured the active desktop window for environment evidence, but it was the editor rather than an authenticated customer route, so it is not recorded as customer screenshot QA.
+
+### Frontend Files
+
+- frontend/lib/features/portal/presentation/screens/portal_shell.dart
+
+### Documentation Files
+
+- docs/customer-ui/CUSTOMER_UI_AUDIT.md
+- docs/CUSTOMER_UI_IMPLEMENTATION_STATUS.md
+- docs/customer-ui/agent-goal/03_CUSTOMER_SCREEN_COMPLETION_MATRIX.csv
+
+### Verification
+
+- flutter analyze lib/features/portal/presentation/screens/portal_shell.dart

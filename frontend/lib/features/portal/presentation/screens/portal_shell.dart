@@ -3570,6 +3570,58 @@ class _CustomerProfilePortalViewState
     return null;
   }
 
+  bool _hasUnsavedChanges() {
+    final customer = _customer;
+    if (customer == null) return false;
+    return _firstNameController.text.trim() != customer.firstName ||
+        _lastNameController.text.trim() != customer.lastName ||
+        _normalizeOptional(_emailController.text) != customer.email ||
+        _normalizeOptional(_addressLine1Controller.text) !=
+            customer.addressLine1 ||
+        _normalizeOptional(_addressLine2Controller.text) !=
+            customer.addressLine2 ||
+        _normalizeOptional(_cityController.text) != customer.city ||
+        _normalizeOptional(_districtController.text) != customer.district ||
+        _normalizeOptional(_stateController.text) != customer.state ||
+        _normalizeOptional(_pincodeController.text) != customer.pincode ||
+        _selectedGender !=
+            _normalizeDropdownValue(customer.gender, _genderOptions) ||
+        _selectedBloodGroup !=
+            _normalizeDropdownValue(customer.bloodGroup, _bloodGroupOptions) ||
+        _selectedDob != customer.dob;
+  }
+
+  Future<bool> _confirmDiscardChanges() async {
+    if (!_hasUnsavedChanges()) return true;
+    return await showDialog<bool>(
+          context: context,
+          builder: (dialogContext) => AlertDialog(
+            title: const Text('Discard profile changes?'),
+            content: const Text(
+              'Your unsaved personal and address updates will be lost.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext, false),
+                child: const Text('Keep editing'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.pop(dialogContext, true),
+                child: const Text('Discard'),
+              ),
+            ],
+          ),
+        ) ??
+        false;
+  }
+
+  String _initials(Customer customer) {
+    final values = [customer.firstName, customer.lastName]
+        .where((value) => value.trim().isNotEmpty)
+        .map((value) => value.trim().characters.first.toUpperCase());
+    return values.join().isEmpty ? 'S' : values.join();
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
@@ -3652,6 +3704,19 @@ class _CustomerProfilePortalViewState
                         ],
                       ),
                     ),
+                    const SizedBox(width: 12),
+                    CircleAvatar(
+                      radius: 23,
+                      backgroundColor: AppColors.white.withValues(alpha: 0.16),
+                      child: Text(
+                        _initials(customer),
+                        style: AppTypography.body.copyWith(
+                          color: AppColors.white,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
                     Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 10,
@@ -3678,7 +3743,7 @@ class _CustomerProfilePortalViewState
                   runSpacing: 10,
                   children: [
                     _ProfileSummaryChip(
-                      label: customer.mobile,
+                      label: 'Verified • ${customer.mobile}',
                       icon: Icons.phone_iphone_outlined,
                     ),
                     _ProfileSummaryChip(
@@ -3696,8 +3761,9 @@ class _CustomerProfilePortalViewState
                   actions: [
                     _HeroActionGridItem(
                       label: _isEditing ? 'Cancel changes' : 'Edit details',
-                      onTap: () {
+                      onTap: () async {
                         if (_isEditing) {
+                          if (!await _confirmDiscardChanges()) return;
                           _hydrateForm(customer);
                         }
                         setState(() {
