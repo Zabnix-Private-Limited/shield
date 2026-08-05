@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { CustomerController } from './customer.controller';
+import { CustomerAccountController } from './customer-account.controller';
 import { CustomerMembershipController } from './customer-membership.controller';
 import { CustomerService } from './customer.service';
 import { PrismaModule } from '../prisma/prisma.module';
@@ -8,7 +9,11 @@ import { WalletModule } from '../wallet/wallet.module';
 
 @Module({
   imports: [PrismaModule, ReferralModule, WalletModule],
-  controllers: [CustomerController, CustomerMembershipController],
+  controllers: [
+    CustomerController,
+    CustomerMembershipController,
+    CustomerAccountController,
+  ],
   providers: [CustomerService],
   exports: [CustomerService],
 })

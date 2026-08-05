@@ -823,6 +823,93 @@ class ApiService {
     );
   }
 
+  static Future<List<Map<String, dynamic>>> getCustomerAddresses() async =>
+      _readEnvelopeList(
+        await _dio.get('/customer/addresses'),
+      ).map((item) => Map<String, dynamic>.from(item as Map)).toList();
+
+  static Future<Map<String, dynamic>> saveCustomerAddress(
+    Map<String, dynamic> payload, {
+    String? addressId,
+  }) async => _readEnvelope(
+    addressId == null
+        ? await _dio.post('/customer/addresses', data: payload)
+        : await _dio.patch('/customer/addresses/$addressId', data: payload),
+  );
+
+  static Future<void> removeCustomerAddress(String addressId) async {
+    await _dio.delete('/customer/addresses/$addressId');
+  }
+
+  static Future<List<Map<String, dynamic>>> getCustomerDependents() async =>
+      _readEnvelopeList(
+        await _dio.get('/customer/dependents'),
+      ).map((item) => Map<String, dynamic>.from(item as Map)).toList();
+
+  static Future<Map<String, dynamic>> saveCustomerDependent(
+    Map<String, dynamic> payload, {
+    String? dependentId,
+  }) async => _readEnvelope(
+    dependentId == null
+        ? await _dio.post('/customer/dependents', data: payload)
+        : await _dio.patch('/customer/dependents/$dependentId', data: payload),
+  );
+
+  static Future<void> removeCustomerDependent(String dependentId) async {
+    await _dio.delete('/customer/dependents/$dependentId');
+  }
+
+  static Future<List<Map<String, dynamic>>> getCustomerContacts() async =>
+      _readEnvelopeList(
+        await _dio.get('/customer/contacts'),
+      ).map((item) => Map<String, dynamic>.from(item as Map)).toList();
+
+  static Future<Map<String, dynamic>> saveCustomerContact(
+    Map<String, dynamic> payload, {
+    String? contactId,
+  }) async => _readEnvelope(
+    contactId == null
+        ? await _dio.post('/customer/contacts', data: payload)
+        : await _dio.patch('/customer/contacts/$contactId', data: payload),
+  );
+
+  static Future<void> removeCustomerContact(String contactId) async {
+    await _dio.delete('/customer/contacts/$contactId');
+  }
+
+  static Future<Map<String, dynamic>?> getCustomerPreferences() async {
+    final response = await _dio.get('/customer/preferences');
+    final data = _readEnvelope(response);
+    return data.isEmpty ? null : data;
+  }
+
+  static Future<Map<String, dynamic>> saveCustomerPreferences(
+    Map<String, dynamic> payload,
+  ) async =>
+      _readEnvelope(await _dio.patch('/customer/preferences', data: payload));
+
+  static Future<List<Map<String, dynamic>>> getEligiblePharmacies() async =>
+      _readEnvelopeList(
+        await _dio.get('/customer/pharmacies'),
+      ).map((item) => Map<String, dynamic>.from(item as Map)).toList();
+
+  static Future<Map<String, dynamic>?> getPreferredProvider() async {
+    final response = await _dio.get('/customer/preferred-provider');
+    final data = _readEnvelope(response);
+    return data.isEmpty ? null : data;
+  }
+
+  static Future<Map<String, dynamic>> setPreferredProvider(
+    String? providerId,
+  ) async => _readEnvelope(
+    providerId == null
+        ? await _dio.delete('/customer/preferred-provider')
+        : await _dio.put(
+            '/customer/preferred-provider',
+            data: {'providerId': providerId},
+          ),
+  );
+
   static Future<Map<String, dynamic>> getCustomerCardProfile(
     String customerId,
   ) async {

@@ -43,7 +43,12 @@ describe('CustomerService alternative contacts', () => {
 
     expect(prisma.customerContact.update).toHaveBeenCalledWith({
       where: { id: 7n },
-      data: { name: 'Care contact', relation: null, isPrimary: false },
+      data: {
+        name: 'Care contact',
+        relation: null,
+        isPrimary: false,
+        contactType: 'ALTERNATIVE',
+      },
     });
     expect(prisma.customerContact.create).not.toHaveBeenCalled();
   });
@@ -91,7 +96,13 @@ describe('CustomerService alternative contacts', () => {
       service.removeAlternativeContact(1n, 7n),
     ).resolves.toBeUndefined();
     expect(prisma.customerContact.deleteMany).toHaveBeenCalledWith({
-      where: { id: 7n, customerId: 1n, isPrimary: false },
+      where: {
+        id: 7n,
+        customerId: 1n,
+        isPrimary: false,
+        contactType: 'ALTERNATIVE',
+        deletedAt: null,
+      },
     });
   });
 });

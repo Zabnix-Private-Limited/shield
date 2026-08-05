@@ -10563,3 +10563,31 @@ Replaced the removed static Flutter carousel with a database-backed Operations c
 
 - npx prisma validate
 - npm run build
+## 21. Customer-account migration and API foundation — 2026-08-05 22:48:00 IST
+
+- Backed up the configured Neon development database, baselined three historical migrations already represented in the schema, and deployed the additive customer-account migration.
+- Added authenticated customer-scoped address, dependent, typed-contact, preference, pharmacy, and preferred-provider API contracts; no route accepts a customer ID as authority.
+- Extended the Flutter API client with matching real endpoint bindings; profile screens are the next slice.
+
+### Backend Files
+
+- backend/src/customer/customer-account.controller.ts
+- backend/src/customer/customer.module.ts
+- backend/src/customer/customer.service.ts
+- backend/src/customer/customer.service.spec.ts
+
+### Frontend Files
+
+- frontend/lib/shared/services/api_service.dart
+
+### Verification
+
+- npx prisma validate
+- npx prisma migrate status
+- npx prisma migrate deploy
+- npx prisma generate
+- npm test -- --runInBand customer.service.spec.ts
+- npm run build
+- flutter analyze lib/shared/services/api_service.dart
+- GET /health (HTTP 200)
+- GET /customer/addresses without auth (HTTP 401)

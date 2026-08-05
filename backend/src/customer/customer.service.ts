@@ -349,7 +349,12 @@ export class CustomerService {
 
   async saveAlternativeContact(
     customerId: bigint,
-    data: { mobile: string; name?: string; relationship?: string },
+    data: {
+      mobile: string;
+      name?: string;
+      relationship?: string;
+      contactType?: 'ALTERNATIVE' | 'EMERGENCY';
+    },
   ) {
     const customer = await this.findOne(customerId);
     const normalized = data.mobile.replace(/\D/g, '').slice(-10);
@@ -361,7 +366,7 @@ export class CustomerService {
     }
     const existing = (
       await this.prisma.customerContact.findMany({
-        where: { customerId },
+        where: { customerId, deletedAt: null },
         select: { id: true, mobile: true },
       })
     ).find(
@@ -372,6 +377,7 @@ export class CustomerService {
       name: data.name?.trim() || null,
       relation: data.relationship?.trim() || null,
       isPrimary: false,
+      contactType: data.contactType ?? 'ALTERNATIVE',
     };
     return existing
       ? this.prisma.customerContact.update({
@@ -385,7 +391,12 @@ export class CustomerService {
 
   async listAlternativeContacts(customerId: bigint) {
     return this.prisma.customerContact.findMany({
-      where: { customerId, isPrimary: false },
+      where: {
+        customerId,
+        isPrimary: false,
+        contactType: 'ALTERNATIVE',
+        deletedAt: null,
+      },
       select: {
         id: true,
         name: true,
@@ -398,11 +409,273 @@ export class CustomerService {
 
   async removeAlternativeContact(customerId: bigint, contactId: bigint) {
     const result = await this.prisma.customerContact.deleteMany({
-      where: { id: contactId, customerId, isPrimary: false },
+      where: {
+        id: contactId,
+        customerId,
+        isPrimary: false,
+        contactType: 'ALTERNATIVE',
+        deletedAt: null,
+      },
     });
     if (result.count === 0) {
       throw new NotFoundException('Alternative contact not found.');
     }
+  }
+
+  async listContacts(customerId: bigint) {
+    return this.prisma.customerContact.findMany({
+      where: { customerId, isPrimary: false, deletedAt: null },
+      select: {
+        id: true,
+        name: true,
+        mobile: true,
+        relation: true,
+        contactType: true,
+      },
+      orderBy: { id: 'desc' },
+    });
+  }
+
+  async saveContact(
+    customerId: bigint,
+    data: {
+      id?: bigint;
+      mobile?: string;
+      name?: string;
+      relationship?: string;
+      contactType?: string;
+    },
+  ) {
+    const contactType = data.contactType?.trim().toUpperCase();
+    if (contactType !== 'ALTERNATIVE' && contactType !== 'EMERGENCY') {
+      throw new BadRequestException(
+        'Contact type must be ALTERNATIVE or EMERGENCY.',
+      );
+    }
+    if (!data.mobile)
+      throw new BadRequestException('Mobile number is required.');
+    if (!data.id) {
+      return this.saveAlternativeContact(customerId, {
+        mobile: data.mobile,
+        name: data.name,
+        relationship: data.relationship,
+        contactType,
+      });
+    }
+    const existing = await this.prisma.customerContact.findFirst({
+      where: { id: data.id, customerId, isPrimary: false, deletedAt: null },
+    });
+    if (!existing) throw new NotFoundException('Contact not found.');
+    const normalized = data.mobile.replace(/\D/g, '').slice(-10);
+    const primary = (await this.findOne(customerId)).mobile
+      .replace(/\D/g, '')
+      .slice(-10);
+    if (normalized.length !== 10 || normalized === primary) {
+      throw new BadRequestException(
+        'Contact mobile must differ from the primary login number.',
+      );
+    }
+    return this.prisma.customerContact.update({
+      where: { id: data.id },
+      data: {
+        mobile: normalized,
+        name: data.name?.trim() || null,
+        relation: data.relationship?.trim() || null,
+        contactType,
+      },
+    });
+  }
+
+  async removeContact(customerId: bigint, contactId: bigint) {
+    const result = await this.prisma.customerContact.updateMany({
+      where: { id: contactId, customerId, isPrimary: false, deletedAt: null },
+      data: { deletedAt: new Date() },
+    });
+    if (!result.count) throw new NotFoundException('Contact not found.');
+  }
+
+  async listAddresses(customerId: bigint) {
+    return this.prisma.customerAddress.findMany({
+      where: { customerId, deletedAt: null },
+      orderBy: [{ isDefault: 'desc' }, { updatedAt: 'desc' }],
+    });
+  }
+
+  async saveAddress(
+    customerId: bigint,
+    data: {
+      id?: bigint;
+      label?: string;
+      addressLine1?: string;
+      addressLine2?: string;
+      city?: string;
+      district?: string;
+      state?: string;
+      pincode?: string;
+      isDefault?: boolean;
+    },
+  ) {
+    const addressLine1 = data.addressLine1?.trim();
+    if (!addressLine1)
+      throw new BadRequestException('Address line 1 is required.');
+    const values = {
+      label: data.label?.trim().toUpperCase() || 'HOME',
+      addressLine1,
+      addressLine2: data.addressLine2?.trim() || null,
+      city: data.city?.trim() || null,
+      district: data.district?.trim() || null,
+      state: data.state?.trim() || null,
+      pincode: data.pincode?.replace(/\s/g, '').toUpperCase() || null,
+      isDefault: data.isDefault === true,
+    };
+    return this.prisma.$transaction(async (tx) => {
+      if (data.id) {
+        const existing = await tx.customerAddress.findFirst({
+          where: { id: data.id, customerId, deletedAt: null },
+        });
+        if (!existing) throw new NotFoundException('Address not found.');
+      }
+      if (values.isDefault) {
+        await tx.customerAddress.updateMany({
+          where: { customerId, deletedAt: null },
+          data: { isDefault: false },
+        });
+      }
+      return data.id
+        ? tx.customerAddress.update({ where: { id: data.id }, data: values })
+        : tx.customerAddress.create({
+            data: { uuid: randomUUID(), customerId, ...values },
+          });
+    });
+  }
+
+  async removeAddress(customerId: bigint, addressId: bigint) {
+    const result = await this.prisma.customerAddress.updateMany({
+      where: { id: addressId, customerId, deletedAt: null },
+      data: { deletedAt: new Date(), isDefault: false },
+    });
+    if (!result.count) throw new NotFoundException('Address not found.');
+  }
+
+  async listDependents(customerId: bigint) {
+    return this.prisma.customerDependent.findMany({
+      where: { customerId, deletedAt: null },
+      orderBy: [{ firstName: 'asc' }, { id: 'asc' }],
+    });
+  }
+
+  async saveDependent(
+    customerId: bigint,
+    data: {
+      id?: bigint;
+      firstName?: string;
+      lastName?: string;
+      relation?: string;
+      dob?: string;
+      gender?: string;
+    },
+  ) {
+    const firstName = data.firstName?.trim();
+    const relation = data.relation?.trim();
+    if (!firstName || !relation)
+      throw new BadRequestException('Name and relationship are required.');
+    const dob = data.dob ? new Date(data.dob) : null;
+    if (dob && Number.isNaN(dob.getTime()))
+      throw new BadRequestException('Date of birth is invalid.');
+    const values = {
+      firstName,
+      lastName: data.lastName?.trim() || null,
+      relation,
+      dob,
+      gender: data.gender?.trim().toUpperCase() || null,
+    };
+    if (data.id) {
+      const existing = await this.prisma.customerDependent.findFirst({
+        where: { id: data.id, customerId, deletedAt: null },
+      });
+      if (!existing) throw new NotFoundException('Family member not found.');
+      return this.prisma.customerDependent.update({
+        where: { id: data.id },
+        data: values,
+      });
+    }
+    return this.prisma.customerDependent.create({
+      data: { uuid: randomUUID(), customerId, ...values },
+    });
+  }
+
+  async removeDependent(customerId: bigint, dependentId: bigint) {
+    const result = await this.prisma.customerDependent.updateMany({
+      where: { id: dependentId, customerId, deletedAt: null },
+      data: { deletedAt: new Date() },
+    });
+    if (!result.count) throw new NotFoundException('Family member not found.');
+  }
+
+  async getPreferences(customerId: bigint) {
+    return this.prisma.customerPreference.findUnique({ where: { customerId } });
+  }
+
+  async savePreferences(
+    customerId: bigint,
+    data: {
+      notificationPreferences?: unknown;
+      language?: string;
+      theme?: string;
+    },
+  ) {
+    return this.prisma.customerPreference.upsert({
+      where: { customerId },
+      create: {
+        uuid: randomUUID(),
+        customerId,
+        notificationPreferences: data.notificationPreferences as any,
+        language: data.language?.trim() || null,
+        theme: data.theme?.trim() || null,
+      },
+      update: {
+        notificationPreferences: data.notificationPreferences as any,
+        language: data.language?.trim() || null,
+        theme: data.theme?.trim() || null,
+      },
+    });
+  }
+
+  async getPreferredProvider(customerId: bigint) {
+    const preference = await this.getPreferences(customerId);
+    if (!preference?.preferredProviderId) return null;
+    const provider = await this.prisma.serviceProvider.findUnique({
+      where: { id: preference.preferredProviderId },
+      include: { business: true },
+    });
+    return provider?.status === 'ACTIVE' ? provider : null;
+  }
+
+  async setPreferredProvider(customerId: bigint, providerId: bigint | null) {
+    if (providerId) {
+      const provider = await this.prisma.serviceProvider.findFirst({
+        where: { id: providerId, status: 'ACTIVE', providerType: 'PHARMACY' },
+      });
+      if (!provider)
+        throw new BadRequestException('Select an active pharmacy provider.');
+    }
+    return this.prisma.customerPreference.upsert({
+      where: { customerId },
+      create: {
+        uuid: randomUUID(),
+        customerId,
+        preferredProviderId: providerId,
+      },
+      update: { preferredProviderId: providerId },
+    });
+  }
+
+  async listEligiblePharmacies() {
+    return this.prisma.serviceProvider.findMany({
+      where: { status: 'ACTIVE', providerType: 'PHARMACY' },
+      include: { business: true },
+      orderBy: { providerName: 'asc' },
+    });
   }
 
   async requestPhysicalCard(customerId: bigint, requestedBy?: bigint) {

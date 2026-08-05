@@ -9,3 +9,4 @@ backend/uploads/documents/
 firebase env/
 frontend/android/app/google-services.json
 frontend/test/failures/
+/.local-backups/
