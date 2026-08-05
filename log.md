@@ -10720,3 +10720,9 @@ Replaced the removed static Flutter carousel with a database-backed Operations c
   - Verified the authenticated Home view renders Operations content and persisted wallet and reward headers.
 - Why
   - Completes the approved customer-session navigation checks without changing balances, membership data, orders, carts, or identity records.
+
+## 41. Wellness retry QA (2026-08-06 00:00:00 IST)
+- Frontend Files
+  - Verified the real catalogue error card and Retry recovery by temporarily blocking only the wellness browser request.
+- Why
+  - Proves failure recovery without stopping the backend or changing customer data.

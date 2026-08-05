@@ -33,7 +33,7 @@
 - Observed customer contract: 552 total records across 23 pages, 24 first-page records, imported rows show numeric prices and neutral product fallback icons, and the required disclosure remains visible.
 - Responsive verification: 350, 375, 390, 412, 448, 480, 768, and 1200 px had no document-width overflow. At 350 px the prior raw import category label was too long; backend-owned concise labels were applied and visually verified.
 - Detail verification: a product detail sheet opened from a card and retained the demo disclosure. Back/drop-dismiss returned to the catalogue without signing out. No cart records, orders, balances, memberships, or customer records were changed.
-- Error/retry: the catalogue contains a retryable API-error card in the implementation; it was not forced live because intentionally interrupting the authenticated backend would have disrupted the approved QA session.
+- Error/retry: verified live without stopping the backend. Chrome blocked only `/customer/wellness-products*` after Services access had loaded; the catalogue displayed its error card and Retry action. The block was removed, Retry restored the selected `Diagnostic devices` results, and no session or customer data changed.
 
 ## 2026-08-06 customer home completion
 
