@@ -17,6 +17,7 @@ import '../../../admin/presentation/screens/admin_portal_workspace.dart';
 import '../../../customer/dashboard/presentation/screens/dashboard_screen.dart';
 import '../../../customer/activity/presentation/screens/customer_activity_screen.dart';
 import '../../../customer/account/presentation/screens/customer_account_screen.dart';
+import '../../../customer/account/data/customer_account_repository.dart';
 import '../../../customer/documents/presentation/screens/customer_documents_screen.dart';
 import '../../../customer/membership/data/models/membership_model.dart';
 import '../../../customer/membership/presentation/screens/membership_screen.dart';
@@ -5159,34 +5160,11 @@ class _CustomerSettingsView extends StatelessWidget {
                   ),
                 ],
               ),
-              const SizedBox(height: 16),
-              Wrap(
-                spacing: 10,
-                runSpacing: 10,
-                children: const [
-                  _StatusPill(
-                    label: 'Preferences unavailable',
-                    color: AppColors.gray,
-                  ),
-                ],
-              ),
             ],
           ),
         ),
         const SizedBox(height: 18),
-        _SettingsGroupCard(
-          title: 'Notification preferences',
-          subtitle:
-              'Customer preference controls are not yet backed by a SHIELD API.',
-          children: const [
-            _CompactSettingAction(
-              icon: Icons.info_outline_rounded,
-              title: 'Preferences unavailable',
-              subtitle:
-                  'Push, SMS, wallet, and care-sharing preferences will appear when the customer settings contract is available.',
-            ),
-          ],
-        ),
+        const _CustomerPreferenceCard(),
         const SizedBox(height: 16),
         _SettingsGroupCard(
           title: 'Privacy and care',
@@ -6589,6 +6567,119 @@ class _StatusPill extends StatelessWidget {
           fontWeight: FontWeight.w700,
         ),
       ),
+    );
+  }
+}
+
+class _CustomerPreferenceCard extends StatefulWidget {
+  const _CustomerPreferenceCard();
+
+  @override
+  State<_CustomerPreferenceCard> createState() =>
+      _CustomerPreferenceCardState();
+}
+
+class _CustomerPreferenceCardState extends State<_CustomerPreferenceCard> {
+  final _repository = const CustomerAccountRepository();
+  bool _loading = true;
+  bool _saving = false;
+  bool _push = true;
+  bool _sms = true;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      final value = await _repository.preferences();
+      final notifications = value?['notificationPreferences'];
+      if (!mounted) return;
+      setState(() {
+        _push = notifications is Map ? notifications['push'] != false : true;
+        _sms = notifications is Map ? notifications['sms'] != false : true;
+        _loading = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _error = 'Preferences could not be loaded.';
+      });
+    }
+  }
+
+  Future<void> _save({bool? push, bool? sms}) async {
+    final previousPush = _push;
+    final previousSms = _sms;
+    final nextPush = push ?? _push;
+    final nextSms = sms ?? _sms;
+    setState(() {
+      _push = nextPush;
+      _sms = nextSms;
+      _saving = true;
+    });
+    try {
+      await _repository.savePreferences({
+        'notificationPreferences': {'push': nextPush, 'sms': nextSms},
+      });
+      if (!mounted) return;
+      setState(() => _saving = false);
+      showPortalSnackBar(context, 'Notification preferences saved.');
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _push = previousPush;
+        _sms = previousSms;
+        _saving = false;
+        _error = 'Preferences could not be saved. Please retry.';
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return _SettingsGroupCard(
+      title: 'Notification preferences',
+      subtitle: _loading
+          ? 'Loading saved preferences...'
+          : 'Choose how SHIELD may contact you.',
+      children: [
+        if (_error != null)
+          _CompactSettingAction(
+            icon: Icons.refresh_rounded,
+            title: _error!,
+            subtitle: 'Tap to retry.',
+            onTap: _load,
+          )
+        else ...[
+          SwitchListTile.adaptive(
+            contentPadding: EdgeInsets.zero,
+            title: const Text('Push notifications'),
+            subtitle: const Text('Appointment, record, and service updates'),
+            value: _push,
+            onChanged: _loading || _saving
+                ? null
+                : (value) => _save(push: value),
+          ),
+          SwitchListTile.adaptive(
+            contentPadding: EdgeInsets.zero,
+            title: const Text('SMS notifications'),
+            subtitle: const Text('Important membership and care reminders'),
+            value: _sms,
+            onChanged: _loading || _saving
+                ? null
+                : (value) => _save(sms: value),
+          ),
+        ],
+      ],
     );
   }
 }

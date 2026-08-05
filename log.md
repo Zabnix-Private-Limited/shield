@@ -10635,3 +10635,17 @@ Replaced the removed static Flutter carousel with a database-backed Operations c
 
 - npm run build
 - npm test -- --runInBand customer.service.spec.ts
+
+## 25. Persisted customer notification preferences — 2026-08-05 23:58:00 IST
+
+- Replaced the Settings placeholder with API-backed Push and SMS preference controls, including loading, retry, saving, success, and rollback-on-failure states.
+
+### Frontend Files
+
+- frontend/lib/features/customer/account/data/customer_account_repository.dart
+- frontend/lib/features/portal/presentation/screens/portal_shell.dart
+
+### Verification
+
+- flutter analyze customer account and portal files
+- flutter test test/customer_portal_routes_test.dart

@@ -34,4 +34,9 @@ class CustomerAccountRepository {
       ApiService.getPreferredProvider();
   Future<Map<String, dynamic>> setPreferredProvider(String? id) =>
       ApiService.setPreferredProvider(id);
+
+  Future<Map<String, dynamic>?> preferences() =>
+      ApiService.getCustomerPreferences();
+  Future<Map<String, dynamic>> savePreferences(Map<String, dynamic> value) =>
+      ApiService.saveCustomerPreferences(value);
 }
