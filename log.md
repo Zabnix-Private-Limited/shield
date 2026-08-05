@@ -10696,3 +10696,4 @@ Replaced the removed static Flutter carousel with a database-backed Operations c
 ### Documentation Files
 
 - docs/customer-ui/CUSTOMER_UI_VISUAL_QA.md
+\n\n## 31. Local web OTP launch configuration — 2026-08-06 00:52:00 IST\n\n- Propagated the existing debug-only ALLOW_LOCAL_WEB_PHONE_AUTH setting through the shared Flutter define helper and environment-aware launch/build scripts. The setting remains opt-in; no authentication bypass or credential change was added.\n\n### Frontend Files\n\n- frontend/scripts/flutter-env-defines.mjs\n- frontend/scripts/run-web-with-env.ps1\n- frontend/scripts/build-web-with-env.ps1\n- frontend/scripts/build-apk-with-env.ps1\n- frontend/scripts/build-apk-release-with-env.ps1\n\n### Verification\n\n- Flutter env define propagation check\n- flutter analyze auth repository and app config\n- git diff --check\n

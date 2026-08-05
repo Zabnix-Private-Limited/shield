@@ -22,5 +22,10 @@ export function withFlutterEnvDefines(args, env = process.env) {
   pushDefine(nextArgs, 'SENTRY_FLUTTER_DSN', env.SENTRY_FLUTTER_DSN);
   pushDefine(nextArgs, 'SENTRY_ENVIRONMENT', env.SENTRY_ENVIRONMENT);
   pushDefine(nextArgs, 'SENTRY_RELEASE', env.SENTRY_RELEASE);
+  pushDefine(
+    nextArgs,
+    'ALLOW_LOCAL_WEB_PHONE_AUTH',
+    env.ALLOW_LOCAL_WEB_PHONE_AUTH,
+  );
   return nextArgs;
 }

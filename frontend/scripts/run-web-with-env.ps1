@@ -32,7 +32,8 @@ foreach ($key in @(
   'SENTRY_FLUTTER_DSN',
   'SENTRY_ENVIRONMENT',
   'SENTRY_RELEASE',
-  'FIREBASE_WEB_VAPID_KEY'
+  'FIREBASE_WEB_VAPID_KEY',
+  'ALLOW_LOCAL_WEB_PHONE_AUTH'
 )) {
   $value = [Environment]::GetEnvironmentVariable($key, 'Process')
   if (-not [string]::IsNullOrWhiteSpace($value)) {
