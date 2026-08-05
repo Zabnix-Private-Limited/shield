@@ -242,11 +242,8 @@ class _CustomerAccountScreenState extends State<CustomerAccountScreen>
                         'Relationship not added',
                     onAdd: () => _editDependent(),
                     onEdit: _editDependent,
-                    onRemove: (row) => _remove(
-                      id: row['id'].toString(),
-                      address: false,
-                      contact: true,
-                    ),
+                    onRemove: (row) =>
+                        _remove(id: row['id'].toString(), address: false),
                   ),
                   _RecordList(
                     empty: 'No emergency or alternative contacts saved yet.',
@@ -257,8 +254,11 @@ class _CustomerAccountScreenState extends State<CustomerAccountScreen>
                         '${row['contactType'] ?? 'ALTERNATIVE'} • ${row['mobile'] ?? ''}',
                     onAdd: () => _editContact(),
                     onEdit: _editContact,
-                    onRemove: (row) =>
-                        _remove(id: row['id'].toString(), address: false),
+                    onRemove: (row) => _remove(
+                      id: row['id'].toString(),
+                      address: false,
+                      contact: true,
+                    ),
                   ),
                   _PharmacyList(
                     pharmacies: data.pharmacies,
