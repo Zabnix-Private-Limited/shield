@@ -417,13 +417,30 @@ class ApiService {
     ).map((item) => Map<String, dynamic>.from(item as Map)).toList();
   }
 
-  static Future<List<Map<String, dynamic>>>
-  getCustomerWellnessProducts() async {
+  static Future<Map<String, dynamic>> getCustomerWellnessProducts({
+    String? query,
+    String? categoryId,
+    int page = 1,
+    int pageSize = 24,
+  }) async {
     _requireCustomerId();
-    final response = await _dio.get('/customer/wellness-products');
-    return _readEnvelopeList(
-      response,
-    ).map((item) => Map<String, dynamic>.from(item as Map)).toList();
+    final response = await _dio.get(
+      '/customer/wellness-products',
+      queryParameters: {
+        if (query != null && query.trim().isNotEmpty) 'query': query.trim(),
+        if (categoryId != null) 'categoryId': categoryId,
+        'page': page,
+        'pageSize': pageSize,
+      },
+    );
+    return _readEnvelope(response);
+  }
+
+  static Future<Map<String, dynamic>> getCustomerWellnessProduct(
+    String id,
+  ) async {
+    _requireCustomerId();
+    return _readEnvelope(await _dio.get('/customer/wellness-products/$id'));
   }
 
   static Future<Map<String, dynamic>> saveAppointmentPrescriptionDraft(

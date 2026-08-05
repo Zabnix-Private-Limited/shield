@@ -7,4 +7,6 @@
 
 All 547 rows pass the schema-compatible import validation. There are no blank rows, duplicate source IDs, duplicate names, duplicate alias names, negative MRP/stock, invalid GST/discount values, missing category, or missing required source fields. Categories are 350 `VITAMINS & SUPPLEMENTS-HW` and 197 `DIAGNOSTIC DEVICES & MONITORING EQUIPMENT-MDE`. GST is 0%, 5%, or 18%. The workbook has no SKU/barcode, URL, image, tax-table, or variant field.
 
-The 33 names matching a conservative health-claim/device keyword check (for example BP monitors and `LIVER DETOX`) are not promoted to live products; every import row is `STAGING`, non-demo, and unavailable to the current demo-only catalogue. `PTR` is retained as cost price and MRP as both MRP and selling price because no approved retail pricing rule was supplied. Review those staging rows and their claims before any live catalogue approval.
+The 33 names matching a conservative health-claim/device keyword check (for example BP monitors and `LIVER DETOX`) remain import-analysis items requiring manual review before any production approval. The customer demo catalogue exposes only neutral product identity, category, unit, and price; it does not expose health claims or source metadata. `PTR` is retained as cost price and MRP as both MRP and selling price because no approved retail pricing rule was supplied.
+
+The 547-row batch is approved only for the non-production demo catalogue. It is identified by `data_source=LEGACY_XLS_20260805` and `is_demo_available=true`; this is not a live Sahakar inventory approval.

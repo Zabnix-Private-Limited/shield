@@ -65,9 +65,111 @@ export class PharmacyService {
 
   async listWellnessProducts() {
     return this.prisma.product.findMany({
-      where: { status: 'ACTIVE' },
+      where: {
+        OR: [
+          { status: 'ACTIVE' },
+          {
+            dataSource: 'LEGACY_XLS_20260805',
+            status: 'STAGING',
+            isDemoAvailable: true,
+          },
+        ],
+      },
+      include: { category: true },
       orderBy: { productName: 'asc' },
     });
+  }
+
+  private customerWellnessWhere() {
+    return {
+      OR: [
+        { status: 'ACTIVE', dataSource: { not: 'LEGACY_XLS_20260805' } },
+        { dataSource: 'LEGACY_XLS_20260805', isDemoAvailable: true },
+      ],
+    };
+  }
+
+  private customerWellnessProduct(product: any) {
+    return {
+      id: product.id.toString(),
+      productCode: product.productCode,
+      productName: product.productName,
+      brand: product.brand,
+      unit: product.unit,
+      mrp: product.mrp == null ? null : Number(product.mrp),
+      sellingPrice:
+        product.sellingPrice == null ? null : Number(product.sellingPrice),
+      category: product.category
+        ? { id: product.category.id.toString(), name: product.category.name }
+        : null,
+      catalogueKind:
+        product.dataSource === 'LEGACY_XLS_20260805' ? 'DEMO' : 'STANDARD',
+    };
+  }
+
+  async listCustomerWellnessProducts(options: {
+    query?: string;
+    categoryId?: string;
+    page?: string;
+    pageSize?: string;
+  }) {
+    const requestedPage = Number(options.page);
+    const requestedPageSize = Number(options.pageSize);
+    const page =
+      Number.isSafeInteger(requestedPage) && requestedPage > 0
+        ? requestedPage
+        : 1;
+    const pageSize =
+      Number.isSafeInteger(requestedPageSize) && requestedPageSize > 0
+        ? Math.min(50, requestedPageSize)
+        : 24;
+    const filters: any[] = [this.customerWellnessWhere()];
+    const query = options.query?.trim();
+    if (query) {
+      filters.push({
+        OR: [
+          { productName: { contains: query, mode: 'insensitive' } },
+          { brand: { contains: query, mode: 'insensitive' } },
+          { productCode: { contains: query, mode: 'insensitive' } },
+        ],
+      });
+    }
+    if (options.categoryId && /^\d+$/.test(options.categoryId)) {
+      filters.push({ categoryId: BigInt(options.categoryId) });
+    }
+    const where = { AND: filters };
+    const [total, products, categories] = await this.prisma.$transaction([
+      this.prisma.product.count({ where }),
+      this.prisma.product.findMany({
+        where,
+        include: { category: true },
+        orderBy: { productName: 'asc' },
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+      }),
+      this.prisma.productCategory.findMany({
+        where: { products: { some: this.customerWellnessWhere() } },
+        orderBy: { name: 'asc' },
+      }),
+    ]);
+    return {
+      items: products.map((product) => this.customerWellnessProduct(product)),
+      pagination: { page, pageSize, total, totalPages: Math.ceil(total / pageSize) },
+      categories: categories.map((category) => ({
+        id: category.id.toString(),
+        name: category.name,
+      })),
+      disclosure: 'Demo products only — not live Sahakar inventory.',
+    };
+  }
+
+  async getCustomerWellnessProduct(id: bigint) {
+    const product = await this.prisma.product.findFirst({
+      where: { AND: [{ id }, this.customerWellnessWhere()] },
+      include: { category: true },
+    });
+    if (!product) throw new NotFoundException('Wellness product not found.');
+    return this.customerWellnessProduct(product);
   }
 
   async createPurchase(data: {

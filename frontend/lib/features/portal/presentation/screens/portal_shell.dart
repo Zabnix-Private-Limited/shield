@@ -144,7 +144,9 @@ class _PortalShellState extends State<PortalShell> {
         portal = portalDataForRole(widget.role);
         data = await ApiService.getRoleSectionData(widget.role, sectionKey);
       }
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
       setState(() {
         _portalData = portal;
         _sectionData = data;
@@ -6923,7 +6925,11 @@ class _CustomerServicesView extends StatefulWidget {
 class _CustomerServicesViewState extends State<_CustomerServicesView> {
   late Future<_CustomerAccessContext> _accessFuture;
   late Future<List<Map<String, dynamic>>> _providersFuture;
-  late Future<List<Map<String, dynamic>>> _wellnessProductsFuture;
+  late Future<Map<String, dynamic>> _wellnessProductsFuture;
+  final TextEditingController _wellnessSearchController =
+      TextEditingController();
+  String? _wellnessCategoryId;
+  int _wellnessPage = 1;
   String _activeTab =
       'PHARMACY'; // 'PHARMACY', 'LAB', 'HOMECARE', 'CONSULTATION'
   String _uploadStatus = 'No files selected';
@@ -6948,13 +6954,73 @@ class _CustomerServicesViewState extends State<_CustomerServicesView> {
     super.initState();
     _accessFuture = _loadCustomerAccessContext();
     _providersFuture = ApiService.getProviders();
-    _wellnessProductsFuture = ApiService.getCustomerWellnessProducts();
+    _wellnessProductsFuture = _loadWellnessProducts();
   }
 
   @override
   void dispose() {
     _manualMedicineController.dispose();
+    _wellnessSearchController.dispose();
     super.dispose();
+  }
+
+  Future<Map<String, dynamic>> _loadWellnessProducts() {
+    return ApiService.getCustomerWellnessProducts(
+      query: _wellnessSearchController.text,
+      categoryId: _wellnessCategoryId,
+      page: _wellnessPage,
+    );
+  }
+
+  void _refreshWellnessProducts({int? page}) {
+    setState(() {
+      _wellnessPage = page ?? 1;
+      _wellnessProductsFuture = _loadWellnessProducts();
+    });
+  }
+
+  Future<void> _showWellnessProduct(Map<String, dynamic> product) async {
+    final id = product['id']?.toString();
+    if (id == null) return;
+    try {
+      final details = await ApiService.getCustomerWellnessProduct(id);
+      if (!mounted) return;
+      await showModalBottomSheet<void>(
+        context: context,
+        builder: (context) => Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                details['productName']?.toString() ?? 'Wellness product',
+                style: AppTypography.h4,
+              ),
+              if ((details['brand']?.toString() ?? '').isNotEmpty) ...[
+                const SizedBox(height: 6),
+                Text(
+                  details['brand'].toString(),
+                  style: AppTypography.small.copyWith(color: AppColors.gray),
+                ),
+              ],
+              const SizedBox(height: 12),
+              Text(
+                'Demo products only — not live Sahakar inventory.',
+                style: AppTypography.tiny.copyWith(color: AppColors.gray),
+              ),
+            ],
+          ),
+        ),
+      );
+    } catch (_) {
+      if (mounted) {
+        showPortalSnackBar(
+          context,
+          'Product details could not be loaded. Please retry.',
+        );
+      }
+    }
   }
 
   String _inferMimeType(String fileName) {
@@ -7675,7 +7741,7 @@ class _CustomerServicesViewState extends State<_CustomerServicesView> {
   }
 
   Widget _buildWellnessCatalogue() {
-    return FutureBuilder<List<Map<String, dynamic>>>(
+    return FutureBuilder<Map<String, dynamic>>(
       future: _wellnessProductsFuture,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
@@ -7694,10 +7760,7 @@ class _CustomerServicesViewState extends State<_CustomerServicesView> {
                   ),
                 ),
                 TextButton(
-                  onPressed: () => setState(
-                    () => _wellnessProductsFuture =
-                        ApiService.getCustomerWellnessProducts(),
-                  ),
+                  onPressed: () => setState(_refreshWellnessProducts),
                   child: const Text('Retry'),
                 ),
               ],
@@ -7705,7 +7768,16 @@ class _CustomerServicesViewState extends State<_CustomerServicesView> {
           );
         }
 
-        final products = snapshot.data ?? const <Map<String, dynamic>>[];
+        final catalogue = snapshot.data ?? const <String, dynamic>{};
+        final products = ((catalogue['items'] as List?) ?? const [])
+            .map((item) => Map<String, dynamic>.from(item as Map))
+            .toList();
+        final categories = ((catalogue['categories'] as List?) ?? const [])
+            .map((item) => Map<String, dynamic>.from(item as Map))
+            .toList();
+        final pagination = Map<String, dynamic>.from(
+          (catalogue['pagination'] as Map?) ?? const {},
+        );
         if (products.isEmpty) {
           return AppCard(
             child: Text(
@@ -7719,9 +7791,51 @@ class _CustomerServicesViewState extends State<_CustomerServicesView> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Catalogue availability and prices are shown from the active SHIELD product catalogue.',
+              catalogue['disclosure']?.toString() ??
+                  'Demo products only — not live Sahakar inventory.',
               style: AppTypography.tiny.copyWith(color: AppColors.gray),
             ),
+            const SizedBox(height: 10),
+            TextField(
+              controller: _wellnessSearchController,
+              textInputAction: TextInputAction.search,
+              onSubmitted: (_) => _refreshWellnessProducts(),
+              decoration: InputDecoration(
+                hintText: 'Search wellness products',
+                prefixIcon: const Icon(Icons.search),
+                suffixIcon: IconButton(
+                  icon: const Icon(Icons.search),
+                  onPressed: _refreshWellnessProducts,
+                ),
+              ),
+            ),
+            if (categories.isNotEmpty) ...[
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 8,
+                children: [
+                  ChoiceChip(
+                    label: const Text('All'),
+                    selected: _wellnessCategoryId == null,
+                    onSelected: (_) {
+                      _wellnessCategoryId = null;
+                      _refreshWellnessProducts();
+                    },
+                  ),
+                  ...categories.map(
+                    (category) => ChoiceChip(
+                      label: Text(category['name']?.toString() ?? 'Category'),
+                      selected:
+                          _wellnessCategoryId == category['id']?.toString(),
+                      onSelected: (_) {
+                        _wellnessCategoryId = category['id']?.toString();
+                        _refreshWellnessProducts();
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ],
             const SizedBox(height: 10),
             ...products.map((product) {
               final name =
@@ -7738,57 +7852,88 @@ class _CustomerServicesViewState extends State<_CustomerServicesView> {
                     ).format(price);
               return Padding(
                 padding: const EdgeInsets.only(bottom: 10),
-                child: AppCard(
-                  padding: const EdgeInsets.all(14),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 42,
-                        height: 42,
-                        decoration: BoxDecoration(
-                          color: AppColors.shieldBlue.withValues(alpha: 0.08),
-                          borderRadius: BorderRadius.circular(14),
+                child: InkWell(
+                  onTap: () => _showWellnessProduct(product),
+                  borderRadius: BorderRadius.circular(16),
+                  child: AppCard(
+                    padding: const EdgeInsets.all(14),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 42,
+                          height: 42,
+                          decoration: BoxDecoration(
+                            color: AppColors.shieldBlue.withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          child: const Icon(
+                            Icons.health_and_safety_outlined,
+                            color: AppColors.shieldBlue,
+                          ),
                         ),
-                        child: const Icon(
-                          Icons.health_and_safety_outlined,
-                          color: AppColors.shieldBlue,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              name,
-                              style: AppTypography.body.copyWith(
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                            if (unit != null && unit.isNotEmpty) ...[
-                              const SizedBox(height: 3),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
                               Text(
-                                unit,
-                                style: AppTypography.tiny.copyWith(
-                                  color: AppColors.gray,
+                                name,
+                                style: AppTypography.body.copyWith(
+                                  fontWeight: FontWeight.w700,
                                 ),
                               ),
+                              if (unit != null && unit.isNotEmpty) ...[
+                                const SizedBox(height: 3),
+                                Text(
+                                  unit,
+                                  style: AppTypography.tiny.copyWith(
+                                    color: AppColors.gray,
+                                  ),
+                                ),
+                              ],
                             ],
-                          ],
+                          ),
                         ),
-                      ),
-                      Text(
-                        priceLabel,
-                        style: AppTypography.small.copyWith(
-                          color: AppColors.shieldNavy,
-                          fontWeight: FontWeight.w700,
+                        Text(
+                          priceLabel,
+                          style: AppTypography.small.copyWith(
+                            color: AppColors.shieldNavy,
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               );
             }),
+            if ((pagination['totalPages'] as num? ?? 1) > 1) ...[
+              const SizedBox(height: 4),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  TextButton(
+                    onPressed: _wellnessPage > 1
+                        ? () =>
+                              _refreshWellnessProducts(page: _wellnessPage - 1)
+                        : null,
+                    child: const Text('Previous'),
+                  ),
+                  Text(
+                    'Page ${pagination['page'] ?? 1} of ${pagination['totalPages'] ?? 1}',
+                    style: AppTypography.tiny.copyWith(color: AppColors.gray),
+                  ),
+                  TextButton(
+                    onPressed:
+                        _wellnessPage < (pagination['totalPages'] as num? ?? 1)
+                        ? () =>
+                              _refreshWellnessProducts(page: _wellnessPage + 1)
+                        : null,
+                    child: const Text('Next'),
+                  ),
+                ],
+              ),
+            ],
           ],
         );
       },

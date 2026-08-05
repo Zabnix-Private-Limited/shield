@@ -3,6 +3,8 @@ import { PharmacyController } from './pharmacy.controller';
 describe('PharmacyController customer wellness catalogue', () => {
   const pharmacyService = {
     listWellnessProducts: jest.fn(),
+    listCustomerWellnessProducts: jest.fn(),
+    getCustomerWellnessProduct: jest.fn(),
     listPurchases: jest.fn(),
   };
   const providerScope = { assertProviderCanAccessCustomer: jest.fn() };
@@ -14,14 +16,19 @@ describe('PharmacyController customer wellness catalogue', () => {
   beforeEach(() => jest.clearAllMocks());
 
   it('returns active catalogue products to an authenticated customer', async () => {
-    pharmacyService.listWellnessProducts.mockResolvedValue([{ id: 1 }]);
+    pharmacyService.listCustomerWellnessProducts.mockResolvedValue({
+      items: [{ id: '1', catalogueKind: 'DEMO' }],
+    });
 
     await expect(
       controller.listCustomerWellnessProducts({
         principalType: 'CUSTOMER',
         customerId: '7',
-      } as any),
-    ).resolves.toMatchObject({ data: [{ id: 1 }] });
+      } as any, 'vitamin', '2', '3', '12'),
+    ).resolves.toMatchObject({ data: { items: [{ id: '1' }] } });
+    expect(pharmacyService.listCustomerWellnessProducts).toHaveBeenCalledWith({
+      query: 'vitamin', categoryId: '2', page: '3', pageSize: '12',
+    });
   });
 
   it('rejects non-customer principals', async () => {

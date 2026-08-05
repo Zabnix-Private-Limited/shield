@@ -10,7 +10,7 @@ All entries use the authenticated customer session. Flutter route guards improve
 | Providers/booking | `ApiService` in customer services view | `GET /service-providers`; customer appointment create | UI submits only selected active provider; backend binds appointment to customer principal |
 | Visits | `ApiService` | Customer appointments list/cancel/reschedule | Backend verifies customer ownership for every mutation |
 | Documents/prescriptions | Customer document screens | Customer document read/upload/detail/signed download APIs | Customer-owned document checks; storage paths never render in Flutter |
-| Wellness catalogue | `ApiService.getCustomerWellnessProducts` | `GET /customer/wellness-products` | Seeded demo products remain API/database-derived and marked in their data source |
+| Wellness catalogue | `ApiService.getCustomerWellnessProducts`, `getCustomerWellnessProduct` | `GET /customer/wellness-products?query=&categoryId=&page=&pageSize=`; `GET /customer/wellness-products/:id` | Customer-safe paginated records only; imported batch renders as `DEMO` with the required non-live inventory disclosure |
 | Orders | `CustomerOrdersScreen` | `GET /pharmacy/purchases?customer_id=` | Read-only customer purchase history; no cart/checkout contract |
 | Referrals | `CustomerReferralsScreen` | `GET /referrals/summary/:customerId` | Customer-scoped lifecycle history; no client reward calculation |
 | Activity/notifications | Customer timeline/inbox views | `GET /timeline/me`; notification read APIs | Timeline resolves self; notification mutations are ownership-scoped |

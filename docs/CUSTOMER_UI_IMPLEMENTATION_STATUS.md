@@ -64,9 +64,10 @@ Completed:
 - Removed unreachable local lab/home-care request snippets; unavailable catalogue states remain explicit until the backend provides customer-safe contracts.
 - Customer document archive coverage now verifies a backend failure is retryable and never presented as an empty customer archive.
 - Customer account capabilities now have an authenticated API foundation and routed Profile & Family workspace for addresses, dependents, typed contacts, preferred pharmacy, and persisted notification preferences. Browser UAT remains pending because the local browser session redirected to login before an authenticated render could be captured.
+- Customer Wellness now uses a customer-safe paginated contract with backend-owned demo disclosure, product detail lookup, search, and category filtering. The legacy spreadsheet batch is visible only through its explicit demo flag; internal import/cost/stock fields remain server-only.
 
 Not complete:
 
-- Full commerce, rewards, card lifecycle, referral, family, timeline, booking, and responsive visual QA.
+- Full commerce, rewards, card lifecycle, referral, family, timeline, booking, and responsive visual QA. Wellness live browser evidence remains pending while the restarted local Flutter server is unavailable.
 - Customer-safe subscription entitlement, physical-card history, replacement, lost and damaged card API contracts.
 - Feature extraction for portal-shell-only customer screens.

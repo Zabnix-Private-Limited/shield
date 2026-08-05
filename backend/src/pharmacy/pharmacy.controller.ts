@@ -56,6 +56,10 @@ export class PharmacyController {
   @Get('customer/wellness-products')
   async listCustomerWellnessProducts(
     @CurrentPrincipal() principal?: ShieldPrincipal,
+    @Query('query') query?: string,
+    @Query('categoryId') categoryId?: string,
+    @Query('page') page?: string,
+    @Query('pageSize') pageSize?: string,
   ) {
     if (principal?.principalType !== 'CUSTOMER' || !principal.customerId) {
       throw new ForbiddenException(
@@ -66,7 +70,30 @@ export class PharmacyController {
     return {
       success: true,
       message: 'Customer wellness catalog retrieved',
-      data: await this.pharmacyService.listWellnessProducts(),
+      data: await this.pharmacyService.listCustomerWellnessProducts({
+        query,
+        categoryId,
+        page,
+        pageSize,
+      }),
+    };
+  }
+
+  @RequirePermissions('customers.view')
+  @Get('customer/wellness-products/:id')
+  async getCustomerWellnessProduct(
+    @Param('id') id: string,
+    @CurrentPrincipal() principal?: ShieldPrincipal,
+  ) {
+    if (principal?.principalType !== 'CUSTOMER' || !principal.customerId) {
+      throw new ForbiddenException(
+        'Only authenticated customers can browse the customer wellness catalogue.',
+      );
+    }
+    return {
+      success: true,
+      message: 'Customer wellness product retrieved',
+      data: await this.pharmacyService.getCustomerWellnessProduct(BigInt(id)),
     };
   }
 
