@@ -40,7 +40,9 @@ class _CustomerLoginScreenState extends State<CustomerLoginScreen> {
 
     try {
       final result = await CustomerAuthRepository.instance
-          .startPhoneVerification(_phoneController.text);
+          .startPhoneVerification(
+            _phoneController.text.replaceAll(RegExp(r'\D'), ''),
+          );
       if (!mounted) {
         return;
       }

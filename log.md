@@ -10418,3 +10418,19 @@ Replaced the removed static Flutter carousel with a database-backed Operations c
 ### Verification
 
 - flutter analyze lib/features/portal/presentation/screens/portal_shell.dart
+
+
+## 2026-08-05 20:45:00 IST - Codex
+
+## 11. Customer OTP mobile normalization
+
+- Runtime Playwright verification found the prefilled formatted test number passed visible validation but was submitted with its spacing, causing a false invalid-mobile state.
+- The customer login boundary now strips non-digits before starting Firebase phone verification, matching the existing ten-digit validator.
+
+### Frontend Files
+
+- frontend/lib/features/customer/auth/presentation/screens/customer_login_screen.dart
+
+### Verification
+
+- flutter analyze lib/features/customer/auth/presentation/screens/customer_login_screen.dart
