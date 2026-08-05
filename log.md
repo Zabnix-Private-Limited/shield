@@ -10607,3 +10607,18 @@ Replaced the removed static Flutter carousel with a database-backed Operations c
 
 - flutter analyze customer account and portal files
 - flutter test test/customer_portal_routes_test.dart
+
+## 23. Customer contacts and preferred pharmacy — 2026-08-05 23:35:00 IST
+
+- Extended the Profile and Family workspace with persisted alternative/emergency contact and preferred pharmacy surfaces using the new customer-scoped API.
+- Contact form validates a ten-digit number before request; preferred pharmacy is selectable only from active API-provided pharmacy records.
+
+### Frontend Files
+
+- frontend/lib/features/customer/account/data/customer_account_repository.dart
+- frontend/lib/features/customer/account/presentation/screens/customer_account_screen.dart
+
+### Verification
+
+- flutter analyze customer account and portal files
+- flutter test test/customer_portal_routes_test.dart

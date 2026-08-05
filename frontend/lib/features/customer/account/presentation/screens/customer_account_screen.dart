@@ -23,7 +23,7 @@ class _CustomerAccountScreenState extends State<CustomerAccountScreen>
   @override
   void initState() {
     super.initState();
-    _tabs = TabController(length: 2, vsync: this);
+    _tabs = TabController(length: 4, vsync: this);
     _future = _load();
   }
 
@@ -37,17 +37,36 @@ class _CustomerAccountScreenState extends State<CustomerAccountScreen>
     final results = await Future.wait([
       _repository.addresses(),
       _repository.dependents(),
+      _repository.contacts(),
+      _repository.pharmacies(),
+      _repository.preferredProvider(),
     ]);
-    return _AccountData(addresses: results[0], dependents: results[1]);
+    return _AccountData(
+      addresses: results[0] as List<Map<String, dynamic>>,
+      dependents: results[1] as List<Map<String, dynamic>>,
+      contacts: results[2] as List<Map<String, dynamic>>,
+      pharmacies: results[3] as List<Map<String, dynamic>>,
+      preferredProvider: results[4] as Map<String, dynamic>?,
+    );
   }
 
   void _refresh() => setState(() => _future = _load());
 
-  Future<void> _remove({required String id, required bool address}) async {
+  Future<void> _remove({
+    required String id,
+    required bool address,
+    bool contact = false,
+  }) async {
     final approved = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text(address ? 'Remove address?' : 'Remove family member?'),
+        title: Text(
+          address
+              ? 'Remove address?'
+              : contact
+              ? 'Remove contact?'
+              : 'Remove family member?',
+        ),
         content: const Text(
           'This action removes the saved record from your account.',
         ),
@@ -67,6 +86,8 @@ class _CustomerAccountScreenState extends State<CustomerAccountScreen>
     try {
       if (address) {
         await _repository.removeAddress(id);
+      } else if (contact) {
+        await _repository.removeContact(id);
       } else {
         await _repository.removeDependent(id);
       }
@@ -102,6 +123,28 @@ class _CustomerAccountScreenState extends State<CustomerAccountScreen>
     if (saved == true) _refresh();
   }
 
+  Future<void> _editContact([Map<String, dynamic>? existing]) async {
+    final saved = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => _ContactEditor(
+        value: existing,
+        onSave: (value) =>
+            _repository.saveContact(value, id: existing?['id']?.toString()),
+      ),
+    );
+    if (saved == true) _refresh();
+  }
+
+  Future<void> _setPreferredProvider(String? providerId) async {
+    try {
+      await _repository.setPreferredProvider(providerId);
+      if (mounted) _refresh();
+    } catch (_) {
+      if (mounted) _message('Could not update your preferred pharmacy.');
+    }
+  }
+
   void _message(String text) =>
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
 
@@ -127,6 +170,8 @@ class _CustomerAccountScreenState extends State<CustomerAccountScreen>
             tabs: const [
               Tab(text: 'Addresses'),
               Tab(text: 'Family'),
+              Tab(text: 'Contacts'),
+              Tab(text: 'Pharmacy'),
             ],
           ),
         ),
@@ -161,7 +206,7 @@ class _CustomerAccountScreenState extends State<CustomerAccountScreen>
             }
             final data = snapshot.data!;
             return SizedBox(
-              height: 520,
+              height: 560,
               child: TabBarView(
                 controller: _tabs,
                 children: [
@@ -197,8 +242,28 @@ class _CustomerAccountScreenState extends State<CustomerAccountScreen>
                         'Relationship not added',
                     onAdd: () => _editDependent(),
                     onEdit: _editDependent,
+                    onRemove: (row) => _remove(
+                      id: row['id'].toString(),
+                      address: false,
+                      contact: true,
+                    ),
+                  ),
+                  _RecordList(
+                    empty: 'No emergency or alternative contacts saved yet.',
+                    addLabel: 'Add contact',
+                    records: data.contacts,
+                    title: (row) => (row['name'] as String?) ?? 'Contact',
+                    detail: (row) =>
+                        '${row['contactType'] ?? 'ALTERNATIVE'} • ${row['mobile'] ?? ''}',
+                    onAdd: () => _editContact(),
+                    onEdit: _editContact,
                     onRemove: (row) =>
                         _remove(id: row['id'].toString(), address: false),
+                  ),
+                  _PharmacyList(
+                    pharmacies: data.pharmacies,
+                    selectedId: data.preferredProvider?['id']?.toString(),
+                    onSelect: _setPreferredProvider,
                   ),
                 ],
               ),
@@ -211,9 +276,18 @@ class _CustomerAccountScreenState extends State<CustomerAccountScreen>
 }
 
 class _AccountData {
-  const _AccountData({required this.addresses, required this.dependents});
+  const _AccountData({
+    required this.addresses,
+    required this.dependents,
+    required this.contacts,
+    required this.pharmacies,
+    required this.preferredProvider,
+  });
   final List<Map<String, dynamic>> addresses;
   final List<Map<String, dynamic>> dependents;
+  final List<Map<String, dynamic>> contacts;
+  final List<Map<String, dynamic>> pharmacies;
+  final Map<String, dynamic>? preferredProvider;
 }
 
 class _RecordList extends StatelessWidget {
@@ -456,5 +530,170 @@ class _DependentEditorState extends State<_DependentEditor> {
         ],
       ),
     ),
+  );
+}
+
+class _ContactEditor extends StatefulWidget {
+  const _ContactEditor({this.value, required this.onSave});
+  final Map<String, dynamic>? value;
+  final Future<Map<String, dynamic>> Function(Map<String, dynamic>) onSave;
+
+  @override
+  State<_ContactEditor> createState() => _ContactEditorState();
+}
+
+class _ContactEditorState extends State<_ContactEditor> {
+  late final _name = TextEditingController(
+    text: widget.value?['name'] as String? ?? '',
+  );
+  late final _mobile = TextEditingController(
+    text: widget.value?['mobile'] as String? ?? '',
+  );
+  String _type = 'EMERGENCY';
+  bool _saving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _type = (widget.value?['contactType'] as String? ?? 'EMERGENCY')
+        .toUpperCase();
+  }
+
+  @override
+  void dispose() {
+    _name.dispose();
+    _mobile.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: EdgeInsets.fromLTRB(
+      20,
+      20,
+      20,
+      20 + MediaQuery.viewInsetsOf(context).bottom,
+    ),
+    child: SingleChildScrollView(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            widget.value == null ? 'Add contact' : 'Edit contact',
+            style: AppTypography.h3,
+          ),
+          const SizedBox(height: 16),
+          DropdownButtonFormField<String>(
+            initialValue: _type,
+            items: const [
+              DropdownMenuItem(
+                value: 'EMERGENCY',
+                child: Text('Emergency contact'),
+              ),
+              DropdownMenuItem(
+                value: 'ALTERNATIVE',
+                child: Text('Alternative contact'),
+              ),
+            ],
+            onChanged: (value) => setState(() => _type = value ?? _type),
+          ),
+          TextField(
+            controller: _name,
+            decoration: const InputDecoration(labelText: 'Name'),
+          ),
+          TextField(
+            controller: _mobile,
+            keyboardType: TextInputType.phone,
+            decoration: const InputDecoration(labelText: 'Mobile number'),
+          ),
+          const SizedBox(height: 16),
+          AppButton(
+            text: _saving ? 'Saving...' : 'Save contact',
+            onPressed: _saving
+                ? null
+                : () async {
+                    if (_mobile.text.replaceAll(RegExp(r'\D'), '').length !=
+                        10) {
+                      return;
+                    }
+                    setState(() => _saving = true);
+                    try {
+                      await widget.onSave({
+                        'name': _name.text,
+                        'mobile': _mobile.text,
+                        'contactType': _type,
+                      });
+                      if (!context.mounted) return;
+                      Navigator.pop(context, true);
+                    } catch (_) {
+                      if (mounted) {
+                        setState(() => _saving = false);
+                      }
+                    }
+                  },
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+class _PharmacyList extends StatelessWidget {
+  const _PharmacyList({
+    required this.pharmacies,
+    required this.selectedId,
+    required this.onSelect,
+  });
+  final List<Map<String, dynamic>> pharmacies;
+  final String? selectedId;
+  final ValueChanged<String?> onSelect;
+
+  @override
+  Widget build(BuildContext context) => ListView(
+    children: [
+      if (selectedId != null)
+        Align(
+          alignment: Alignment.centerRight,
+          child: TextButton(
+            onPressed: () => onSelect(null),
+            child: const Text('Remove preference'),
+          ),
+        ),
+      if (pharmacies.isEmpty)
+        AppCard(
+          child: Text(
+            'No active pharmacies are available.',
+            style: AppTypography.body.copyWith(color: AppColors.gray),
+          ),
+        ),
+      ...pharmacies.map((pharmacy) {
+        final id = pharmacy['id'].toString();
+        final selected = id == selectedId;
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 10),
+          child: AppCard(
+            child: ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: Icon(
+                selected ? Icons.check_circle : Icons.local_pharmacy_outlined,
+                color: selected ? AppColors.success : AppColors.shieldBlue,
+              ),
+              title: Text((pharmacy['providerName'] as String?) ?? 'Pharmacy'),
+              subtitle: Text(
+                (pharmacy['business'] as Map?)?['name']?.toString() ??
+                    'SHIELD pharmacy',
+              ),
+              trailing: selected
+                  ? const Text('Preferred')
+                  : TextButton(
+                      onPressed: () => onSelect(id),
+                      child: const Text('Select'),
+                    ),
+            ),
+          ),
+        );
+      }),
+    ],
   );
 }
