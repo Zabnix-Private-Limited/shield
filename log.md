@@ -10688,3 +10688,11 @@ Replaced the removed static Flutter carousel with a database-backed Operations c
 
 - npm test -- --runInBand customer-account.controller.spec.ts customer.controller.spec.ts customer.service.spec.ts
 - npm run build
+
+## 30. Firebase QA source reconciliation — 2026-08-06 00:38:00 IST
+
+- Reconciled the local login capture with current source: source normalizes formatted mobile input; the visible spacing validation failure came from the stale localhost runtime. Firebase OTP verification remains the actual QA blocker.
+
+### Documentation Files
+
+- docs/customer-ui/CUSTOMER_UI_VISUAL_QA.md
