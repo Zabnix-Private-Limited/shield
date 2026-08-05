@@ -10224,3 +10224,52 @@ Replaced the removed static Flutter carousel with a database-backed Operations c
   - Post-apply verification returned ACTIVE JSON configuration with three published dashboard banner records.
 - Why:
   - The customer Home carousel is API/database-driven and deliberately renders nothing when Operations has not configured a banner. This local review database now has the explicit demo configuration required to exercise the real carousel.
+
+## 2026-08-05 16:15:00 IST - Codex
+
+## 1. Controlled customer membership activation and legacy catalogue import preparation
+
+- Added a non-production-gated, dry-run-default command for only complete waiting customer memberships; it writes lifecycle history and audit data without creating financial entries.
+- Audited the workbook directly with xlrd, prepared 547 staging-only insert rows, and preserved all unsupported source fields in the normalized CSV for review.
+
+### Frontend Files
+
+- None.
+
+### Backend Files
+
+- `backend/scripts/activate-waiting-customers.ts`
+- `backend/prisma/data-fixes/20260805_*`
+- `backend/prisma/product-imports/vitamin-supplements/*`
+- `docs/backend/*ACTIVATION*` and `docs/backend/*VITAMIN*`
+## 2026-08-05 16:24:00 IST - Codex
+
+## 2. Non-production staging catalogue seed executed
+
+- Operator confirmed the configured Neon database is the non-production testing target.
+- Applied 05_import_products.sql: copied 547 normalized rows, inserted 2 source categories and 547 LEGACY_XLS_20260805 STAGING products.
+- Verification found zero duplicate product codes, zero products without categories, and zero products without valid prices; rerun inserted zero categories/products and retained 547 staging rows.
+
+### Frontend Files
+
+- None.
+
+### Backend Files
+
+- No additional repository file changes; database execution used the reviewed staging import package.
+
+## 2026-08-05 16:29:00 IST - Codex
+
+## 3. Eligible waiting membership activation executed
+
+- Non-production dry run found 5 pending Standard customers; 1 met the existing completeness and active-plan criteria, while 4 were intentionally excluded.
+- Applied the controlled batch: activated 1 Standard customer, updated the linked membership, and recorded one lifecycle audit row.
+- Post-run distribution: Founding 3 active and 1 incomplete/inactive; Standard 5 active and 4 pending/inactive.
+
+### Frontend Files
+
+- None.
+
+### Backend Files
+
+- No additional repository file changes; database execution used the controlled activation command.

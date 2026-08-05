@@ -13,6 +13,7 @@
     "db:push": "prisma db push",
     "db:prepare": "prisma db push && prisma db seed",
     "seed": "prisma db seed",
+    "customers:activate-waiting": "ts-node scripts/activate-waiting-customers.ts",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "nest start",
     "start:dev": "nest start --watch",
