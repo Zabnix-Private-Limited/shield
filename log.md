@@ -10450,3 +10450,12 @@ Replaced the removed static Flutter carousel with a database-backed Operations c
 ### Verification Artifacts
 
 - output/playwright/customer-otp-entered.png
+## 13. Authenticated Chrome customer QA
+
+- Used the existing signed-in customer browser session for non-mutating live verification of Profile, Edit details, Settings, customer-scoped Active sessions, and the wellness catalogue.
+- Confirmed real membership/session/catalogue rendering with no demo data or account-changing action; documented the evidence and isolated the lone console message as a Chrome extension listener issue.
+
+### Documentation Files
+
+- docs/CUSTOMER_UI_VISUAL_QA.md
+- Timestamp: 2026-08-05 20:45:19 IST
