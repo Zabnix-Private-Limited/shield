@@ -10524,4 +10524,16 @@ Replaced the removed static Flutter carousel with a database-backed Operations c
 ### Verification
 
 - flutter analyze lib/features/portal/presentation/screens/portal_shell.dart
-- flutter test test/customer_portal_routes_test.dart
+- flutter test test/customer_portal_routes_test.dart## 18. Alternative-contact server regression coverage — 2026-08-05 21:08:15 IST
+
+- Added focused service coverage for country-prefixed primary-mobile rejection and normalized existing-contact updates, preserving the API-side scope and duplicate protections behind the customer UI guard.
+- Authenticated browser capture was read-only; no customer contact or session changed.
+
+### Backend Files
+
+- backend/src/customer/customer.service.spec.ts
+
+### Verification
+
+- npm test -- --runInBand customer.service.spec.ts
+- npm run build
