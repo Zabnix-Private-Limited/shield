@@ -10622,3 +10622,16 @@ Replaced the removed static Flutter carousel with a database-backed Operations c
 
 - flutter analyze customer account and portal files
 - flutter test test/customer_portal_routes_test.dart
+
+## 24. Customer-account audit trail — 2026-08-05 23:55:00 IST
+
+- Added append-only audit records for customer-owned address, dependent, typed-contact, preference, and preferred-provider mutations without recording authentication numbers or credentials.
+
+### Backend Files
+
+- backend/src/customer/customer.service.ts
+
+### Verification
+
+- npm run build
+- npm test -- --runInBand customer.service.spec.ts

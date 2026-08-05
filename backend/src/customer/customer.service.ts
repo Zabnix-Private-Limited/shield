@@ -23,6 +23,22 @@ export class CustomerService {
     private readonly walletService: WalletService,
   ) {}
 
+  private async recordCustomerAccountAudit(
+    action: string,
+    entityType: string,
+    entityId: bigint | null,
+    customerId: bigint,
+  ) {
+    await this.prisma.auditLog.create({
+      data: {
+        action,
+        entityType,
+        entityId,
+        newData: { customerId: customerId.toString() },
+      },
+    });
+  }
+
   async create(data: any, staffUserId?: bigint) {
     const result = await this.createCustomerAggregate(data, staffUserId);
     const preloadConfig = await this.getSafePreloadConfig();
@@ -475,7 +491,7 @@ export class CustomerService {
         'Contact mobile must differ from the primary login number.',
       );
     }
-    return this.prisma.customerContact.update({
+    const contact = await this.prisma.customerContact.update({
       where: { id: data.id },
       data: {
         mobile: normalized,
@@ -484,6 +500,13 @@ export class CustomerService {
         contactType,
       },
     });
+    await this.recordCustomerAccountAudit(
+      'CUSTOMER_CONTACT_UPDATED',
+      'CUSTOMER_CONTACT',
+      contact.id,
+      customerId,
+    );
+    return contact;
   }
 
   async removeContact(customerId: bigint, contactId: bigint) {
@@ -492,6 +515,12 @@ export class CustomerService {
       data: { deletedAt: new Date() },
     });
     if (!result.count) throw new NotFoundException('Contact not found.');
+    await this.recordCustomerAccountAudit(
+      'CUSTOMER_CONTACT_REMOVED',
+      'CUSTOMER_CONTACT',
+      contactId,
+      customerId,
+    );
   }
 
   async listAddresses(customerId: bigint) {
@@ -528,7 +557,7 @@ export class CustomerService {
       pincode: data.pincode?.replace(/\s/g, '').toUpperCase() || null,
       isDefault: data.isDefault === true,
     };
-    return this.prisma.$transaction(async (tx) => {
+    const address = await this.prisma.$transaction(async (tx) => {
       if (data.id) {
         const existing = await tx.customerAddress.findFirst({
           where: { id: data.id, customerId, deletedAt: null },
@@ -547,6 +576,13 @@ export class CustomerService {
             data: { uuid: randomUUID(), customerId, ...values },
           });
     });
+    await this.recordCustomerAccountAudit(
+      data.id ? 'CUSTOMER_ADDRESS_UPDATED' : 'CUSTOMER_ADDRESS_CREATED',
+      'CUSTOMER_ADDRESS',
+      address.id,
+      customerId,
+    );
+    return address;
   }
 
   async removeAddress(customerId: bigint, addressId: bigint) {
@@ -555,6 +591,12 @@ export class CustomerService {
       data: { deletedAt: new Date(), isDefault: false },
     });
     if (!result.count) throw new NotFoundException('Address not found.');
+    await this.recordCustomerAccountAudit(
+      'CUSTOMER_ADDRESS_REMOVED',
+      'CUSTOMER_ADDRESS',
+      addressId,
+      customerId,
+    );
   }
 
   async listDependents(customerId: bigint) {
@@ -594,14 +636,28 @@ export class CustomerService {
         where: { id: data.id, customerId, deletedAt: null },
       });
       if (!existing) throw new NotFoundException('Family member not found.');
-      return this.prisma.customerDependent.update({
+      const dependent = await this.prisma.customerDependent.update({
         where: { id: data.id },
         data: values,
       });
+      await this.recordCustomerAccountAudit(
+        'CUSTOMER_DEPENDENT_UPDATED',
+        'CUSTOMER_DEPENDENT',
+        dependent.id,
+        customerId,
+      );
+      return dependent;
     }
-    return this.prisma.customerDependent.create({
+    const dependent = await this.prisma.customerDependent.create({
       data: { uuid: randomUUID(), customerId, ...values },
     });
+    await this.recordCustomerAccountAudit(
+      'CUSTOMER_DEPENDENT_CREATED',
+      'CUSTOMER_DEPENDENT',
+      dependent.id,
+      customerId,
+    );
+    return dependent;
   }
 
   async removeDependent(customerId: bigint, dependentId: bigint) {
@@ -610,6 +666,12 @@ export class CustomerService {
       data: { deletedAt: new Date() },
     });
     if (!result.count) throw new NotFoundException('Family member not found.');
+    await this.recordCustomerAccountAudit(
+      'CUSTOMER_DEPENDENT_REMOVED',
+      'CUSTOMER_DEPENDENT',
+      dependentId,
+      customerId,
+    );
   }
 
   async getPreferences(customerId: bigint) {
@@ -624,7 +686,7 @@ export class CustomerService {
       theme?: string;
     },
   ) {
-    return this.prisma.customerPreference.upsert({
+    const preference = await this.prisma.customerPreference.upsert({
       where: { customerId },
       create: {
         uuid: randomUUID(),
@@ -639,6 +701,13 @@ export class CustomerService {
         theme: data.theme?.trim() || null,
       },
     });
+    await this.recordCustomerAccountAudit(
+      'CUSTOMER_PREFERENCES_UPDATED',
+      'CUSTOMER_PREFERENCE',
+      preference.id,
+      customerId,
+    );
+    return preference;
   }
 
   async getPreferredProvider(customerId: bigint) {
@@ -659,7 +728,7 @@ export class CustomerService {
       if (!provider)
         throw new BadRequestException('Select an active pharmacy provider.');
     }
-    return this.prisma.customerPreference.upsert({
+    const preference = await this.prisma.customerPreference.upsert({
       where: { customerId },
       create: {
         uuid: randomUUID(),
@@ -668,6 +737,13 @@ export class CustomerService {
       },
       update: { preferredProviderId: providerId },
     });
+    await this.recordCustomerAccountAudit(
+      'CUSTOMER_PREFERRED_PROVIDER_UPDATED',
+      'CUSTOMER_PREFERENCE',
+      preference.id,
+      customerId,
+    );
+    return preference;
   }
 
   async listEligiblePharmacies() {
