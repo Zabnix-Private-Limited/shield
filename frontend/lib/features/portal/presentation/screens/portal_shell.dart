@@ -6973,7 +6973,7 @@ class _CustomerServicesViewState extends State<_CustomerServicesView> {
           secondaryRoute: '/portal/customer/profile',
         ),
         const SizedBox(height: 18),
-        Text('Wellness demo catalogue', style: AppTypography.h4),
+        Text('Wellness catalogue', style: AppTypography.h4),
         const SizedBox(height: 12),
         _buildWellnessCatalogue(),
       ],
@@ -7025,7 +7025,7 @@ class _CustomerServicesViewState extends State<_CustomerServicesView> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Demo products only — not live Sahakar inventory.',
+              'Catalogue availability and prices are shown from the active SHIELD product catalogue.',
               style: AppTypography.tiny.copyWith(color: AppColors.gray),
             ),
             const SizedBox(height: 10),

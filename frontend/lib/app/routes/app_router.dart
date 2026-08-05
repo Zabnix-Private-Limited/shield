@@ -220,6 +220,11 @@ final GoRouter router = GoRouter(
       redirect: (context, state) => PortalResolver.resolvedHomeRoute(),
     ),
     GoRoute(
+      path: '/portal/customer/shop',
+      name: 'customer-wellness-shop',
+      redirect: (context, state) => '/portal/customer/services',
+    ),
+    GoRoute(
       path: '/portal/:role/:section',
       name: 'role-portal',
       builder: (context, state) {

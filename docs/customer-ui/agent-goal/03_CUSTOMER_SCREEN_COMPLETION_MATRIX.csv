@@ -1,0 +1,260 @@
+﻿ID,Domain,Screen_or_State,Target_Route_or_Surface,Purpose,Required_Data_or_API,Notes,Route_Audited,Functional,Visual,States,Responsive,Tests,Screenshot_QA,Status
+001,Authentication,Splash / Bootstrap,/splash,"Secure startup, config and session restoration",local config + auth/session,,NO,NO,NO,NO,NO,NO,NO,TODO
+002,Authentication,Onboarding — Connected Care,/onboarding/connected-care,Explain unified care ecosystem,public app content/config,,NO,NO,NO,NO,NO,NO,NO,TODO
+003,Authentication,Onboarding — Membership,/onboarding/membership,Explain membership and privilege card,public plan summary,,NO,NO,NO,NO,NO,NO,NO,TODO
+004,Authentication,Onboarding — Rewards,/onboarding/rewards,Explain rewards without unapproved conversion promises,public reward rules,,NO,NO,NO,NO,NO,NO,NO,TODO
+005,Authentication,Welcome / Entry Choice,/welcome,Choose login or registration,local navigation,,NO,NO,NO,NO,NO,NO,NO,TODO
+006,Authentication,Customer Phone Login,/customer/login,Start Firebase phone authentication,Firebase + customer auth repository,,NO,NO,NO,NO,NO,NO,NO,TODO
+007,Authentication,OTP Verification,/customer/otp,Verify OTP and establish session,Firebase + auth exchange,,NO,NO,NO,NO,NO,NO,NO,TODO
+008,Authentication,OTP Resend / Timeout,same auth surface,Handle resend countdown and retry,Firebase auth,,NO,NO,NO,NO,NO,NO,NO,TODO
+009,Authentication,OTP Error / Rate Limit,same auth surface,Explain invalid/expired/rate-limited OTP,Firebase/auth errors,,NO,NO,NO,NO,NO,NO,NO,TODO
+010,Authentication,Existing Customer Lookup,/register/lookup,Prevent duplicate customer registration,customer lookup API,,NO,NO,NO,NO,NO,NO,NO,TODO
+011,Authentication,Existing Customer Found,/register/existing,Review and convert/link legacy customer,customer conversion API,,NO,NO,NO,NO,NO,NO,NO,TODO
+012,Authentication,Registration — Personal Details,/register/personal,Capture customer profile,customer create/update,,NO,NO,NO,NO,NO,NO,NO,TODO
+013,Authentication,Registration — Contact and Address,/register/contact,Capture alternative contact and address,customer contacts + addresses,,NO,NO,NO,NO,NO,NO,NO,TODO
+014,Authentication,Registration — Consent,/register/consent,Capture versioned consent,consent/legal API,,NO,NO,NO,NO,NO,NO,NO,TODO
+015,Authentication,Registration — Review,/register/review,Review before submit,registration draft,,NO,NO,NO,NO,NO,NO,NO,TODO
+016,Authentication,Registration Complete,/register/complete,Confirm account/membership result,registration response,,NO,NO,NO,NO,NO,NO,NO,TODO
+017,Authentication,Membership Pending,auth/portal gate,Truthful pending state,membership status,,NO,NO,NO,NO,NO,NO,NO,TODO
+018,Authentication,Account Suspended / Archived,auth/portal gate,Blocked-account explanation and support action,customer status,,NO,NO,NO,NO,NO,NO,NO,TODO
+019,Authentication,Session Expired,global auth state,Reauthenticate safely,session/auth,,NO,NO,NO,NO,NO,NO,NO,TODO
+020,Home,Customer Dashboard,/portal/customer/dashboard,Primary customer home,dashboard aggregate,,NO,NO,NO,NO,NO,NO,NO,TODO
+021,Home,Operations Banner Details,/portal/customer/banner/:id,View eligible campaign/offer details,published banner detail,,NO,NO,NO,NO,NO,NO,NO,TODO
+022,Home,Offers and Benefits List,/portal/customer/offers,Browse eligible customer offers,Operations content API,,NO,NO,NO,NO,NO,NO,NO,TODO
+023,Home,Global Search Entry,/portal/customer/search,Search supported customer content,search APIs where supported,,NO,NO,NO,NO,NO,NO,NO,TODO
+024,Membership & Card,Membership Dashboard,/portal/customer/membership,Membership and plan overview,membership aggregate,,NO,NO,NO,NO,NO,NO,NO,TODO
+025,Membership & Card,Privilege Card,/portal/customer/card,Card and subscription summary,membership/card/subscription,,NO,NO,NO,NO,NO,NO,NO,TODO
+026,Membership & Card,Digital Card,/portal/customer/card/digital,Full digital card,membership card API,,NO,NO,NO,NO,NO,NO,NO,TODO
+027,Membership & Card,QR Card,/portal/customer/card/qr,Scannable signed identity token,card token API,,NO,NO,NO,NO,NO,NO,NO,TODO
+028,Membership & Card,Membership Benefits,/portal/customer/membership/benefits,Eligible benefits and limits,plan benefits API,,NO,NO,NO,NO,NO,NO,NO,TODO
+029,Membership & Card,Subscription Details,/portal/customer/membership/subscription,Plan contribution and validity,subscription API,,NO,NO,NO,NO,NO,NO,NO,TODO
+030,Membership & Card,Entitlement Details,/portal/customer/membership/entitlement,Total/monthly entitlement,entitlement API,,NO,NO,NO,NO,NO,NO,NO,TODO
+031,Membership & Card,Carry Forward Details,/portal/customer/membership/carry-forward,Carry-forward breakdown,entitlement ledger/config,,NO,NO,NO,NO,NO,NO,NO,TODO
+032,Membership & Card,Benefit Usage History,/portal/customer/membership/usage,Applied benefit events,benefit application API,,NO,NO,NO,NO,NO,NO,NO,TODO
+033,Membership & Card,Request Physical Card,/portal/customer/card/request,Submit supported card request,card request API,,NO,NO,NO,NO,NO,NO,NO,TODO
+034,Membership & Card,Card Request Review,same request flow,Review request/address,card request draft,,NO,NO,NO,NO,NO,NO,NO,TODO
+035,Membership & Card,Card Request Confirmation,same request flow,Confirm submission,card request response,,NO,NO,NO,NO,NO,NO,NO,TODO
+036,Membership & Card,Card Request Tracking,/portal/customer/card/tracking,Track lifecycle,card request/events,,NO,NO,NO,NO,NO,NO,NO,TODO
+037,Membership & Card,Card History,/portal/customer/card/history,Issue/activation/replacement events,card events API,,NO,NO,NO,NO,NO,NO,NO,TODO
+038,Membership & Card,Report Lost Card,/portal/customer/card/lost,Block/report lost card,card lifecycle API,,NO,NO,NO,NO,NO,NO,NO,TODO
+039,Membership & Card,Report Damaged Card,/portal/customer/card/damaged,Request damaged-card handling,card lifecycle API,,NO,NO,NO,NO,NO,NO,NO,TODO
+040,Membership & Card,Replacement Card,/portal/customer/card/replacement,Request replacement,card lifecycle API,,NO,NO,NO,NO,NO,NO,NO,TODO
+041,Membership & Card,Membership Renewal Overview,/portal/customer/membership/renew,Renewal eligibility and plan,renewal API/config,,NO,NO,NO,NO,NO,NO,NO,TODO
+042,Membership & Card,Membership Renewal Review,same renewal flow,Review renewal values,renewal quote,,NO,NO,NO,NO,NO,NO,NO,TODO
+043,Membership & Card,Membership Renewal Payment,same renewal flow,Complete approved payment,payment/renewal API,,NO,NO,NO,NO,NO,NO,NO,TODO
+044,Membership & Card,Membership Renewal Success,same renewal flow,Confirm renewal,renewal result,,NO,NO,NO,NO,NO,NO,NO,TODO
+045,Membership & Card,Membership Renewal Failure,same renewal flow,Recover from payment/renewal failure,renewal error,,NO,NO,NO,NO,NO,NO,NO,TODO
+046,Membership & Card,Expired Membership,membership state,Explain expiry and supported actions,membership status,,NO,NO,NO,NO,NO,NO,NO,TODO
+047,Membership & Card,Suspended Membership,membership state,Explain suspension and support,membership status,,NO,NO,NO,NO,NO,NO,NO,TODO
+048,Cash Wallet,Cash Wallet Dashboard,/portal/customer/wallet,Show CASH balance and actions,customer wallet API,,NO,NO,NO,NO,NO,NO,NO,TODO
+049,Cash Wallet,Wallet Transaction History,/portal/customer/wallet/transactions,Ledger history,wallet ledger API,,NO,NO,NO,NO,NO,NO,NO,TODO
+050,Cash Wallet,Wallet Transaction Filters,same history surface,Filter credits/debits/refunds/status,wallet ledger API,,NO,NO,NO,NO,NO,NO,NO,TODO
+051,Cash Wallet,Wallet Transaction Detail,/portal/customer/wallet/transactions/:id,Explain one ledger entry,wallet transaction API,,NO,NO,NO,NO,NO,NO,NO,TODO
+052,Cash Wallet,Add Funds — Amount,/portal/customer/wallet/add-funds,Enter supported amount,payment/top-up config,,NO,NO,NO,NO,NO,NO,NO,TODO
+053,Cash Wallet,Add Funds — Payment Method,same add-funds flow,Choose approved method,payment methods API,,NO,NO,NO,NO,NO,NO,NO,TODO
+054,Cash Wallet,Add Funds — Review,same add-funds flow,Review authoritative amount/fees,top-up quote,,NO,NO,NO,NO,NO,NO,NO,TODO
+055,Cash Wallet,Add Funds — Processing,same add-funds flow,Prevent duplicate submit,payment transaction,,NO,NO,NO,NO,NO,NO,NO,TODO
+056,Cash Wallet,Add Funds — Success,same add-funds flow,Confirm credit after backend success,payment/wallet result,,NO,NO,NO,NO,NO,NO,NO,TODO
+057,Cash Wallet,Add Funds — Failure,same add-funds flow,Recover safely,payment error,,NO,NO,NO,NO,NO,NO,NO,TODO
+058,Cash Wallet,Wallet Statement,/portal/customer/wallet/statements,Statement periods/download,statement API,,NO,NO,NO,NO,NO,NO,NO,TODO
+059,Cash Wallet,Statement Filters,same statement surface,Select range/type,statement API,,NO,NO,NO,NO,NO,NO,NO,TODO
+060,Cash Wallet,Statement Download/Share,same statement surface,Authorized export,report API,,NO,NO,NO,NO,NO,NO,NO,TODO
+061,Cash Wallet,Refund Detail,/portal/customer/wallet/refunds/:id,Explain refund status,wallet transaction/refund,,NO,NO,NO,NO,NO,NO,NO,TODO
+062,Cash Wallet,Reversal Detail,/portal/customer/wallet/reversals/:id,Explain reversal,wallet transaction,,NO,NO,NO,NO,NO,NO,NO,TODO
+063,Cash Wallet,Pending/Locked Balance,/portal/customer/wallet/locked,Explain unavailable amount,wallet holds API,,NO,NO,NO,NO,NO,NO,NO,TODO
+064,Cash Wallet,Wallet Rules,/portal/customer/wallet/rules,Explain supported usage,wallet config/content,,NO,NO,NO,NO,NO,NO,NO,TODO
+065,Reward Points,Reward Points Dashboard,/portal/customer/rewards,Available points and summary,REWARD_POINTS ledger,,NO,NO,NO,NO,NO,NO,NO,TODO
+066,Reward Points,Reward History,/portal/customer/rewards/history,Reward ledger events,reward ledger API,,NO,NO,NO,NO,NO,NO,NO,TODO
+067,Reward Points,Reward Transaction Detail,/portal/customer/rewards/history/:id,Explain one points event,reward transaction API,,NO,NO,NO,NO,NO,NO,NO,TODO
+068,Reward Points,Pending Points,/portal/customer/rewards/pending,Pending qualification events,reward/referral API,,NO,NO,NO,NO,NO,NO,NO,TODO
+069,Reward Points,Earned Points,/portal/customer/rewards/earned,Qualified credits,reward ledger API,,NO,NO,NO,NO,NO,NO,NO,TODO
+070,Reward Points,Redeemed Points,/portal/customer/rewards/redeemed,Redemption history,reward ledger API,,NO,NO,NO,NO,NO,NO,NO,TODO
+071,Reward Points,Expiring Points,/portal/customer/rewards/expiring,Expiry only when supported,reward rule API,,NO,NO,NO,NO,NO,NO,NO,TODO
+072,Reward Points,How to Earn,/portal/customer/rewards/earn,Approved earning rules,reward rules,,NO,NO,NO,NO,NO,NO,NO,TODO
+073,Reward Points,Reward Rules,/portal/customer/rewards/rules,Eligibility and limitations,reward rules,,NO,NO,NO,NO,NO,NO,NO,TODO
+074,Reward Points,Redemption Catalogue,/portal/customer/rewards/redeem,Supported redemption choices,redemption config/API,,NO,NO,NO,NO,NO,NO,NO,TODO
+075,Reward Points,Redemption Detail,/portal/customer/rewards/redeem/:id,Review selected redemption,redemption API,,NO,NO,NO,NO,NO,NO,NO,TODO
+076,Reward Points,Redemption Review,same redemption flow,Confirm points/cost,redemption quote,,NO,NO,NO,NO,NO,NO,NO,TODO
+077,Reward Points,Redemption Success,same redemption flow,Confirm persisted event,redemption result,,NO,NO,NO,NO,NO,NO,NO,TODO
+078,Reward Points,Redemption Failure,same redemption flow,Recover safely,redemption error,,NO,NO,NO,NO,NO,NO,NO,TODO
+079,Services & Providers,Services Landing,/portal/customer/services,Browse service families,service catalogue API,,NO,NO,NO,NO,NO,NO,NO,TODO
+080,Services & Providers,Service Search,/portal/customer/services/search,Search services/providers,service/provider search,,NO,NO,NO,NO,NO,NO,NO,TODO
+081,Services & Providers,Service Search Results,same search flow,Display categorized results,search API,,NO,NO,NO,NO,NO,NO,NO,TODO
+082,Services & Providers,Service Categories,/portal/customer/services/categories,Browse categories,master data/API,,NO,NO,NO,NO,NO,NO,NO,TODO
+083,Services & Providers,Service Category Detail,/portal/customer/services/categories/:id,Category services/providers,service API,,NO,NO,NO,NO,NO,NO,NO,TODO
+084,Services & Providers,Service Filters and Sort,same listing surface,Filter location/type/availability,provider API,,NO,NO,NO,NO,NO,NO,NO,TODO
+085,Services & Providers,Provider Listing,/portal/customer/providers,List eligible providers,provider API,,NO,NO,NO,NO,NO,NO,NO,TODO
+086,Services & Providers,Provider Detail,/portal/customer/providers/:id,Provider branch/services/contact,provider profile API,,NO,NO,NO,NO,NO,NO,NO,TODO
+087,Services & Providers,Doctor Listing,/portal/customer/doctors,List doctors,provider/practitioner API,,NO,NO,NO,NO,NO,NO,NO,TODO
+088,Services & Providers,Doctor Profile,/portal/customer/doctors/:id,Doctor details and availability,practitioner API,,NO,NO,NO,NO,NO,NO,NO,TODO
+089,Services & Providers,Lab Listing,/portal/customer/labs,List labs,provider API,,NO,NO,NO,NO,NO,NO,NO,TODO
+090,Services & Providers,Lab Detail,/portal/customer/labs/:id,Lab services and availability,provider/service API,,NO,NO,NO,NO,NO,NO,NO,TODO
+091,Services & Providers,Pharmacy Listing,/portal/customer/pharmacies,List pharmacies,provider API,,NO,NO,NO,NO,NO,NO,NO,TODO
+092,Services & Providers,Pharmacy Detail,/portal/customer/pharmacies/:id,Pharmacy services and preferred action,provider API,,NO,NO,NO,NO,NO,NO,NO,TODO
+093,Services & Providers,Dental Providers,/portal/customer/dental,Dental discovery,provider API,,NO,NO,NO,NO,NO,NO,NO,TODO
+094,Services & Providers,Home Care,/portal/customer/home-care,Home-care services,service/provider API,,NO,NO,NO,NO,NO,NO,NO,TODO
+095,Services & Providers,Dietitian,/portal/customer/dietitian,Dietitian services,service/provider API,,NO,NO,NO,NO,NO,NO,NO,TODO
+096,Services & Providers,Cosmetic/Wellness Services,/portal/customer/wellness-services,Supported wellness services,service/provider API,,NO,NO,NO,NO,NO,NO,NO,TODO
+097,Services & Providers,Nearby Services,/portal/customer/services/nearby,Location-aware list where supported,provider/location API,,NO,NO,NO,NO,NO,NO,NO,TODO
+098,Services & Providers,Favourite Providers,/portal/customer/providers/favourites,Saved providers where supported,favourites API,,NO,NO,NO,NO,NO,NO,NO,TODO
+099,Booking & Visits,Book Visit Start,/portal/customer/book,Start booking,service/provider APIs,,NO,NO,NO,NO,NO,NO,NO,TODO
+100,Booking & Visits,Select Service,same booking flow,Choose service,service API,,NO,NO,NO,NO,NO,NO,NO,TODO
+101,Booking & Visits,Select Provider,same booking flow,Choose provider/branch,provider API,,NO,NO,NO,NO,NO,NO,NO,TODO
+102,Booking & Visits,Select Practitioner,same booking flow,Choose doctor/practitioner,practitioner API,,NO,NO,NO,NO,NO,NO,NO,TODO
+103,Booking & Visits,Select Patient,same booking flow,Choose self/family where supported,customer/family API,,NO,NO,NO,NO,NO,NO,NO,TODO
+104,Booking & Visits,Select Visit Type,same booking flow,In-person/online/home where supported,service config,,NO,NO,NO,NO,NO,NO,NO,TODO
+105,Booking & Visits,Select Date,same booking flow,Choose date,availability API,,NO,NO,NO,NO,NO,NO,NO,TODO
+106,Booking & Visits,Select Time Slot,same booking flow,Choose live slot,slot API,,NO,NO,NO,NO,NO,NO,NO,TODO
+107,Booking & Visits,Booking Notes,same booking flow,Capture allowed notes,appointment DTO,,NO,NO,NO,NO,NO,NO,NO,TODO
+108,Booking & Visits,Pricing and Coverage,same booking flow,Display backend quote/benefit,pricing evaluate API,,NO,NO,NO,NO,NO,NO,NO,TODO
+109,Booking & Visits,Booking Review,same booking flow,Review details,booking draft/quote,,NO,NO,NO,NO,NO,NO,NO,TODO
+110,Booking & Visits,Booking Confirmation,same booking flow,Confirm mutation,appointment API,,NO,NO,NO,NO,NO,NO,NO,TODO
+111,Booking & Visits,Booking Success,same booking flow,Show persisted appointment,appointment result,,NO,NO,NO,NO,NO,NO,NO,TODO
+112,Booking & Visits,Booking Failure,same booking flow,Retry without duplicates,appointment error,,NO,NO,NO,NO,NO,NO,NO,TODO
+113,Booking & Visits,My Visits,/portal/customer/visits,Upcoming/completed/cancelled,appointment API,,NO,NO,NO,NO,NO,NO,NO,TODO
+114,Booking & Visits,Visit Filters,same visits surface,Filter status/type/date,appointment API,,NO,NO,NO,NO,NO,NO,NO,TODO
+115,Booking & Visits,Visit Detail,/portal/customer/visits/:id,Full appointment information,appointment API,,NO,NO,NO,NO,NO,NO,NO,TODO
+116,Booking & Visits,Reschedule Visit,/portal/customer/visits/:id/reschedule,Select new slot,appointment API,,NO,NO,NO,NO,NO,NO,NO,TODO
+117,Booking & Visits,Cancel Visit,/portal/customer/visits/:id/cancel,Confirm cancellation,appointment API,,NO,NO,NO,NO,NO,NO,NO,TODO
+118,Booking & Visits,Cancellation Result,same cancel flow,Show status/refund effect,appointment result,,NO,NO,NO,NO,NO,NO,NO,TODO
+119,Booking & Visits,Online Consultation Detail,/portal/customer/visits/:id/online,Join/instructions where supported,consultation API,,NO,NO,NO,NO,NO,NO,NO,TODO
+120,Booking & Visits,No Available Slots,booking state,Truthful no-slot recovery,availability API,,NO,NO,NO,NO,NO,NO,NO,TODO
+121,Documents & Prescriptions,Documents Landing,/portal/customer/documents,Document overview/categories,documents API,,NO,NO,NO,NO,NO,NO,NO,TODO
+122,Documents & Prescriptions,Document Categories,/portal/customer/documents/categories,Browse supported types,document metadata,,NO,NO,NO,NO,NO,NO,NO,TODO
+123,Documents & Prescriptions,Document List,/portal/customer/documents/list,List owned documents,documents API,,NO,NO,NO,NO,NO,NO,NO,TODO
+124,Documents & Prescriptions,Document Detail,/portal/customer/documents/:id,Metadata/actions,document API,,NO,NO,NO,NO,NO,NO,NO,TODO
+125,Documents & Prescriptions,Secure Document Viewer,/portal/customer/documents/:id/view,Authorized view,signed access API,,NO,NO,NO,NO,NO,NO,NO,TODO
+126,Documents & Prescriptions,Upload Document,/portal/customer/documents/upload,Upload with metadata,document upload API,,NO,NO,NO,NO,NO,NO,NO,TODO
+127,Documents & Prescriptions,Document Upload Progress,same upload flow,Progress/cancel/retry,upload API,,NO,NO,NO,NO,NO,NO,NO,TODO
+128,Documents & Prescriptions,Document Share,/portal/customer/documents/:id/share,Authorized sharing where supported,document access API,,NO,NO,NO,NO,NO,NO,NO,TODO
+129,Documents & Prescriptions,Document Download,same document surface,Authorized download,signed access API,,NO,NO,NO,NO,NO,NO,NO,TODO
+130,Documents & Prescriptions,Lab Reports,/portal/customer/documents/lab-reports,Lab report list,documents/lab API,,NO,NO,NO,NO,NO,NO,NO,TODO
+131,Documents & Prescriptions,Lab Result Detail,/portal/customer/documents/lab-reports/:id,View result safely,lab report API,,NO,NO,NO,NO,NO,NO,NO,TODO
+132,Documents & Prescriptions,Medical Records,/portal/customer/documents/medical-records,Medical record grouping,documents API,,NO,NO,NO,NO,NO,NO,NO,TODO
+133,Documents & Prescriptions,Vaccination Records,/portal/customer/documents/vaccinations,Vaccination records where supported,documents API,,NO,NO,NO,NO,NO,NO,NO,TODO
+134,Documents & Prescriptions,Prescriptions List,/portal/customer/prescriptions,Owned prescriptions,documents/prescription API,,NO,NO,NO,NO,NO,NO,NO,TODO
+135,Documents & Prescriptions,Upload Prescription,/portal/customer/prescriptions/upload,Upload prescription,document upload API,,NO,NO,NO,NO,NO,NO,NO,TODO
+136,Documents & Prescriptions,Prescription Detail,/portal/customer/prescriptions/:id,Metadata/status/actions,prescription API,,NO,NO,NO,NO,NO,NO,NO,TODO
+137,Documents & Prescriptions,Prescription Viewer,/portal/customer/prescriptions/:id/view,Secure view,signed access API,,NO,NO,NO,NO,NO,NO,NO,TODO
+138,Documents & Prescriptions,Prescription Processing,prescription state,Show processing without invented OCR,document status,,NO,NO,NO,NO,NO,NO,NO,TODO
+139,Documents & Prescriptions,Prescription Verified,prescription state,Show verified status,document status,,NO,NO,NO,NO,NO,NO,NO,TODO
+140,Documents & Prescriptions,Prescription Rejected,prescription state,Explain rejection/reupload,document status,,NO,NO,NO,NO,NO,NO,NO,TODO
+141,Documents & Prescriptions,Prescription to Pharmacy,/portal/customer/prescriptions/:id/pharmacy,Send/link where supported,pharmacy request API,,NO,NO,NO,NO,NO,NO,NO,TODO
+142,Wellness Shop & Orders,Wellness Shop Landing,/portal/customer/shop,Catalogue landing,wellness products API,Authenticated shop route now resolves to the existing Services Wellness catalogue; dedicated presentation extraction remains next.,YES,YES,PARTIAL,YES,NO,NO,IN PROGRESS
+143,Wellness Shop & Orders,Product Search,/portal/customer/shop/search,Search catalogue,product search API,,NO,NO,NO,NO,NO,NO,NO,TODO
+144,Wellness Shop & Orders,Search Suggestions,same search surface,Suggestions/recent searches,search API/local history,,NO,NO,NO,NO,NO,NO,NO,TODO
+145,Wellness Shop & Orders,Product Categories,/portal/customer/shop/categories,Browse categories,product categories API,,NO,NO,NO,NO,NO,NO,NO,TODO
+146,Wellness Shop & Orders,Product Listing,/portal/customer/shop/products,List database products,products API,Active catalogue is API-backed with loading error retry and empty states; obsolete demo wording removed and product-detail route remains next.,YES,YES,PARTIAL,YES,NO,NO,IN PROGRESS
+147,Wellness Shop & Orders,Product Filters,same listing surface,Category/brand/price/availability,products API,,NO,NO,NO,NO,NO,NO,NO,TODO
+148,Wellness Shop & Orders,Product Sort,same listing surface,Sort supported fields,products API,,NO,NO,NO,NO,NO,NO,NO,TODO
+149,Wellness Shop & Orders,Product Detail,/portal/customer/shop/products/:id,Product information/price/stock,product API,,NO,NO,NO,NO,NO,NO,NO,TODO
+150,Wellness Shop & Orders,Product Image Gallery,same detail surface,View product images,product media API,,NO,NO,NO,NO,NO,NO,NO,TODO
+151,Wellness Shop & Orders,Wishlist,/portal/customer/shop/wishlist,Saved products where supported,wishlist API,,NO,NO,NO,NO,NO,NO,NO,TODO
+152,Wellness Shop & Orders,Cart,/portal/customer/shop/cart,Current customer cart,cart API,,NO,NO,NO,NO,NO,NO,NO,TODO
+153,Wellness Shop & Orders,Cart Item Edit,same cart surface,Quantity/remove,cart API,,NO,NO,NO,NO,NO,NO,NO,TODO
+154,Wellness Shop & Orders,Apply Coupon,same cart/checkout flow,Validate approved coupon,promotion API,,NO,NO,NO,NO,NO,NO,NO,TODO
+155,Wellness Shop & Orders,Address Selection,/portal/customer/shop/checkout/address,Choose delivery address,address API,,NO,NO,NO,NO,NO,NO,NO,TODO
+156,Wellness Shop & Orders,Add Delivery Address,same checkout flow,Create address,address API,,NO,NO,NO,NO,NO,NO,NO,TODO
+157,Wellness Shop & Orders,Edit Delivery Address,same checkout flow,Update address,address API,,NO,NO,NO,NO,NO,NO,NO,TODO
+158,Wellness Shop & Orders,Checkout,/portal/customer/shop/checkout,Checkout summary,checkout quote API,,NO,NO,NO,NO,NO,NO,NO,TODO
+159,Wellness Shop & Orders,Payment Selection,same checkout flow,Select supported method,payment config,,NO,NO,NO,NO,NO,NO,NO,TODO
+160,Wellness Shop & Orders,Wallet Payment Review,same checkout flow,Confirm wallet charge,checkout/payment API,,NO,NO,NO,NO,NO,NO,NO,TODO
+161,Wellness Shop & Orders,Order Review,same checkout flow,Server-authoritative totals,checkout quote,,NO,NO,NO,NO,NO,NO,NO,TODO
+162,Wellness Shop & Orders,Place Order Processing,same checkout flow,Idempotent creation,orders API,,NO,NO,NO,NO,NO,NO,NO,TODO
+163,Wellness Shop & Orders,Order Success,same checkout flow,Show persisted order,orders API,,NO,NO,NO,NO,NO,NO,NO,TODO
+164,Wellness Shop & Orders,Order Failure,same checkout flow,Recover safely,orders error,,NO,NO,NO,NO,NO,NO,NO,TODO
+165,Wellness Shop & Orders,My Orders,/portal/customer/orders,List owned orders,orders API,,NO,NO,NO,NO,NO,NO,NO,TODO
+166,Wellness Shop & Orders,Order Filters,same orders surface,Filter statuses/date,orders API,,NO,NO,NO,NO,NO,NO,NO,TODO
+167,Wellness Shop & Orders,Order Detail,/portal/customer/orders/:id,Items/totals/status/address,order API,,NO,NO,NO,NO,NO,NO,NO,TODO
+168,Wellness Shop & Orders,Order Tracking,/portal/customer/orders/:id/tracking,Status timeline,order events API,,NO,NO,NO,NO,NO,NO,NO,TODO
+169,Wellness Shop & Orders,Cancel Order,/portal/customer/orders/:id/cancel,Cancel when eligible,orders API,,NO,NO,NO,NO,NO,NO,NO,TODO
+170,Wellness Shop & Orders,Return Request,/portal/customer/orders/:id/return,Return where supported,return API,,NO,NO,NO,NO,NO,NO,NO,TODO
+171,Wellness Shop & Orders,Refund Status,/portal/customer/orders/:id/refund,Refund lifecycle,refund/payment API,,NO,NO,NO,NO,NO,NO,NO,TODO
+172,Wellness Shop & Orders,Reorder,/portal/customer/orders/:id/reorder,Create cart from prior order,cart/orders API,,NO,NO,NO,NO,NO,NO,NO,TODO
+173,Referrals,Referral Dashboard,/portal/customer/referrals,Summary and code,referral summary API,,NO,NO,NO,NO,NO,NO,NO,TODO
+174,Referrals,Referral Code,same referral surface,Display unique code,referral API,,NO,NO,NO,NO,NO,NO,NO,TODO
+175,Referrals,Referral QR,/portal/customer/referrals/qr,Shareable QR,referral API,,NO,NO,NO,NO,NO,NO,NO,TODO
+176,Referrals,Share Referral,same referral surface,Native/web share,referral link API,,NO,NO,NO,NO,NO,NO,NO,TODO
+177,Referrals,Referral History,/portal/customer/referrals/history,Owned referrals,referral API,,NO,NO,NO,NO,NO,NO,NO,TODO
+178,Referrals,Referral Detail,/portal/customer/referrals/:id,Privacy-safe status,referral API,,NO,NO,NO,NO,NO,NO,NO,TODO
+179,Referrals,Pending Referrals,/portal/customer/referrals/pending,Awaiting qualification,referral API,,NO,NO,NO,NO,NO,NO,NO,TODO
+180,Referrals,Qualified Referrals,/portal/customer/referrals/qualified,Qualified status,referral API,,NO,NO,NO,NO,NO,NO,NO,TODO
+181,Referrals,Rewarded Referrals,/portal/customer/referrals/rewarded,Rewarded status,referral/reward API,,NO,NO,NO,NO,NO,NO,NO,TODO
+182,Referrals,Rejected Referrals,/portal/customer/referrals/rejected,Rejected status/reason,referral API,,NO,NO,NO,NO,NO,NO,NO,TODO
+183,Referrals,Referral Rewards,/portal/customer/referrals/rewards,Reward events,reward ledger API,,NO,NO,NO,NO,NO,NO,NO,TODO
+184,Referrals,Referral Rules,/portal/customer/referrals/rules,Qualification rules,referral config/content,,NO,NO,NO,NO,NO,NO,NO,TODO
+185,Activity & Notifications,Activity Timeline,/portal/customer/activity,Customer event history,timeline API,,NO,NO,NO,NO,NO,NO,NO,TODO
+186,Activity & Notifications,Activity Detail,/portal/customer/activity/:id,Event detail,timeline API,,NO,NO,NO,NO,NO,NO,NO,TODO
+187,Activity & Notifications,Activity Filters,same activity surface,Filter event types/date,timeline API,,NO,NO,NO,NO,NO,NO,NO,TODO
+188,Activity & Notifications,Notifications Inbox,/portal/customer/notifications,Live inbox,notifications API,,NO,NO,NO,NO,NO,NO,NO,TODO
+189,Activity & Notifications,Notification Filters,same notification surface,Filter type/read state,notifications API,,NO,NO,NO,NO,NO,NO,NO,TODO
+190,Activity & Notifications,Notification Detail,/portal/customer/notifications/:id,Read detail/action,notifications API,,NO,NO,NO,NO,NO,NO,NO,TODO
+191,Activity & Notifications,Mark All Read,same notification surface,Persist read state,notifications API,,NO,NO,NO,NO,NO,NO,NO,TODO
+192,Activity & Notifications,Notification Preferences,/portal/customer/settings/notifications,Channel/type preferences,preference API,,NO,NO,NO,NO,NO,NO,NO,TODO
+193,Activity & Notifications,Service Notifications,notification filter/state,Service events,notifications API,,NO,NO,NO,NO,NO,NO,NO,TODO
+194,Activity & Notifications,Order Notifications,notification filter/state,Order events,notifications API,,NO,NO,NO,NO,NO,NO,NO,TODO
+195,Activity & Notifications,Reward Notifications,notification filter/state,Reward events,notifications API,,NO,NO,NO,NO,NO,NO,NO,TODO
+196,Activity & Notifications,Membership/Card Notifications,notification filter/state,Membership/card events,notifications API,,NO,NO,NO,NO,NO,NO,NO,TODO
+197,Profile & Family,Profile,/portal/customer/profile,Customer account overview,profile/session API,,NO,NO,NO,NO,NO,NO,NO,TODO
+198,Profile & Family,Edit Profile,/portal/customer/profile/edit,Update allowed fields,customer API,,NO,NO,NO,NO,NO,NO,NO,TODO
+199,Profile & Family,Personal Details,/portal/customer/profile/personal,View demographic fields,customer API,,NO,NO,NO,NO,NO,NO,NO,TODO
+200,Profile & Family,Alternative Contact,/portal/customer/profile/contact,Manage non-login contact,customer contacts API,,NO,NO,NO,NO,NO,NO,NO,TODO
+201,Profile & Family,Profile Photo,/portal/customer/profile/photo,Upload/remove photo where supported,profile media API,,NO,NO,NO,NO,NO,NO,NO,TODO
+202,Profile & Family,Address Book,/portal/customer/profile/addresses,Owned addresses,address API,,NO,NO,NO,NO,NO,NO,NO,TODO
+203,Profile & Family,Address Detail,/portal/customer/profile/addresses/:id,View address,address API,,NO,NO,NO,NO,NO,NO,NO,TODO
+204,Profile & Family,Add Address,/portal/customer/profile/addresses/add,Create address,address API,,NO,NO,NO,NO,NO,NO,NO,TODO
+205,Profile & Family,Edit Address,/portal/customer/profile/addresses/:id/edit,Update address,address API,,NO,NO,NO,NO,NO,NO,NO,TODO
+206,Profile & Family,Family Members,/portal/customer/family,Owned family/dependents,family API,,NO,NO,NO,NO,NO,NO,NO,TODO
+207,Profile & Family,Family Member Detail,/portal/customer/family/:id,View dependent,family API,,NO,NO,NO,NO,NO,NO,NO,TODO
+208,Profile & Family,Add Family Member,/portal/customer/family/add,Create dependent where supported,family API,,NO,NO,NO,NO,NO,NO,NO,TODO
+209,Profile & Family,Edit Family Member,/portal/customer/family/:id/edit,Update dependent,family API,,NO,NO,NO,NO,NO,NO,NO,TODO
+210,Profile & Family,Remove Family Member Confirmation,same family flow,Safe removal/unlink,family API,,NO,NO,NO,NO,NO,NO,NO,TODO
+211,Profile & Family,Emergency Contacts,/portal/customer/profile/emergency-contacts,Emergency contacts,contacts API,,NO,NO,NO,NO,NO,NO,NO,TODO
+212,Profile & Family,Add Emergency Contact,same contact flow,Create emergency contact,contacts API,,NO,NO,NO,NO,NO,NO,NO,TODO
+213,Profile & Family,Edit Emergency Contact,same contact flow,Update emergency contact,contacts API,,NO,NO,NO,NO,NO,NO,NO,TODO
+214,Profile & Family,Preferred Pharmacy,/portal/customer/profile/preferred-pharmacy,Current preferred provider,customer/provider API,,NO,NO,NO,NO,NO,NO,NO,TODO
+215,Profile & Family,Select Preferred Pharmacy,same preferred pharmacy flow,Choose eligible pharmacy,provider API,,NO,NO,NO,NO,NO,NO,NO,TODO
+216,Profile & Family,Linked Accounts,/portal/customer/profile/linked-accounts,Linked identities where supported,auth/account API,,NO,NO,NO,NO,NO,NO,NO,TODO
+217,Profile & Family,Account Information,/portal/customer/profile/account,Membership/customer identifiers,profile API,,NO,NO,NO,NO,NO,NO,NO,TODO
+218,"Settings, Privacy & Support",Settings,/portal/customer/settings,Settings landing,preferences API/local settings,,NO,NO,NO,NO,NO,NO,NO,TODO
+219,"Settings, Privacy & Support",Appearance,/portal/customer/settings/appearance,Theme preference where supported,local preference,,NO,NO,NO,NO,NO,NO,NO,TODO
+220,"Settings, Privacy & Support",Language,/portal/customer/settings/language,Language preference where supported,preference/content,,NO,NO,NO,NO,NO,NO,NO,TODO
+221,"Settings, Privacy & Support",Notification Settings,/portal/customer/settings/notifications,Channel/type preferences,notifications API,,NO,NO,NO,NO,NO,NO,NO,TODO
+222,"Settings, Privacy & Support",Biometric Settings,/portal/customer/settings/biometrics,Local biometric unlock where supported,device secure storage,,NO,NO,NO,NO,NO,NO,NO,TODO
+223,"Settings, Privacy & Support",Security,/portal/customer/settings/security,Security overview,session/auth API,,NO,NO,NO,NO,NO,NO,NO,TODO
+224,"Settings, Privacy & Support",Change Primary Mobile,/portal/customer/settings/security/mobile,Verified mobile-change workflow,auth/customer API,,NO,NO,NO,NO,NO,NO,NO,TODO
+225,"Settings, Privacy & Support",Verify New Mobile,same mobile flow,Firebase verification,Firebase/auth API,,NO,NO,NO,NO,NO,NO,NO,TODO
+226,"Settings, Privacy & Support",Active Sessions,/portal/customer/settings/security/sessions,View/revoke sessions,session API,,NO,NO,NO,NO,NO,NO,NO,TODO
+227,"Settings, Privacy & Support",Privacy & Security,/portal/customer/privacy,Privacy/security hub,legal/config/session APIs,,NO,NO,NO,NO,NO,NO,NO,TODO
+228,"Settings, Privacy & Support",Privacy Policy,/portal/customer/privacy/policy,Versioned policy,legal content API,,NO,NO,NO,NO,NO,NO,NO,TODO
+229,"Settings, Privacy & Support",Terms and Conditions,/portal/customer/privacy/terms,Versioned terms,legal content API,,NO,NO,NO,NO,NO,NO,NO,TODO
+230,"Settings, Privacy & Support",Consent Management,/portal/customer/privacy/consents,View/manage consents,consent API,,NO,NO,NO,NO,NO,NO,NO,TODO
+231,"Settings, Privacy & Support",Data Usage,/portal/customer/privacy/data-usage,Explain data use,legal content,,NO,NO,NO,NO,NO,NO,NO,TODO
+232,"Settings, Privacy & Support",Download My Data,/portal/customer/privacy/export,Request export where supported,data export API,,NO,NO,NO,NO,NO,NO,NO,TODO
+233,"Settings, Privacy & Support",Delete Account,/portal/customer/settings/delete-account,Auditable deletion request,account deletion API,,NO,NO,NO,NO,NO,NO,NO,TODO
+234,"Settings, Privacy & Support",Delete Account Confirmation,same delete flow,Deliberate confirmation,account deletion API,,NO,NO,NO,NO,NO,NO,NO,TODO
+235,"Settings, Privacy & Support",Help & Support,/portal/customer/support,Support landing,support content/API,,NO,NO,NO,NO,NO,NO,NO,TODO
+236,"Settings, Privacy & Support",Help Search,/portal/customer/support/search,Search help content,support/FAQ API,,NO,NO,NO,NO,NO,NO,NO,TODO
+237,"Settings, Privacy & Support",FAQ,/portal/customer/support/faq,FAQ list,support content API,,NO,NO,NO,NO,NO,NO,NO,TODO
+238,"Settings, Privacy & Support",FAQ Detail,/portal/customer/support/faq/:id,FAQ article,support content API,,NO,NO,NO,NO,NO,NO,NO,TODO
+239,"Settings, Privacy & Support",Contact Support,/portal/customer/support/contact,Support channels,support config,,NO,NO,NO,NO,NO,NO,NO,TODO
+240,"Settings, Privacy & Support",Create Support Ticket,/portal/customer/support/tickets/new,Create ticket,support API,,NO,NO,NO,NO,NO,NO,NO,TODO
+241,"Settings, Privacy & Support",Support Ticket Detail,/portal/customer/support/tickets/:id,Ticket history/replies,support API,,NO,NO,NO,NO,NO,NO,NO,TODO
+242,"Settings, Privacy & Support",Support History,/portal/customer/support/tickets,Owned tickets,support API,,NO,NO,NO,NO,NO,NO,NO,TODO
+243,"Settings, Privacy & Support",Feedback,/portal/customer/support/feedback,Submit feedback,feedback API,,NO,NO,NO,NO,NO,NO,NO,TODO
+244,"Settings, Privacy & Support",Rate App,/portal/customer/support/rate,Platform rating action,platform deep link/config,,NO,NO,NO,NO,NO,NO,NO,TODO
+245,"Settings, Privacy & Support",About SHIELD,/portal/customer/about,Product information,app content/config,,NO,NO,NO,NO,NO,NO,NO,TODO
+246,"Settings, Privacy & Support",App Version,same about/settings surface,Display build/version,local package info,,NO,NO,NO,NO,NO,NO,NO,TODO
+247,"Settings, Privacy & Support",Logout Confirmation,global account action,Confirm logout and clear scope,auth/session,,NO,NO,NO,NO,NO,NO,NO,TODO
+248,Global States,Global Loading Skeleton,shared state,Reusable loading treatment,n/a,,NO,NO,NO,NO,NO,NO,NO,TODO
+249,Global States,Global Empty State,shared state,Reusable legitimate-empty treatment,n/a,,NO,NO,NO,NO,NO,NO,NO,TODO
+250,Global States,Global Recoverable Error,shared state,Retryable error,n/a,,NO,NO,NO,NO,NO,NO,NO,TODO
+251,Global States,Offline / No Internet,global state,Explain cached/offline behavior,connectivity/cache,,NO,NO,NO,NO,NO,NO,NO,TODO
+252,Global States,Maintenance,global state,Planned maintenance,platform config,,NO,NO,NO,NO,NO,NO,NO,TODO
+253,Global States,Service Unavailable,global state,Backend unavailable,API errors,,NO,NO,NO,NO,NO,NO,NO,TODO
+254,Global States,Feature Unavailable,shared state,Unsupported/disabled capability,capabilities/config,,NO,NO,NO,NO,NO,NO,NO,TODO
+255,Global States,Permission Denied,global state,Authorization failure,API 403,,NO,NO,NO,NO,NO,NO,NO,TODO
+256,Global States,Session Expired,global state,Reauthenticate,API 401/session,,NO,NO,NO,NO,NO,NO,NO,TODO
+257,Global States,Update Required,global state,Minimum-version enforcement where supported,app config,,NO,NO,NO,NO,NO,NO,NO,TODO
+258,Global States,Not Found,global state,Unknown route/resource,router/API 404,,NO,NO,NO,NO,NO,NO,NO,TODO
+259,Global States,Account Suspended,global state,Restricted customer,customer status,,NO,NO,NO,NO,NO,NO,NO,TODO

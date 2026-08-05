@@ -10289,3 +10289,19 @@ Replaced the removed static Flutter carousel with a database-backed Operations c
 ### Backend Files
 
 - ackend/src/pharmacy/pharmacy.service.ts and controller now expose active products without demo wording.
+
+## 2026-08-05 16:43:00 IST - Codex
+
+## 5. Customer Wellness route coverage
+
+- Added the authenticated /portal/customer/shop route, resolving to the current API-backed Wellness surface without a parallel shell.
+- Removed the obsolete demo-only catalogue disclosure after the non-production catalogue publication, preserving loading, error/retry and empty states.
+- Updated the customer UI completion matrix for the Wellness landing and listing surfaces.
+
+### Frontend Files
+
+- rontend/lib/app/routes/app_router.dart and rontend/lib/features/portal/presentation/screens/portal_shell.dart
+
+### Backend Files
+
+- None.
