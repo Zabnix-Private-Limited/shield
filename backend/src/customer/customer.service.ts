@@ -471,12 +471,19 @@ export class CustomerService {
     if (!data.mobile)
       throw new BadRequestException('Mobile number is required.');
     if (!data.id) {
-      return this.saveAlternativeContact(customerId, {
+      const contact = await this.saveAlternativeContact(customerId, {
         mobile: data.mobile,
         name: data.name,
         relationship: data.relationship,
         contactType,
       });
+      await this.recordCustomerAccountAudit(
+        'CUSTOMER_CONTACT_CREATED',
+        'CUSTOMER_CONTACT',
+        contact.id,
+        customerId,
+      );
+      return contact;
     }
     const existing = await this.prisma.customerContact.findFirst({
       where: { id: data.id, customerId, isPrimary: false, deletedAt: null },
