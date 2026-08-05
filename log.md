@@ -10537,3 +10537,15 @@ Replaced the removed static Flutter carousel with a database-backed Operations c
 
 - npm test -- --runInBand customer.service.spec.ts
 - npm run build
+## 19. Preserve alternative-contact regression coverage — 2026-08-05 21:12:08 IST
+
+- Restored the pre-existing normalized-update, short-number, and non-primary-delete cases while retaining the new +91 primary-number regression test.
+
+### Backend Files
+
+- backend/src/customer/customer.service.spec.ts
+
+### Verification
+
+- npm test -- --runInBand customer.service.spec.ts
+- npm run build
