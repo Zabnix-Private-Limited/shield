@@ -34,3 +34,8 @@
 - Responsive verification: 350, 375, 390, 412, 448, 480, 768, and 1200 px had no document-width overflow. At 350 px the prior raw import category label was too long; backend-owned concise labels were applied and visually verified.
 - Detail verification: a product detail sheet opened from a card and retained the demo disclosure. Back/drop-dismiss returned to the catalogue without signing out. No cart records, orders, balances, memberships, or customer records were changed.
 - Error/retry: the catalogue contains a retryable API-error card in the implementation; it was not forced live because intentionally interrupting the authenticated backend would have disrupted the approved QA session.
+
+## 2026-08-06 customer home completion
+
+- Route: `/portal/customer/dashboard`; browser-session capture verified the Operations carousel, active membership card, Cash Wallet header value, and Reward Points header value in the authenticated session.
+- A short local backend interruption was used only to confirm health recovery; the service was restored to `200` on the browser loopback target immediately. No customer data or session state was modified.

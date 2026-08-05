@@ -10714,3 +10714,9 @@ Replaced the removed static Flutter carousel with a database-backed Operations c
   - Kept search and category controls visible when a wellness search has no matches.
 - Why
   - Live QA exposed a Windows loopback mismatch and an empty-search recovery dead end; both are resolved without changing product data or customer records.
+
+## 40. Customer home completion QA (2026-08-06 00:00:00 IST)
+- Frontend Files
+  - Verified the authenticated Home view renders Operations content and persisted wallet and reward headers.
+- Why
+  - Completes the approved customer-session navigation checks without changing balances, membership data, orders, carts, or identity records.
