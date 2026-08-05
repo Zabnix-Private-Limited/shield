@@ -374,6 +374,7 @@ class _AddressEditorState extends State<_AddressEditor> {
     text: widget.value?['pincode'] as String? ?? '',
   );
   bool _saving = false;
+  String? _error;
   @override
   void dispose() {
     _line1.dispose();
@@ -401,6 +402,11 @@ class _AddressEditorState extends State<_AddressEditor> {
             style: AppTypography.h3,
           ),
           const SizedBox(height: 16),
+          if (_error != null)
+            Text(
+              _error!,
+              style: AppTypography.small.copyWith(color: AppColors.error),
+            ),
           TextField(
             controller: _line1,
             decoration: const InputDecoration(labelText: 'Address line 1'),
@@ -425,6 +431,7 @@ class _AddressEditorState extends State<_AddressEditor> {
                 ? null
                 : () async {
                     if (_line1.text.trim().isEmpty) {
+                      setState(() => _error = 'Address line 1 is required.');
                       return;
                     }
                     setState(() => _saving = true);
@@ -439,7 +446,10 @@ class _AddressEditorState extends State<_AddressEditor> {
                       Navigator.pop(context, true);
                     } catch (_) {
                       if (mounted) {
-                        setState(() => _saving = false);
+                        setState(() {
+                          _saving = false;
+                          _error = 'Could not save this address. Please retry.';
+                        });
                       }
                     }
                   },
@@ -466,6 +476,7 @@ class _DependentEditorState extends State<_DependentEditor> {
     text: widget.value?['relation'] as String? ?? '',
   );
   bool _saving = false;
+  String? _error;
   @override
   void dispose() {
     _name.dispose();
@@ -491,6 +502,11 @@ class _DependentEditorState extends State<_DependentEditor> {
             style: AppTypography.h3,
           ),
           const SizedBox(height: 16),
+          if (_error != null)
+            Text(
+              _error!,
+              style: AppTypography.small.copyWith(color: AppColors.error),
+            ),
           TextField(
             controller: _name,
             decoration: const InputDecoration(labelText: 'First name'),
@@ -507,6 +523,9 @@ class _DependentEditorState extends State<_DependentEditor> {
                 : () async {
                     if (_name.text.trim().isEmpty ||
                         _relation.text.trim().isEmpty) {
+                      setState(
+                        () => _error = 'Name and relationship are required.',
+                      );
                       return;
                     }
                     setState(() => _saving = true);
@@ -519,7 +538,11 @@ class _DependentEditorState extends State<_DependentEditor> {
                       Navigator.pop(context, true);
                     } catch (_) {
                       if (mounted) {
-                        setState(() => _saving = false);
+                        setState(() {
+                          _saving = false;
+                          _error =
+                              'Could not save this family member. Please retry.';
+                        });
                       }
                     }
                   },
@@ -548,6 +571,7 @@ class _ContactEditorState extends State<_ContactEditor> {
   );
   String _type = 'EMERGENCY';
   bool _saving = false;
+  String? _error;
 
   @override
   void initState() {
@@ -581,6 +605,11 @@ class _ContactEditorState extends State<_ContactEditor> {
             style: AppTypography.h3,
           ),
           const SizedBox(height: 16),
+          if (_error != null)
+            Text(
+              _error!,
+              style: AppTypography.small.copyWith(color: AppColors.error),
+            ),
           DropdownButtonFormField<String>(
             initialValue: _type,
             items: const [
@@ -612,6 +641,9 @@ class _ContactEditorState extends State<_ContactEditor> {
                 : () async {
                     if (_mobile.text.replaceAll(RegExp(r'\D'), '').length !=
                         10) {
+                      setState(
+                        () => _error = 'Enter a valid 10-digit mobile number.',
+                      );
                       return;
                     }
                     setState(() => _saving = true);
@@ -625,7 +657,10 @@ class _ContactEditorState extends State<_ContactEditor> {
                       Navigator.pop(context, true);
                     } catch (_) {
                       if (mounted) {
-                        setState(() => _saving = false);
+                        setState(() {
+                          _saving = false;
+                          _error = 'Could not save this contact. Please retry.';
+                        });
                       }
                     }
                   },
