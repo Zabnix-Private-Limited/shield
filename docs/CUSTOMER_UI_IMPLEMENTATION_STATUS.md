@@ -65,6 +65,7 @@ Completed:
 - Customer document archive coverage now verifies a backend failure is retryable and never presented as an empty customer archive.
 - Customer account capabilities now have an authenticated API foundation and routed Profile & Family workspace for addresses, dependents, typed contacts, preferred pharmacy, and persisted notification preferences. Browser UAT remains pending because the local browser session redirected to login before an authenticated render could be captured.
 - Customer Wellness now uses a customer-safe paginated contract with backend-owned demo disclosure, product detail lookup, search, and category filtering. The legacy spreadsheet batch is visible only through its explicit demo flag; internal import/cost/stock fields remain server-only.
+- Local browser QA fixed the Windows loopback mismatch by binding Nest to IPv4. The authenticated Services catalogue is now verified through search, filters, product detail, pagination, loading, empty search recovery, and 350–1200px no-overflow checks.
 
 Not complete:
 

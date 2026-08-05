@@ -18,3 +18,5 @@ Imported rows are returned with `catalogueKind=DEMO` and the backend-provided di
 - Roll back visibility only: `psql "$DATABASE_URL" -f backend/prisma/product-imports/vitamin-supplements/10_revert_demo_catalogue_visibility.sql`
 
 Each file is transactional, targets only the stable legacy source identifier, and does not change product IDs, categories, pricing, provenance, or unrelated products. The applied development verification recorded 547 imported rows, 547 demo-visible rows, zero missing categories, zero invalid prices, and a second publish run that updated zero rows.
+
+The development catalogue contains 552 customer-visible records: 547 imported demo records and 5 existing primary active records. Imported category source values remain unchanged in the database; the customer contract supplies concise display labels (`Diagnostic devices`, `Vitamins & supplements`) so narrow screens do not expose truncated import codes.

@@ -24,3 +24,13 @@
 - The authenticated customer shell rendered its existing Services retry state after the backend restart; this is evidence of the existing membership-access dependency, not proof of catalogue rendering.
 - Static wellness checks passed after the customer API contract and UI were updated. The browser run cannot yet record populated catalogue screenshots because the local Flutter process did not become reachable on port 53431 after its required restart command.
 - Pending live evidence: landing catalogue, search, category filter, product details, empty search, retry, and responsive widths. No screenshots with customer credentials or tokens were saved.
+
+## 2026-08-06 wellness live verification
+
+- Route: `/portal/customer/services`; approved localhost customer session, with credentials intentionally omitted from this document.
+- Backend connectivity correction: local Nest now binds IPv4 as well as the browser-facing loopback target. Health was `200` at `127.0.0.1:3000`; no session tokens were inspected or recorded.
+- Browser-session captures (not persisted to disk): catalogue landing, `vitamin` search results, `Vitamins & supplements` filter results, product detail sheet, first-page pagination (`Page 1 of 23`) and second-page records, loading skeleton, and empty search recovery.
+- Observed customer contract: 552 total records across 23 pages, 24 first-page records, imported rows show numeric prices and neutral product fallback icons, and the required disclosure remains visible.
+- Responsive verification: 350, 375, 390, 412, 448, 480, 768, and 1200 px had no document-width overflow. At 350 px the prior raw import category label was too long; backend-owned concise labels were applied and visually verified.
+- Detail verification: a product detail sheet opened from a card and retained the demo disclosure. Back/drop-dismiss returned to the catalogue without signing out. No cart records, orders, balances, memberships, or customer records were changed.
+- Error/retry: the catalogue contains a retryable API-error card in the implementation; it was not forced live because intentionally interrupting the authenticated backend would have disrupted the approved QA session.

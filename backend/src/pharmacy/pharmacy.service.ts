@@ -100,11 +100,24 @@ export class PharmacyService {
       sellingPrice:
         product.sellingPrice == null ? null : Number(product.sellingPrice),
       category: product.category
-        ? { id: product.category.id.toString(), name: product.category.name }
+        ? {
+            id: product.category.id.toString(),
+            name: this.customerCategoryName(product.category.name),
+          }
         : null,
       catalogueKind:
         product.dataSource === 'LEGACY_XLS_20260805' ? 'DEMO' : 'STANDARD',
     };
+  }
+
+  private customerCategoryName(name?: string | null) {
+    if (name === 'DIAGNOSTIC DEVICES & MONITORING EQUIPMENT-MDE') {
+      return 'Diagnostic devices';
+    }
+    if (name === 'VITAMINS & SUPPLEMENTS-HW') {
+      return 'Vitamins & supplements';
+    }
+    return name;
   }
 
   async listCustomerWellnessProducts(options: {
@@ -157,7 +170,7 @@ export class PharmacyService {
       pagination: { page, pageSize, total, totalPages: Math.ceil(total / pageSize) },
       categories: categories.map((category) => ({
         id: category.id.toString(),
-        name: category.name,
+        name: this.customerCategoryName(category.name),
       })),
       disclosure: 'Demo products only — not live Sahakar inventory.',
     };

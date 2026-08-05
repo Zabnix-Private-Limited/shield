@@ -10705,3 +10705,12 @@ Replaced the removed static Flutter carousel with a database-backed Operations c
   - Added catalogue disclosure, search, category filters, pagination, and product detail sheet to the existing customer Services view.
 - Why
   - Keeps development spreadsheet inventory clearly non-live and prevents raw internal product data from reaching customers.
+
+## 39. Local wellness runtime QA (2026-08-06 00:00:00 IST)
+- Backend Files
+  - Bound Nest to IPv4 so browser-originated localhost requests reach the development API.
+  - Returned concise customer category labels for the imported demo batch to avoid narrow-screen truncation.
+- Frontend Files
+  - Kept search and category controls visible when a wellness search has no matches.
+- Why
+  - Live QA exposed a Windows loopback mismatch and an empty-search recovery dead end; both are resolved without changing product data or customer records.

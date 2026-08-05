@@ -7778,15 +7778,6 @@ class _CustomerServicesViewState extends State<_CustomerServicesView> {
         final pagination = Map<String, dynamic>.from(
           (catalogue['pagination'] as Map?) ?? const {},
         );
-        if (products.isEmpty) {
-          return AppCard(
-            child: Text(
-              'No wellness products are available right now.',
-              style: AppTypography.small.copyWith(color: AppColors.gray),
-            ),
-          );
-        }
-
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -7837,6 +7828,15 @@ class _CustomerServicesViewState extends State<_CustomerServicesView> {
               ),
             ],
             const SizedBox(height: 10),
+            if (products.isEmpty)
+              AppCard(
+                child: Text(
+                  _wellnessSearchController.text.trim().isEmpty
+                      ? 'No wellness products are available right now.'
+                      : 'No wellness products match your search. Try another name or category.',
+                  style: AppTypography.small.copyWith(color: AppColors.gray),
+                ),
+              ),
             ...products.map((product) {
               final name =
                   product['productName']?.toString() ?? 'Wellness product';

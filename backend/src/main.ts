@@ -14,6 +14,6 @@ async function bootstrap() {
   app.enableShutdownHooks();
   app.use(createImmediatePreflightHandler(env));
   app.enableCors(createShieldCorsOptions(env));
-  await app.listen(env.port);
+  await app.listen(env.port, '0.0.0.0');
 }
 bootstrap();
