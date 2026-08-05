@@ -34,6 +34,7 @@ Completed:
 - Order-history coverage now verifies that a failed purchase API read remains retryable and never appears as an empty order history.
 - Referral & Rewards now presents the authenticated customer’s referral code, counts, available points, and backend referral lifecycle history. QR sharing and referral creation remain unavailable because no customer-safe contract exists.
 - Customer Settings no longer presents local-only notification, privacy, wallet, or PIN controls as saved preferences. Supported profile, policy, support, feedback, and sign-out actions remain available.
+- Profile now surfaces the supported persisted address edit alongside alternative contacts; family, emergency-contact, and preferred-pharmacy gaps remain visible but non-interactive until customer-scoped APIs exist. Settings adds FAQ and About actions, keeps the app-version gap explicit, and confirms sign-out before clearing the session.
 - Profile-gated customer sections now distinguish access-status loading from an API failure and provide a retryable error state instead of a permanent skeleton.
 - Customer document and prescription archive failures now use the shared customer error card with a generic retry message; transport and server details are not rendered to the customer.
 - Customer document, signed-download, prescription-review, extraction, and processing-log reads now verify the authenticated customer owns the document. Private object-storage paths are stripped from customer document responses.

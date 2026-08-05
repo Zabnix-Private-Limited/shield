@@ -3914,6 +3914,14 @@ class _CustomerProfilePortalViewState
           ),
           const SizedBox(height: 14),
           _CustomerAlternativeContactsCard(customerId: customer.id),
+          const SizedBox(height: 14),
+          _CustomerAccountCapabilitiesCard(
+            onEditProfile: () {
+              if (!_isEditing) {
+                setState(() => _isEditing = true);
+              }
+            },
+          ),
           if (_error != null) ...[
             const SizedBox(height: 14),
             Text(
@@ -4177,6 +4185,78 @@ class _CustomerAlternativeContactsCardState
           );
         },
       ),
+    );
+  }
+}
+
+class _CustomerAccountCapabilitiesCard extends StatelessWidget {
+  const _CustomerAccountCapabilitiesCard({required this.onEditProfile});
+
+  final VoidCallback onEditProfile;
+
+  @override
+  Widget build(BuildContext context) {
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Profile and family', style: AppTypography.h4),
+          const SizedBox(height: 6),
+          Text(
+            'Manage the information SHIELD currently supports for this account.',
+            style: AppTypography.small.copyWith(color: AppColors.gray),
+          ),
+          const SizedBox(height: 14),
+          _CompactSettingAction(
+            icon: Icons.home_outlined,
+            title: 'Address details',
+            subtitle: 'Update your current address in personal details',
+            onTap: onEditProfile,
+          ),
+          const _CompactSettingAction(
+            icon: Icons.group_outlined,
+            title: 'Family members',
+            subtitle:
+                'Family member records are not yet available for customer accounts.',
+          ),
+          const _CompactSettingAction(
+            icon: Icons.emergency_outlined,
+            title: 'Emergency contacts',
+            subtitle:
+                'A dedicated emergency-contact record is not yet available.',
+          ),
+          const _CompactSettingAction(
+            icon: Icons.local_pharmacy_outlined,
+            title: 'Preferred pharmacy',
+            subtitle: 'Preferred pharmacy selection is not yet available.',
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CustomerFaqItem extends StatelessWidget {
+  const _CustomerFaqItem({required this.question, required this.answer});
+
+  final String question;
+  final String answer;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          question,
+          style: AppTypography.body.copyWith(
+            color: AppColors.shieldNavy,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(answer, style: AppTypography.small),
+      ],
     );
   }
 }
@@ -4772,6 +4852,61 @@ class _KpiTile extends StatelessWidget {
 class _CustomerSettingsView extends StatelessWidget {
   const _CustomerSettingsView();
 
+  Future<void> _showFaq(BuildContext context) {
+    return showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Frequently asked questions'),
+        content: const SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _CustomerFaqItem(
+                question: 'How do I update my personal details?',
+                answer:
+                    'Open Profile and choose Edit details. Your verified primary mobile remains your sign-in identity.',
+              ),
+              SizedBox(height: 14),
+              _CustomerFaqItem(
+                question: 'Where can I see my membership?',
+                answer:
+                    'Open Membership from Profile or the customer menu to view the membership record available to your account.',
+              ),
+              SizedBox(height: 14),
+              _CustomerFaqItem(
+                question: 'How do I get help?',
+                answer:
+                    'Choose Get support to send a request to the SHIELD support team.',
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showAbout(BuildContext context) {
+    showAboutDialog(
+      context: context,
+      applicationName: 'SHIELD',
+      applicationLegalese:
+          'Sahakar Healthcare Initiative to Exempt Lifestyle Disease',
+      children: const [
+        SizedBox(height: 12),
+        Text(
+          'Version details are not currently supplied by the customer application build contract.',
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -4909,14 +5044,54 @@ class _CustomerSettingsView extends StatelessWidget {
               ),
             ),
             _CompactSettingAction(
+              icon: Icons.quiz_outlined,
+              title: 'FAQ',
+              subtitle:
+                  'Quick answers about your profile, membership, and support',
+              onTap: () => _showFaq(context),
+            ),
+            _CompactSettingAction(
+              icon: Icons.info_outline_rounded,
+              title: 'About SHIELD',
+              subtitle: 'Learn about the SHIELD customer application',
+              onTap: () => _showAbout(context),
+            ),
+            _CompactSettingAction(
               icon: Icons.logout_rounded,
               title: 'Sign out',
               subtitle: 'Clear the current customer session on this device',
               destructive: true,
               onTap: () async {
-                await CustomerAuthSession.instance.signOut();
-                if (context.mounted) {
-                  context.go('/customer/login');
+                final confirmed = await showDialog<bool>(
+                  context: context,
+                  builder: (dialogContext) => AlertDialog(
+                    title: const Text('Sign out of SHIELD?'),
+                    content: const Text(
+                      'You will need to verify your mobile number to access this account again.',
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(dialogContext, false),
+                        child: const Text('Stay signed in'),
+                      ),
+                      FilledButton(
+                        onPressed: () => Navigator.pop(dialogContext, true),
+                        child: const Text('Sign out'),
+                      ),
+                    ],
+                  ),
+                );
+                if (confirmed != true) return;
+                try {
+                  await CustomerAuthSession.instance.signOut();
+                  if (context.mounted) context.go('/customer/login');
+                } catch (_) {
+                  if (context.mounted) {
+                    showPortalSnackBar(
+                      context,
+                      'Could not sign out safely. Please try again.',
+                    );
+                  }
                 }
               },
             ),

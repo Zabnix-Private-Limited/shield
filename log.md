@@ -10305,3 +10305,27 @@ Replaced the removed static Flutter carousel with a database-backed Operations c
 ### Backend Files
 
 - None.
+--help
+## 2026-08-05 20:10:00 IST - Codex
+
+## 6. Customer account-profile and settings capability batch
+
+- Preserved the authenticated inline customer shell while exposing the persisted profile-address edit path, database-backed alternative contacts, FAQ, About, persisted support/feedback, and a confirmed sign-out flow with failure handling.
+- Added explicit non-interactive unavailable states for family members, emergency contacts, preferred pharmacy, customer preferences, and app version because no customer-scoped contracts are present; no local records or false success states were created.
+- Updated the account completion matrix and customer UI audit to distinguish working features from these API gaps. Local browser startup did not expose its port, so no runtime screenshot is claimed.
+
+### Frontend Files
+
+- frontend/lib/features/portal/presentation/screens/portal_shell.dart
+
+### Documentation Files
+
+- docs/customer-ui/CUSTOMER_UI_AUDIT.md
+- docs/CUSTOMER_UI_IMPLEMENTATION_STATUS.md
+- docs/CUSTOMER_UI_VISUAL_QA.md
+- docs/customer-ui/agent-goal/03_CUSTOMER_SCREEN_COMPLETION_MATRIX.csv
+
+### Verification
+
+- flutter analyze lib/features/portal/presentation/screens/portal_shell.dart
+- flutter test test/portal_support_test.dart

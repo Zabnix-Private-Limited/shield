@@ -195,28 +195,28 @@
 194,Activity & Notifications,Order Notifications,notification filter/state,Order events,notifications API,,NO,NO,NO,NO,NO,NO,NO,TODO
 195,Activity & Notifications,Reward Notifications,notification filter/state,Reward events,notifications API,,NO,NO,NO,NO,NO,NO,NO,TODO
 196,Activity & Notifications,Membership/Card Notifications,notification filter/state,Membership/card events,notifications API,,NO,NO,NO,NO,NO,NO,NO,TODO
-197,Profile & Family,Profile,/portal/customer/profile,Customer account overview,profile/session API,,NO,NO,NO,NO,NO,NO,NO,TODO
-198,Profile & Family,Edit Profile,/portal/customer/profile/edit,Update allowed fields,customer API,,NO,NO,NO,NO,NO,NO,NO,TODO
-199,Profile & Family,Personal Details,/portal/customer/profile/personal,View demographic fields,customer API,,NO,NO,NO,NO,NO,NO,NO,TODO
-200,Profile & Family,Alternative Contact,/portal/customer/profile/contact,Manage non-login contact,customer contacts API,,NO,NO,NO,NO,NO,NO,NO,TODO
+197,Profile & Family,Profile,/portal/customer/profile,Customer account overview,authenticated customer profile API,Inline profile has real loading retry and populated states plus membership navigation.,YES,YES,YES,YES,NO,NO,IN PROGRESS
+198,Profile & Family,Edit Profile,/portal/customer/profile/edit,Update allowed fields,authenticated customer update API,Existing profile surface edits only supported customer fields with validation saving success and retry states.,YES,YES,YES,YES,NO,NO,IN PROGRESS
+199,Profile & Family,Personal Details,/portal/customer/profile/personal,View demographic fields,authenticated customer profile API,Demographic values are customer scoped and rendered on the existing profile surface.,YES,YES,YES,YES,NO,NO,IN PROGRESS
+200,Profile & Family,Alternative Contact,/portal/customer/profile/contact,Manage non-login contact,authenticated alternative-contact API,List add and confirmed removal are persisted and self scoped; alternative contact is not a login identity.,YES,YES,YES,YES,NO,NO,IN PROGRESS
 201,Profile & Family,Profile Photo,/portal/customer/profile/photo,Upload/remove photo where supported,profile media API,,NO,NO,NO,NO,NO,NO,NO,TODO
-202,Profile & Family,Address Book,/portal/customer/profile/addresses,Owned addresses,address API,,NO,NO,NO,NO,NO,NO,NO,TODO
-203,Profile & Family,Address Detail,/portal/customer/profile/addresses/:id,View address,address API,,NO,NO,NO,NO,NO,NO,NO,TODO
-204,Profile & Family,Add Address,/portal/customer/profile/addresses/add,Create address,address API,,NO,NO,NO,NO,NO,NO,NO,TODO
-205,Profile & Family,Edit Address,/portal/customer/profile/addresses/:id/edit,Update address,address API,,NO,NO,NO,NO,NO,NO,NO,TODO
-206,Profile & Family,Family Members,/portal/customer/family,Owned family/dependents,family API,,NO,NO,NO,NO,NO,NO,NO,TODO
+202,Profile & Family,Address Book,/portal/customer/profile/addresses,Owned addresses,address API,Only the single persisted customer profile address exists; no owned address-book API.,YES,NO,YES,YES,NO,NO,IN PROGRESS
+203,Profile & Family,Address Detail,/portal/customer/profile/addresses/:id,View address,address API,No per-address customer API; current profile address is shown and editable in Profile.,YES,NO,YES,YES,NO,NO,IN PROGRESS
+204,Profile & Family,Add Address,/portal/customer/profile/addresses/add,Create address,address API,No address-book creation contract; no fake local address is created.,YES,NO,YES,YES,NO,NO,IN PROGRESS
+205,Profile & Family,Edit Address,/portal/customer/profile/addresses/:id/edit,Update address,address API,Current profile address is persisted through customer update; no per-address contract exists.,YES,NO,YES,YES,NO,NO,IN PROGRESS
+206,Profile & Family,Family Members,/portal/customer/family,Owned family/dependents,family API,Family capability is visibly unavailable because customer-scoped family APIs do not exist.,YES,NO,YES,YES,NO,NO,IN PROGRESS
 207,Profile & Family,Family Member Detail,/portal/customer/family/:id,View dependent,family API,,NO,NO,NO,NO,NO,NO,NO,TODO
 208,Profile & Family,Add Family Member,/portal/customer/family/add,Create dependent where supported,family API,,NO,NO,NO,NO,NO,NO,NO,TODO
 209,Profile & Family,Edit Family Member,/portal/customer/family/:id/edit,Update dependent,family API,,NO,NO,NO,NO,NO,NO,NO,TODO
 210,Profile & Family,Remove Family Member Confirmation,same family flow,Safe removal/unlink,family API,,NO,NO,NO,NO,NO,NO,NO,TODO
-211,Profile & Family,Emergency Contacts,/portal/customer/profile/emergency-contacts,Emergency contacts,contacts API,,NO,NO,NO,NO,NO,NO,NO,TODO
+211,Profile & Family,Emergency Contacts,/portal/customer/profile/emergency-contacts,Emergency contacts,contacts API,Dedicated emergency contact API is absent and shown as unavailable without reclassifying alternative contacts.,YES,NO,YES,YES,NO,NO,IN PROGRESS
 212,Profile & Family,Add Emergency Contact,same contact flow,Create emergency contact,contacts API,,NO,NO,NO,NO,NO,NO,NO,TODO
 213,Profile & Family,Edit Emergency Contact,same contact flow,Update emergency contact,contacts API,,NO,NO,NO,NO,NO,NO,NO,TODO
-214,Profile & Family,Preferred Pharmacy,/portal/customer/profile/preferred-pharmacy,Current preferred provider,customer/provider API,,NO,NO,NO,NO,NO,NO,NO,TODO
+214,Profile & Family,Preferred Pharmacy,/portal/customer/profile/preferred-pharmacy,Current preferred provider,customer/provider API,No preferred-provider persistence contract exists and the profile card states this truthfully.,YES,NO,YES,YES,NO,NO,IN PROGRESS
 215,Profile & Family,Select Preferred Pharmacy,same preferred pharmacy flow,Choose eligible pharmacy,provider API,,NO,NO,NO,NO,NO,NO,NO,TODO
 216,Profile & Family,Linked Accounts,/portal/customer/profile/linked-accounts,Linked identities where supported,auth/account API,,NO,NO,NO,NO,NO,NO,NO,TODO
 217,Profile & Family,Account Information,/portal/customer/profile/account,Membership/customer identifiers,profile API,,NO,NO,NO,NO,NO,NO,NO,TODO
-218,"Settings, Privacy & Support",Settings,/portal/customer/settings,Settings landing,preferences API/local settings,,NO,NO,NO,NO,NO,NO,NO,TODO
+218,"Settings, Privacy & Support",Settings,/portal/customer/settings,Settings landing,preferences API/local settings,Settings retains only backed support policy feedback FAQ About and confirmed sign-out actions; unsupported preferences are explicit.,YES,YES,YES,YES,NO,NO,IN PROGRESS
 219,"Settings, Privacy & Support",Appearance,/portal/customer/settings/appearance,Theme preference where supported,local preference,,NO,NO,NO,NO,NO,NO,NO,TODO
 220,"Settings, Privacy & Support",Language,/portal/customer/settings/language,Language preference where supported,preference/content,,NO,NO,NO,NO,NO,NO,NO,TODO
 221,"Settings, Privacy & Support",Notification Settings,/portal/customer/settings/notifications,Channel/type preferences,notifications API,,NO,NO,NO,NO,NO,NO,NO,TODO
@@ -235,7 +235,7 @@
 234,"Settings, Privacy & Support",Delete Account Confirmation,same delete flow,Deliberate confirmation,account deletion API,,NO,NO,NO,NO,NO,NO,NO,TODO
 235,"Settings, Privacy & Support",Help & Support,/portal/customer/support,Support landing,support content/API,,NO,NO,NO,NO,NO,NO,NO,TODO
 236,"Settings, Privacy & Support",Help Search,/portal/customer/support/search,Search help content,support/FAQ API,,NO,NO,NO,NO,NO,NO,NO,TODO
-237,"Settings, Privacy & Support",FAQ,/portal/customer/support/faq,FAQ list,support content API,,NO,NO,NO,NO,NO,NO,NO,TODO
+237,"Settings, Privacy & Support",FAQ,/portal/customer/support/faq,FAQ list,local customer guidance,Reachable from Settings with current supported workflow guidance.,YES,YES,YES,YES,NO,NO,IN PROGRESS
 238,"Settings, Privacy & Support",FAQ Detail,/portal/customer/support/faq/:id,FAQ article,support content API,,NO,NO,NO,NO,NO,NO,NO,TODO
 239,"Settings, Privacy & Support",Contact Support,/portal/customer/support/contact,Support channels,support config,,NO,NO,NO,NO,NO,NO,NO,TODO
 240,"Settings, Privacy & Support",Create Support Ticket,/portal/customer/support/tickets/new,Create ticket,support API,,NO,NO,NO,NO,NO,NO,NO,TODO
@@ -243,9 +243,9 @@
 242,"Settings, Privacy & Support",Support History,/portal/customer/support/tickets,Owned tickets,support API,,NO,NO,NO,NO,NO,NO,NO,TODO
 243,"Settings, Privacy & Support",Feedback,/portal/customer/support/feedback,Submit feedback,feedback API,,NO,NO,NO,NO,NO,NO,NO,TODO
 244,"Settings, Privacy & Support",Rate App,/portal/customer/support/rate,Platform rating action,platform deep link/config,,NO,NO,NO,NO,NO,NO,NO,TODO
-245,"Settings, Privacy & Support",About SHIELD,/portal/customer/about,Product information,app content/config,,NO,NO,NO,NO,NO,NO,NO,TODO
-246,"Settings, Privacy & Support",App Version,same about/settings surface,Display build/version,local package info,,NO,NO,NO,NO,NO,NO,NO,TODO
-247,"Settings, Privacy & Support",Logout Confirmation,global account action,Confirm logout and clear scope,auth/session,,NO,NO,NO,NO,NO,NO,NO,TODO
+245,"Settings, Privacy & Support",About SHIELD,/portal/customer/about,Product information,local app metadata,Reachable Settings dialog uses real product naming and does not invent a build version.,YES,YES,YES,YES,NO,NO,IN PROGRESS
+246,"Settings, Privacy & Support",App Version,same about/settings surface,Display build/version,local package info,No package-info dependency or build-version contract is currently wired; About states this gap.,YES,NO,YES,YES,NO,NO,IN PROGRESS
+247,"Settings, Privacy & Support",Logout Confirmation,global account action,Confirm logout and clear scope,customer auth session,Confirmation clears the authenticated customer session and handles sign-out failure without false success.,YES,YES,YES,YES,NO,NO,IN PROGRESS
 248,Global States,Global Loading Skeleton,shared state,Reusable loading treatment,n/a,,NO,NO,NO,NO,NO,NO,NO,TODO
 249,Global States,Global Empty State,shared state,Reusable legitimate-empty treatment,n/a,,NO,NO,NO,NO,NO,NO,NO,TODO
 250,Global States,Global Recoverable Error,shared state,Retryable error,n/a,,NO,NO,NO,NO,NO,NO,NO,TODO
