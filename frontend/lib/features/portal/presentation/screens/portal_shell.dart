@@ -3987,6 +3987,12 @@ class _CustomerProfilePortalViewState
                 setState(() => _isEditing = true);
               }
             },
+            onOpenSettings: () => context.go('/portal/customer/settings'),
+            onGetSupport: () => showCustomerSupportSheet(
+              context,
+              type: SupportSheetType.contact,
+            ),
+            onSignOut: () => _confirmCustomerSignOut(context),
           ),
           if (_error != null) ...[
             const SizedBox(height: 14),
@@ -4256,9 +4262,17 @@ class _CustomerAlternativeContactsCardState
 }
 
 class _CustomerAccountCapabilitiesCard extends StatelessWidget {
-  const _CustomerAccountCapabilitiesCard({required this.onEditProfile});
+  const _CustomerAccountCapabilitiesCard({
+    required this.onEditProfile,
+    required this.onOpenSettings,
+    required this.onGetSupport,
+    required this.onSignOut,
+  });
 
   final VoidCallback onEditProfile;
+  final VoidCallback onOpenSettings;
+  final VoidCallback onGetSupport;
+  final VoidCallback onSignOut;
 
   @override
   Widget build(BuildContext context) {
@@ -4295,6 +4309,34 @@ class _CustomerAccountCapabilitiesCard extends StatelessWidget {
             icon: Icons.local_pharmacy_outlined,
             title: 'Preferred pharmacy',
             subtitle: 'Preferred pharmacy selection is not yet available.',
+          ),
+          const SizedBox(height: 14),
+          Text('Account and support', style: AppTypography.h4),
+          const SizedBox(height: 6),
+          _CompactSettingAction(
+            icon: Icons.shield_outlined,
+            title: 'Privacy and security',
+            subtitle: 'Review available privacy and account controls',
+            onTap: onOpenSettings,
+          ),
+          _CompactSettingAction(
+            icon: Icons.tune_rounded,
+            title: 'Settings',
+            subtitle: 'Support, policy, and available device preferences',
+            onTap: onOpenSettings,
+          ),
+          _CompactSettingAction(
+            icon: Icons.help_outline,
+            title: 'Help and support',
+            subtitle: 'Send a membership, service, or app-support request',
+            onTap: onGetSupport,
+          ),
+          _CompactSettingAction(
+            icon: Icons.logout_rounded,
+            title: 'Sign out',
+            subtitle: 'Clear the current customer session on this device',
+            destructive: true,
+            onTap: onSignOut,
           ),
         ],
       ),
@@ -4915,6 +4957,40 @@ class _KpiTile extends StatelessWidget {
   }
 }
 
+Future<void> _confirmCustomerSignOut(BuildContext context) async {
+  final confirmed = await showDialog<bool>(
+    context: context,
+    builder: (dialogContext) => AlertDialog(
+      title: const Text('Sign out of SHIELD?'),
+      content: const Text(
+        'You will need to verify your mobile number to access this account again.',
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(dialogContext, false),
+          child: const Text('Stay signed in'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.pop(dialogContext, true),
+          child: const Text('Sign out'),
+        ),
+      ],
+    ),
+  );
+  if (confirmed != true) return;
+  try {
+    await CustomerAuthSession.instance.signOut();
+    if (context.mounted) context.go('/customer/login');
+  } catch (_) {
+    if (context.mounted) {
+      showPortalSnackBar(
+        context,
+        'Could not sign out safely. Please try again.',
+      );
+    }
+  }
+}
+
 class _CustomerSettingsView extends StatelessWidget {
   const _CustomerSettingsView();
 
@@ -5127,39 +5203,7 @@ class _CustomerSettingsView extends StatelessWidget {
               title: 'Sign out',
               subtitle: 'Clear the current customer session on this device',
               destructive: true,
-              onTap: () async {
-                final confirmed = await showDialog<bool>(
-                  context: context,
-                  builder: (dialogContext) => AlertDialog(
-                    title: const Text('Sign out of SHIELD?'),
-                    content: const Text(
-                      'You will need to verify your mobile number to access this account again.',
-                    ),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.pop(dialogContext, false),
-                        child: const Text('Stay signed in'),
-                      ),
-                      FilledButton(
-                        onPressed: () => Navigator.pop(dialogContext, true),
-                        child: const Text('Sign out'),
-                      ),
-                    ],
-                  ),
-                );
-                if (confirmed != true) return;
-                try {
-                  await CustomerAuthSession.instance.signOut();
-                  if (context.mounted) context.go('/customer/login');
-                } catch (_) {
-                  if (context.mounted) {
-                    showPortalSnackBar(
-                      context,
-                      'Could not sign out safely. Please try again.',
-                    );
-                  }
-                }
-              },
+              onTap: () => _confirmCustomerSignOut(context),
             ),
           ],
         ),

@@ -10351,3 +10351,25 @@ Replaced the removed static Flutter carousel with a database-backed Operations c
 ### Verification
 
 - flutter analyze lib/features/portal/presentation/screens/portal_shell.dart
+
+
+## 2026-08-05 20:20:00 IST - Codex
+
+## 8. Profile account-action completion
+
+- Profile now directly exposes Privacy and Security, Settings, Help and Support, and the same confirmed sign-out behavior used by Settings.
+- Extracted the sign-out confirmation into one shared customer action, so both entry points clear the authenticated session or show the same safe retry message.
+- The active-window capture was the editor, not an authenticated customer route, and is intentionally not counted as visual customer QA.
+
+### Frontend Files
+
+- frontend/lib/features/portal/presentation/screens/portal_shell.dart
+
+### Documentation Files
+
+- docs/customer-ui/CUSTOMER_UI_AUDIT.md
+- docs/customer-ui/agent-goal/03_CUSTOMER_SCREEN_COMPLETION_MATRIX.csv
+
+### Verification
+
+- flutter analyze lib/features/portal/presentation/screens/portal_shell.dart
