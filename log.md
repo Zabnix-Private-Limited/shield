@@ -10508,4 +10508,20 @@ Replaced the removed static Flutter carousel with a database-backed Operations c
 ### Verification
 
 - flutter analyze lib/features/portal/presentation/screens/portal_shell.dart
+- flutter test test/customer_portal_routes_test.dart## 17. Country-prefixed primary-mobile guard — 2026-08-05 21:02:55 IST
+
+- Alternative-contact validation now compares the final ten digits of the primary number, so +91-formatted customer identities cannot bypass the client-side duplicate guard.
+- The server remains the final authority for customer scope and duplicate contact checks; authenticated browser capture made no writes.
+
+### Frontend Files
+
+- frontend/lib/features/portal/presentation/screens/portal_shell.dart
+
+### Documentation Files
+
+- docs/customer-ui/agent-goal/03_CUSTOMER_SCREEN_COMPLETION_MATRIX.csv
+
+### Verification
+
+- flutter analyze lib/features/portal/presentation/screens/portal_shell.dart
 - flutter test test/customer_portal_routes_test.dart

@@ -4138,8 +4138,14 @@ class _CustomerAlternativeContactsCardState
                   );
                   return;
                 }
-                if (normalizedMobile ==
-                    widget.primaryMobile.replaceAll(RegExp(r'\D'), '')) {
+                final primaryDigits = widget.primaryMobile.replaceAll(
+                  RegExp(r'\D'),
+                  '',
+                );
+                final primaryLocalMobile = primaryDigits.length > 10
+                    ? primaryDigits.substring(primaryDigits.length - 10)
+                    : primaryDigits;
+                if (normalizedMobile == primaryLocalMobile) {
                   setDialogState(
                     () => mobileError =
                         'Use a number different from the primary sign-in number',
