@@ -10649,3 +10649,12 @@ Replaced the removed static Flutter carousel with a database-backed Operations c
 
 - flutter analyze customer account and portal files
 - flutter test test/customer_portal_routes_test.dart
+
+## 26. Account capability visual-QA record — 2026-08-06 00:10:00 IST
+
+- Added the customer visual-QA record. The first live route navigation redirected to login after the localhost session was no longer authenticated; no OTP, sign-out, customer change, or session revocation was performed.
+
+### Documentation Files
+
+- docs/customer-ui/CUSTOMER_UI_VISUAL_QA.md
+- docs/CUSTOMER_UI_IMPLEMENTATION_STATUS.md

@@ -63,6 +63,7 @@ Completed:
 - Added the shared customer design-token, component, and accessibility references for consistent follow-on feature work.
 - Removed unreachable local lab/home-care request snippets; unavailable catalogue states remain explicit until the backend provides customer-safe contracts.
 - Customer document archive coverage now verifies a backend failure is retryable and never presented as an empty customer archive.
+- Customer account capabilities now have an authenticated API foundation and routed Profile & Family workspace for addresses, dependents, typed contacts, preferred pharmacy, and persisted notification preferences. Browser UAT remains pending because the local browser session redirected to login before an authenticated render could be captured.
 
 Not complete:
 
