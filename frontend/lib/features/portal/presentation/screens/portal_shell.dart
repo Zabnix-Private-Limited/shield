@@ -16,6 +16,7 @@ import '../../../agent/settings/presentation/screens/agent_settings_screen.dart'
 import '../../../admin/presentation/screens/admin_portal_workspace.dart';
 import '../../../customer/dashboard/presentation/screens/dashboard_screen.dart';
 import '../../../customer/activity/presentation/screens/customer_activity_screen.dart';
+import '../../../customer/account/presentation/screens/customer_account_screen.dart';
 import '../../../customer/documents/presentation/screens/customer_documents_screen.dart';
 import '../../../customer/membership/data/models/membership_model.dart';
 import '../../../customer/membership/presentation/screens/membership_screen.dart';
@@ -561,6 +562,8 @@ class _RoleContent extends StatelessWidget {
         portal.role == SHIELDRole.customer && section.key == 'rewards';
     final isCustomerSettings =
         portal.role == SHIELDRole.customer && section.key == 'settings';
+    final isCustomerAccount =
+        portal.role == SHIELDRole.customer && section.key == 'account';
     final isAgentRole = portal.role == SHIELDRole.agent;
     final isProviderRole = portal.role == SHIELDRole.provider;
     final isAdminRole = portal.role == SHIELDRole.superAdmin;
@@ -626,6 +629,8 @@ class _RoleContent extends StatelessWidget {
       content = const CustomerRewardPointsScreen();
     } else if (isCustomerSettings) {
       content = const _CustomerSettingsView();
+    } else if (isCustomerAccount) {
+      content = const CustomerAccountScreen();
     } else if (isAgentRole) {
       content = _buildAgentModuleContent(section);
     } else if (isProviderRole) {
@@ -4018,6 +4023,7 @@ class _CustomerProfilePortalViewState
               }
             },
             onOpenSettings: () => context.go('/portal/customer/settings'),
+            onOpenAccount: () => context.go('/portal/customer/account'),
             onGetSupport: () => showCustomerSupportSheet(
               context,
               type: SupportSheetType.contact,
@@ -4319,12 +4325,14 @@ class _CustomerAccountCapabilitiesCard extends StatelessWidget {
   const _CustomerAccountCapabilitiesCard({
     required this.onEditProfile,
     required this.onOpenSettings,
+    required this.onOpenAccount,
     required this.onGetSupport,
     required this.onSignOut,
   });
 
   final VoidCallback onEditProfile;
   final VoidCallback onOpenSettings;
+  final VoidCallback onOpenAccount;
   final VoidCallback onGetSupport;
   final VoidCallback onSignOut;
 
@@ -4345,19 +4353,19 @@ class _CustomerAccountCapabilitiesCard extends StatelessWidget {
             icon: Icons.home_outlined,
             title: 'Address details',
             subtitle: 'Update your current address in personal details',
-            onTap: onEditProfile,
+            onTap: onOpenAccount,
           ),
-          const _CompactSettingAction(
+          _CompactSettingAction(
             icon: Icons.location_on_outlined,
-            title: 'Address book unavailable',
-            subtitle:
-                'SHIELD currently supports one profile address; saved addresses need a customer address-book API.',
+            title: 'Address book',
+            subtitle: 'Manage saved addresses and your default address.',
+            onTap: onOpenAccount,
           ),
-          const _CompactSettingAction(
+          _CompactSettingAction(
             icon: Icons.group_outlined,
             title: 'Family members',
-            subtitle:
-                'Family member records are not yet available for customer accounts.',
+            subtitle: 'Manage family members linked to your account.',
+            onTap: onOpenAccount,
           ),
           const _CompactSettingAction(
             icon: Icons.emergency_outlined,

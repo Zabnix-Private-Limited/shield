@@ -291,6 +291,7 @@ PortalRoleData portalDataForRole(SHIELDRole role) {
           _PortalSectionFactory.customerAppointments,
           _PortalSectionFactory.customerDocuments,
           _PortalSectionFactory.customerProfile,
+          _PortalSectionFactory.customerAccount,
           _PortalSectionFactory.customerMembership,
           _PortalSectionFactory.customerPrivilegeCard,
           _PortalSectionFactory.customerPrescriptions,
@@ -678,6 +679,12 @@ class _PortalSectionFactory {
   static final PortalSectionData customerSettings = _section(
     'settings',
     summary: 'Account preferences, support, and session controls.',
+  );
+
+  static final PortalSectionData customerAccount = _section(
+    'account',
+    title: 'Profile & Family',
+    summary: 'Saved addresses and family member records for this account.',
   );
 
   static final PortalSectionData customerNotifications = _section(

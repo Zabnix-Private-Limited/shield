@@ -10591,3 +10591,19 @@ Replaced the removed static Flutter carousel with a database-backed Operations c
 - flutter analyze lib/shared/services/api_service.dart
 - GET /health (HTTP 200)
 - GET /customer/addresses without auth (HTTP 401)
+## 22. Customer Profile and Family workspace — 2026-08-05 23:20:00 IST
+
+- Added a routed customer-owned workspace for real address and family member records through the authenticated account API.
+- Address and family lists now expose loading, empty, retry, save, edit, and confirmed-remove states without local-only records.
+
+### Frontend Files
+
+- frontend/lib/features/customer/account/data/customer_account_repository.dart
+- frontend/lib/features/customer/account/presentation/screens/customer_account_screen.dart
+- frontend/lib/features/portal/presentation/portal_role_data.dart
+- frontend/lib/features/portal/presentation/screens/portal_shell.dart
+
+### Verification
+
+- flutter analyze customer account and portal files
+- flutter test test/customer_portal_routes_test.dart
