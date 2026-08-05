@@ -43,6 +43,12 @@ export class CustomerAccountController {
     };
   }
 
+  @RequirePermissions('customers.view')
+  @Get('addresses/:id')
+  async address(@Param('id') id: string, @CurrentPrincipal() principal?: ShieldPrincipal) {
+    return { success: true, data: await this.customerService.getAddress(this.customerId(principal), this.resourceId(id)) };
+  }
+
   @RequirePermissions('customers.update')
   @Post('addresses')
   async createAddress(
@@ -98,6 +104,12 @@ export class CustomerAccountController {
     };
   }
 
+  @RequirePermissions('customers.view')
+  @Get('dependents/:id')
+  async dependent(@Param('id') id: string, @CurrentPrincipal() principal?: ShieldPrincipal) {
+    return { success: true, data: await this.customerService.getDependent(this.customerId(principal), this.resourceId(id)) };
+  }
+
   @RequirePermissions('customers.update')
   @Post('dependents')
   async createDependent(
@@ -149,6 +161,12 @@ export class CustomerAccountController {
       success: true,
       data: await this.customerService.listContacts(this.customerId(principal)),
     };
+  }
+
+  @RequirePermissions('customers.view')
+  @Get('contacts/:id')
+  async contact(@Param('id') id: string, @CurrentPrincipal() principal?: ShieldPrincipal) {
+    return { success: true, data: await this.customerService.getContact(this.customerId(principal), this.resourceId(id)) };
   }
 
   @RequirePermissions('customers.update')

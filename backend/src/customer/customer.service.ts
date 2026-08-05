@@ -452,6 +452,14 @@ export class CustomerService {
     });
   }
 
+  async getContact(customerId: bigint, id: bigint) {
+    const contact = await this.prisma.customerContact.findFirst({
+      where: { id, customerId, isPrimary: false, deletedAt: null },
+    });
+    if (!contact) throw new NotFoundException('Contact not found.');
+    return contact;
+  }
+
   async saveContact(
     customerId: bigint,
     data: {
@@ -537,6 +545,14 @@ export class CustomerService {
     });
   }
 
+  async getAddress(customerId: bigint, id: bigint) {
+    const address = await this.prisma.customerAddress.findFirst({
+      where: { id, customerId, deletedAt: null },
+    });
+    if (!address) throw new NotFoundException('Address not found.');
+    return address;
+  }
+
   async saveAddress(
     customerId: bigint,
     data: {
@@ -611,6 +627,14 @@ export class CustomerService {
       where: { customerId, deletedAt: null },
       orderBy: [{ firstName: 'asc' }, { id: 'asc' }],
     });
+  }
+
+  async getDependent(customerId: bigint, id: bigint) {
+    const dependent = await this.prisma.customerDependent.findFirst({
+      where: { id, customerId, deletedAt: null },
+    });
+    if (!dependent) throw new NotFoundException('Family member not found.');
+    return dependent;
   }
 
   async saveDependent(
