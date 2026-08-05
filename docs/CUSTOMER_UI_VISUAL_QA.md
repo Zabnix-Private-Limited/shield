@@ -6,6 +6,7 @@ Reference images were inspected from `Design reference/`; they are visual refere
 
 - Shared customer header: targeted static analysis passed.
 - Dashboard membership-first hierarchy: targeted static analysis passed.
+- 2026-08-05 local Playwright capture: the current production-style login renders correctly at `http://localhost:5354/`; `9876543210` passes client validation and is normalized to `+919876543210` before the Firebase request. The authenticated flow is blocked only because Firebase web phone auth is not configured for localhost; `ALLOW_LOCAL_WEB_PHONE_AUTH=true` plus Firebase authorized-domain/test-phone configuration are required before entering `123123` can be verified.
 - 2026-08-04 local web capture attempt: `flutter run -d chrome --web-port 5353` remained in startup/build state and did not expose the local port after a short wait. No screenshot was captured or claimed.
 - 2026-08-04 responsive browser check: the existing `localhost:53431` Flutter server was reachable and a 480×800 capture was taken in Chrome, but it rendered only the blank Flutter surface (white canvas with the top shell stripe), with no DOM content or console errors. The capture was not saved as a project artifact and cannot verify the authenticated header.
 

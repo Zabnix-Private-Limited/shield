@@ -10434,3 +10434,19 @@ Replaced the removed static Flutter carousel with a database-backed Operations c
 ### Verification
 
 - flutter analyze lib/features/customer/auth/presentation/screens/customer_login_screen.dart
+
+
+## 2026-08-05 20:55:00 IST - Codex
+
+## 12. Authenticated customer runtime evidence
+
+- Built and served a fresh web artifact, then verified that the visible customer login accepts the supplied ten-digit mobile and normalizes it before the Firebase request.
+- The runtime reaches the deliberate localhost Firebase authorization gate; no customer OTP/session was fabricated while Firebase test-phone configuration remains absent.
+
+### Documentation Files
+
+- docs/CUSTOMER_UI_VISUAL_QA.md
+
+### Verification Artifacts
+
+- output/playwright/customer-otp-entered.png
