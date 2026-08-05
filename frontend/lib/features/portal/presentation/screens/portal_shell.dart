@@ -3413,6 +3413,7 @@ class _CustomerProfilePortalViewState
   String? _selectedBloodGroup;
   DateTime _selectedDob = DateTime(DateTime.now().year - 25, 1, 1);
   Customer? _customer;
+  Membership? _membership;
 
   @override
   void initState() {
@@ -3441,13 +3442,17 @@ class _CustomerProfilePortalViewState
     });
 
     try {
-      final customer = await ApiService.getCustomerProfile(
-        ApiService.requireAuthenticatedCustomerId(),
-      );
+      final customerId = ApiService.requireAuthenticatedCustomerId();
+      final results = await Future.wait<Object?>([
+        ApiService.getCustomerProfile(customerId),
+        _loadProfileMembership(customerId),
+      ]);
+      final customer = results[0]! as Customer;
       if (!mounted) return;
       _hydrateForm(customer);
       setState(() {
         _customer = customer;
+        _membership = results[1] as Membership?;
         _isLoading = false;
       });
     } catch (error) {
@@ -3456,6 +3461,15 @@ class _CustomerProfilePortalViewState
         _error = 'Profile details could not be loaded. Please retry.';
         _isLoading = false;
       });
+    }
+  }
+
+  Future<Membership?> _loadProfileMembership(String customerId) async {
+    try {
+      final bundle = await ApiService.getCustomerMembershipBundle(customerId);
+      return MembershipModel.fromJson(bundle);
+    } catch (_) {
+      return null;
     }
   }
 
@@ -3651,6 +3665,7 @@ class _CustomerProfilePortalViewState
     }
 
     final customer = _customer!;
+    final membership = _membership;
     final address = [
       customer.addressLine1,
       customer.addressLine2,
@@ -3727,7 +3742,11 @@ class _CustomerProfilePortalViewState
                         borderRadius: BorderRadius.circular(999),
                       ),
                       child: Text(
-                        customer.status.toUpperCase(),
+                        membership == null
+                            ? 'MEMBERSHIP UNAVAILABLE'
+                            : membership.isActive
+                            ? 'MEMBERSHIP ACTIVE'
+                            : 'MEMBERSHIP PENDING',
                         style: AppTypography.tiny.copyWith(
                           color: AppColors.white,
                           fontWeight: FontWeight.w700,
@@ -3745,6 +3764,14 @@ class _CustomerProfilePortalViewState
                     _ProfileSummaryChip(
                       label: 'Verified • ${customer.mobile}',
                       icon: Icons.phone_iphone_outlined,
+                    ),
+                    _ProfileSummaryChip(
+                      label: membership == null
+                          ? 'Membership unavailable'
+                          : membership.customerCode.isEmpty
+                          ? 'Membership number pending'
+                          : 'Member ID ${membership.customerCode}',
+                      icon: Icons.badge_outlined,
                     ),
                     _ProfileSummaryChip(
                       label: customer.bloodGroup ?? 'Blood group pending',
@@ -3773,7 +3800,7 @@ class _CustomerProfilePortalViewState
                       },
                     ),
                     _HeroActionGridItem(
-                      label: customer.status.toUpperCase() == 'ACTIVE'
+                      label: membership?.isActive == true
                           ? 'View member ID'
                           : 'Membership status',
                       onTap: () => context.go('/portal/customer/membership'),

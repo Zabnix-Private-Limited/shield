@@ -10373,3 +10373,26 @@ Replaced the removed static Flutter carousel with a database-backed Operations c
 ### Verification
 
 - flutter analyze lib/features/portal/presentation/screens/portal_shell.dart
+
+
+## 2026-08-05 20:25:00 IST - Codex
+
+## 9. Profile membership identity binding
+
+- Profile now loads the authenticated customer membership bundle separately from the personal-profile request and renders the actual membership number and issued status.
+- A membership read error does not hide the profile; the hero says membership is unavailable instead of treating the customer code as a membership number.
+- The captured active window was a non-SHIELD browser page and is not counted as customer visual QA.
+
+### Frontend Files
+
+- frontend/lib/features/portal/presentation/screens/portal_shell.dart
+
+### Documentation Files
+
+- docs/customer-ui/CUSTOMER_UI_AUDIT.md
+- docs/CUSTOMER_UI_IMPLEMENTATION_STATUS.md
+- docs/customer-ui/agent-goal/03_CUSTOMER_SCREEN_COMPLETION_MATRIX.csv
+
+### Verification
+
+- flutter analyze lib/features/portal/presentation/screens/portal_shell.dart
