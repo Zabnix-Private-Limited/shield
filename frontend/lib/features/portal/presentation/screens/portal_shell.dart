@@ -4230,6 +4230,11 @@ class _CustomerAlternativeContactsCardState
                   ),
                 ],
               ),
+              const SizedBox(height: 4),
+              Text(
+                'Alternative contacts do not become SHIELD sign-in identities.',
+                style: AppTypography.small.copyWith(color: AppColors.gray),
+              ),
               if (snapshot.connectionState == ConnectionState.waiting)
                 const Padding(
                   padding: EdgeInsets.symmetric(vertical: 12),

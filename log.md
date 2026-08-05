@@ -10476,4 +10476,20 @@ Replaced the removed static Flutter carousel with a database-backed Operations c
 ### Verification
 
 - flutter analyze lib/features/portal/presentation/screens/portal_shell.dart
-- flutter test (150 passed; unrelated Agent Portal registration golden failed)
+- flutter test (150 passed; unrelated Agent Portal registration golden failed)## 15. Alternative-contact identity boundary — 2026-08-05 20:56:35 IST
+
+- The Profile alternative-contact section now states that stored alternative contacts cannot become SHIELD sign-in identities, matching the phone-OTP customer auth rule.
+- No contact was added, removed, or otherwise changed during authenticated browser QA.
+
+### Frontend Files
+
+- frontend/lib/features/portal/presentation/screens/portal_shell.dart
+
+### Documentation Files
+
+- docs/customer-ui/agent-goal/03_CUSTOMER_SCREEN_COMPLETION_MATRIX.csv
+
+### Verification
+
+- flutter analyze lib/features/portal/presentation/screens/portal_shell.dart
+- flutter test test/customer_portal_routes_test.dart
