@@ -224,7 +224,7 @@
 223,"Settings, Privacy & Support",Security,/portal/customer/settings/security,Security overview,session/auth API,,NO,NO,NO,NO,NO,NO,NO,TODO
 224,"Settings, Privacy & Support",Change Primary Mobile,/portal/customer/settings/security/mobile,Verified mobile-change workflow,auth/customer API,,NO,NO,NO,NO,NO,NO,NO,TODO
 225,"Settings, Privacy & Support",Verify New Mobile,same mobile flow,Firebase verification,Firebase/auth API,,NO,NO,NO,NO,NO,NO,NO,TODO
-226,"Settings, Privacy & Support",Active Sessions,/portal/customer/settings/security/sessions,View/revoke sessions,session API,,NO,NO,NO,NO,NO,NO,NO,TODO
+226,"Settings, Privacy & Support",Active Sessions,/portal/customer/settings/security/sessions,View/revoke sessions,authenticated owner-scoped session API,Settings sheet lists current and other account sessions with loading empty error retry and confirmed revoke actions.,YES,YES,YES,YES,NO,NO,IN PROGRESS
 227,"Settings, Privacy & Support",Privacy & Security,/portal/customer/privacy,Privacy/security hub,legal/config/session APIs,,NO,NO,NO,NO,NO,NO,NO,TODO
 228,"Settings, Privacy & Support",Privacy Policy,/portal/customer/privacy/policy,Versioned policy,legal content API,,NO,NO,NO,NO,NO,NO,NO,TODO
 229,"Settings, Privacy & Support",Terms and Conditions,/portal/customer/privacy/terms,Versioned terms,legal content API,,NO,NO,NO,NO,NO,NO,NO,TODO

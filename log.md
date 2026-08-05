@@ -10396,3 +10396,25 @@ Replaced the removed static Flutter carousel with a database-backed Operations c
 ### Verification
 
 - flutter analyze lib/features/portal/presentation/screens/portal_shell.dart
+
+
+## 2026-08-05 20:35:00 IST - Codex
+
+## 10. Customer session-security controls
+
+- Settings now exposes the existing authenticated owner-scoped session API in a customer security sheet with loading, retry, empty, current-device, and revoked-device states.
+- Customers can confirm revocation of a specific other device or all other devices; the backend remains authoritative for ownership and session invalidation.
+
+### Frontend Files
+
+- frontend/lib/features/portal/presentation/screens/portal_shell.dart
+
+### Documentation Files
+
+- docs/customer-ui/CUSTOMER_UI_AUDIT.md
+- docs/CUSTOMER_UI_IMPLEMENTATION_STATUS.md
+- docs/customer-ui/agent-goal/03_CUSTOMER_SCREEN_COMPLETION_MATRIX.csv
+
+### Verification
+
+- flutter analyze lib/features/portal/presentation/screens/portal_shell.dart

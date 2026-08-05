@@ -37,6 +37,7 @@ Completed:
 - Profile now surfaces the supported persisted address edit alongside alternative contacts; family, emergency-contact, and preferred-pharmacy gaps remain visible but non-interactive until customer-scoped APIs exist. Settings adds FAQ and About actions, keeps the app-version gap explicit, and confirms sign-out before clearing the session.
 - Profile now renders an initials avatar and verified-primary-mobile context, and asks before discarding dirty personal or address changes.
 - Profile hero now reads the authenticated membership bundle for the actual membership number and issued status; membership-read failure is explicit and does not hide usable profile data.
+- Customer Settings now exposes owner-scoped active-session listing and confirmed revoke actions through the existing authenticated session API; unsupported PIN and primary-mobile changes remain unavailable.
 - Profile-gated customer sections now distinguish access-status loading from an API failure and provide a retryable error state instead of a permanent skeleton.
 - Customer document and prescription archive failures now use the shared customer error card with a generic retry message; transport and server details are not rendered to the customer.
 - Customer document, signed-download, prescription-review, extraction, and processing-log reads now verify the authenticated customer owns the document. Private object-storage paths are stripped from customer document responses.

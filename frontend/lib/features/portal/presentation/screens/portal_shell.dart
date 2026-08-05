@@ -5163,6 +5163,12 @@ class _CustomerSettingsView extends StatelessWidget {
               subtitle: 'Review profile, address, and membership details',
               onTap: () => context.go('/portal/customer/profile'),
             ),
+            _CompactSettingAction(
+              icon: Icons.devices_outlined,
+              title: 'Active sessions',
+              subtitle: 'Review this account’s signed-in devices',
+              onTap: () => _showCustomerSecuritySheet(context),
+            ),
           ],
         ),
         const SizedBox(height: 16),
@@ -5235,6 +5241,249 @@ class _CustomerSettingsView extends StatelessWidget {
           ],
         ),
       ],
+    );
+  }
+}
+
+Future<void> _showCustomerSecuritySheet(BuildContext context) {
+  return showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    useSafeArea: true,
+    backgroundColor: Colors.transparent,
+    builder: (_) => const _CustomerSecuritySheet(),
+  );
+}
+
+class _CustomerSecuritySheet extends StatefulWidget {
+  const _CustomerSecuritySheet();
+
+  @override
+  State<_CustomerSecuritySheet> createState() => _CustomerSecuritySheetState();
+}
+
+class _CustomerSecuritySheetState extends State<_CustomerSecuritySheet> {
+  bool _isLoading = true;
+  bool _isMutating = false;
+  String? _error;
+  List<Map<String, dynamic>> _sessions = const [];
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+    try {
+      final sessions = await ApiService.getAuthenticatedSessions();
+      if (!mounted) return;
+      setState(() {
+        _sessions = sessions;
+        _isLoading = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _error = 'Signed-in devices could not be loaded. Please retry.';
+        _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _revoke(String sessionId, {required bool otherDevices}) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(
+          otherDevices ? 'Sign out other devices?' : 'Revoke session?',
+        ),
+        content: Text(
+          otherDevices
+              ? 'Other signed-in devices will need to verify the customer mobile again.'
+              : 'This device will need to verify the customer mobile again.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Sign out'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    setState(() => _isMutating = true);
+    try {
+      if (otherDevices) {
+        await ApiService.revokeOtherSessions();
+      } else {
+        await ApiService.revokeSession(sessionId);
+      }
+      if (!mounted) return;
+      showPortalSnackBar(context, 'Session access updated.');
+      await _load();
+    } catch (_) {
+      if (!mounted) return;
+      showPortalSnackBar(
+        context,
+        'Session access could not be updated. Please retry.',
+      );
+    } finally {
+      if (mounted) setState(() => _isMutating = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final otherActiveSessions = _sessions.where(
+      (session) => session['isCurrent'] != true && session['revokedAt'] == null,
+    );
+    return SafeArea(
+      top: false,
+      child: Container(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.sizeOf(context).height * .82,
+        ),
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+        decoration: const BoxDecoration(
+          color: AppColors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+        ),
+        child: Column(
+          children: [
+            SizedBox(
+              width: 46,
+              height: 5,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: AppColors.divider,
+                  borderRadius: BorderRadius.circular(99),
+                ),
+              ),
+            ),
+            const SizedBox(height: 18),
+            const Row(
+              children: [
+                Icon(Icons.shield_outlined, color: AppColors.shieldBlue),
+                SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'Security and signed-in devices',
+                    style: AppTypography.h4,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'Only sessions for this customer account are shown.',
+              style: AppTypography.small.copyWith(color: AppColors.gray),
+            ),
+            const SizedBox(height: 14),
+            if (otherActiveSessions.isNotEmpty)
+              Align(
+                alignment: Alignment.centerLeft,
+                child: OutlinedButton.icon(
+                  onPressed: _isMutating
+                      ? null
+                      : () => _revoke('', otherDevices: true),
+                  icon: const Icon(Icons.phonelink_erase_outlined),
+                  label: const Text('Sign out other devices'),
+                ),
+              ),
+            const SizedBox(height: 8),
+            Expanded(child: _buildBody()),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBody() {
+    if (_isLoading) return const Center(child: CircularProgressIndicator());
+    if (_error != null) {
+      return Center(
+        child: AppButton(text: 'Retry', onPressed: _load),
+      );
+    }
+    if (_sessions.isEmpty) {
+      return Center(
+        child: Text(
+          'No signed-in devices found.',
+          style: AppTypography.small.copyWith(color: AppColors.gray),
+        ),
+      );
+    }
+    return ListView.separated(
+      itemCount: _sessions.length,
+      separatorBuilder: (_, _) => const SizedBox(height: 10),
+      itemBuilder: (context, index) {
+        final session = _sessions[index];
+        final device = session['device'] as Map<String, dynamic>?;
+        final current = session['isCurrent'] == true;
+        final revoked = session['revokedAt'] != null;
+        final sessionId = session['sessionId']?.toString() ?? '';
+        return AppCard(
+          child: Row(
+            children: [
+              Icon(
+                current ? Icons.phone_android_outlined : Icons.devices_outlined,
+                color: current ? AppColors.shieldGreen : AppColors.shieldBlue,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      device?['deviceName']?.toString() ?? 'Signed-in device',
+                      style: AppTypography.body.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      [
+                            device?['platform'],
+                            device?['browser'],
+                            session['loginMethod'],
+                          ]
+                          .whereType<String>()
+                          .where((value) => value.trim().isNotEmpty)
+                          .join(' • '),
+                      style: AppTypography.small.copyWith(
+                        color: AppColors.gray,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (current)
+                const _StatusPill(
+                  label: 'Current',
+                  color: AppColors.shieldGreen,
+                )
+              else if (revoked)
+                const _StatusPill(label: 'Signed out', color: AppColors.gray)
+              else
+                TextButton(
+                  onPressed: _isMutating || sessionId.isEmpty
+                      ? null
+                      : () => _revoke(sessionId, otherDevices: false),
+                  child: const Text('Revoke'),
+                ),
+            ],
+          ),
+        );
+      },
     );
   }
 }
