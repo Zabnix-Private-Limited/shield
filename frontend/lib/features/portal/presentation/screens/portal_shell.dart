@@ -4006,7 +4006,10 @@ class _CustomerProfilePortalViewState
             ),
           ),
           const SizedBox(height: 14),
-          _CustomerAlternativeContactsCard(customerId: customer.id),
+          _CustomerAlternativeContactsCard(
+            customerId: customer.id,
+            primaryMobile: customer.mobile,
+          ),
           const SizedBox(height: 14),
           _CustomerAccountCapabilitiesCard(
             onEditProfile: () {
@@ -4050,9 +4053,13 @@ class _CustomerProfilePortalViewState
 }
 
 class _CustomerAlternativeContactsCard extends StatefulWidget {
-  const _CustomerAlternativeContactsCard({required this.customerId});
+  const _CustomerAlternativeContactsCard({
+    required this.customerId,
+    required this.primaryMobile,
+  });
 
   final String customerId;
+  final String primaryMobile;
 
   @override
   State<_CustomerAlternativeContactsCard> createState() =>
@@ -4124,14 +4131,23 @@ class _CustomerAlternativeContactsCardState
             TextButton(
               onPressed: () {
                 final mobile = mobileController.text.trim();
-                if (mobile.replaceAll(RegExp(r'\D'), '').length != 10) {
+                final normalizedMobile = mobile.replaceAll(RegExp(r'\D'), '');
+                if (normalizedMobile.length != 10) {
                   setDialogState(
                     () => mobileError = 'Enter a valid 10-digit mobile number',
                   );
                   return;
                 }
+                if (normalizedMobile ==
+                    widget.primaryMobile.replaceAll(RegExp(r'\D'), '')) {
+                  setDialogState(
+                    () => mobileError =
+                        'Use a number different from the primary sign-in number',
+                  );
+                  return;
+                }
                 Navigator.pop(context, {
-                  'mobile': mobile,
+                  'mobile': normalizedMobile,
                   'name': nameController.text.trim(),
                   'relationship': relationshipController.text.trim(),
                 });

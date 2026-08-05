@@ -10492,4 +10492,20 @@ Replaced the removed static Flutter carousel with a database-backed Operations c
 ### Verification
 
 - flutter analyze lib/features/portal/presentation/screens/portal_shell.dart
+- flutter test test/customer_portal_routes_test.dart## 16. Alternative-contact primary-mobile guard — 2026-08-05 20:59:41 IST
+
+- The customer form now normalizes an entered alternative mobile and rejects the authenticated primary sign-in number before the existing persisted API call; the backend duplicate and ownership checks remain authoritative.
+- Captured the authenticated Profile capability surface without invoking an add, remove, or sign-out action.
+
+### Frontend Files
+
+- frontend/lib/features/portal/presentation/screens/portal_shell.dart
+
+### Documentation Files
+
+- docs/customer-ui/agent-goal/03_CUSTOMER_SCREEN_COMPLETION_MATRIX.csv
+
+### Verification
+
+- flutter analyze lib/features/portal/presentation/screens/portal_shell.dart
 - flutter test test/customer_portal_routes_test.dart
