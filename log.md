@@ -10667,3 +10667,11 @@ Replaced the removed static Flutter carousel with a database-backed Operations c
 
 - docs/customer-ui/CUSTOMER_UI_AUDIT.md
 - docs/CUSTOMER_UI_API_BINDINGS.md
+
+## 28. Applied customer-account schema snapshot — 2026-08-06 00:22:00 IST
+
+- Updated current_schema.md with the deployed customer-account tables, typed contacts, foreign keys, and indexes so repository schema truth matches Neon development.
+
+### Documentation Files
+
+- current_schema.md

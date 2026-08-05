@@ -1041,3 +1041,29 @@ ALTER TABLE "users" ADD CONSTRAINT "users_role_id_fkey" FOREIGN KEY ("role_id") 
 ALTER TABLE "wallet_transactions" ADD CONSTRAINT "wallet_transactions_created_by_fkey" FOREIGN KEY ("created_by") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 ALTER TABLE "wallet_transactions" ADD CONSTRAINT "wallet_transactions_wallet_id_fkey" FOREIGN KEY ("wallet_id") REFERENCES "wallets"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 ALTER TABLE "wallets" ADD CONSTRAINT "wallets_customer_id_fkey" FOREIGN KEY ("customer_id") REFERENCES "customers"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- Applied migration snapshot: 20260805_customer_account_capabilities
+ALTER TABLE "customer_contacts" ADD COLUMN "contact_type" varchar(30) NOT NULL DEFAULT 'ALTERNATIVE', ADD COLUMN "deleted_at" timestamp with time zone;
+CREATE TABLE "customer_addresses" (
+  "id" bigserial PRIMARY KEY, "uuid" uuid NOT NULL UNIQUE,
+  "customer_id" bigint NOT NULL REFERENCES "customers"("id") ON DELETE CASCADE,
+  "label" varchar(50) NOT NULL DEFAULT 'HOME', "address_line1" text NOT NULL,
+  "address_line2" text, "city" varchar(100), "district" varchar(100), "state" varchar(100), "pincode" varchar(20),
+  "is_default" boolean NOT NULL DEFAULT false,
+  "created_at" timestamp with time zone NOT NULL DEFAULT now(), "updated_at" timestamp with time zone NOT NULL DEFAULT now(), "deleted_at" timestamp with time zone
+);
+CREATE INDEX "idx_customer_addresses_customer" ON "customer_addresses" ("customer_id", "deleted_at");
+CREATE TABLE "customer_dependents" (
+  "id" bigserial PRIMARY KEY, "uuid" uuid NOT NULL UNIQUE,
+  "customer_id" bigint NOT NULL REFERENCES "customers"("id") ON DELETE CASCADE,
+  "first_name" varchar(255) NOT NULL, "last_name" varchar(255), "relation" varchar(100) NOT NULL,
+  "dob" date, "gender" varchar(20),
+  "created_at" timestamp with time zone NOT NULL DEFAULT now(), "updated_at" timestamp with time zone NOT NULL DEFAULT now(), "deleted_at" timestamp with time zone
+);
+CREATE INDEX "idx_customer_dependents_customer" ON "customer_dependents" ("customer_id", "deleted_at");
+CREATE TABLE "customer_preferences" (
+  "id" bigserial PRIMARY KEY, "uuid" uuid NOT NULL UNIQUE,
+  "customer_id" bigint NOT NULL UNIQUE REFERENCES "customers"("id") ON DELETE CASCADE,
+  "notification_preferences" jsonb, "language" varchar(20), "theme" varchar(30), "preferred_provider_id" bigint,
+  "created_at" timestamp with time zone NOT NULL DEFAULT now(), "updated_at" timestamp with time zone NOT NULL DEFAULT now()
+);
