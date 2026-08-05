@@ -10458,4 +10458,22 @@ Replaced the removed static Flutter carousel with a database-backed Operations c
 ### Documentation Files
 
 - docs/CUSTOMER_UI_VISUAL_QA.md
-- Timestamp: 2026-08-05 20:45:19 IST
+- Timestamp: 2026-08-05 20:45:19 IST## 14. Customer address-book capability clarity — 2026-08-05 20:53:12 IST
+
+- Added an explicit Profile unavailable row for multi-address books while retaining the existing persisted single-address editor; no local-only address records or duplicate routes were introduced.
+- Live authenticated Chrome capture confirmed the surrounding Profile capability hierarchy and existing unavailable states without modifying customer data.
+- The full Flutter suite ran 150 passing tests but failed an unrelated Agent Portal registration golden comparison (1.03% pixel difference); targeted customer portal analysis passed.
+
+### Frontend Files
+
+- frontend/lib/features/portal/presentation/screens/portal_shell.dart
+
+### Documentation Files
+
+- docs/customer-ui/agent-goal/03_CUSTOMER_SCREEN_COMPLETION_MATRIX.csv
+- docs/CUSTOMER_UI_VISUAL_QA.md
+
+### Verification
+
+- flutter analyze lib/features/portal/presentation/screens/portal_shell.dart
+- flutter test (150 passed; unrelated Agent Portal registration golden failed)

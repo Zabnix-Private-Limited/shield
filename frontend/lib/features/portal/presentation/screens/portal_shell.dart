@@ -4321,6 +4321,12 @@ class _CustomerAccountCapabilitiesCard extends StatelessWidget {
             onTap: onEditProfile,
           ),
           const _CompactSettingAction(
+            icon: Icons.location_on_outlined,
+            title: 'Address book unavailable',
+            subtitle:
+                'SHIELD currently supports one profile address; saved addresses need a customer address-book API.',
+          ),
+          const _CompactSettingAction(
             icon: Icons.group_outlined,
             title: 'Family members',
             subtitle:
