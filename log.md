@@ -10675,3 +10675,16 @@ Replaced the removed static Flutter carousel with a database-backed Operations c
 ### Documentation Files
 
 - current_schema.md
+
+## 29. Customer-account controller authorization tests — 2026-08-06 00:30:00 IST
+
+- Added focused controller coverage proving account resources derive ownership from the authenticated customer principal, reject non-customer principals and malformed resource IDs, and do not accept a payload customer ID as authority.
+
+### Backend Files
+
+- backend/src/customer/customer-account.controller.spec.ts
+
+### Verification
+
+- npm test -- --runInBand customer-account.controller.spec.ts customer.controller.spec.ts customer.service.spec.ts
+- npm run build
