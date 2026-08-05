@@ -10549,3 +10549,17 @@ Replaced the removed static Flutter carousel with a database-backed Operations c
 
 - npm test -- --runInBand customer.service.spec.ts
 - npm run build
+## 20. Customer account capability schema — 2026-08-05 21:18:46 IST
+
+- Added an additive, unapplied Prisma migration for customer-owned address books, dependents, persisted preferences, preferred-provider selection, and typed/soft-deletable contacts.
+- The migration is intentionally not applied to any database; it must go through the explicit repository migration workflow.
+
+### Backend Files
+
+- backend/prisma/schema.prisma
+- backend/prisma/migrations/20260805_customer_account_capabilities/migration.sql
+
+### Verification
+
+- npx prisma validate
+- npm run build

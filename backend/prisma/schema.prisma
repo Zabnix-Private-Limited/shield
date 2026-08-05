@@ -232,6 +232,9 @@ model Customer {
   referredCustomers Customer[] @relation("CustomerReferral")
 
   customerContacts               CustomerContact[]
+  customerAddresses              CustomerAddress[]
+  customerDependents             CustomerDependent[]
+  customerPreferences            CustomerPreference?
   customerStatusHistory          CustomerStatusHistory[]
   membership                     Membership?
   shieldCard                     ShieldCard?
@@ -263,17 +266,76 @@ model Customer {
 }
 
 model CustomerContact {
-  id         BigInt   @id @default(autoincrement())
-  customerId BigInt   @map("customer_id")
-  name       String?  @db.VarChar(255)
-  relation   String?  @db.VarChar(100)
-  mobile     String?  @db.VarChar(20)
-  isPrimary  Boolean? @default(false) @map("is_primary")
-  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  id          BigInt    @id @default(autoincrement())
+  customerId  BigInt    @map("customer_id")
+  name        String?   @db.VarChar(255)
+  relation    String?   @db.VarChar(100)
+  mobile      String?   @db.VarChar(20)
+  isPrimary   Boolean?  @default(false) @map("is_primary")
+  contactType String    @default("ALTERNATIVE") @map("contact_type") @db.VarChar(30)
+  deletedAt   DateTime? @map("deleted_at") @db.Timestamptz(6)
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
 
   customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
 
   @@map("customer_contacts")
+}
+
+model CustomerAddress {
+  id           BigInt    @id @default(autoincrement())
+  uuid         String    @unique @db.Uuid
+  customerId   BigInt    @map("customer_id")
+  label        String    @default("HOME") @db.VarChar(50)
+  addressLine1 String    @map("address_line1") @db.Text
+  addressLine2 String?   @map("address_line2") @db.Text
+  city         String?   @db.VarChar(100)
+  district     String?   @db.VarChar(100)
+  state        String?   @db.VarChar(100)
+  pincode      String?   @db.VarChar(20)
+  isDefault    Boolean   @default(false) @map("is_default")
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt    DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([customerId, deletedAt], map: "idx_customer_addresses_customer")
+  @@map("customer_addresses")
+}
+
+model CustomerDependent {
+  id         BigInt    @id @default(autoincrement())
+  uuid       String    @unique @db.Uuid
+  customerId BigInt    @map("customer_id")
+  firstName  String    @map("first_name") @db.VarChar(255)
+  lastName   String?   @map("last_name") @db.VarChar(255)
+  relation   String    @db.VarChar(100)
+  dob        DateTime? @db.Date
+  gender     String?   @db.VarChar(20)
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt  DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt  DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([customerId, deletedAt], map: "idx_customer_dependents_customer")
+  @@map("customer_dependents")
+}
+
+model CustomerPreference {
+  id                      BigInt   @id @default(autoincrement())
+  uuid                    String   @unique @db.Uuid
+  customerId              BigInt   @unique @map("customer_id")
+  notificationPreferences Json?    @map("notification_preferences")
+  language                String?  @db.VarChar(20)
+  theme                   String?  @db.VarChar(30)
+  preferredProviderId     BigInt?  @map("preferred_provider_id")
+  createdAt               DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt               DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@map("customer_preferences")
 }
 
 model CustomerStatusHistory {
