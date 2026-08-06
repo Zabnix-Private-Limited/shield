@@ -10,3 +10,6 @@ firebase env/
 frontend/android/app/google-services.json
 frontend/test/failures/
 /.local-backups/
+.playwright-cli/
+.tmp/
+output/playwright/
