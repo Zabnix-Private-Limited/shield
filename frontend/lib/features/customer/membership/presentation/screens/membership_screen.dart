@@ -9,6 +9,7 @@ import '../../../../../shared/widgets/app_card.dart';
 import '../../../../../shared/widgets/portal_support.dart';
 import '../../../shared/domain/customer_access_state.dart';
 import '../../../../customer/shared/widgets/error_card.dart';
+import '../../data/models/membership_model.dart';
 import '../controllers/membership_controller.dart';
 
 class CustomerMembershipScreen extends StatefulWidget {
@@ -105,38 +106,38 @@ class _CustomerMembershipScreenState extends State<CustomerMembershipScreen> {
                     children: [
                       _MembershipStatCard(
                         label: accessState.serviceAccessEnabled
-                            ? 'Total credited'
+                            ? 'Cash credited'
                             : 'Credits unlock later',
                         value:
                             '₹${membership.totalEarnedCredits.toStringAsFixed(0)}',
                         note: accessState.serviceAccessEnabled
-                            ? 'Ledger-backed wallet credits'
+                            ? 'CASH wallet ledger only'
                             : 'No customer credit is exposed before card issue',
                         color: AppColors.shieldGreen,
                         icon: Icons.arrow_downward_rounded,
                       ),
                       _MembershipStatCard(
                         label: accessState.serviceAccessEnabled
-                            ? 'Total used'
+                            ? 'Cash spent'
                             : 'Service access',
                         value: accessState.serviceAccessEnabled
                             ? '₹${membership.totalRedeemedCredits.toStringAsFixed(0)}'
                             : 'Pending',
                         note: accessState.serviceAccessEnabled
-                            ? 'Redeemed across care services'
+                            ? 'CASH wallet ledger only'
                             : 'Admin or agent approval is still required',
                         color: AppColors.shieldBlue,
                         icon: Icons.local_hospital_outlined,
                       ),
                       _MembershipStatCard(
                         label: accessState.serviceAccessEnabled
-                            ? 'Available now'
+                            ? 'Cash balance'
                             : 'Card issuance',
                         value: accessState.serviceAccessEnabled
                             ? '₹${(membership.totalEarnedCredits - membership.totalRedeemedCredits).toStringAsFixed(0)}'
                             : 'Awaiting',
                         note: accessState.serviceAccessEnabled
-                            ? 'Computed from live customer ledger'
+                            ? 'Computed from live CASH ledger'
                             : 'SHIELD card is issued by admin or agent team',
                         color: AppColors.shieldNavy,
                         icon: Icons.account_balance_wallet_outlined,
@@ -146,44 +147,8 @@ class _CustomerMembershipScreenState extends State<CustomerMembershipScreen> {
                 },
               ),
               const SizedBox(height: 24),
-              AppCard(
-                padding: const EdgeInsets.all(16),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        color: AppColors.warning.withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                      child: const Icon(
-                        Icons.info_outline_rounded,
-                        color: AppColors.warning,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Subscription entitlement',
-                            style: AppTypography.h5,
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            'Monthly entitlement, carry-forward, customer contribution and SHIELD Benefit are not available in your customer membership contract yet.',
-                            style: AppTypography.small.copyWith(
-                              color: AppColors.gray,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
+              _SubscriptionEntitlementCard(
+                subscription: membership.subscription,
               ),
               const SizedBox(height: 12),
               AppCard(
@@ -545,6 +510,181 @@ class _MembershipStatCard extends StatelessWidget {
     );
   }
 }
+
+class _SubscriptionEntitlementCard extends StatelessWidget {
+  const _SubscriptionEntitlementCard({required this.subscription});
+
+  final MembershipSubscriptionEntitlement? subscription;
+
+  @override
+  Widget build(BuildContext context) {
+    final subscription = this.subscription;
+    if (subscription == null) {
+      return AppCard(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: AppColors.warning.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: const Icon(
+                Icons.info_outline_rounded,
+                color: AppColors.warning,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Subscription entitlement', style: AppTypography.h5),
+                  const SizedBox(height: 4),
+                  Text(
+                    'There is no current subscription entitlement on this membership.',
+                    style: AppTypography.small.copyWith(color: AppColors.gray),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final allocation = subscription.currentAllocation;
+    return AppCard(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(
+                Icons.auto_awesome_outlined,
+                color: AppColors.shieldBlue,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'Subscription entitlement',
+                  style: AppTypography.h5,
+                ),
+              ),
+              _SubscriptionStatus(status: subscription.status),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            subscription.planName,
+            style: AppTypography.small.copyWith(color: AppColors.gray),
+          ),
+          const SizedBox(height: 14),
+          _EntitlementLine(
+            'Your contribution',
+            _formatPaise(subscription.customerContributionPaise),
+          ),
+          _EntitlementLine(
+            'SHIELD Benefit',
+            _formatPaise(subscription.shieldBenefitPaise),
+          ),
+          const Divider(height: 22),
+          _EntitlementLine(
+            'Total entitlement',
+            _formatPaise(subscription.totalEntitlementPaise),
+            emphasis: true,
+          ),
+          if (allocation != null) ...[
+            const SizedBox(height: 14),
+            Text(
+              'Current allocation',
+              style: AppTypography.small.copyWith(fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 6),
+            _EntitlementLine(
+              'Allocated',
+              _formatPaise(allocation.allocationPaise),
+            ),
+            _EntitlementLine(
+              'Carry-forward',
+              _formatPaise(allocation.carryForwardPaise),
+            ),
+            _EntitlementLine('Used', _formatPaise(allocation.usedPaise)),
+            _EntitlementLine(
+              'Remaining',
+              _formatPaise(allocation.remainingPaise),
+              emphasis: true,
+            ),
+          ] else
+            Padding(
+              padding: const EdgeInsets.only(top: 12),
+              child: Text(
+                'No allocation is recorded for the current subscription period.',
+                style: AppTypography.small.copyWith(color: AppColors.gray),
+              ),
+            ),
+          const SizedBox(height: 10),
+          Text(
+            'SHIELD Benefit is a membership entitlement. It is not a CASH wallet balance or reward-point balance.',
+            style: AppTypography.tiny.copyWith(color: AppColors.gray),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _EntitlementLine extends StatelessWidget {
+  const _EntitlementLine(this.label, this.value, {this.emphasis = false});
+  final String label;
+  final String value;
+  final bool emphasis;
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(bottom: 7),
+    child: Row(
+      children: [
+        Expanded(child: Text(label, style: AppTypography.small)),
+        Text(
+          value,
+          style: AppTypography.small.copyWith(
+            fontWeight: emphasis ? FontWeight.w800 : FontWeight.w600,
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+class _SubscriptionStatus extends StatelessWidget {
+  const _SubscriptionStatus({required this.status});
+  final String status;
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+    decoration: BoxDecoration(
+      color: AppColors.shieldGreen.withValues(alpha: 0.12),
+      borderRadius: BorderRadius.circular(999),
+    ),
+    child: Text(
+      status.replaceAll('_', ' '),
+      style: AppTypography.tiny.copyWith(
+        color: AppColors.shieldGreen,
+        fontWeight: FontWeight.w700,
+      ),
+    ),
+  );
+}
+
+String _formatPaise(int value) => NumberFormat.currency(
+  locale: 'en_IN',
+  symbol: '₹',
+  decimalDigits: 0,
+).format(value / 100);
 
 class _MembershipActions extends StatelessWidget {
   const _MembershipActions({

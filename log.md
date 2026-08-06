@@ -10726,3 +10726,22 @@ Replaced the removed static Flutter carousel with a database-backed Operations c
   - Verified the real catalogue error card and Retry recovery by temporarily blocking only the wellness browser request.
 - Why
   - Proves failure recovery without stopping the backend or changing customer data.
+
+## 58. Customer subscription entitlement contract
+**2026-08-06 09:05:00 IST**
+
+Added a customer-self, read-only subscription projection to the existing membership bundle so membership financial values remain database-derived and SHIELD Benefit is never represented as CASH or reward points.
+
+### Backend Files
+- `backend/src/customer/customer.service.ts`
+  - Reads only the authenticated customer subscription and latest allocation on or before the current month.
+  - Returns contribution, SHIELD Benefit, entitlement, allocation, carry-forward, usage, and remaining amount without invoking management-demo mutation routes.
+
+### Frontend Files
+- `frontend/lib/features/customer/membership/data/models/membership_model.dart`
+- `frontend/lib/features/customer/membership/presentation/screens/membership_screen.dart`
+  - Renders the entitlement as a distinct membership area; memberships without a subscription receive a truthful unavailable state.
+
+### Verification
+- Prisma validation, backend build, customer controller scope tests, Flutter analyzer, and focused membership widget/model tests passed.
+- Authenticated browser pre-restart confirmed the existing active member/card screen. The restarted Flutter debug bundle remained blank in the externally controlled tab while its debug service was still loading, so post-restart visual evidence is not claimed.

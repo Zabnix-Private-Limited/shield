@@ -20,7 +20,10 @@ class MembershipModel extends Membership {
     super.cardQrPayload,
     super.cardStatus,
     super.cardIssuedAt,
+    this.subscription,
   });
+
+  final MembershipSubscriptionEntitlement? subscription;
 
   factory MembershipModel.fromJson(Map<String, dynamic> json) {
     final membership = Map<String, dynamic>.from(
@@ -38,6 +41,9 @@ class MembershipModel extends Membership {
     );
     final shieldCard = Map<String, dynamic>.from(
       json['shieldCard'] as Map? ?? const {},
+    );
+    final subscription = Map<String, dynamic>.from(
+      json['subscription'] as Map? ?? const {},
     );
     final tierSource =
         (membershipType['name'] ??
@@ -77,6 +83,9 @@ class MembershipModel extends Membership {
       cardIssuedAt: shieldCard['issuedAt'] == null
           ? null
           : _parseDate(shieldCard['issuedAt']),
+      subscription: subscription.isEmpty
+          ? null
+          : MembershipSubscriptionEntitlement.fromJson(subscription),
     );
   }
 
@@ -105,6 +114,7 @@ class MembershipModel extends Membership {
         'totalRedeemedCredits': totalRedeemedCredits,
         'availableCredits': totalEarnedCredits - totalRedeemedCredits,
       },
+      if (subscription != null) 'subscription': subscription!.toJson(),
       if (cardNumber != null || cardQrPayload != null || cardStatus != null)
         'shieldCard': {
           'cardNumber': cardNumber,
@@ -129,3 +139,91 @@ class MembershipModel extends Membership {
     return parsed ?? fallback ?? DateTime.now();
   }
 }
+
+class MembershipSubscriptionEntitlement {
+  const MembershipSubscriptionEntitlement({
+    required this.planName,
+    required this.status,
+    required this.customerContributionPaise,
+    required this.shieldBenefitPaise,
+    required this.totalEntitlementPaise,
+    this.startsOn,
+    this.endsOn,
+    this.currentAllocation,
+  });
+
+  final String planName;
+  final String status;
+  final int customerContributionPaise;
+  final int shieldBenefitPaise;
+  final int totalEntitlementPaise;
+  final DateTime? startsOn;
+  final DateTime? endsOn;
+  final MembershipAllocation? currentAllocation;
+
+  factory MembershipSubscriptionEntitlement.fromJson(Map<String, dynamic> json) {
+    final allocation = Map<String, dynamic>.from(
+      json['currentAllocation'] as Map? ?? const {},
+    );
+    return MembershipSubscriptionEntitlement(
+      planName: (json['planName'] ?? '').toString(),
+      status: (json['status'] ?? '').toString(),
+      customerContributionPaise: _asInt(json['customerContributionPaise']),
+      shieldBenefitPaise: _asInt(json['shieldBenefitPaise']),
+      totalEntitlementPaise: _asInt(json['totalEntitlementPaise']),
+      startsOn: _tryParseDate(json['startsOn']),
+      endsOn: _tryParseDate(json['endsOn']),
+      currentAllocation: allocation.isEmpty
+          ? null
+          : MembershipAllocation.fromJson(allocation),
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        'planName': planName,
+        'status': status,
+        'customerContributionPaise': customerContributionPaise,
+        'shieldBenefitPaise': shieldBenefitPaise,
+        'totalEntitlementPaise': totalEntitlementPaise,
+        'startsOn': startsOn?.toIso8601String(),
+        'endsOn': endsOn?.toIso8601String(),
+        if (currentAllocation != null) 'currentAllocation': currentAllocation!.toJson(),
+      };
+}
+
+class MembershipAllocation {
+  const MembershipAllocation({
+    required this.monthStart,
+    required this.allocationPaise,
+    required this.carryForwardPaise,
+    required this.usedPaise,
+    required this.remainingPaise,
+  });
+
+  final DateTime? monthStart;
+  final int allocationPaise;
+  final int carryForwardPaise;
+  final int usedPaise;
+  final int remainingPaise;
+
+  factory MembershipAllocation.fromJson(Map<String, dynamic> json) => MembershipAllocation(
+        monthStart: _tryParseDate(json['monthStart']),
+        allocationPaise: _asInt(json['allocationPaise']),
+        carryForwardPaise: _asInt(json['carryForwardPaise']),
+        usedPaise: _asInt(json['usedPaise']),
+        remainingPaise: _asInt(json['remainingPaise']),
+      );
+
+  Map<String, dynamic> toJson() => {
+        'monthStart': monthStart?.toIso8601String(),
+        'allocationPaise': allocationPaise,
+        'carryForwardPaise': carryForwardPaise,
+        'usedPaise': usedPaise,
+        'remainingPaise': remainingPaise,
+      };
+}
+
+int _asInt(dynamic value) => int.tryParse(value?.toString() ?? '') ?? 0;
+
+DateTime? _tryParseDate(dynamic value) =>
+    value == null ? null : DateTime.tryParse(value.toString());

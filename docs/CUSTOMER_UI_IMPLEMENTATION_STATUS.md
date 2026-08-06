@@ -17,7 +17,7 @@ Completed:
 - Customer reward-points route added using the existing wallet endpoint and `REWARD_POINTS` transaction ledger; no mock points or shared customer data.
 - Customer transaction tiles now use the normalized ledger credit direction, so `EARNED` reward-point entries render as credits instead of debits.
 - Privilege Card route added from the membership endpoint's actual `shieldCard` payload. It renders only an issued card and its real QR payload; no subscription or physical-card data is fabricated.
-- Membership screen now renders a clear entitlement-unavailable state until a customer-safe subscription contract returns contribution, SHIELD Benefit, monthly allocation and carry-forward values.
+- Membership now exposes a customer-self, read-only subscription entitlement projection through `GET /customer/membership`. It renders backend-issued contribution, SHIELD Benefit, total entitlement, and current allocation separately from CASH and reward-point balances; memberships without a subscription remain a truthful no-entitlement state.
 - Privilege Card supports the verified physical-card request/status contract. Backend and Flutter both reject attempts to target another customer ID.
 - Privilege Card widget coverage verifies the actual QR payload is rendered and that physical-card actions follow the backend card-profile action rather than a client-side assumption.
 - Membership widget coverage verifies populated identity/entitlement-gap rendering and the membership API-error state.
@@ -70,5 +70,5 @@ Completed:
 Not complete:
 
 - Full commerce, rewards, card lifecycle, referral, family, timeline, booking, and responsive visual QA. Wellness live browser evidence remains pending while the restarted local Flutter server is unavailable.
-- Customer-safe subscription entitlement, physical-card history, replacement, lost and damaged card API contracts.
+- Physical-card history, replacement, lost and damaged card API contracts.
 - Feature extraction for portal-shell-only customer screens.

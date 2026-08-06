@@ -139,6 +139,20 @@ export class CustomerService {
     const walletSummary = customer.wallet
       ? await this.walletService.getWalletSummary(customer.wallet.id)
       : null;
+    const subscription = await this.prisma.membershipSubscription.findUnique({
+      where: { customerId },
+    });
+    const currentAllocation = subscription
+      ? await this.prisma.subscriptionMonthlyAllocation.findFirst({
+          where: {
+            subscriptionId: subscription.id,
+            monthStart: {
+              lte: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0),
+            },
+          },
+          orderBy: { monthStart: 'desc' },
+        })
+      : null;
 
     return {
       customerId: customer.id.toString(),
@@ -173,6 +187,29 @@ export class CustomerService {
         totalRedeemedCredits: walletSummary?.cashWallet.debited ?? 0,
         availableCredits: walletSummary?.cashWallet.available ?? 0,
       },
+      subscription: subscription
+        ? {
+            planName: subscription.planName,
+            status: subscription.status,
+            startsOn: subscription.startsOn,
+            endsOn: subscription.endsOn,
+            customerContributionPaise: subscription.customerContributionPaise,
+            shieldBenefitPaise: subscription.shieldBenefitPaise,
+            totalEntitlementPaise: subscription.totalEntitlementPaise,
+            currentAllocation: currentAllocation
+              ? {
+                  monthStart: currentAllocation.monthStart,
+                  allocationPaise: currentAllocation.allocationPaise,
+                  carryForwardPaise: currentAllocation.carryForwardPaise,
+                  usedPaise: currentAllocation.usedPaise,
+                  remainingPaise:
+                    currentAllocation.allocationPaise +
+                    currentAllocation.carryForwardPaise -
+                    currentAllocation.usedPaise,
+                }
+              : null,
+          }
+        : null,
       shieldCard: customer.shieldCard
         ? {
             id: customer.shieldCard.id.toString(),

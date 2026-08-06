@@ -45,10 +45,29 @@ void main() {
 
       expect(find.text('SHLD-00042'), findsWidgets);
       expect(find.text('Subscription entitlement'), findsOneWidget);
-      expect(find.textContaining('SHIELD Benefit'), findsOneWidget);
+      expect(find.textContaining('no current subscription entitlement'), findsOneWidget);
       expect(find.text('₹10000'), findsNothing);
     },
   );
+
+  testWidgets('renders backend-derived subscription entitlement separately', (
+    tester,
+  ) async {
+    final controller = MembershipController(
+      customerId: '42',
+      repository: _MembershipTestRepository(_membership(withSubscription: true)),
+    );
+    await tester.pumpWidget(
+      MaterialApp(home: CustomerMembershipScreen(controller: controller)),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Your contribution'), findsOneWidget);
+    expect(find.text('SHIELD Benefit'), findsWidgets);
+    expect(find.text('₹10,000'), findsOneWidget);
+    expect(find.text('₹1,000'), findsWidgets);
+    expect(find.textContaining('not a CASH wallet balance'), findsOneWidget);
+  });
 
   testWidgets('renders the membership API error state', (tester) async {
     final controller = MembershipController(
@@ -93,7 +112,7 @@ class _PendingMembershipRepository extends MembershipRepository {
   Future<MembershipModel> loadMembership(String customerId) => pending.future;
 }
 
-MembershipModel _membership() => MembershipModel.fromJson(const {
+MembershipModel _membership({bool withSubscription = false}) => MembershipModel.fromJson({
   'customerId': '42',
   'membership': {
     'id': '7',
@@ -107,4 +126,18 @@ MembershipModel _membership() => MembershipModel.fromJson(const {
     'membershipType': {'name': 'Founding Member'},
   },
   'membershipStats': {'totalEarnedCredits': 100, 'totalRedeemedCredits': 40},
+  if (withSubscription)
+    'subscription': {
+      'planName': 'SHIELD Privilege Plan',
+      'status': 'ACTIVE',
+      'customerContributionPaise': 1000000,
+      'shieldBenefitPaise': 100000,
+      'totalEntitlementPaise': 1100000,
+      'currentAllocation': {
+        'allocationPaise': 100000,
+        'carryForwardPaise': 0,
+        'usedPaise': 0,
+        'remainingPaise': 100000,
+      },
+    },
 });
