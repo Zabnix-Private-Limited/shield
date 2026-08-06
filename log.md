@@ -10788,3 +10788,9 @@ Added a customer-self, read-only subscription projection to the existing members
 - Existing cached membership fallback now has an explicit offline banner and refresh action.
 - Focused controller/screen coverage verifies cached data is not presented as current online data.
 - Flutter analyzer and membership screen tests passed.
+## 65. Membership narrow viewport test
+**2026-08-06 10:45:00 IST**
+
+- Added a 350 logical-pixel membership screen regression test with backend-derived subscription content.
+- The test completes without a Flutter layout exception.
+- Browser viewport evidence remains separate and unverified.

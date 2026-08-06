@@ -124,6 +124,26 @@ void main() {
     expect(find.text('Subscription details'), findsOneWidget);
     expect(find.text('Your contribution'), findsOneWidget);
   });
+
+  testWidgets('keeps membership content stable at 350 logical pixels', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(350, 800));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final controller = MembershipController(
+      customerId: '42',
+      repository: _MembershipTestRepository(
+        _membership(withSubscription: true),
+      ),
+    );
+    await tester.pumpWidget(
+      MaterialApp(home: CustomerMembershipScreen(controller: controller)),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('SHLD-00042'), findsWidgets);
+    expect(tester.takeException(), isNull);
+  });
 }
 
 class _MembershipTestRepository extends MembershipRepository {
