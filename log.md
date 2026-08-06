@@ -10764,3 +10764,9 @@ Added a customer-self, read-only subscription projection to the existing members
 - Removed tier-based coverage and support claims from the customer membership benefit list.
 - The screen now reports only plan identity, issued-card/validity facts, and the structured-benefit contract gap.
 - Focused membership widget tests passed.
+## 61. Membership deep links
+**2026-08-06 10:00:00 IST**
+
+- Added supported customer deep links for membership details, subscription, and benefits through the existing portal shell.
+- The routes reuse the established membership screen and expose no unsupported renewal or mutation action.
+- Flutter analyzer and focused membership/route tests passed.

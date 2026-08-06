@@ -225,6 +225,13 @@ final GoRouter router = GoRouter(
       redirect: (context, state) => '/portal/customer/services',
     ),
     GoRoute(
+      path: '/portal/customer/membership/:detail',
+      builder: (context, state) => PortalShell(
+        role: SHIELDRole.customer,
+        sectionKey: 'membership-${state.pathParameters['detail']}',
+      ),
+    ),
+    GoRoute(
       path: '/portal/:role/:section',
       name: 'role-portal',
       builder: (context, state) {

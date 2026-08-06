@@ -751,6 +751,14 @@ class _MembershipActions extends StatelessWidget {
               ),
             ),
             action(
+              'Subscription details',
+              () => context.go('/portal/customer/membership/subscription'),
+            ),
+            action(
+              'Plan benefits',
+              () => context.go('/portal/customer/membership/benefits'),
+            ),
+            action(
               accessState.serviceAccessEnabled
                   ? 'Open profile'
                   : 'Complete profile',

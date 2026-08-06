@@ -116,6 +116,9 @@ class PortalResolver {
             role == SHIELDRole.agent ||
             role == SHIELDRole.provider;
       case 'membership':
+      case 'membership-details':
+      case 'membership-subscription':
+      case 'membership-benefits':
       case 'services':
       case 'wallet':
       case 'orders':

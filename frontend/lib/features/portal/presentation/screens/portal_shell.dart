@@ -537,7 +537,13 @@ class _RoleContent extends StatelessWidget {
     final isCustomerDashboard =
         portal.role == SHIELDRole.customer && section.key == 'dashboard';
     final isCustomerMembership =
-        portal.role == SHIELDRole.customer && section.key == 'membership';
+        portal.role == SHIELDRole.customer &&
+        const {
+          'membership',
+          'membership-details',
+          'membership-subscription',
+          'membership-benefits',
+        }.contains(section.key);
     final isCustomerPrivilegeCard =
         portal.role == SHIELDRole.customer && section.key == 'privilege-card';
     final isCustomerServices =
