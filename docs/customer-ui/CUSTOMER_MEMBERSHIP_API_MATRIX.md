@@ -6,6 +6,7 @@ Audited: 2026-08-06. `current_schema.md` is authoritative for persisted models; 
 |---|---|---|---|---|
 | Current membership | `GET /customer/membership` | Customer principal resolves to its own `customerId`; agent access is additionally scope-checked | Membership number, status, dates, membership type/plan, cash-ledger totals, digital card | Supported |
 | Subscription entitlement | `GET /customer/membership` | Same customer-self resolver; no customer ID is accepted for a customer principal | Stored plan/status, customer contribution, SHIELD Benefit, total entitlement and the latest allocation on or before the current month | Supported, read-only |
+| Membership benefits | `GET /customer/membership` plan fields only | Same customer-self resolver | Plan name, status and eligibility metadata; no structured coverage, exclusions, annual/monthly limits, or carry-forward policy | Partial: UI must show the contract gap, not tier-based claims |
 | Digital privilege card | `GET /customer/membership/card` | Customer principal resolves to its own customer ID | Card number, status, issued date and request status | Supported when a card exists |
 | QR verification | No verified customer/provider QR-verification endpoint | N/A | Persisted `shield_cards.qr_code` is a static string; no expiry, signing, verifier, replay protection, or PII review contract | Unavailable; UI must not render it as a QR code |
 | Cash membership usage | Included as `membershipStats` in `GET /customer/membership` | Same as above | Cash wallet credited/debited/available; this is not SHIELD Benefit | Supported as wallet-derived summary only |
@@ -26,6 +27,7 @@ Audited: 2026-08-06. `current_schema.md` is authoritative for persisted models; 
 ## Explicit gaps
 
 - No verified customer-safe lost, damaged or replacement-card endpoint, nor an event model capable of preserving those lifecycle reasons.
+- No structured plan-benefit model or customer benefit endpoint, so coverage claims must remain unavailable.
 - The present membership DTO omits customer display name; the privilege card screen obtains it through the existing authenticated customer profile API.
 
 ## Current customer presentation

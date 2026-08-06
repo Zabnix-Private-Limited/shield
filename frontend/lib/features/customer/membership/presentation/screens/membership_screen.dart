@@ -273,17 +273,15 @@ class _CustomerMembershipScreenState extends State<CustomerMembershipScreen> {
     switch (tier) {
       case MembershipTier.foundingMember:
         return const [
-          'Digital privilege card with branch-ready verification.',
-          'Founding-member wallet benefits across SHIELD care touchpoints.',
-          'Priority support for onboarding, renewals, and membership exceptions.',
-          'Cross-service access for pharmacy, clinic, diagnostics, and follow-ups.',
+          'Your membership plan is recorded as Founding Member.',
+          'Your issued card status and membership validity are shown above.',
+          'Service coverage, exclusions, and annual limits are not in the customer membership contract yet.',
         ];
       case MembershipTier.standardMember:
         return const [
-          'Digital membership card with wallet-linked service access.',
-          'Eligibility for supported SHIELD pharmacy and care benefits.',
-          'Notifications for appointments, documents, and service updates.',
-          'Branch-aware support for active customer membership usage.',
+          'Your membership plan is recorded as Standard Member.',
+          'Your issued card status and membership validity are shown above.',
+          'Service coverage, exclusions, and annual limits are not in the customer membership contract yet.',
         ];
     }
   }

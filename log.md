@@ -10758,3 +10758,9 @@ Added a customer-self, read-only subscription projection to the existing members
 ### Verification
 - Prisma validation, focused backend controller tests, backend build, Flutter analyzer, and focused membership/card Flutter tests passed.
 - Browser reconnection after the local Flutter restart timed out while the debug bundle loaded; no post-change browser screenshot is claimed.
+## 60. Membership benefit contract boundary
+**2026-08-06 09:45:00 IST**
+
+- Removed tier-based coverage and support claims from the customer membership benefit list.
+- The screen now reports only plan identity, issued-card/validity facts, and the structured-benefit contract gap.
+- Focused membership widget tests passed.
