@@ -10745,3 +10745,16 @@ Added a customer-self, read-only subscription projection to the existing members
 ### Verification
 - Prisma validation, backend build, customer controller scope tests, Flutter analyzer, and focused membership widget/model tests passed.
 - Authenticated browser pre-restart confirmed the existing active member/card screen. The restarted Flutter debug bundle remained blank in the externally controlled tab while its debug service was still loading, so post-restart visual evidence is not claimed.
+## 59. Customer-safe card history and QR boundary
+**2026-08-06 09:30:00 IST**
+
+### Backend Files
+- `backend/src/customer/customer-membership.controller.ts`: Added customer-principal card, history, and request routes without client-supplied identity.
+- `backend/src/customer/customer.service.ts`: Request creation records an append-only audit entry; history returns only customer-owned safe fields.
+
+### Frontend Files
+- `frontend/lib/features/customer/membership/presentation/screens/privilege_card_screen.dart`: Added physical-card history and withheld QR because stored values have no signed verification or expiry contract.
+
+### Verification
+- Prisma validation, focused backend controller tests, backend build, Flutter analyzer, and focused membership/card Flutter tests passed.
+- Browser reconnection after the local Flutter restart timed out while the debug bundle loaded; no post-change browser screenshot is claimed.

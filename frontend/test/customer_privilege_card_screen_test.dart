@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:qr_flutter/qr_flutter.dart';
 import 'package:shield/features/customer/membership/data/models/membership_model.dart';
 import 'package:shield/features/customer/membership/data/repositories/membership_repository.dart';
 import 'package:shield/features/customer/membership/presentation/controllers/membership_controller.dart';
@@ -9,7 +8,7 @@ import 'package:shield/shared/models/customer.dart';
 
 void main() {
   testWidgets(
-    'renders the server-issued QR card and hides unsupported request',
+    'renders the digital card but withholds an unverifiable QR payload',
     (tester) async {
       await tester.pumpWidget(
         MaterialApp(
@@ -18,6 +17,7 @@ void main() {
               controller: _controller(),
               loadCustomer: () async => _customer(),
               loadCardProfile: () async => const {'action': 'VIEW_CARD'},
+              loadCardHistory: () async => const [],
             ),
           ),
         ),
@@ -25,7 +25,8 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('SHLD-00042'), findsOneWidget);
-      expect(find.byType(QrImageView), findsOneWidget);
+      expect(find.text('QR verification unavailable'), findsOneWidget);
+      expect(find.textContaining('signed, server-verifiable'), findsOneWidget);
       expect(find.text('Request physical card'), findsNothing);
     },
   );
@@ -43,6 +44,7 @@ void main() {
               loadCardProfile: () async => const {
                 'action': 'REQUEST_PHYSICAL_CARD',
               },
+              loadCardHistory: () async => const [],
               requestPhysicalCard: () async {
                 requests++;
                 return const {'status': 'PENDING'};
@@ -71,6 +73,7 @@ void main() {
             controller: _controller(),
             loadCustomer: () async => _customer(),
             loadCardProfile: () async => throw StateError('Unavailable'),
+            loadCardHistory: () async => const [],
           ),
         ),
       ),
@@ -82,6 +85,32 @@ void main() {
       findsOneWidget,
     );
     expect(find.text('Retry'), findsOneWidget);
+  });
+
+  testWidgets('renders self-scoped physical-card history', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: CustomerPrivilegeCardScreen(
+            controller: _controller(),
+            loadCustomer: () async => _customer(),
+            loadCardProfile: () async => const {'action': 'VIEW_CARD'},
+            loadCardHistory: () async => const [
+              {
+                'status': 'REQUESTED',
+                'requestedAt': '2026-08-01T00:00:00.000Z',
+              },
+            ],
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.drag(find.byType(ListView), const Offset(0, -360));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Physical card history'), findsOneWidget);
+    expect(find.textContaining('REQUESTED'), findsOneWidget);
   });
 }
 

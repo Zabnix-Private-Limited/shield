@@ -1,4 +1,4 @@
-import { BadRequestException, Controller, Get, Query } from '@nestjs/common';
+import { BadRequestException, Controller, Get, Post, Query } from '@nestjs/common';
 import { AgentScopeService } from '../auth/agent-scope.service';
 import { CurrentPrincipal } from '../auth/current-principal.decorator';
 import { RequirePermissions } from '../auth/permissions.decorator';
@@ -42,6 +42,36 @@ export class CustomerMembershipController {
       data: await this.customerService.getCustomerPortalMembership(
         resolvedCustomerId,
       ),
+    };
+  }
+
+  @RequirePermissions('customers.view')
+  @Get('membership/card')
+  async getCard(@CurrentPrincipal() principal?: ShieldPrincipal) {
+    const customerId = this.resolveCustomerId(undefined, principal);
+    return {
+      success: true,
+      data: await this.customerService.getCardProfile(customerId),
+    };
+  }
+
+  @RequirePermissions('customers.view')
+  @Get('membership/card/requests')
+  async getCardRequests(@CurrentPrincipal() principal?: ShieldPrincipal) {
+    const customerId = this.resolveCustomerId(undefined, principal);
+    return {
+      success: true,
+      data: await this.customerService.listPhysicalCardRequests(customerId),
+    };
+  }
+
+  @RequirePermissions('customers.update')
+  @Post('membership/card/request')
+  async requestCard(@CurrentPrincipal() principal?: ShieldPrincipal) {
+    const customerId = this.resolveCustomerId(undefined, principal);
+    return {
+      success: true,
+      data: await this.customerService.requestPhysicalCard(customerId),
     };
   }
 }

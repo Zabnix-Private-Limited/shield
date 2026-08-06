@@ -945,6 +945,21 @@ class ApiService {
     );
   }
 
+  static Future<Map<String, dynamic>> getOwnCustomerCardProfile() async =>
+      _readEnvelope(await _dio.get('/customer/membership/card'));
+
+  static Future<List<Map<String, dynamic>>> getOwnPhysicalCardRequests() async {
+    final payload = _readEnvelopeList(
+      await _dio.get('/customer/membership/card/requests'),
+    );
+    return payload
+        .map((item) => Map<String, dynamic>.from(item as Map))
+        .toList();
+  }
+
+  static Future<Map<String, dynamic>> requestOwnPhysicalCard() async =>
+      _readEnvelope(await _dio.post('/customer/membership/card/request'));
+
   static Future<Map<String, dynamic>> createCustomer(
     Map<String, dynamic> payload,
   ) async {

@@ -16,7 +16,7 @@ Completed:
 - Operations-owned carousel contract added through the existing commercial-settings table. An explicit idempotent non-production seed now publishes three local-image demo banners only when Operations has not configured the setting.
 - Customer reward-points route added using the existing wallet endpoint and `REWARD_POINTS` transaction ledger; no mock points or shared customer data.
 - Customer transaction tiles now use the normalized ledger credit direction, so `EARNED` reward-point entries render as credits instead of debits.
-- Privilege Card route added from the membership endpoint's actual `shieldCard` payload. It renders only an issued card and its real QR payload; no subscription or physical-card data is fabricated.
+- Privilege Card route renders only an issued digital card and customer-self physical-card request/status/history data. The stored static QR value is not rendered: a signed, server-verifiable QR contract is required first.
 - Membership now exposes a customer-self, read-only subscription entitlement projection through `GET /customer/membership`. It renders backend-issued contribution, SHIELD Benefit, total entitlement, and current allocation separately from CASH and reward-point balances; memberships without a subscription remain a truthful no-entitlement state.
 - Privilege Card supports the verified physical-card request/status contract. Backend and Flutter both reject attempts to target another customer ID.
 - Privilege Card widget coverage verifies the actual QR payload is rendered and that physical-card actions follow the backend card-profile action rather than a client-side assumption.

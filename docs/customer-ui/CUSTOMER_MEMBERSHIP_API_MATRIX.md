@@ -6,29 +6,31 @@ Audited: 2026-08-06. `current_schema.md` is authoritative for persisted models; 
 |---|---|---|---|---|
 | Current membership | `GET /customer/membership` | Customer principal resolves to its own `customerId`; agent access is additionally scope-checked | Membership number, status, dates, membership type/plan, cash-ledger totals, digital card | Supported |
 | Subscription entitlement | `GET /customer/membership` | Same customer-self resolver; no customer ID is accepted for a customer principal | Stored plan/status, customer contribution, SHIELD Benefit, total entitlement and the latest allocation on or before the current month | Supported, read-only |
-| Digital privilege card | Included as `shieldCard` in `GET /customer/membership` | Same as above | Card number, actual QR payload, status, issued date/business | Supported when a card exists |
+| Digital privilege card | `GET /customer/membership/card` | Customer principal resolves to its own customer ID | Card number, status, issued date and request status | Supported when a card exists |
+| QR verification | No verified customer/provider QR-verification endpoint | N/A | Persisted `shield_cards.qr_code` is a static string; no expiry, signing, verifier, replay protection, or PII review contract | Unavailable; UI must not render it as a QR code |
 | Cash membership usage | Included as `membershipStats` in `GET /customer/membership` | Same as above | Cash wallet credited/debited/available; this is not SHIELD Benefit | Supported as wallet-derived summary only |
-| Physical-card request | `POST /customers/:id/card-requests` | Customer-self guard, provider/agent scope checks, Flutter authenticated-id guard | Creates/reuses a request; customer UI confirms returned status | Supported |
-| Physical-card status | `GET /customers/:id/card-profile` | Customer-self guard, provider/agent scope checks, Flutter authenticated-id guard | Latest request and card, action state | Supported |
+| Physical-card request | `POST /customer/membership/card/request` | Customer principal derived by the controller; no client customer ID | Creates/reuses an active request and writes an audit log | Supported |
+| Physical-card status | `GET /customer/membership/card` | Customer principal derived by the controller | Latest request and card, action state | Supported |
+| Physical-card history | `GET /customer/membership/card/requests` | Customer principal derived by the controller | Customer-owned request status, requested/reviewed dates and staff remarks | Supported |
 | Subscription read (staff/demo) | `GET /management-demo/subscriptions/:customerId` | `customers.view`, no customer-self resolver in this controller | Subscription and full allocation history | Not customer-safe; do not use in customer app |
 | Subscription activation/preview | `POST /management-demo/subscriptions/:customerId/activate`, `POST /management-demo/subscriptions/preview` | Staff permission | Management-demo workflow | Not customer operation |
-| Card history/replacement/lost/damaged | No verified customer API | N/A | Schema has `card_requests`, no customer history/replacement contract located | Unsupported |
+| Lost, damaged and replacement card | No verified customer API | N/A | Current single-card schema has no lifecycle reason/event or safe replacement contract | Unsupported |
 
 ## Data models
 
 - `memberships`: membership number, status, activation/expiry and type.
-- `shield_cards`: one card per customer, card number, QR payload, status, issuing business/date.
+- `shield_cards`: one card per customer, card number, stored QR string, status, issuing business/date. The stored QR string is not a customer-safe verification contract.
 - `membership_subscriptions` and `subscription_monthly_allocations`: configured contribution, SHIELD Benefit, entitlement and monthly allocation data. The customer membership bundle now returns a minimal self-scoped projection, not the staff/demo history contract.
 - `card_requests`: physical-card request state; no customer-safe history contract verified.
 
 ## Explicit gaps
 
-- No verified customer-safe physical-card history/replacement/lost/damaged endpoints.
+- No verified customer-safe lost, damaged or replacement-card endpoint, nor an event model capable of preserving those lifecycle reasons.
 - The present membership DTO omits customer display name; the privilege card screen obtains it through the existing authenticated customer profile API.
 
 ## Current customer presentation
 
-The membership screen presents identity, validity, plan and actual CASH-ledger summary. If the backend returns a subscription projection, it renders server-issued contribution, SHIELD Benefit, total entitlement and allocation values. SHIELD Benefit is explicitly labelled as an entitlement, never as CASH or reward points. If no subscription exists, the screen truthfully says so. The privilege-card route shows an issued digital card or the real physical-card request/status state. If the card-profile request fails, it keeps the card screen usable and shows a retryable physical-card-status state instead of silently removing the section.
+The membership screen presents identity, validity, plan and actual CASH-ledger summary. If the backend returns a subscription projection, it renders server-issued contribution, SHIELD Benefit, total entitlement and allocation values. SHIELD Benefit is explicitly labelled as an entitlement, never as CASH or reward points. If no subscription exists, the screen truthfully says so. The privilege-card route shows an issued digital card, real physical-card request/status and history. It deliberately withholds the persisted QR string until a signed, server-verifiable QR contract exists.
 
 ## Verification coverage
 

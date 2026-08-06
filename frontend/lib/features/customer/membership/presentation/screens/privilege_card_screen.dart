@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:qr_flutter/qr_flutter.dart';
 
 import '../../../../../app/theme/app_colors.dart';
 import '../../../../../app/theme/app_typography.dart';
@@ -16,12 +15,14 @@ class CustomerPrivilegeCardScreen extends StatefulWidget {
     this.controller,
     this.loadCustomer,
     this.loadCardProfile,
+    this.loadCardHistory,
     this.requestPhysicalCard,
   });
 
   final MembershipController? controller;
   final Future<Customer> Function()? loadCustomer;
   final Future<Map<String, dynamic>> Function()? loadCardProfile;
+  final Future<List<Map<String, dynamic>>> Function()? loadCardHistory;
   final Future<Map<String, dynamic>> Function()? requestPhysicalCard;
 
   @override
@@ -35,6 +36,7 @@ class _CustomerPrivilegeCardScreenState
   late final bool _ownsMembershipController;
   late Future<Customer> _customer;
   late Future<Map<String, dynamic>> _cardProfile;
+  late Future<List<Map<String, dynamic>>> _cardHistory;
   bool _requestingPhysicalCard = false;
 
   @override
@@ -45,6 +47,7 @@ class _CustomerPrivilegeCardScreenState
     _membershipController.load();
     _customer = _loadCustomer();
     _cardProfile = _loadCardProfile();
+    _cardHistory = _loadCardHistory();
   }
 
   @override
@@ -97,13 +100,15 @@ class _CustomerPrivilegeCardScreenState
               child: ListView(
                 physics: const AlwaysScrollableScrollPhysics(),
                 children: [
-                  if (membership.cardQrPayload?.isNotEmpty == true)
+                  if (membership.cardNumber?.isNotEmpty == true)
                     _DigitalCard(
                       customer: customerSnapshot.data!,
                       membership: membership,
                     )
                   else
                     const _DigitalCardUnavailable(),
+                  const SizedBox(height: 12),
+                  const _QrUnavailable(),
                   const SizedBox(height: 24),
                   Text('Card details', style: AppTypography.h4),
                   const SizedBox(height: 12),
@@ -143,6 +148,22 @@ class _CustomerPrivilegeCardScreenState
                     },
                   ),
                   const SizedBox(height: 12),
+                  FutureBuilder<List<Map<String, dynamic>>>(
+                    future: _cardHistory,
+                    builder: (context, snapshot) {
+                      if (snapshot.hasError) {
+                        return const _CardHistoryUnavailable();
+                      }
+                      if (!snapshot.hasData) {
+                        return const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 12),
+                          child: LinearProgressIndicator(),
+                        );
+                      }
+                      return _CardHistoryPanel(requests: snapshot.data!);
+                    },
+                  ),
+                  const SizedBox(height: 12),
                   Text(
                     'Present this QR code only to an authorised SHIELD provider for membership verification.',
                     style: AppTypography.small.copyWith(color: AppColors.gray),
@@ -165,18 +186,20 @@ class _CustomerPrivilegeCardScreenState
   Future<Map<String, dynamic>> _loadCardProfile() async {
     try {
       return await (widget.loadCardProfile?.call() ??
-          ApiService.getCustomerCardProfile(
-            ApiService.requireAuthenticatedCustomerId(),
-          ));
+          ApiService.getOwnCustomerCardProfile());
     } catch (_) {
       return const {'_unavailable': true};
     }
   }
 
+  Future<List<Map<String, dynamic>>> _loadCardHistory() =>
+      widget.loadCardHistory?.call() ?? ApiService.getOwnPhysicalCardRequests();
+
   Future<void> _refresh() async {
     await _membershipController.refresh();
     if (mounted) {
       setState(() => _cardProfile = _loadCardProfile());
+      setState(() => _cardHistory = _loadCardHistory());
     }
     await _cardProfile;
   }
@@ -186,11 +209,10 @@ class _CustomerPrivilegeCardScreenState
     try {
       final request = widget.requestPhysicalCard != null
           ? await widget.requestPhysicalCard!()
-          : await ApiService.requestCustomerPhysicalCard(
-              ApiService.requireAuthenticatedCustomerId(),
-            );
+          : await ApiService.requestOwnPhysicalCard();
       if (!mounted) return;
       setState(() => _cardProfile = _loadCardProfile());
+      setState(() => _cardHistory = _loadCardHistory());
       final status =
           request['status']?.toString().replaceAll('_', ' ') ?? 'Unavailable';
       await showDialog<void>(
@@ -294,20 +316,10 @@ class _DigitalCard extends StatelessWidget {
                   ],
                 ),
               ),
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: QrImageView(
-                  data: membership.cardQrPayload!,
-                  size: 92,
-                  eyeStyle: const QrEyeStyle(
-                    eyeShape: QrEyeShape.square,
-                    color: Color(0xFF082B70),
-                  ),
-                ),
+              const Icon(
+                Icons.qr_code_2_rounded,
+                color: Colors.white,
+                size: 42,
               ),
             ],
           ),
@@ -338,6 +350,41 @@ class _DigitalCardUnavailable extends StatelessWidget {
         Text(
           'Your digital privilege card will appear here after SHIELD issues it.',
           style: AppTypography.small.copyWith(color: AppColors.gray),
+        ),
+      ],
+    ),
+  );
+}
+
+class _QrUnavailable extends StatelessWidget {
+  const _QrUnavailable();
+
+  @override
+  Widget build(BuildContext context) => Container(
+    width: double.infinity,
+    padding: const EdgeInsets.all(16),
+    decoration: BoxDecoration(
+      color: const Color(0xFFF6F8FC),
+      border: Border.all(color: const Color(0xFFE3E9F2)),
+      borderRadius: BorderRadius.circular(16),
+    ),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Icon(Icons.qr_code_scanner_outlined, color: AppColors.gray),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('QR verification unavailable', style: AppTypography.h5),
+              const SizedBox(height: 4),
+              Text(
+                'A signed, server-verifiable QR contract is required before QR display is enabled.',
+                style: AppTypography.small.copyWith(color: AppColors.gray),
+              ),
+            ],
+          ),
         ),
       ],
     ),
@@ -484,4 +531,74 @@ class _PhysicalCardUnavailable extends StatelessWidget {
       ],
     ),
   );
+}
+
+class _CardHistoryPanel extends StatelessWidget {
+  const _CardHistoryPanel({required this.requests});
+  final List<Map<String, dynamic>> requests;
+
+  @override
+  Widget build(BuildContext context) {
+    if (requests.isEmpty) {
+      return const _CardHistoryUnavailable(
+        message: 'No physical-card requests have been recorded.',
+      );
+    }
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF6F8FC),
+        border: Border.all(color: const Color(0xFFE3E9F2)),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Physical card history', style: AppTypography.h5),
+          const SizedBox(height: 8),
+          ...requests
+              .take(3)
+              .map(
+                (request) => Padding(
+                  padding: const EdgeInsets.only(bottom: 7),
+                  child: Text(
+                    '${request['status']?.toString().replaceAll('_', ' ') ?? 'UNKNOWN'} • ${_formatRequestDate(request['requestedAt'])}',
+                    style: AppTypography.small.copyWith(color: AppColors.gray),
+                  ),
+                ),
+              ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CardHistoryUnavailable extends StatelessWidget {
+  const _CardHistoryUnavailable({
+    this.message = 'Physical-card history is unavailable right now.',
+  });
+  final String message;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    width: double.infinity,
+    padding: const EdgeInsets.all(16),
+    decoration: BoxDecoration(
+      color: const Color(0xFFF6F8FC),
+      border: Border.all(color: const Color(0xFFE3E9F2)),
+      borderRadius: BorderRadius.circular(16),
+    ),
+    child: Text(
+      message,
+      style: AppTypography.small.copyWith(color: AppColors.gray),
+    ),
+  );
+}
+
+String _formatRequestDate(dynamic value) {
+  final date = value == null ? null : DateTime.tryParse(value.toString());
+  return date == null
+      ? 'Date unavailable'
+      : DateFormat('dd MMM yyyy').format(date);
 }

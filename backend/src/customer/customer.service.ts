@@ -837,7 +837,7 @@ export class CustomerService {
       orderBy: { requestedAt: 'desc' },
     });
     if (existing) return existing;
-    return this.prisma.cardRequest.create({
+    const request = await this.prisma.cardRequest.create({
       data: {
         uuid: randomUUID(),
         customerId,
@@ -846,6 +846,29 @@ export class CustomerService {
         requestedBy,
       },
     });
+    await this.recordCustomerAccountAudit(
+      'CUSTOMER_PHYSICAL_CARD_REQUESTED',
+      'CARD_REQUEST',
+      request.id,
+      customerId,
+    );
+    return request;
+  }
+
+  async listPhysicalCardRequests(customerId: bigint) {
+    await this.findOne(customerId);
+    const requests = await this.prisma.cardRequest.findMany({
+      where: { customerId },
+      orderBy: [{ requestedAt: 'desc' }, { id: 'desc' }],
+    });
+    return requests.map((request) => ({
+      id: request.id.toString(),
+      uuid: request.uuid,
+      status: request.status,
+      requestedAt: request.requestedAt,
+      reviewedAt: request.reviewedAt,
+      remarks: request.remarks,
+    }));
   }
 
   async getCardProfile(customerId: bigint) {
