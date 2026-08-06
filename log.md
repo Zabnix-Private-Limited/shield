@@ -10770,3 +10770,9 @@ Added a customer-self, read-only subscription projection to the existing members
 - Added supported customer deep links for membership details, subscription, and benefits through the existing portal shell.
 - The routes reuse the established membership screen and expose no unsupported renewal or mutation action.
 - Flutter analyzer and focused membership/route tests passed.
+## 62. Focused membership details
+**2026-08-06 10:15:00 IST**
+
+- Deep-linked subscription and benefits routes now render dedicated focused membership views from the existing customer-safe membership bundle.
+- Subscription values stay backend-derived and benefits remain constrained to verified plan/card facts.
+- Flutter analyzer and focused membership tests passed.

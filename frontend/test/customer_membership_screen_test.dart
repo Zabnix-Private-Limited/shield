@@ -45,7 +45,10 @@ void main() {
 
       expect(find.text('SHLD-00042'), findsWidgets);
       expect(find.text('Subscription entitlement'), findsOneWidget);
-      expect(find.textContaining('no current subscription entitlement'), findsOneWidget);
+      expect(
+        find.textContaining('no current subscription entitlement'),
+        findsOneWidget,
+      );
       expect(find.text('₹10000'), findsNothing);
     },
   );
@@ -55,7 +58,9 @@ void main() {
   ) async {
     final controller = MembershipController(
       customerId: '42',
-      repository: _MembershipTestRepository(_membership(withSubscription: true)),
+      repository: _MembershipTestRepository(
+        _membership(withSubscription: true),
+      ),
     );
     await tester.pumpWidget(
       MaterialApp(home: CustomerMembershipScreen(controller: controller)),
@@ -80,6 +85,29 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Membership unavailable'), findsOneWidget);
+  });
+
+  testWidgets('renders a dedicated subscription view from the same contract', (
+    tester,
+  ) async {
+    final controller = MembershipController(
+      customerId: '42',
+      repository: _MembershipTestRepository(
+        _membership(withSubscription: true),
+      ),
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: CustomerMembershipScreen(
+          controller: controller,
+          focus: MembershipFocus.subscription,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Subscription details'), findsOneWidget);
+    expect(find.text('Your contribution'), findsOneWidget);
   });
 }
 
@@ -112,32 +140,36 @@ class _PendingMembershipRepository extends MembershipRepository {
   Future<MembershipModel> loadMembership(String customerId) => pending.future;
 }
 
-MembershipModel _membership({bool withSubscription = false}) => MembershipModel.fromJson({
-  'customerId': '42',
-  'membership': {
-    'id': '7',
-    'uuid': 'member-7',
-    'membershipNumber': 'SHLD-00042',
-    'status': 'ACTIVE',
-    'activationDate': '2026-01-01T00:00:00.000Z',
-    'expiryDate': '2027-01-01T00:00:00.000Z',
-    'createdAt': '2026-01-01T00:00:00.000Z',
-    'updatedAt': '2026-01-01T00:00:00.000Z',
-    'membershipType': {'name': 'Founding Member'},
-  },
-  'membershipStats': {'totalEarnedCredits': 100, 'totalRedeemedCredits': 40},
-  if (withSubscription)
-    'subscription': {
-      'planName': 'SHIELD Privilege Plan',
-      'status': 'ACTIVE',
-      'customerContributionPaise': 1000000,
-      'shieldBenefitPaise': 100000,
-      'totalEntitlementPaise': 1100000,
-      'currentAllocation': {
-        'allocationPaise': 100000,
-        'carryForwardPaise': 0,
-        'usedPaise': 0,
-        'remainingPaise': 100000,
+MembershipModel _membership({bool withSubscription = false}) =>
+    MembershipModel.fromJson({
+      'customerId': '42',
+      'membership': {
+        'id': '7',
+        'uuid': 'member-7',
+        'membershipNumber': 'SHLD-00042',
+        'status': 'ACTIVE',
+        'activationDate': '2026-01-01T00:00:00.000Z',
+        'expiryDate': '2027-01-01T00:00:00.000Z',
+        'createdAt': '2026-01-01T00:00:00.000Z',
+        'updatedAt': '2026-01-01T00:00:00.000Z',
+        'membershipType': {'name': 'Founding Member'},
       },
-    },
-});
+      'membershipStats': {
+        'totalEarnedCredits': 100,
+        'totalRedeemedCredits': 40,
+      },
+      if (withSubscription)
+        'subscription': {
+          'planName': 'SHIELD Privilege Plan',
+          'status': 'ACTIVE',
+          'customerContributionPaise': 1000000,
+          'shieldBenefitPaise': 100000,
+          'totalEntitlementPaise': 1100000,
+          'currentAllocation': {
+            'allocationPaise': 100000,
+            'carryForwardPaise': 0,
+            'usedPaise': 0,
+            'remainingPaise': 100000,
+          },
+        },
+    });

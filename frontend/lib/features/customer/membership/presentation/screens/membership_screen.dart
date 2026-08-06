@@ -12,10 +12,17 @@ import '../../../../customer/shared/widgets/error_card.dart';
 import '../../data/models/membership_model.dart';
 import '../controllers/membership_controller.dart';
 
+enum MembershipFocus { overview, subscription, benefits }
+
 class CustomerMembershipScreen extends StatefulWidget {
-  const CustomerMembershipScreen({super.key, this.controller});
+  const CustomerMembershipScreen({
+    super.key,
+    this.controller,
+    this.focus = MembershipFocus.overview,
+  });
 
   final MembershipController? controller;
+  final MembershipFocus focus;
 
   @override
   State<CustomerMembershipScreen> createState() =>
@@ -66,6 +73,14 @@ class _CustomerMembershipScreenState extends State<CustomerMembershipScreen> {
             title: 'Membership unavailable',
             message: 'No membership data is available right now.',
             onRetry: _controller.load,
+          );
+        }
+
+        if (widget.focus != MembershipFocus.overview) {
+          return _FocusedMembershipView(
+            membership: membership,
+            focus: widget.focus,
+            onRefresh: _controller.refresh,
           );
         }
 
@@ -284,6 +299,60 @@ class _CustomerMembershipScreenState extends State<CustomerMembershipScreen> {
           'Service coverage, exclusions, and annual limits are not in the customer membership contract yet.',
         ];
     }
+  }
+}
+
+class _FocusedMembershipView extends StatelessWidget {
+  const _FocusedMembershipView({
+    required this.membership,
+    required this.focus,
+    required this.onRefresh,
+  });
+
+  final MembershipModel membership;
+  final MembershipFocus focus;
+  final Future<void> Function() onRefresh;
+
+  @override
+  Widget build(BuildContext context) {
+    final isSubscription = focus == MembershipFocus.subscription;
+    final benefits = <String>[
+      'Plan: ${membership.tierLabel}',
+      'Card status: ${membership.cardStatus ?? 'Not issued'}',
+      'Coverage, exclusions, and limits are not available in the current customer contract.',
+    ];
+    return RefreshIndicator(
+      onRefresh: onRefresh,
+      child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        children: [
+          Text(
+            isSubscription ? 'Subscription details' : 'Membership benefits',
+            style: AppTypography.h3,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            isSubscription
+                ? 'Backend-derived membership entitlement for ${membership.tierLabel}.'
+                : 'Only verified membership-plan facts are shown here.',
+            style: AppTypography.small.copyWith(color: AppColors.gray),
+          ),
+          const SizedBox(height: 20),
+          if (isSubscription)
+            _SubscriptionEntitlementCard(subscription: membership.subscription)
+          else
+            ...benefits.map(
+              (benefit) => Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: AppCard(
+                  padding: const EdgeInsets.all(16),
+                  child: Text(benefit, style: AppTypography.body),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
   }
 }
 

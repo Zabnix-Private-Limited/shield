@@ -602,7 +602,13 @@ class _RoleContent extends StatelessWidget {
     } else if (isCustomerDashboard) {
       content = const CustomerDashboardScreen();
     } else if (isCustomerMembership) {
-      content = const CustomerMembershipScreen();
+      content = CustomerMembershipScreen(
+        focus: section.key == 'membership-subscription'
+            ? MembershipFocus.subscription
+            : section.key == 'membership-benefits'
+            ? MembershipFocus.benefits
+            : MembershipFocus.overview,
+      );
     } else if (isCustomerPrivilegeCard) {
       content = const CustomerPrivilegeCardScreen();
     } else if (isCustomerServices) {
