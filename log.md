@@ -10862,3 +10862,18 @@ Added a customer-self, read-only subscription projection to the existing members
 - backend/src/service-provider/service-provider.service.ts
 - backend/src/service-provider/service-provider.module.ts
 - backend/src/service-provider/customer-provider-discovery.controller.spec.ts
+
+
+## 45. Customer provider details and pagination
+2026-08-06 12:10:00 IST
+
+- Wired provider cards to the customer-safe detail endpoint and added load-more pagination through the feature controller and repository.
+- Detail loading failure remains recoverable through the existing booking entry point and does not invent missing provider information.
+
+### Frontend Files
+- frontend/lib/features/customer/services/presentation/controllers/customer_services_controller.dart
+- frontend/lib/features/customer/services/presentation/screens/customer_services_screen.dart
+- frontend/test/customer_services_screen_test.dart
+
+### Backend Files
+- None; reused the customer provider discovery contract introduced in the preceding commit.

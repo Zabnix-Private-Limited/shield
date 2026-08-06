@@ -58,4 +58,7 @@ class _Controller extends CustomerServicesController {
     error = null;
     notifyListeners();
   }
+
+  @override
+  Future<CustomerProvider> provider(String id) async => page.items.single;
 }

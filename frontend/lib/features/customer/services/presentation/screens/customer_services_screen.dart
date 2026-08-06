@@ -128,7 +128,23 @@ class _CustomerServicesScreenState extends State<CustomerServicesScreen> {
               ..._controller.page.items.map(
                 (provider) => Padding(
                   padding: const EdgeInsets.only(bottom: 10),
-                  child: _ProviderCard(provider: provider),
+                  child: _ProviderCard(
+                    provider: provider,
+                    loadDetails: _controller.provider,
+                  ),
+                ),
+              ),
+            if (_controller.page.page < _controller.page.totalPages)
+              Center(
+                child: TextButton(
+                  onPressed: _controller.isLoading
+                      ? null
+                      : _controller.loadNextPage,
+                  child: Text(
+                    _controller.isLoading
+                        ? 'Loading more…'
+                        : 'Load more providers',
+                  ),
                 ),
               ),
             const SizedBox(height: 8),
@@ -206,40 +222,55 @@ class _CategoryFilters extends StatelessWidget {
 }
 
 class _ProviderCard extends StatelessWidget {
-  const _ProviderCard({required this.provider});
+  const _ProviderCard({required this.provider, required this.loadDetails});
   final CustomerProvider provider;
+  final Future<CustomerProvider> Function(String id) loadDetails;
 
   @override
   Widget build(BuildContext context) => AppCard(
     onTap: () => showModalBottomSheet<void>(
       context: context,
-      builder: (context) => Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(provider.name, style: AppTypography.h4),
-            const SizedBox(height: 8),
-            Text(
-              provider.typeLabel,
-              style: AppTypography.small.copyWith(color: AppColors.gray),
-            ),
-            if (provider.businessName != null) ...[
+      builder: (context) => FutureBuilder<CustomerProvider>(
+        future: loadDetails(provider.id),
+        builder: (context, snapshot) => Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                snapshot.data?.name ?? provider.name,
+                style: AppTypography.h4,
+              ),
               const SizedBox(height: 8),
-              Text(provider.businessName!),
+              Text(
+                snapshot.data?.typeLabel ?? provider.typeLabel,
+                style: AppTypography.small.copyWith(color: AppColors.gray),
+              ),
+              if (snapshot.connectionState == ConnectionState.waiting)
+                const Padding(
+                  padding: EdgeInsets.only(top: 12),
+                  child: LinearProgressIndicator(),
+                ),
+              if (provider.businessName != null) ...[
+                const SizedBox(height: 8),
+                Text(provider.businessName!),
+              ],
+              const SizedBox(height: 16),
+              Text(
+                snapshot.hasError
+                    ? 'Provider details could not be loaded. You can still continue to the existing booking flow.'
+                    : 'Additional provider details, coverage, hours, ratings, and location are not available in the current customer contract.',
+                style: AppTypography.small.copyWith(color: AppColors.gray),
+              ),
+              const SizedBox(height: 12),
+              TextButton(
+                onPressed: () =>
+                    context.go('/portal/customer/book-appointment'),
+                child: const Text('Continue to booking'),
+              ),
             ],
-            const SizedBox(height: 16),
-            Text(
-              'Additional provider details, coverage, hours, ratings, and location are not available in the current customer contract.',
-              style: AppTypography.small.copyWith(color: AppColors.gray),
-            ),
-            const SizedBox(height: 12),
-            TextButton(
-              onPressed: () => context.go('/portal/customer/book-appointment'),
-              child: const Text('Continue to booking'),
-            ),
-          ],
+          ),
         ),
       ),
     ),
