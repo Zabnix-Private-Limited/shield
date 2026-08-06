@@ -11,6 +11,7 @@ import { TimelineModule } from '../timeline/timeline.module';
 import { WalletModule } from '../wallet/wallet.module';
 import { ServiceProviderService } from './service-provider.service';
 import { ServiceProviderController } from './service-provider.controller';
+import { CustomerProviderDiscoveryController } from './customer-provider-discovery.controller';
 
 @Module({
   imports: [
@@ -25,7 +26,7 @@ import { ServiceProviderController } from './service-provider.controller';
     PharmacyModule,
     TimelineModule,
   ],
-  controllers: [ServiceProviderController],
+  controllers: [ServiceProviderController, CustomerProviderDiscoveryController],
   providers: [ServiceProviderService],
   exports: [ServiceProviderService],
 })

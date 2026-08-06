@@ -1585,6 +1585,39 @@ class ApiService {
     );
   }
 
+  static Future<Map<String, dynamic>> getCustomerProviders({
+    String? query,
+    String? type,
+    int page = 1,
+    int pageSize = 20,
+  }) async {
+    _requireCustomerId();
+    final response = await _dio.get(
+      '/customer/providers',
+      queryParameters: {
+        if (query?.trim().isNotEmpty == true) 'query': query!.trim(),
+        if (type?.trim().isNotEmpty == true) 'type': type!.trim(),
+        'page': page,
+        'pageSize': pageSize,
+      },
+    );
+    return _readEnvelope(response);
+  }
+
+  static Future<List<Map<String, dynamic>>>
+  getCustomerProviderCategories() async {
+    _requireCustomerId();
+    final response = await _dio.get('/customer/providers/categories');
+    return _readEnvelopeList(
+      response,
+    ).map((item) => Map<String, dynamic>.from(item as Map)).toList();
+  }
+
+  static Future<Map<String, dynamic>> getCustomerProvider(String id) async {
+    _requireCustomerId();
+    return _readEnvelope(await _dio.get('/customer/providers/$id'));
+  }
+
   static Future<Map<String, dynamic>?> createProvider(
     Map<String, dynamic> data,
   ) async {

@@ -10842,3 +10842,23 @@ Added a customer-self, read-only subscription projection to the existing members
 
 ### Backend Files
 - None; existing owner-scoped read contract was reused without changing financial behavior.
+
+
+## 44. Customer Services provider discovery foundation
+2026-08-06 12:00:00 IST
+
+- Added a customer-only active provider directory with category aggregation, paginated public-name/type/business search, and customer-safe detail projection.
+- Extracted the active Services route into CustomerServicesScreen while leaving the existing booking workflow on its dedicated route.
+- Did not expose or simulate unsupported provider coverage, distance, favourites, popularity, ratings, hours, languages, practitioner profiles, or insurance providers.
+
+### Frontend Files
+- frontend/lib/features/customer/services/
+- frontend/lib/features/portal/presentation/screens/portal_shell.dart
+- frontend/lib/shared/services/api_service.dart
+- frontend/test/customer_services_screen_test.dart
+
+### Backend Files
+- backend/src/service-provider/customer-provider-discovery.controller.ts
+- backend/src/service-provider/service-provider.service.ts
+- backend/src/service-provider/service-provider.module.ts
+- backend/src/service-provider/customer-provider-discovery.controller.spec.ts

@@ -62,6 +62,115 @@ export class ServiceProviderService {
     });
   }
 
+  async listCustomerProviderCategories() {
+    const categories = await this.prisma.serviceProvider.groupBy({
+      by: ['providerType'],
+      where: { status: 'ACTIVE', providerType: { not: null } },
+      _count: { _all: true },
+      orderBy: { providerType: 'asc' },
+    });
+    return categories.map((category) => ({
+      code: category.providerType!,
+      label: this.customerProviderTypeLabel(category.providerType!),
+      providerCount: category._count._all,
+    }));
+  }
+
+  async listCustomerProviders(options: {
+    query?: string;
+    type?: string;
+    page?: string;
+    pageSize?: string;
+  }) {
+    const page = this.customerDirectoryPage(options.page);
+    const pageSize = this.customerDirectoryPageSize(options.pageSize);
+    const query = options.query?.trim().slice(0, 100);
+    const type = options.type?.trim().toUpperCase();
+    const where = {
+      status: 'ACTIVE',
+      ...(type ? { providerType: type } : {}),
+      ...(query
+        ? {
+            OR: [
+              { providerName: { contains: query, mode: 'insensitive' as const } },
+              { providerType: { contains: query, mode: 'insensitive' as const } },
+              { business: { name: { contains: query, mode: 'insensitive' as const } } },
+            ],
+          }
+        : {}),
+    };
+    const [total, providers] = await this.prisma.$transaction([
+      this.prisma.serviceProvider.count({ where }),
+      this.prisma.serviceProvider.findMany({
+        where,
+        select: {
+          id: true,
+          providerName: true,
+          providerType: true,
+          business: { select: { name: true } },
+        },
+        orderBy: [{ providerName: 'asc' }, { id: 'asc' }],
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+      }),
+    ]);
+    return {
+      items: providers.map((provider) => this.customerProviderSummary(provider)),
+      pagination: { page, pageSize, total, totalPages: Math.ceil(total / pageSize) },
+    };
+  }
+
+  async getCustomerProvider(id: bigint) {
+    const provider = await this.prisma.serviceProvider.findFirst({
+      where: { id, status: 'ACTIVE' },
+      select: {
+        id: true,
+        providerName: true,
+        providerType: true,
+        business: { select: { name: true } },
+      },
+    });
+    if (!provider) throw new NotFoundException('Provider is unavailable.');
+    return this.customerProviderSummary(provider);
+  }
+
+  private customerProviderSummary(provider: {
+    id: bigint;
+    providerName: string | null;
+    providerType: string | null;
+    business: { name: string } | null;
+  }) {
+    return {
+      id: provider.id.toString(),
+      name: provider.providerName?.trim() || 'SHIELD provider',
+      type: provider.providerType || 'GENERAL',
+      typeLabel: this.customerProviderTypeLabel(provider.providerType || 'GENERAL'),
+      businessName: provider.business?.name?.trim() || null,
+      availability: 'AVAILABLE',
+      availabilityLabel: 'Available',
+    };
+  }
+
+  private customerProviderTypeLabel(type: string) {
+    return type
+      .trim()
+      .replace(/[_-]+/g, ' ')
+      .toLowerCase()
+      .replace(/\b\w/g, (character) => character.toUpperCase());
+  }
+
+  private customerDirectoryPage(value?: string) {
+    const page = Number(value);
+    return Number.isSafeInteger(page) && page > 0 ? page : 1;
+  }
+
+  private customerDirectoryPageSize(value?: string) {
+    const pageSize = Number(value);
+    return Number.isSafeInteger(pageSize) && pageSize > 0
+      ? Math.min(50, pageSize)
+      : 20;
+  }
+
   async findOne(id: bigint) {
     const provider = await this.prisma.serviceProvider.findUnique({
       where: { id },

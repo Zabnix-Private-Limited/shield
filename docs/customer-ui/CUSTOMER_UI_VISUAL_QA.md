@@ -1,5 +1,11 @@
 # Customer UI visual QA
 
+## Services discovery — automated visual-adjacent coverage — 2026-08-06
+
+- Route: `/portal/customer/services`.
+- Widget coverage verified loading completion, backend category/provider render, and the provider-detail unavailable boundary.
+- Authenticated screenshot review is pending release QA; no screenshot was fabricated because the existing Chrome-control integration and Playwright CLI are not usable in this workspace.
+
 ## Membership/Card QA closure — 2026-08-06
 
 Functional and responsive automated QA passed. Authenticated screenshot QA is **DEFERRED — TOOLING FAILURE** because the existing Chrome-control integration timed out and Playwright CLI crashed with a native Windows assertion. No screenshot evidence was fabricated. Manual authenticated screenshot review remains a release-QA follow-up.

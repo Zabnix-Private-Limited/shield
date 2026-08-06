@@ -28,6 +28,7 @@ Completed:
 - Wallet now has a real full-history route backed by the existing customer wallet response. The preview links there only when the customer has more than six visible transactions; unsupported recharge/export actions are not advertised.
 - Wallet access now uses the issued membership returned by the wallet bundle. This prevents active members from being shown the pending-wallet screen solely because the profile response does not carry membership data.
 - Customer Services now reads the seeded wellness demo catalogue from an authenticated customer endpoint. Unsupported hardcoded pharmacy, laboratory, home-care, and diet-plan content was removed from the visible flow.
+- Customer Services provider discovery now uses customer-safe active-provider categories, search, type filters, pagination, and details. It intentionally omits unsupported location, coverage, favourites, ratings, hours, languages, popularity, and practitioner-profile claims.
 - The visible wellness catalogue now identifies its database-backed records as demo-only rather than presenting them as live Sahakar inventory.
 - Consultation booking now requires the customer to explicitly select an active backend provider. The selected provider ID is submitted to the existing appointment API; a stale provider selection gets a safe retry message.
 - The legacy Book Appointment route now renders the real customer consultation flow. Unsupported customer recharge is no longer registered as a customer portal section because no persisted top-up request contract exists.

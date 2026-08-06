@@ -55,6 +55,7 @@ import '../../../../shared/services/app_policy_links.dart';
 import '../../../../shared/services/customer_auth_session.dart';
 import '../../../../shared/services/internal_auth_session.dart';
 import '../../../../shared/services/portal_resolver.dart';
+import '../../../customer/services/presentation/screens/customer_services_screen.dart';
 import '../../../../shared/utils/prescription_file_picker.dart';
 import '../../../../shared/widgets/customer_support_sheet.dart';
 import '../../../../shared/widgets/portal_support.dart';
@@ -547,8 +548,9 @@ class _RoleContent extends StatelessWidget {
     final isCustomerPrivilegeCard =
         portal.role == SHIELDRole.customer && section.key == 'privilege-card';
     final isCustomerServices =
-        portal.role == SHIELDRole.customer &&
-        (section.key == 'services' || section.key == 'book-appointment');
+        portal.role == SHIELDRole.customer && section.key == 'services';
+    final isCustomerBooking =
+        portal.role == SHIELDRole.customer && section.key == 'book-appointment';
     final isCustomerOrders =
         portal.role == SHIELDRole.customer && section.key == 'orders';
     final isCustomerReferrals =
@@ -612,6 +614,8 @@ class _RoleContent extends StatelessWidget {
     } else if (isCustomerPrivilegeCard) {
       content = const CustomerPrivilegeCardScreen();
     } else if (isCustomerServices) {
+      content = const CustomerServicesScreen();
+    } else if (isCustomerBooking) {
       content = const _CustomerServicesView();
     } else if (isCustomerOrders) {
       content = const CustomerOrdersScreen();

@@ -77,14 +77,14 @@
 076,Reward Points,Redemption Review,same redemption flow,Confirm points/cost,redemption quote,,NO,NO,NO,NO,NO,NO,NO,TODO
 077,Reward Points,Redemption Success,same redemption flow,Confirm persisted event,redemption result,,NO,NO,NO,NO,NO,NO,NO,TODO
 078,Reward Points,Redemption Failure,same redemption flow,Recover safely,redemption error,,NO,NO,NO,NO,NO,NO,NO,TODO
-079,Services & Providers,Services Landing,/portal/customer/services,Browse service families,service catalogue API,,NO,NO,NO,NO,NO,NO,NO,TODO
-080,Services & Providers,Service Search,/portal/customer/services/search,Search services/providers,service/provider search,,NO,NO,NO,NO,NO,NO,NO,TODO
-081,Services & Providers,Service Search Results,same search flow,Display categorized results,search API,,NO,NO,NO,NO,NO,NO,NO,TODO
-082,Services & Providers,Service Categories,/portal/customer/services/categories,Browse categories,master data/API,,NO,NO,NO,NO,NO,NO,NO,TODO
-083,Services & Providers,Service Category Detail,/portal/customer/services/categories/:id,Category services/providers,service API,,NO,NO,NO,NO,NO,NO,NO,TODO
-084,Services & Providers,Service Filters and Sort,same listing surface,Filter location/type/availability,provider API,,NO,NO,NO,NO,NO,NO,NO,TODO
-085,Services & Providers,Provider Listing,/portal/customer/providers,List eligible providers,provider API,,NO,NO,NO,NO,NO,NO,NO,TODO
-086,Services & Providers,Provider Detail,/portal/customer/providers/:id,Provider branch/services/contact,provider profile API,,NO,NO,NO,NO,NO,NO,NO,TODO
+079,Services & Providers,Services Landing,/portal/customer/services,Browse service families,customer provider categories/list,Extracted discovery screen with real active categories and entry points.,YES,YES,YES,YES,YES,YES,DEFERRED — TOOLING FAILURE,IN PROGRESS
+080,Services & Providers,Service Search,/portal/customer/services,Search services/providers,GET /customer/providers?query,Debounced public provider search.,YES,YES,YES,YES,YES,YES,DEFERRED — TOOLING FAILURE,IN PROGRESS
+081,Services & Providers,Service Search Results,same search flow,Display categorized results,GET /customer/providers,Active-provider results only.,YES,YES,YES,YES,YES,YES,DEFERRED — TOOLING FAILURE,IN PROGRESS
+082,Services & Providers,Service Categories,/portal/customer/services,Browse categories,GET /customer/providers/categories,Backend-derived provider type categories.,YES,YES,YES,YES,YES,YES,DEFERRED — TOOLING FAILURE,IN PROGRESS
+083,Services & Providers,Service Category Detail,/portal/customer/services,Category services/providers,GET /customer/providers?type,Category selection filters active provider list.,YES,YES,YES,YES,YES,YES,DEFERRED — TOOLING FAILURE,IN PROGRESS
+084,Services & Providers,Service Filters and Sort,same listing surface,Filter location/type/availability,GET /customer/providers?type,Type filter only; sort/location/availability beyond active state unavailable.,YES,PARTIAL,YES,YES,YES,YES,DEFERRED — TOOLING FAILURE,IN PROGRESS
+085,Services & Providers,Provider Listing,/portal/customer/services,List eligible providers,GET /customer/providers,Paginated customer-safe active provider projection.,YES,YES,YES,YES,YES,YES,DEFERRED — TOOLING FAILURE,IN PROGRESS
+086,Services & Providers,Provider Detail,/portal/customer/services,Provider branch/services/contact,GET /customer/providers/:id,Customer-safe detail sheet; unsupported fields explicitly absent.,YES,YES,YES,YES,YES,YES,DEFERRED — TOOLING FAILURE,IN PROGRESS
 087,Services & Providers,Doctor Listing,/portal/customer/doctors,List doctors,provider/practitioner API,,NO,NO,NO,NO,NO,NO,NO,TODO
 088,Services & Providers,Doctor Profile,/portal/customer/doctors/:id,Doctor details and availability,practitioner API,,NO,NO,NO,NO,NO,NO,NO,TODO
 089,Services & Providers,Lab Listing,/portal/customer/labs,List labs,provider API,,NO,NO,NO,NO,NO,NO,NO,TODO
