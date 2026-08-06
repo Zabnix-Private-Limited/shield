@@ -1,5 +1,9 @@
 # Customer UI Implementation Status
 
+## Membership/Card closure — 2026-08-06
+
+Classification: **COMPLETE — SUPPORTED FUNCTIONAL SCOPE**. Authenticated screenshot QA is **DEFERRED — TOOLING FAILURE**: Chrome control timed out and Playwright CLI crashed with a Windows native assertion; no evidence was fabricated. Automated membership/card, responsive, and route tests passed.
+
 ## Phase 0 — Audit and shared shell
 
 Completed:

@@ -10798,3 +10798,8 @@ Added a customer-self, read-only subscription projection to the existing members
 **2026-08-06 10:55:00 IST**
 
 - Documented the supported physical-card request/status/history contract and classified QR, renewal, lost, damaged, and replacement flows without inventing business rules.
+## 67. Membership supported-scope closure and wallet audit
+**2026-08-06 11:10:00 IST**
+
+- Closed Membership/Card as COMPLETE — SUPPORTED FUNCTIONAL SCOPE with authenticated screenshots deferred due to documented tooling failure.
+- Began Cash Wallet secondary-flow audit; no financial mutation was added.

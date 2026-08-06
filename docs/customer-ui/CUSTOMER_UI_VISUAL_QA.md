@@ -1,5 +1,9 @@
 # Customer UI visual QA
 
+## Membership/Card QA closure — 2026-08-06
+
+Functional and responsive automated QA passed. Authenticated screenshots are deferred to release QA because Chrome control timed out and Playwright CLI crashed with a native Windows assertion. No screenshots were fabricated.
+
 ## 2026-08-05 account-capabilities checkpoint
 
 - Source route: `/portal/customer/account`.
