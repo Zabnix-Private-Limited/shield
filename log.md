@@ -10782,3 +10782,9 @@ Added a customer-self, read-only subscription projection to the existing members
 - Preserved backend membership status in the shared model so suspended and expired states are not mislabeled as pending.
 - Suspended state coverage verifies customer access remains locked and the UI label is truthful.
 - Focused Flutter analysis and model tests passed.
+## 64. Membership offline state
+**2026-08-06 10:35:00 IST**
+
+- Existing cached membership fallback now has an explicit offline banner and refresh action.
+- Focused controller/screen coverage verifies cached data is not presented as current online data.
+- Flutter analyzer and membership screen tests passed.

@@ -17,12 +17,14 @@ class MembershipController extends ChangeNotifier {
   bool _isRefreshing = false;
   Object? _error;
   MembershipModel? _membership;
+  bool _isShowingCached = false;
 
   bool get isLoading => _isLoading;
   bool get isRefreshing => _isRefreshing;
   Object? get error => _error;
   MembershipModel? get membership => _membership;
   bool get hasData => _membership != null;
+  bool get isShowingCached => _isShowingCached;
 
   String get _resolvedCustomerId =>
       ApiService.requireAuthenticatedCustomerId(customerId);
@@ -35,6 +37,7 @@ class MembershipController extends ChangeNotifier {
     final cached = await _repository.loadCachedMembership(_resolvedCustomerId);
     if (cached != null) {
       _membership = cached;
+      _isShowingCached = true;
       _isLoading = false;
       notifyListeners();
       unawaited(_refreshInBackground());
@@ -43,6 +46,7 @@ class MembershipController extends ChangeNotifier {
 
     try {
       _membership = await _repository.loadMembership(_resolvedCustomerId);
+      _isShowingCached = false;
     } catch (err) {
       _error = err;
     } finally {
@@ -58,6 +62,7 @@ class MembershipController extends ChangeNotifier {
 
     try {
       _membership = await _repository.refreshMembership(_resolvedCustomerId);
+      _isShowingCached = false;
     } catch (err) {
       _error = err;
     } finally {

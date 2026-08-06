@@ -87,6 +87,21 @@ void main() {
     expect(find.text('Membership unavailable'), findsOneWidget);
   });
 
+  testWidgets('labels cached membership data as offline-safe', (tester) async {
+    final controller = MembershipController(
+      customerId: '42',
+      repository: _CachedMembershipRepository(_membership()),
+    );
+    await tester.pumpWidget(
+      MaterialApp(home: CustomerMembershipScreen(controller: controller)),
+    );
+    await tester.pumpAndSettle();
+    expect(
+      find.textContaining('Showing saved membership details'),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('renders a dedicated subscription view from the same contract', (
     tester,
   ) async {
@@ -138,6 +153,16 @@ class _PendingMembershipRepository extends MembershipRepository {
 
   @override
   Future<MembershipModel> loadMembership(String customerId) => pending.future;
+}
+
+class _CachedMembershipRepository extends MembershipRepository {
+  _CachedMembershipRepository(this.value);
+  final MembershipModel value;
+  @override
+  Future<MembershipModel?> loadCachedMembership(String customerId) async =>
+      value;
+  @override
+  Future<MembershipModel> refreshMembership(String customerId) async => value;
 }
 
 MembershipModel _membership({bool withSubscription = false}) =>

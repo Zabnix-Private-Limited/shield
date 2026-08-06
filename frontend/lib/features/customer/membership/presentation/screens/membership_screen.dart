@@ -97,6 +97,10 @@ class _CustomerMembershipScreenState extends State<CustomerMembershipScreen> {
               parent: AlwaysScrollableScrollPhysics(),
             ),
             children: [
+              if (_controller.isShowingCached) ...[
+                _CachedMembershipBanner(onRetry: _controller.refresh),
+                const SizedBox(height: 12),
+              ],
               _MembershipHero(membership: membership, accessState: accessState),
               const SizedBox(height: 20),
               LayoutBuilder(
@@ -927,4 +931,27 @@ class _MembershipLoadingView extends StatelessWidget {
       ],
     );
   }
+}
+
+class _CachedMembershipBanner extends StatelessWidget {
+  const _CachedMembershipBanner({required this.onRetry});
+  final Future<void> Function() onRetry;
+
+  @override
+  Widget build(BuildContext context) => AppCard(
+    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+    child: Row(
+      children: [
+        const Icon(Icons.cloud_off_outlined, color: AppColors.gray),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Text(
+            'Showing saved membership details. Refresh when you are back online.',
+            style: AppTypography.small.copyWith(color: AppColors.gray),
+          ),
+        ),
+        TextButton(onPressed: onRetry, child: const Text('Refresh')),
+      ],
+    ),
+  );
 }
