@@ -10794,3 +10794,7 @@ Added a customer-self, read-only subscription projection to the existing members
 - Added a 350 logical-pixel membership screen regression test with backend-derived subscription content.
 - The test completes without a Flutter layout exception.
 - Browser viewport evidence remains separate and unverified.
+## 66. Card lifecycle contract classification
+**2026-08-06 10:55:00 IST**
+
+- Documented the supported physical-card request/status/history contract and classified QR, renewal, lost, damaged, and replacement flows without inventing business rules.
