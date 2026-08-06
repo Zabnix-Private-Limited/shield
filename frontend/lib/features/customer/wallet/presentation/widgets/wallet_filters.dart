@@ -48,6 +48,45 @@ class WalletFilters extends StatelessWidget {
   }
 }
 
+class WalletDateFilters extends StatelessWidget {
+  const WalletDateFilters({
+    super.key,
+    required this.selectedRange,
+    required this.onSelected,
+  });
+
+  final String selectedRange;
+  final ValueChanged<String> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: [
+          _FilterChip(
+            label: 'All time',
+            selected: selectedRange == 'ALL',
+            onTap: () => onSelected('ALL'),
+          ),
+          const SizedBox(width: 8),
+          _FilterChip(
+            label: 'Last 30 days',
+            selected: selectedRange == '30_DAYS',
+            onTap: () => onSelected('30_DAYS'),
+          ),
+          const SizedBox(width: 8),
+          _FilterChip(
+            label: 'Last 90 days',
+            selected: selectedRange == '90_DAYS',
+            onTap: () => onSelected('90_DAYS'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _FilterChip extends StatelessWidget {
   const _FilterChip({
     required this.label,

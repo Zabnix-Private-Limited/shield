@@ -1,6 +1,7 @@
 import '../datasources/wallet_local.dart';
 import '../datasources/wallet_remote.dart';
 import '../models/wallet_model.dart';
+import '../../../../../shared/models/wallet.dart';
 
 class WalletRepository {
   WalletRepository({
@@ -35,6 +36,18 @@ class WalletRepository {
     await _local.save(customerId, wallet);
     return wallet;
   }
+
+  Future<List<WalletTransaction>> loadTransactions(
+    String walletId, {
+    DateTime? from,
+    DateTime? to,
+    String? transactionType,
+  }) => _remote.fetchTransactions(
+    walletId,
+    from: from,
+    to: to,
+    transactionType: transactionType,
+  );
 
   Future<void> invalidateCache(String customerId) {
     return _local.clear(customerId);

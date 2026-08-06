@@ -71,6 +71,34 @@ class WalletController extends ChangeNotifier {
     return _repository.invalidateCache(_resolvedCustomerId);
   }
 
+  Future<void> loadHistory({
+    DateTime? from,
+    DateTime? to,
+    String? transactionType,
+  }) async {
+    final wallet = _wallet;
+    if (wallet == null) return;
+
+    _isRefreshing = true;
+    _error = null;
+    notifyListeners();
+    try {
+      _wallet = wallet.copyWith(
+        recentTransactions: await _repository.loadTransactions(
+          wallet.walletId,
+          from: from,
+          to: to,
+          transactionType: transactionType,
+        ),
+      );
+    } catch (error) {
+      _error = error;
+    } finally {
+      _isRefreshing = false;
+      notifyListeners();
+    }
+  }
+
   Future<void> _refreshInBackground() async {
     _isRefreshing = true;
     notifyListeners();

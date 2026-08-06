@@ -275,9 +275,19 @@ class ApiService {
   }
 
   static Future<List<WalletTransaction>> _getWalletTransactionsFromBackend(
-    String walletId,
-  ) async {
-    final response = await _dio.get('/wallets/$walletId/transactions');
+    String walletId, {
+    DateTime? from,
+    DateTime? to,
+    String? transactionType,
+  }) async {
+    final response = await _dio.get(
+      '/wallets/$walletId/transactions',
+      queryParameters: {
+        if (from != null) 'from': from.toIso8601String(),
+        if (to != null) 'to': to.toIso8601String(),
+        if (transactionType?.trim().isNotEmpty == true) 'type': transactionType,
+      },
+    );
     return _readEnvelopeList(response)
         .map((item) => WalletTransaction.fromJson(item as Map<String, dynamic>))
         .toList();
@@ -675,9 +685,17 @@ class ApiService {
   }
 
   static Future<List<WalletTransaction>> getWalletTransactions(
-    String walletId,
-  ) async {
-    return _getWalletTransactionsFromBackend(walletId);
+    String walletId, {
+    DateTime? from,
+    DateTime? to,
+    String? transactionType,
+  }) async {
+    return _getWalletTransactionsFromBackend(
+      walletId,
+      from: from,
+      to: to,
+      transactionType: transactionType,
+    );
   }
 
   static Future<Map<String, dynamic>> getCustomerWalletBundle(

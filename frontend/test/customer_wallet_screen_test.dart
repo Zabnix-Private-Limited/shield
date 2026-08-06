@@ -5,6 +5,7 @@ import 'package:shield/features/customer/wallet/data/repositories/wallet_reposit
 import 'package:shield/features/customer/wallet/presentation/controllers/wallet_controller.dart';
 import 'package:shield/features/customer/wallet/presentation/screens/wallet_screen.dart';
 import 'package:shield/shared/models/customer.dart';
+import 'package:shield/shared/models/wallet.dart';
 
 void main() {
   testWidgets(
@@ -37,6 +38,7 @@ void main() {
   ) async {
     await tester.binding.setSurfaceSize(const Size(800, 1800));
     addTearDown(() => tester.binding.setSurfaceSize(null));
+    final repository = _WalletTestRepository(_wallet());
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
@@ -44,7 +46,7 @@ void main() {
             showFullHistory: true,
             controller: WalletController(
               customerId: '42',
-              repository: _WalletTestRepository(_wallet()),
+              repository: repository,
             ),
             loadCustomer: () async => _customer(),
           ),
@@ -59,6 +61,10 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Cash reversal'), findsOneWidget);
     expect(find.text('Cash recharge'), findsNothing);
+
+    await tester.tap(find.text('Last 30 days'));
+    await tester.pumpAndSettle();
+    expect(repository.historyFrom, isNotNull);
   });
 
   testWidgets(
@@ -93,12 +99,24 @@ class _WalletTestRepository extends WalletRepository {
   _WalletTestRepository(this.value);
 
   final WalletModel value;
+  DateTime? historyFrom;
 
   @override
   Future<WalletModel?> loadCachedWallet(String customerId) async => null;
 
   @override
   Future<WalletModel> loadWallet(String customerId) async => value;
+
+  @override
+  Future<List<WalletTransaction>> loadTransactions(
+    String walletId, {
+    DateTime? from,
+    DateTime? to,
+    String? transactionType,
+  }) async {
+    historyFrom = from;
+    return value.recentTransactions;
+  }
 }
 
 class _FailingWalletRepository extends WalletRepository {

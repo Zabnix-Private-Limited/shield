@@ -36,6 +36,7 @@ class _CustomerWalletScreenState extends State<CustomerWalletScreen> {
   late final bool _ownsController;
   late Future<Customer> _customerFuture;
   String _selectedTransactionFilter = 'ALL';
+  String _selectedDateRange = 'ALL';
 
   @override
   void initState() {
@@ -144,6 +145,13 @@ class _CustomerWalletScreenState extends State<CustomerWalletScreen> {
                     style: AppTypography.h4,
                   ),
                   const SizedBox(height: 10),
+                  if (widget.showFullHistory) ...[
+                    WalletDateFilters(
+                      selectedRange: _selectedDateRange,
+                      onSelected: _onDateRangeSelected,
+                    ),
+                    const SizedBox(height: 10),
+                  ],
                   WalletFilters(
                     selectedFilter: _selectedTransactionFilter,
                     onSelected: (value) {
@@ -153,6 +161,28 @@ class _CustomerWalletScreenState extends State<CustomerWalletScreen> {
                     },
                   ),
                   const SizedBox(height: 12),
+                  if (_controller.error != null)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: AppCard(
+                        child: Row(
+                          children: [
+                            const Icon(Icons.cloud_off_outlined),
+                            const SizedBox(width: 10),
+                            const Expanded(
+                              child: Text(
+                                'History could not refresh. Showing the last available entries.',
+                              ),
+                            ),
+                            TextButton(
+                              onPressed: () =>
+                                  _onDateRangeSelected(_selectedDateRange),
+                              child: const Text('Retry'),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
                   TransactionList(
                     transactions: visibleTransactions,
                     maxItems: widget.showFullHistory ? null : 6,
@@ -181,6 +211,17 @@ class _CustomerWalletScreenState extends State<CustomerWalletScreen> {
       ApiService.getCustomerProfile(
         ApiService.requireAuthenticatedCustomerId(),
       );
+
+  void _onDateRangeSelected(String value) {
+    setState(() => _selectedDateRange = value);
+    final now = DateTime.now();
+    final from = switch (value) {
+      '30_DAYS' => now.subtract(const Duration(days: 30)),
+      '90_DAYS' => now.subtract(const Duration(days: 90)),
+      _ => null,
+    };
+    _controller.loadHistory(from: from, to: from == null ? null : now);
+  }
 }
 
 class _LockedWalletView extends StatelessWidget {

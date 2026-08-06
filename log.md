@@ -10822,3 +10822,23 @@ Added a customer-self, read-only subscription projection to the existing members
 
 ### Backend Files
 - None; no financial mutation or schema change was introduced.
+
+## 43. Cash Wallet server-backed history ranges
+2026-08-06 22:40:00 IST
+
+- Connected full customer wallet history to the owner-scoped GET /wallets/:walletId/transactions contract for All time, 30-day, and 90-day ranges.
+- Kept credit, debit, and reversal filtering local over returned CASH rows because backend type is an exact raw ledger-entry type.
+- Failed history refresh preserves the last visible transactions and provides Retry; it never renders false empty history or ₹0.
+
+### Frontend Files
+- frontend/lib/shared/services/api_service.dart
+- frontend/lib/features/customer/wallet/data/datasources/wallet_remote.dart
+- frontend/lib/features/customer/wallet/data/repositories/wallet_repository.dart
+- frontend/lib/features/customer/wallet/data/models/wallet_model.dart
+- frontend/lib/features/customer/wallet/presentation/controllers/wallet_controller.dart
+- frontend/lib/features/customer/wallet/presentation/screens/wallet_screen.dart
+- frontend/lib/features/customer/wallet/presentation/widgets/wallet_filters.dart
+- frontend/test/customer_wallet_screen_test.dart
+
+### Backend Files
+- None; existing owner-scoped read contract was reused without changing financial behavior.

@@ -134,6 +134,20 @@ class WalletModel extends CustomerWalletEntity {
 
   String toCache() => jsonEncode(toJson());
 
+  WalletModel copyWith({List<WalletTransaction>? recentTransactions}) {
+    return WalletModel(
+      walletId: walletId,
+      customerId: customerId,
+      status: status,
+      cashWallet: cashWallet,
+      rewardWallet: rewardWallet,
+      benefitSummary: benefitSummary,
+      recentTransactions: recentTransactions ?? this.recentTransactions,
+      statistics: statistics,
+      membership: membership,
+    );
+  }
+
   static double _asDouble(dynamic value) {
     if (value == null) {
       return 0;
