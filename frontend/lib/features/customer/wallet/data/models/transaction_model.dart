@@ -6,12 +6,14 @@ class TransactionModel extends WalletTransaction {
     required super.uuid,
     required super.walletId,
     required super.transactionType,
+    required super.ledgerEntryType,
     required super.subLedgerType,
     required super.amount,
     super.referenceType,
     super.referenceId,
     super.remarks,
     super.createdBy,
+    super.status,
     required super.createdAt,
   });
 
@@ -22,12 +24,14 @@ class TransactionModel extends WalletTransaction {
       uuid: base.uuid,
       walletId: base.walletId,
       transactionType: base.transactionType,
+      ledgerEntryType: base.ledgerEntryType,
       subLedgerType: base.subLedgerType,
       amount: base.amount,
       referenceType: base.referenceType,
       referenceId: base.referenceId,
       remarks: base.remarks,
       createdBy: base.createdBy,
+      status: base.status,
       createdAt: base.createdAt,
     );
   }

@@ -5,6 +5,8 @@ class WalletTransaction extends Equatable {
   final String uuid;
   final String walletId;
   final String transactionType;
+  final String ledgerEntryType;
+  final String? status;
   final String subLedgerType; // 'CASH' or 'POINTS'
   final double amount;
   final String? referenceType;
@@ -18,16 +20,26 @@ class WalletTransaction extends Equatable {
     required this.uuid,
     required this.walletId,
     required this.transactionType,
+    required this.ledgerEntryType,
     this.subLedgerType = 'CASH',
     required this.amount,
     this.referenceType,
     this.referenceId,
     this.remarks,
     this.createdBy,
+    this.status,
     required this.createdAt,
   });
 
   factory WalletTransaction.fromJson(Map<String, dynamic> json) {
+    final rawType =
+        (json['ledgerEntryType'] ??
+                json['ledger_entry_type'] ??
+                json['transactionType'] ??
+                json['transaction_type'] ??
+                'DEBIT')
+            .toString()
+            .toUpperCase();
     double parseAmount(dynamic value) {
       if (value == null) return 0;
       return double.tryParse(value.toString()) ?? 0;
@@ -51,10 +63,6 @@ class WalletTransaction extends Equatable {
     }
 
     String normalizeTransactionType(Map<String, dynamic> source) {
-      final rawType =
-          (source['transactionType'] ?? source['transaction_type'] ?? 'DEBIT')
-              .toString()
-              .toUpperCase();
       const creditTypes = {
         'CREDIT',
         'RECHARGE',
@@ -78,6 +86,7 @@ class WalletTransaction extends Equatable {
           (json['walletId'] ?? json['wallet_id'] ?? json['wallet_id_fk'] ?? '')
               .toString(),
       transactionType: normalizeTransactionType(json),
+      ledgerEntryType: rawType,
       subLedgerType: normalizeLedgerType(json),
       amount: parseAmount(json['amount']),
       referenceType: (json['referenceType'] ?? json['reference_type'])
@@ -85,6 +94,7 @@ class WalletTransaction extends Equatable {
       referenceId: (json['referenceId'] ?? json['reference_id'])?.toString(),
       remarks: json['remarks']?.toString(),
       createdBy: (json['createdBy'] ?? json['created_by'])?.toString(),
+      status: json['status']?.toString(),
       createdAt:
           DateTime.tryParse(
             (json['createdAt'] ?? json['created_at']).toString(),
@@ -95,6 +105,8 @@ class WalletTransaction extends Equatable {
 
   bool get isCredit => transactionType.toUpperCase() == 'CREDIT';
 
+  bool get isReversal => ledgerEntryType.contains('REVERSAL');
+
   double get signedAmount => isCredit ? amount : -amount;
 
   @override
@@ -103,12 +115,14 @@ class WalletTransaction extends Equatable {
     uuid,
     walletId,
     transactionType,
+    ledgerEntryType,
     subLedgerType,
     amount,
     referenceType,
     referenceId,
     remarks,
     createdBy,
+    status,
     createdAt,
   ];
 }

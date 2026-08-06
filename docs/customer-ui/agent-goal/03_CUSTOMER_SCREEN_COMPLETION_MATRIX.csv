@@ -22,30 +22,30 @@
 021,Home,Operations Banner Details,/portal/customer/banner/:id,View eligible campaign/offer details,published banner detail,,NO,NO,NO,NO,NO,NO,NO,TODO
 022,Home,Offers and Benefits List,/portal/customer/offers,Browse eligible customer offers,Operations content API,,NO,NO,NO,NO,NO,NO,NO,TODO
 023,Home,Global Search Entry,/portal/customer/search,Search supported customer content,search APIs where supported,,NO,NO,NO,NO,NO,NO,NO,TODO
-024,Membership & Card,Membership Dashboard,/portal/customer/membership,Membership and plan overview,membership aggregate,,NO,NO,NO,NO,NO,NO,NO,TODO
-025,Membership & Card,Privilege Card,/portal/customer/card,Card and subscription summary,membership/card/subscription,,NO,NO,NO,NO,NO,NO,NO,TODO
-026,Membership & Card,Digital Card,/portal/customer/card/digital,Full digital card,membership card API,,NO,NO,NO,NO,NO,NO,NO,TODO
-027,Membership & Card,QR Card,/portal/customer/card/qr,Scannable signed identity token,card token API,,NO,NO,NO,NO,NO,NO,NO,TODO
-028,Membership & Card,Membership Benefits,/portal/customer/membership/benefits,Eligible benefits and limits,plan benefits API,,NO,NO,NO,NO,NO,NO,NO,TODO
-029,Membership & Card,Subscription Details,/portal/customer/membership/subscription,Plan contribution and validity,subscription API,,NO,NO,NO,NO,NO,NO,NO,TODO
-030,Membership & Card,Entitlement Details,/portal/customer/membership/entitlement,Total/monthly entitlement,entitlement API,,NO,NO,NO,NO,NO,NO,NO,TODO
-031,Membership & Card,Carry Forward Details,/portal/customer/membership/carry-forward,Carry-forward breakdown,entitlement ledger/config,,NO,NO,NO,NO,NO,NO,NO,TODO
-032,Membership & Card,Benefit Usage History,/portal/customer/membership/usage,Applied benefit events,benefit application API,,NO,NO,NO,NO,NO,NO,NO,TODO
-033,Membership & Card,Request Physical Card,/portal/customer/card/request,Submit supported card request,card request API,,NO,NO,NO,NO,NO,NO,NO,TODO
-034,Membership & Card,Card Request Review,same request flow,Review request/address,card request draft,,NO,NO,NO,NO,NO,NO,NO,TODO
-035,Membership & Card,Card Request Confirmation,same request flow,Confirm submission,card request response,,NO,NO,NO,NO,NO,NO,NO,TODO
-036,Membership & Card,Card Request Tracking,/portal/customer/card/tracking,Track lifecycle,card request/events,,NO,NO,NO,NO,NO,NO,NO,TODO
-037,Membership & Card,Card History,/portal/customer/card/history,Issue/activation/replacement events,card events API,,NO,NO,NO,NO,NO,NO,NO,TODO
-038,Membership & Card,Report Lost Card,/portal/customer/card/lost,Block/report lost card,card lifecycle API,,NO,NO,NO,NO,NO,NO,NO,TODO
-039,Membership & Card,Report Damaged Card,/portal/customer/card/damaged,Request damaged-card handling,card lifecycle API,,NO,NO,NO,NO,NO,NO,NO,TODO
-040,Membership & Card,Replacement Card,/portal/customer/card/replacement,Request replacement,card lifecycle API,,NO,NO,NO,NO,NO,NO,NO,TODO
-041,Membership & Card,Membership Renewal Overview,/portal/customer/membership/renew,Renewal eligibility and plan,renewal API/config,,NO,NO,NO,NO,NO,NO,NO,TODO
-042,Membership & Card,Membership Renewal Review,same renewal flow,Review renewal values,renewal quote,,NO,NO,NO,NO,NO,NO,NO,TODO
-043,Membership & Card,Membership Renewal Payment,same renewal flow,Complete approved payment,payment/renewal API,,NO,NO,NO,NO,NO,NO,NO,TODO
-044,Membership & Card,Membership Renewal Success,same renewal flow,Confirm renewal,renewal result,,NO,NO,NO,NO,NO,NO,NO,TODO
-045,Membership & Card,Membership Renewal Failure,same renewal flow,Recover from payment/renewal failure,renewal error,,NO,NO,NO,NO,NO,NO,NO,TODO
-046,Membership & Card,Expired Membership,membership state,Explain expiry and supported actions,membership status,,NO,NO,NO,NO,NO,NO,NO,TODO
-047,Membership & Card,Suspended Membership,membership state,Explain suspension and support,membership status,,NO,NO,NO,NO,NO,NO,NO,TODO
+024,Membership & Card,Membership Dashboard,/portal/customer/membership,Membership and plan overview,membership aggregate,Complete supported overview and recovery states,YES,YES,YES,YES,YES,YES,DEFERRED — TOOLING FAILURE,COMPLETE — SUPPORTED FUNCTIONAL SCOPE
+025,Membership & Card,Privilege Card,/portal/customer/card,Card and subscription summary,membership/card/subscription,Digital card plus supported request status history,YES,YES,YES,YES,YES,YES,DEFERRED — TOOLING FAILURE,COMPLETE — SUPPORTED FUNCTIONAL SCOPE
+026,Membership & Card,Digital Card,/portal/customer/card/digital,Full digital card,membership card API,Issued customer card only,YES,YES,YES,YES,YES,YES,DEFERRED — TOOLING FAILURE,COMPLETE — SUPPORTED FUNCTIONAL SCOPE
+027,Membership & Card,QR Card,/portal/customer/card/qr,Scannable signed identity token,card token API,No signed verifier contract,YES,NO,YES,YES,YES,YES,N/A,DEFERRED — SECURITY CONTRACT REQUIRED
+028,Membership & Card,Membership Benefits,/portal/customer/membership/benefits,Eligible benefits and limits,plan benefits API,Read-only supported plan facts; structured coverage unavailable,YES,YES,YES,YES,YES,YES,DEFERRED — TOOLING FAILURE,COMPLETE — SUPPORTED FUNCTIONAL SCOPE
+029,Membership & Card,Subscription Details,/portal/customer/membership/subscription,Plan contribution and validity,subscription API,Backend-derived contribution validity entitlement,YES,YES,YES,YES,YES,YES,DEFERRED — TOOLING FAILURE,COMPLETE — SUPPORTED FUNCTIONAL SCOPE
+030,Membership & Card,Entitlement Details,/portal/customer/membership/entitlement,Total/monthly entitlement,entitlement API,Displayed in subscription view,YES,YES,YES,YES,YES,YES,DEFERRED — TOOLING FAILURE,COMPLETE — SUPPORTED FUNCTIONAL SCOPE
+031,Membership & Card,Carry Forward Details,/portal/customer/membership/carry-forward,Carry-forward breakdown,entitlement ledger/config,Only returned allocation fields shown,YES,NO,YES,YES,YES,YES,N/A,PARTIAL — CURRENT CONTRACT
+032,Membership & Card,Benefit Usage History,/portal/customer/membership/usage,Applied benefit events,benefit application API,No customer-safe event API,NO,NO,NO,NO,NO,NO,N/A,NOT SUPPORTED IN CURRENT CONTRACT
+033,Membership & Card,Request Physical Card,/portal/customer/card/request,Submit supported card request,card request API,Customer-self audited request,YES,YES,YES,YES,YES,YES,DEFERRED — TOOLING FAILURE,COMPLETE — SUPPORTED FUNCTIONAL SCOPE
+034,Membership & Card,Card Request Review,same request flow,Review request/address,card request draft,No editable customer request draft,YES,NO,YES,YES,YES,YES,N/A,NOT SUPPORTED IN CURRENT CONTRACT
+035,Membership & Card,Card Request Confirmation,same request flow,Confirm submission,card request response,Backend response after request,YES,YES,YES,YES,YES,YES,DEFERRED — TOOLING FAILURE,COMPLETE — SUPPORTED FUNCTIONAL SCOPE
+036,Membership & Card,Card Request Tracking,/portal/customer/card/tracking,Track lifecycle,card request/events,Customer-owned request statuses,YES,YES,YES,YES,YES,YES,DEFERRED — TOOLING FAILURE,COMPLETE — SUPPORTED FUNCTIONAL SCOPE
+037,Membership & Card,Card History,/portal/customer/card/history,Issue/activation/replacement events,card events API,Customer-owned request history only,YES,YES,YES,YES,YES,YES,DEFERRED — TOOLING FAILURE,COMPLETE — SUPPORTED FUNCTIONAL SCOPE
+038,Membership & Card,Report Lost Card,/portal/customer/card/lost,Block/report lost card,card lifecycle API,No customer-safe lost-card contract,NO,NO,NO,NO,NO,NO,N/A,NOT SUPPORTED IN CURRENT CONTRACT
+039,Membership & Card,Report Damaged Card,/portal/customer/card/damaged,Request damaged-card handling,card lifecycle API,No customer-safe damaged-card contract,NO,NO,NO,NO,NO,NO,N/A,NOT SUPPORTED IN CURRENT CONTRACT
+040,Membership & Card,Replacement Card,/portal/customer/card/replacement,Request replacement,card lifecycle API,Policy and backend lifecycle contract required,NO,NO,NO,NO,NO,NO,N/A,DEFERRED — PRODUCT DECISION AND BACKEND CONTRACT REQUIRED
+041,Membership & Card,Membership Renewal Overview,/portal/customer/membership/renew,Renewal eligibility and plan,renewal API/config,Renewal quote and policy contract required,NO,NO,NO,NO,NO,NO,N/A,DEFERRED — PRODUCT DECISION AND BACKEND CONTRACT REQUIRED
+042,Membership & Card,Membership Renewal Review,same renewal flow,Review renewal values,renewal quote,Renewal quote contract required,NO,NO,NO,NO,NO,NO,N/A,DEFERRED — PRODUCT DECISION AND BACKEND CONTRACT REQUIRED
+043,Membership & Card,Membership Renewal Payment,same renewal flow,Complete approved payment,payment/renewal API,Payment and idempotent renewal contract required,NO,NO,NO,NO,NO,NO,N/A,DEFERRED — PRODUCT DECISION AND BACKEND CONTRACT REQUIRED
+044,Membership & Card,Membership Renewal Success,same renewal flow,Confirm renewal,renewal result,Renewal result contract required,NO,NO,NO,NO,NO,NO,N/A,DEFERRED — PRODUCT DECISION AND BACKEND CONTRACT REQUIRED
+045,Membership & Card,Membership Renewal Failure,same renewal flow,Recover from payment/renewal failure,renewal error,Renewal error contract required,NO,NO,NO,NO,NO,NO,N/A,DEFERRED — PRODUCT DECISION AND BACKEND CONTRACT REQUIRED
+046,Membership & Card,Expired Membership,membership state,Explain expiry and supported actions,membership status,Truthful membership state and recovery messaging,YES,YES,YES,YES,YES,YES,DEFERRED — TOOLING FAILURE,COMPLETE — SUPPORTED FUNCTIONAL SCOPE
+047,Membership & Card,Suspended Membership,membership state,Explain suspension and support,membership status,Truthful membership state and recovery messaging,YES,YES,YES,YES,YES,YES,DEFERRED — TOOLING FAILURE,COMPLETE — SUPPORTED FUNCTIONAL SCOPE
 048,Cash Wallet,Cash Wallet Dashboard,/portal/customer/wallet,Show CASH balance and actions,customer wallet API,,NO,NO,NO,NO,NO,NO,NO,TODO
 049,Cash Wallet,Wallet Transaction History,/portal/customer/wallet/transactions,Ledger history,wallet ledger API,,NO,NO,NO,NO,NO,NO,NO,TODO
 050,Cash Wallet,Wallet Transaction Filters,same history surface,Filter credits/debits/refunds/status,wallet ledger API,,NO,NO,NO,NO,NO,NO,NO,TODO

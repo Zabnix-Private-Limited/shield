@@ -11,7 +11,6 @@ import '../../../shared/domain/customer_access_state.dart';
 import '../../../../customer/shared/widgets/error_card.dart';
 import '../controllers/wallet_controller.dart';
 import '../widgets/balance_card.dart';
-import '../widgets/reward_points_card.dart';
 import '../widgets/transaction_list.dart';
 import '../widgets/wallet_filters.dart';
 import '../widgets/wallet_shimmer.dart';
@@ -36,7 +35,7 @@ class _CustomerWalletScreenState extends State<CustomerWalletScreen> {
   late final WalletController _controller;
   late final bool _ownsController;
   late Future<Customer> _customerFuture;
-  String _selectedLedger = 'ALL';
+  String _selectedTransactionFilter = 'ALL';
 
   @override
   void initState() {
@@ -113,11 +112,13 @@ class _CustomerWalletScreenState extends State<CustomerWalletScreen> {
             }
 
             final visibleTransactions = wallet.recentTransactions.where((txn) {
-              if (txn.subLedgerType == 'BENEFIT') {
-                return false;
-              }
-              return _selectedLedger == 'ALL' ||
-                  txn.subLedgerType == _selectedLedger;
+              if (txn.subLedgerType != 'CASH') return false;
+              return switch (_selectedTransactionFilter) {
+                'CREDITS' => txn.isCredit,
+                'DEBITS' => !txn.isCredit,
+                'REVERSALS' => txn.isReversal,
+                _ => true,
+              };
             }).toList();
 
             return RefreshIndicator(
@@ -131,7 +132,6 @@ class _CustomerWalletScreenState extends State<CustomerWalletScreen> {
                   _WalletHero(
                     status: wallet.status,
                     cashBalance: wallet.cashWallet.available,
-                    pointsBalance: wallet.rewardWallet.available,
                     creditAvailable: wallet.statistics.creditAvailable,
                     monthlySpend: wallet.statistics.monthlySpend,
                     rewardCredits: wallet.statistics.rewardCredits,
@@ -145,10 +145,10 @@ class _CustomerWalletScreenState extends State<CustomerWalletScreen> {
                   ),
                   const SizedBox(height: 10),
                   WalletFilters(
-                    selectedLedger: _selectedLedger,
+                    selectedFilter: _selectedTransactionFilter,
                     onSelected: (value) {
                       setState(() {
-                        _selectedLedger = value;
+                        _selectedTransactionFilter = value;
                       });
                     },
                   ),
@@ -356,7 +356,6 @@ class _WalletHero extends StatelessWidget {
   const _WalletHero({
     required this.status,
     required this.cashBalance,
-    required this.pointsBalance,
     required this.creditAvailable,
     required this.monthlySpend,
     required this.rewardCredits,
@@ -364,7 +363,6 @@ class _WalletHero extends StatelessWidget {
 
   final String status;
   final double cashBalance;
-  final double pointsBalance;
   final double creditAvailable;
   final double monthlySpend;
   final double rewardCredits;
@@ -436,8 +434,7 @@ class _WalletHero extends StatelessWidget {
                     value: AppDisplayFormatters.formatCurrencyString(
                       cashBalance.toStringAsFixed(2),
                     ),
-                    secondary:
-                        '${pointsBalance.toStringAsFixed(0)} reward points',
+                    secondary: 'Available CASH ledger balance',
                   ),
                   _HeroStatBlock(
                     width: itemWidth,
@@ -453,30 +450,14 @@ class _WalletHero extends StatelessWidget {
             },
           ),
           const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: BalanceCard(
-                  title: 'Visible cash balance',
-                  value: AppDisplayFormatters.formatCurrencyString(
-                    cashBalance.toStringAsFixed(2),
-                  ),
-                  caption: 'Customer-visible cash available for eligible use',
-                  icon: Icons.currency_rupee,
-                  dark: true,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: RewardPointsCard(
-                  title: 'Reward points',
-                  value: '${pointsBalance.toStringAsFixed(0)} pts',
-                  caption: 'Customer-visible referral and loyalty rewards',
-                  icon: Icons.stars_rounded,
-                  dark: true,
-                ),
-              ),
-            ],
+          BalanceCard(
+            title: 'Visible cash balance',
+            value: AppDisplayFormatters.formatCurrencyString(
+              cashBalance.toStringAsFixed(2),
+            ),
+            caption: 'Customer-visible CASH available for eligible use',
+            icon: Icons.currency_rupee,
+            dark: true,
           ),
           const SizedBox(height: 12),
           Row(
@@ -494,13 +475,7 @@ class _WalletHero extends StatelessWidget {
               ),
               const SizedBox(width: 12),
               Expanded(
-                child: RewardPointsCard(
-                  title: 'Rewards earned',
-                  value: '${rewardCredits.toStringAsFixed(0)} pts',
-                  caption: 'Approved referrals and promotional rewards',
-                  icon: Icons.card_giftcard_outlined,
-                  dark: true,
-                ),
+                child: _RewardSummaryAction(rewardCredits: rewardCredits),
               ),
             ],
           ),
@@ -565,6 +540,54 @@ class _HeroStatBlock extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _RewardSummaryAction extends StatelessWidget {
+  const _RewardSummaryAction({required this.rewardCredits});
+
+  final double rewardCredits;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: AppColors.white.withValues(alpha: 0.1),
+      borderRadius: BorderRadius.circular(14),
+      child: InkWell(
+        onTap: () => context.go('/portal/customer/rewards'),
+        borderRadius: BorderRadius.circular(14),
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Reward points',
+                style: AppTypography.small.copyWith(
+                  color: AppColors.white,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                '${rewardCredits.toStringAsFixed(0)} earned this cycle',
+                style: AppTypography.tiny.copyWith(
+                  color: AppColors.white.withValues(alpha: 0.84),
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'View separately',
+                style: AppTypography.tiny.copyWith(
+                  color: AppColors.white,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

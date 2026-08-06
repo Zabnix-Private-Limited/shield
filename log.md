@@ -10803,3 +10803,22 @@ Added a customer-self, read-only subscription projection to the existing members
 
 - Closed Membership/Card as COMPLETE — SUPPORTED FUNCTIONAL SCOPE with authenticated screenshots deferred due to documented tooling failure.
 - Began Cash Wallet secondary-flow audit; no financial mutation was added.
+## 42. Membership closure classification and Cash Wallet secondary history
+2026-08-06 22:15:00 IST
+
+- Finalized Membership/Card as COMPLETE — SUPPORTED FUNCTIONAL SCOPE: overview, subscription/entitlement display, lifecycle states, digital card, supported physical-card request/status/history, cached offline data, refresh/recovery, 350px coverage, and automated regression coverage.
+- Recorded authenticated screenshot QA as DEFERRED — TOOLING FAILURE. Existing Chrome control timed out and Playwright CLI crashed with a native Windows assertion; no screenshot evidence was fabricated. Manual authenticated review remains release QA.
+- Preserved lifecycle boundaries: renewal/replacement require product and backend contracts, lost/damaged are not supported, and secure QR requires a security contract.
+- Audited Cash Wallet secondary flows. The customer surface now shows CASH history only with supported All/Credits/Debits/Reversals filters and backend-returned transaction details. Reward points remain separate and SHIELD_BENEFIT is never cash. Statement/export, locked balance detail, wallet rules, and customer add-funds remain unavailable because no customer-safe contract exists.
+
+### Frontend Files
+- `frontend/lib/features/customer/wallet/presentation/screens/wallet_screen.dart`
+- `frontend/lib/features/customer/wallet/presentation/widgets/wallet_filters.dart`
+- `frontend/lib/features/customer/wallet/presentation/widgets/transaction_tile.dart`
+- `frontend/lib/features/customer/wallet/data/models/transaction_model.dart`
+- `frontend/lib/features/customer/wallet/data/models/wallet_model.dart`
+- `frontend/lib/shared/models/wallet.dart`
+- `frontend/test/customer_wallet_screen_test.dart`
+
+### Backend Files
+- None; no financial mutation or schema change was introduced.

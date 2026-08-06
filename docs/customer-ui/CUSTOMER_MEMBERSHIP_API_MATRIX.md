@@ -8,21 +8,24 @@ Audited: 2026-08-06. `current_schema.md` is authoritative for persisted models; 
 | Subscription entitlement | `GET /customer/membership` | Same customer-self resolver; no customer ID is accepted for a customer principal | Stored plan/status, customer contribution, SHIELD Benefit, total entitlement and the latest allocation on or before the current month | Supported, read-only |
 | Membership benefits | `GET /customer/membership` plan fields only | Same customer-self resolver | Plan name, status and eligibility metadata; no structured coverage, exclusions, annual/monthly limits, or carry-forward policy | Partial: UI must show the contract gap, not tier-based claims |
 | Digital privilege card | `GET /customer/membership/card` | Customer principal resolves to its own customer ID | Card number, status, issued date and request status | Supported when a card exists |
-| QR verification | No verified customer/provider QR-verification endpoint | N/A | Persisted `shield_cards.qr_code` is a static string; no expiry, signing, verifier, replay protection, or PII review contract | Unavailable; UI must not render it as a QR code |
+| Secure QR verification | No verified customer/provider QR-verification endpoint | N/A | Persisted `shield_cards.qr_code` is a static string; no expiry, signing, verifier, replay protection, or PII review contract | DEFERRED — SECURITY CONTRACT REQUIRED; UI must not render it as a QR code |
 | Cash membership usage | Included as `membershipStats` in `GET /customer/membership` | Same as above | Cash wallet credited/debited/available; this is not SHIELD Benefit | Supported as wallet-derived summary only |
 | Physical-card request | `POST /customer/membership/card/request` | Customer principal derived by the controller; no client customer ID | Creates/reuses an active request and writes an audit log | Supported |
 | Physical-card status | `GET /customer/membership/card` | Customer principal derived by the controller | Latest request and card, action state | Supported |
 | Physical-card history | `GET /customer/membership/card/requests` | Customer principal derived by the controller | Customer-owned request status, requested/reviewed dates and staff remarks | Supported |
 | Subscription read (staff/demo) | `GET /management-demo/subscriptions/:customerId` | `customers.view`, no customer-self resolver in this controller | Subscription and full allocation history | Not customer-safe; do not use in customer app |
 | Subscription activation/preview | `POST /management-demo/subscriptions/:customerId/activate`, `POST /management-demo/subscriptions/preview` | Staff permission | Management-demo workflow | Not customer operation |
-| Lost, damaged and replacement card | No verified customer API | N/A | Current single-card schema has no lifecycle reason/event or safe replacement contract | Unsupported |
+| Lost card | No verified customer API | N/A | No lifecycle reason/event or safe deactivation contract | NOT SUPPORTED IN CURRENT CONTRACT |
+| Damaged card | No verified customer API | N/A | No lifecycle reason/event, assessment, fee, or delivery contract | NOT SUPPORTED IN CURRENT CONTRACT |
+| Replacement card | No verified customer API | N/A | Current single-card schema has no replacement policy, duplicate-card rule, or safe replacement contract | DEFERRED — PRODUCT DECISION AND BACKEND CONTRACT REQUIRED |
+| Membership renewal | No verified customer API | N/A | No renewal quote, payment, validity, carry-forward, audit, or notification workflow | DEFERRED — PRODUCT DECISION AND BACKEND CONTRACT REQUIRED |
 
 ## Data models
 
 - `memberships`: membership number, status, activation/expiry and type.
 - `shield_cards`: one card per customer, card number, stored QR string, status, issuing business/date. The stored QR string is not a customer-safe verification contract.
 - `membership_subscriptions` and `subscription_monthly_allocations`: configured contribution, SHIELD Benefit, entitlement and monthly allocation data. The customer membership bundle now returns a minimal self-scoped projection, not the staff/demo history contract.
-- `card_requests`: physical-card request state; no customer-safe history contract verified.
+- `card_requests`: physical-card request state with customer-self status and history routes.
 
 ## Explicit gaps
 

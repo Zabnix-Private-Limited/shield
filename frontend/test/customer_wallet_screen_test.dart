@@ -32,6 +32,35 @@ void main() {
     },
   );
 
+  testWidgets('filters the customer history to supported CASH entries', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(800, 1800));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: CustomerWalletScreen(
+            showFullHistory: true,
+            controller: WalletController(
+              customerId: '42',
+              repository: _WalletTestRepository(_wallet()),
+            ),
+            loadCustomer: () async => _customer(),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Cash recharge'), findsOneWidget);
+    expect(find.text('Reward points earned'), findsNothing);
+    await tester.tap(find.text('Reversals'));
+    await tester.pumpAndSettle();
+    expect(find.text('Cash reversal'), findsOneWidget);
+    expect(find.text('Cash recharge'), findsNothing);
+  });
+
   testWidgets(
     'shows a retryable wallet API failure instead of a zero balance',
     (tester) async {
@@ -94,6 +123,33 @@ WalletModel _wallet() => WalletModel.fromJson(const {
     'hiddenRemaining': 1000,
   },
   'recentTransactions': [
+    {
+      'id': 'cash-credit',
+      'wallet_id': '9',
+      'transaction_type': 'RECHARGE',
+      'sub_ledger_type': 'CASH',
+      'amount': 200,
+      'remarks': 'Cash recharge',
+      'created_at': '2026-08-05T00:00:00.000Z',
+    },
+    {
+      'id': 'cash-reversal',
+      'wallet_id': '9',
+      'transaction_type': 'REVERSAL_CREDIT',
+      'sub_ledger_type': 'CASH',
+      'amount': 50,
+      'remarks': 'Cash reversal',
+      'created_at': '2026-08-04T00:00:00.000Z',
+    },
+    {
+      'id': 'points-credit',
+      'wallet_id': '9',
+      'transaction_type': 'EARNED',
+      'sub_ledger_type': 'REWARD_POINTS',
+      'amount': 20,
+      'remarks': 'Reward points earned',
+      'created_at': '2026-08-03T00:00:00.000Z',
+    },
     {
       'id': 'benefit-1',
       'wallet_id': '9',

@@ -6,11 +6,11 @@ import '../../../../../app/theme/app_typography.dart';
 class WalletFilters extends StatelessWidget {
   const WalletFilters({
     super.key,
-    required this.selectedLedger,
+    required this.selectedFilter,
     required this.onSelected,
   });
 
-  final String selectedLedger;
+  final String selectedFilter;
   final ValueChanged<String> onSelected;
 
   @override
@@ -20,21 +20,27 @@ class WalletFilters extends StatelessWidget {
       child: Row(
         children: [
           _FilterChip(
-            label: 'All',
-            selected: selectedLedger == 'ALL',
+            label: 'All cash',
+            selected: selectedFilter == 'ALL',
             onTap: () => onSelected('ALL'),
           ),
           const SizedBox(width: 8),
           _FilterChip(
-            label: 'Cash',
-            selected: selectedLedger == 'CASH',
-            onTap: () => onSelected('CASH'),
+            label: 'Credits',
+            selected: selectedFilter == 'CREDITS',
+            onTap: () => onSelected('CREDITS'),
           ),
           const SizedBox(width: 8),
           _FilterChip(
-            label: 'Points',
-            selected: selectedLedger == 'POINTS',
-            onTap: () => onSelected('POINTS'),
+            label: 'Debits',
+            selected: selectedFilter == 'DEBITS',
+            onTap: () => onSelected('DEBITS'),
+          ),
+          const SizedBox(width: 8),
+          _FilterChip(
+            label: 'Reversals',
+            selected: selectedFilter == 'REVERSALS',
+            onTap: () => onSelected('REVERSALS'),
           ),
         ],
       ),

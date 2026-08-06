@@ -2,7 +2,7 @@
 
 ## Membership/Card closure — 2026-08-06
 
-Classification: **COMPLETE — SUPPORTED FUNCTIONAL SCOPE**. Authenticated screenshot QA is **DEFERRED — TOOLING FAILURE**: Chrome control timed out and Playwright CLI crashed with a Windows native assertion; no evidence was fabricated. Automated membership/card, responsive, and route tests passed.
+Classification: **COMPLETE — SUPPORTED FUNCTIONAL SCOPE**. Membership overview, subscription/entitlement display, active/pending/expired/suspended states, digital card, supported physical-card request/status/history, offline cached-data state, refresh/recovery, 350px responsive coverage, and automated regression coverage are complete. Authenticated screenshot QA is **DEFERRED — TOOLING FAILURE**: the existing Chrome-control integration timed out and Playwright CLI crashed with a Windows native assertion; no evidence was fabricated. Manual authenticated screenshot review remains a release-QA follow-up.
 
 ## Phase 0 — Audit and shared shell
 

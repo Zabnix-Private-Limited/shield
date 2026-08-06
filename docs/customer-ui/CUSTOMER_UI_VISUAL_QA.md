@@ -2,7 +2,7 @@
 
 ## Membership/Card QA closure — 2026-08-06
 
-Functional and responsive automated QA passed. Authenticated screenshots are deferred to release QA because Chrome control timed out and Playwright CLI crashed with a native Windows assertion. No screenshots were fabricated.
+Functional and responsive automated QA passed. Authenticated screenshot QA is **DEFERRED — TOOLING FAILURE** because the existing Chrome-control integration timed out and Playwright CLI crashed with a native Windows assertion. No screenshot evidence was fabricated. Manual authenticated screenshot review remains a release-QA follow-up.
 
 ## 2026-08-05 account-capabilities checkpoint
 
