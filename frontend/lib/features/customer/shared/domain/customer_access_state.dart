@@ -21,14 +21,29 @@ class CustomerAccessState {
 
   bool get serviceAccessEnabled => hasIssuedMembershipCard;
 
-  String get heroStatusLabel => serviceAccessEnabled ? 'ACTIVE' : 'PENDING';
+  String get membershipStatus =>
+      membership?.membershipStatus.trim().toUpperCase() ?? 'NO_MEMBERSHIP';
+
+  bool get isExpired => membershipStatus == 'EXPIRED';
+  bool get isSuspended => membershipStatus == 'SUSPENDED';
+
+  String get heroStatusLabel =>
+      serviceAccessEnabled ? 'ACTIVE' : membershipStatus;
 
   String get membershipHeadline => serviceAccessEnabled
       ? membership?.tierLabel ?? 'SHIELD Member'
+      : isExpired
+      ? 'Membership expired'
+      : isSuspended
+      ? 'Membership suspended'
       : 'Membership pending';
 
   String get membershipSupportingText => serviceAccessEnabled
       ? 'Issued by SHIELD admin or agent team'
+      : isExpired
+      ? 'Your membership has expired. Renewal is unavailable until a verified payment workflow is provided.'
+      : isSuspended
+      ? 'Your membership is suspended. Contact SHIELD support for assistance.'
       : 'Registration complete. Awaiting admin or agent approval and card issuance.';
 
   String get walletStatusLabel => serviceAccessEnabled ? 'ACTIVE' : 'LOCKED';

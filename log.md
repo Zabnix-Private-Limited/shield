@@ -10776,3 +10776,9 @@ Added a customer-self, read-only subscription projection to the existing members
 - Deep-linked subscription and benefits routes now render dedicated focused membership views from the existing customer-safe membership bundle.
 - Subscription values stay backend-derived and benefits remain constrained to verified plan/card facts.
 - Flutter analyzer and focused membership tests passed.
+## 63. Membership lifecycle states
+**2026-08-06 10:25:00 IST**
+
+- Preserved backend membership status in the shared model so suspended and expired states are not mislabeled as pending.
+- Suspended state coverage verifies customer access remains locked and the UI label is truthful.
+- Focused Flutter analysis and model tests passed.

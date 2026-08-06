@@ -22,6 +22,7 @@ class Membership extends Equatable {
   final String? cardQrPayload;
   final String? cardStatus;
   final DateTime? cardIssuedAt;
+  final String membershipStatus;
 
   const Membership({
     required this.id,
@@ -40,6 +41,7 @@ class Membership extends Equatable {
     this.cardQrPayload,
     this.cardStatus,
     this.cardIssuedAt,
+    this.membershipStatus = 'PENDING',
   });
 
   String get tierLabel => switch (tier) {
@@ -106,6 +108,7 @@ class Membership extends Equatable {
               .toString()
               .toUpperCase()) ==
           'ACTIVE',
+      membershipStatus: (membership?['status'] ?? customer.status).toString(),
       totalEarnedCredits: earned,
       totalRedeemedCredits: redeemed,
       createdAt: createdAt,
@@ -140,5 +143,6 @@ class Membership extends Equatable {
     cardQrPayload,
     cardStatus,
     cardIssuedAt,
+    membershipStatus,
   ];
 }

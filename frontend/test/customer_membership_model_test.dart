@@ -57,4 +57,28 @@ void main() {
       isTrue,
     );
   });
+
+  test(
+    'preserves suspended membership status for customer state rendering',
+    () {
+      final membership = MembershipModel.fromJson(const {
+        'customerId': '42',
+        'membership': {
+          'id': '7',
+          'uuid': 'member-7',
+          'membershipNumber': 'SHLD-00042',
+          'status': 'SUSPENDED',
+          'createdAt': '2026-01-01T00:00:00.000Z',
+          'membershipType': {'name': 'Standard Member'},
+        },
+      });
+      final state = CustomerAccessState(
+        customerStatus: 'ACTIVE',
+        membership: membership,
+      );
+      expect(state.heroStatusLabel, 'SUSPENDED');
+      expect(state.membershipHeadline, 'Membership suspended');
+      expect(state.serviceAccessEnabled, isFalse);
+    },
+  );
 }

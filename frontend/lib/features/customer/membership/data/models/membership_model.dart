@@ -20,6 +20,7 @@ class MembershipModel extends Membership {
     super.cardQrPayload,
     super.cardStatus,
     super.cardIssuedAt,
+    super.membershipStatus,
     this.subscription,
   });
 
@@ -73,6 +74,7 @@ class MembershipModel extends Membership {
       ),
       isActive:
           (membership['status'] ?? '').toString().toUpperCase() == 'ACTIVE',
+      membershipStatus: (membership['status'] ?? 'PENDING').toString(),
       totalEarnedCredits: _asDouble(stats['totalEarnedCredits']),
       totalRedeemedCredits: _asDouble(stats['totalRedeemedCredits']),
       createdAt: createdAt,
@@ -102,7 +104,7 @@ class MembershipModel extends Membership {
         'id': id,
         'uuid': uuid,
         'membershipNumber': customerCode,
-        'status': isActive ? 'ACTIVE' : 'INACTIVE',
+        'status': membershipStatus,
         'activationDate': startDate.toIso8601String(),
         'expiryDate': endDate.toIso8601String(),
         'createdAt': createdAt.toIso8601String(),
@@ -161,7 +163,9 @@ class MembershipSubscriptionEntitlement {
   final DateTime? endsOn;
   final MembershipAllocation? currentAllocation;
 
-  factory MembershipSubscriptionEntitlement.fromJson(Map<String, dynamic> json) {
+  factory MembershipSubscriptionEntitlement.fromJson(
+    Map<String, dynamic> json,
+  ) {
     final allocation = Map<String, dynamic>.from(
       json['currentAllocation'] as Map? ?? const {},
     );
@@ -180,15 +184,16 @@ class MembershipSubscriptionEntitlement {
   }
 
   Map<String, dynamic> toJson() => {
-        'planName': planName,
-        'status': status,
-        'customerContributionPaise': customerContributionPaise,
-        'shieldBenefitPaise': shieldBenefitPaise,
-        'totalEntitlementPaise': totalEntitlementPaise,
-        'startsOn': startsOn?.toIso8601String(),
-        'endsOn': endsOn?.toIso8601String(),
-        if (currentAllocation != null) 'currentAllocation': currentAllocation!.toJson(),
-      };
+    'planName': planName,
+    'status': status,
+    'customerContributionPaise': customerContributionPaise,
+    'shieldBenefitPaise': shieldBenefitPaise,
+    'totalEntitlementPaise': totalEntitlementPaise,
+    'startsOn': startsOn?.toIso8601String(),
+    'endsOn': endsOn?.toIso8601String(),
+    if (currentAllocation != null)
+      'currentAllocation': currentAllocation!.toJson(),
+  };
 }
 
 class MembershipAllocation {
@@ -206,7 +211,8 @@ class MembershipAllocation {
   final int usedPaise;
   final int remainingPaise;
 
-  factory MembershipAllocation.fromJson(Map<String, dynamic> json) => MembershipAllocation(
+  factory MembershipAllocation.fromJson(Map<String, dynamic> json) =>
+      MembershipAllocation(
         monthStart: _tryParseDate(json['monthStart']),
         allocationPaise: _asInt(json['allocationPaise']),
         carryForwardPaise: _asInt(json['carryForwardPaise']),
@@ -215,12 +221,12 @@ class MembershipAllocation {
       );
 
   Map<String, dynamic> toJson() => {
-        'monthStart': monthStart?.toIso8601String(),
-        'allocationPaise': allocationPaise,
-        'carryForwardPaise': carryForwardPaise,
-        'usedPaise': usedPaise,
-        'remainingPaise': remainingPaise,
-      };
+    'monthStart': monthStart?.toIso8601String(),
+    'allocationPaise': allocationPaise,
+    'carryForwardPaise': carryForwardPaise,
+    'usedPaise': usedPaise,
+    'remainingPaise': remainingPaise,
+  };
 }
 
 int _asInt(dynamic value) => int.tryParse(value?.toString() ?? '') ?? 0;
