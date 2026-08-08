@@ -85,6 +85,15 @@ Not complete:
 - Full commerce, rewards, card lifecycle, referral, family, timeline, booking, and responsive visual QA. Wellness live browser evidence remains pending while the restarted local Flutter server is unavailable.
 - Physical-card history, replacement, lost and damaged card API contracts.
 - Feature extraction for portal-shell-only customer screens.
+
+## Commerce supported-scope closure — 2026-08-08
+
+- `COMPLETE — SUPPORTED FUNCTIONAL SCOPE`: Wellness remains a catalogue-only
+  surface until a backend-owned ordering decision exists. No false cart,
+  checkout, payment, or delivery UI is exposed.
+- My Orders now has authenticated customer-owned list and detail bindings for
+  existing recorded purchases. Cart, customer checkout, payments, fulfilment,
+  cancellation, refund, reorder, and status history remain deferred contracts.
 # Documents and prescriptions closure — 2026-08-08
 
 Classification: `COMPLETE — SUPPORTED FUNCTIONAL SCOPE` pending final aggregate regression run.

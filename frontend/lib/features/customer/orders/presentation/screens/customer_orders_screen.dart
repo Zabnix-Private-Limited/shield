@@ -2,16 +2,17 @@ import 'package:flutter/material.dart';
 
 import '../../../../../app/theme/app_colors.dart';
 import '../../../../../app/theme/app_typography.dart';
-import '../../../../../shared/services/api_service.dart';
 import '../../../../../shared/utils/app_display_formatters.dart';
 import '../../../../../shared/widgets/app_card.dart';
 import '../../../../customer/shared/widgets/error_card.dart';
+import '../../data/customer_orders_repository.dart';
 import '../../domain/customer_order_summary.dart';
 
 class CustomerOrdersScreen extends StatefulWidget {
-  const CustomerOrdersScreen({super.key, this.loadOrders});
+  const CustomerOrdersScreen({super.key, this.loadOrders, this.repository});
 
   final Future<List<CustomerOrderSummary>> Function()? loadOrders;
+  final CustomerOrdersRepository? repository;
 
   @override
   State<CustomerOrdersScreen> createState() => _CustomerOrdersScreenState();
@@ -29,9 +30,27 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
   void _loadOrders() {
     _ordersFuture =
         widget.loadOrders?.call() ??
-        ApiService.getCustomerPurchases(
-          ApiService.requireAuthenticatedCustomerId(),
-        ).then((items) => items.map(CustomerOrderSummary.fromJson).toList());
+        (widget.repository ?? const CustomerOrdersRepository()).listOrders();
+  }
+
+  Future<void> _showOrderDetails(CustomerOrderSummary order) async {
+    if (order.id.isEmpty) return;
+    try {
+      final details =
+          await (widget.repository ?? const CustomerOrdersRepository())
+              .getOrder(order.id);
+      if (!mounted) return;
+      await showModalBottomSheet<void>(
+        context: context,
+        isScrollControlled: true,
+        builder: (context) => _OrderDetailsSheet(order: details),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Order details could not be loaded.')),
+      );
+    }
   }
 
   @override
@@ -65,7 +84,10 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
                   separatorBuilder: (_, __) => const SizedBox(height: 12),
                   itemBuilder: (context, index) {
                     if (index == 0) return const _OrdersIntro();
-                    return _OrderCard(order: orders[index - 1]);
+                    return _OrderCard(
+                      order: orders[index - 1],
+                      onTap: () => _showOrderDetails(orders[index - 1]),
+                    );
                   },
                 ),
         );
@@ -119,9 +141,10 @@ class _OrdersEmptyState extends StatelessWidget {
 }
 
 class _OrderCard extends StatelessWidget {
-  const _OrderCard({required this.order});
+  const _OrderCard({required this.order, required this.onTap});
 
   final CustomerOrderSummary order;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -131,47 +154,125 @@ class _OrderCard extends StatelessWidget {
     final amount = order.payableAmount.isEmpty
         ? 'Amount unavailable'
         : AppDisplayFormatters.formatCurrencyString(order.payableAmount);
-    return AppCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+    return InkWell(
+      onTap: order.id.isEmpty ? null : onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: AppCard(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(
+                  Icons.shopping_bag_outlined,
+                  color: AppColors.warning,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    order.providerName.isEmpty
+                        ? 'Pharmacy purchase'
+                        : order.providerName,
+                    style: AppTypography.body.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+                if (status.isNotEmpty) _StatusPill(status: status),
+              ],
+            ),
+            const SizedBox(height: 14),
+            Text(
+              amount,
+              style: AppTypography.h4.copyWith(color: AppColors.shieldNavy),
+            ),
+            const SizedBox(height: 5),
+            Text(
+              [
+                if (order.invoiceNumber.isNotEmpty)
+                  'Invoice ${order.invoiceNumber}',
+                if (order.itemCount > 0)
+                  '${order.itemCount} item${order.itemCount == 1 ? '' : 's'}',
+                if (order.purchaseDate != null)
+                  AppDisplayFormatters.formatDateOrDateTime(
+                    order.purchaseDate!.toIso8601String(),
+                  ),
+              ].join(' • '),
+              style: AppTypography.small.copyWith(color: AppColors.gray),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _OrderDetailsSheet extends StatelessWidget {
+  const _OrderDetailsSheet({required this.order});
+
+  final CustomerOrderDetails order;
+
+  @override
+  Widget build(BuildContext context) {
+    final amount = order.payableAmount.isEmpty
+        ? 'Amount unavailable'
+        : AppDisplayFormatters.formatCurrencyString(order.payableAmount);
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Icon(Icons.shopping_bag_outlined, color: AppColors.warning),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  order.providerName.isEmpty
-                      ? 'Pharmacy purchase'
-                      : order.providerName,
-                  style: AppTypography.body.copyWith(
-                    fontWeight: FontWeight.w700,
+              Text('Order details', style: AppTypography.h3),
+              const SizedBox(height: 6),
+              Text(
+                order.invoiceNumber.isEmpty
+                    ? 'Recorded pharmacy purchase'
+                    : 'Invoice ${order.invoiceNumber}',
+                style: AppTypography.small.copyWith(color: AppColors.gray),
+              ),
+              const SizedBox(height: 18),
+              Text(amount, style: AppTypography.h4),
+              const SizedBox(height: 6),
+              Text(
+                AppDisplayFormatters.formatStatusLabel(order.orderStatus),
+                style: AppTypography.small.copyWith(
+                  color: AppColors.shieldBlue,
+                ),
+              ),
+              const SizedBox(height: 18),
+              ...order.items.map(
+                (item) => Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(item.name, style: AppTypography.body),
+                      ),
+                      Text(
+                        item.lineTotal.isEmpty
+                            ? '—'
+                            : AppDisplayFormatters.formatCurrencyString(
+                                item.lineTotal,
+                              ),
+                        style: AppTypography.small.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
-              if (status.isNotEmpty) _StatusPill(status: status),
+              if (order.items.isEmpty)
+                Text(
+                  'Item details are unavailable for this recorded purchase.',
+                  style: AppTypography.small,
+                ),
             ],
           ),
-          const SizedBox(height: 14),
-          Text(
-            amount,
-            style: AppTypography.h4.copyWith(color: AppColors.shieldNavy),
-          ),
-          const SizedBox(height: 5),
-          Text(
-            [
-              if (order.invoiceNumber.isNotEmpty)
-                'Invoice ${order.invoiceNumber}',
-              if (order.itemCount > 0)
-                '${order.itemCount} item${order.itemCount == 1 ? '' : 's'}',
-              if (order.purchaseDate != null)
-                AppDisplayFormatters.formatDateOrDateTime(
-                  order.purchaseDate!.toIso8601String(),
-                ),
-            ].join(' • '),
-            style: AppTypography.small.copyWith(color: AppColors.gray),
-          ),
-        ],
+        ),
       ),
     );
   }

@@ -27,8 +27,9 @@ or incorrectly debiting CASH, REWARD_POINTS, or SHIELD_BENEFIT.
 | Checkout / submit order | — | — | No customer checkout DTO, idempotency token, or transactional customer order mutation | Missing contract |
 | Customer payment | — | — | No customer payment method/intent contract. Existing wallet and pricing services are provider/staff purchase infrastructure. | Missing contract |
 | Delivery address snapshot | — | — | `CustomerAddress` exists, but `Purchase` has no address snapshot and no delivery contract | Missing contract |
-| Order history | My Orders | `GET /pharmacy/purchases?customer_id=:id` | Existing `Purchase` / `PurchaseItem` read surface; customer identity is supplied from the authenticated session in Flutter | Existing recorded-purchase history |
-| Order details / timeline | — | — | No customer order-detail DTO or historical status event model | Missing contract |
+| Order history | My Orders | `GET /customer/orders` | Existing `Purchase` / `PurchaseItem` projected from the authenticated customer principal; `CustomerOrdersRepository` | Supported recorded-purchase history |
+| Order details | My Orders detail sheet | `GET /customer/orders/:id` | Customer-safe `Purchase` and item price snapshots; customer ownership is included in the query | Supported current-status detail |
+| Order timeline | — | — | No historical status-event model | Missing contract |
 | Cancel, refund, reorder | — | — | No customer mutation/API/model contract | Missing contract |
 
 ## Financial and security rules

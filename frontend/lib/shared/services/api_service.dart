@@ -602,6 +602,19 @@ class ApiService {
     return purchases;
   }
 
+  static Future<List<Map<String, dynamic>>> getCustomerOrders() async {
+    _requireCustomerId();
+    final response = await _dio.get('/customer/orders');
+    return _readEnvelopeList(
+      response,
+    ).map((item) => Map<String, dynamic>.from(item as Map)).toList();
+  }
+
+  static Future<Map<String, dynamic>> getCustomerOrder(String orderId) async {
+    _requireCustomerId();
+    return _readEnvelope(await _dio.get('/customer/orders/$orderId'));
+  }
+
   static Future<List<NotificationModel>> getNotifications(
     SHIELDRole role,
   ) async {

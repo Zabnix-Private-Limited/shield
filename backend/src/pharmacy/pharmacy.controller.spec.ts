@@ -6,6 +6,8 @@ describe('PharmacyController customer wellness catalogue', () => {
     listCustomerWellnessProducts: jest.fn(),
     getCustomerWellnessProduct: jest.fn(),
     listPurchases: jest.fn(),
+    listCustomerOrders: jest.fn(),
+    getCustomerOrder: jest.fn(),
     createCustomerPrescriptionRequest: jest.fn(),
     listCustomerPrescriptionRequests: jest.fn(),
   };
@@ -104,5 +106,21 @@ describe('PharmacyController customer wellness catalogue', () => {
     expect(
       pharmacyService.listCustomerPrescriptionRequests,
     ).toHaveBeenCalledWith(BigInt(7));
+  });
+
+  it('lists orders using the authenticated customer identity only', async () => {
+    pharmacyService.listCustomerOrders.mockResolvedValue([{ id: '9' }]);
+
+    await expect(
+      controller.listCustomerOrders({ principalType: 'CUSTOMER', customerId: '7' } as any),
+    ).resolves.toMatchObject({ data: [{ id: '9' }] });
+    expect(pharmacyService.listCustomerOrders).toHaveBeenCalledWith(BigInt(7));
+  });
+
+  it('rejects cross-customer order access without a customer session', async () => {
+    await expect(
+      controller.getCustomerOrder('9', { principalType: 'USER' } as any),
+    ).rejects.toThrow('Authenticated customer context is required.');
+    expect(pharmacyService.getCustomerOrder).not.toHaveBeenCalled();
   });
 });

@@ -11063,3 +11063,40 @@ px prisma validate, Nest build, 17 focused Documents/Pharmacy controller tests, 
   - Passed `backend`: `npx prisma validate` and `npm run build`.
   - Passed `frontend`: `flutter analyze lib\\features\\portal\\presentation\\screens\\portal_shell.dart lib\\features\\customer\\orders`.
   - Browser/authenticated UAT and the migration verification remain deferred: database connectivity must be restored first so a successful backup, baseline, approved deploy, and post-deploy constraint/data verification can be completed.
+
+## 57. Customer-safe Orders contract and applied prescription migration — 2026-08-08 14:43:31 IST
+
+### Backend Files
+
+- backend/src/pharmacy/pharmacy.controller.ts and backend/src/pharmacy/pharmacy.service.ts
+  - Added customer-self GET /customer/orders and GET /customer/orders/:id APIs. The backend derives the customer from the session and constrains every lookup by that ID.
+  - Responses expose only safe purchase reference/status/totals/provider label/item snapshots. Billing JSON, payment metadata, costs, margins, audit data, and other-customer data remain excluded.
+- backend/src/pharmacy/pharmacy.controller.spec.ts and backend/src/pharmacy/pharmacy.service.spec.ts
+  - Added ownership, cross-customer, and safe-projection regression coverage.
+
+### Frontend Files
+
+- frontend/lib/features/customer/orders/
+  - Added CustomerOrdersRepository; My Orders now uses the customer-owned order endpoint and supports a safe order-detail sheet while retaining loading, empty, error/retry, and refresh states.
+- frontend/lib/shared/services/api_service.dart
+  - Added authenticated customer Orders bindings.
+
+### Database Migration Verification
+
+- Pre-deploy baseline: 13 customers, 13 memberships, 552 products, 8 purchases.
+- Created verified custom-format backup: backend/output/db-backups/shield-before-20260808-prescription-pharmacy-requests-20260808-143341.dump (332705 bytes).
+- Applied the reviewed additive 20260808_prescription_pharmacy_requests migration through npx prisma migrate deploy.
+- Verified the table, three foreign keys, three supporting indexes, partial duplicate-prevention unique index, and unchanged baseline counts.
+- A later duplicate index command was rejected by PostgreSQL because the index already exists; a direct recheck confirms the live index and partial unique predicate remain intact. No data changed.
+- current_schema.md is user-maintained and was not edited by this slice. No additional database SQL should be run.
+
+### Documentation and Verification
+
+- Added Commerce, Cart, Checkout, and Orders implementation audits; updated the Commerce API matrix.
+- Passed npx prisma validate, npm run build, focused Pharmacy Jest suites (11 tests), targeted Flutter analysis, and customer Orders Flutter tests.
+- Cart, checkout, payment, delivery, cancellation, refund, reorder, and order timeline remain deferred because no customer-safe backend contracts exist. No funds, wallet, reward points, SHIELD Benefit, order, or customer data was manually changed.
+
+## 58. Commerce handoff documentation alignment — 2026-08-08 14:44:11 IST
+
+- Updated CUSTOMER_UI_IMPLEMENTATION_STATUS.md and CUSTOMER_UI_API_BINDINGS.md to identify CustomerOrdersRepository and the authenticated customer-owned Orders endpoints.
+- This is documentation-only; no database SQL, data mutation, payment, or ledger operation was run.

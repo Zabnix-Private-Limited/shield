@@ -433,4 +433,61 @@ export class PharmacyService {
       orderBy: { purchaseDate: 'desc' },
     });
   }
+
+  private customerOrderProjection(purchase: any) {
+    return {
+      id: purchase.id.toString(),
+      invoiceNumber: purchase.invoiceNumber ?? null,
+      orderStatus: purchase.orderStatus,
+      paymentStatus: purchase.paymentStatus ?? null,
+      totalAmount:
+        purchase.totalAmount == null ? null : Number(purchase.totalAmount),
+      payableAmount:
+        purchase.payableAmount == null ? null : Number(purchase.payableAmount),
+      purchaseDate: purchase.purchaseDate ?? null,
+      providerName:
+        purchase.provider?.business?.name ??
+        purchase.provider?.providerName ??
+        null,
+      items: (purchase.purchaseItems ?? []).map((item: any) => ({
+        id: item.id.toString(),
+        productId: item.productId == null ? null : item.productId.toString(),
+        name: item.itemName ?? item.product?.productName ?? 'Product',
+        quantity: item.quantity == null ? null : Number(item.quantity),
+        unitPrice: item.unitPrice == null ? null : Number(item.unitPrice),
+        lineTotal: item.totalPrice == null ? null : Number(item.totalPrice),
+      })),
+    };
+  }
+
+  private customerOrderInclude() {
+    return {
+      provider: { include: { business: true } },
+      purchaseItems: {
+        include: {
+          product: {
+            select: { productName: true },
+          },
+        },
+      },
+    } as const;
+  }
+
+  async listCustomerOrders(customerId: bigint) {
+    const purchases = await this.prisma.purchase.findMany({
+      where: { customerId },
+      include: this.customerOrderInclude(),
+      orderBy: [{ purchaseDate: 'desc' }, { id: 'desc' }],
+    });
+    return purchases.map((purchase) => this.customerOrderProjection(purchase));
+  }
+
+  async getCustomerOrder(customerId: bigint, orderId: bigint) {
+    const purchase = await this.prisma.purchase.findFirst({
+      where: { id: orderId, customerId },
+      include: this.customerOrderInclude(),
+    });
+    if (!purchase) throw new NotFoundException('Order not found.');
+    return this.customerOrderProjection(purchase);
+  }
 }

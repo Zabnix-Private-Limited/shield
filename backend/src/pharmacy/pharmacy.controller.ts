@@ -227,4 +227,34 @@ export class PharmacyController {
       data: purchases,
     };
   }
+
+  @RequirePermissions('customers.view')
+  @Get('customer/orders')
+  async listCustomerOrders(
+    @CurrentPrincipal() principal?: ShieldPrincipal,
+  ) {
+    return {
+      success: true,
+      message: 'Customer order history retrieved.',
+      data: await this.pharmacyService.listCustomerOrders(
+        this.requireCustomer(principal),
+      ),
+    };
+  }
+
+  @RequirePermissions('customers.view')
+  @Get('customer/orders/:id')
+  async getCustomerOrder(
+    @Param('id') id: string,
+    @CurrentPrincipal() principal?: ShieldPrincipal,
+  ) {
+    return {
+      success: true,
+      message: 'Customer order retrieved.',
+      data: await this.pharmacyService.getCustomerOrder(
+        this.requireCustomer(principal),
+        this.parseId(id, 'Order ID'),
+      ),
+    };
+  }
 }
