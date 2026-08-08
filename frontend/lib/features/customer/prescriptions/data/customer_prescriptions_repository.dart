@@ -24,4 +24,7 @@ class CustomerPrescriptionsRepository {
     providerId: providerId,
     customerNotes: customerNotes,
   );
+
+  Future<Map<String, dynamic>?> preferredPharmacy() =>
+      ApiService.getPreferredProvider();
 }

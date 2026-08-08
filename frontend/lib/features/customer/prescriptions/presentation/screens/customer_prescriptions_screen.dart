@@ -100,6 +100,83 @@ class _CustomerPrescriptionsScreenState
     }
   }
 
+  Future<void> _reviewAndSubmit(Document prescription) async {
+    final preferred = _controller.preferredPharmacy;
+    final providerId = _pharmacyProviderId ?? preferred?['id']?.toString();
+    if (providerId == null || providerId.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Select a pharmacy from Services first.'),
+          ),
+        );
+      }
+      return;
+    }
+    final notes = TextEditingController();
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Send prescription to pharmacy'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Prescription: ${prescription.fileName}'),
+            const SizedBox(height: 8),
+            Text(
+              _pharmacyProviderId != null
+                  ? 'Selected pharmacy from Services'
+                  : 'Your preferred pharmacy: ${preferred?['providerName'] ?? preferred?['name'] ?? 'selected pharmacy'}',
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: notes,
+              maxLength: 1000,
+              decoration: const InputDecoration(
+                labelText: 'Optional note',
+                hintText: 'Add a note for the pharmacy',
+              ),
+            ),
+            const Text(
+              'By confirming, you allow this pharmacy to access this prescription for review.',
+              style: AppTypography.small,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Confirm'),
+          ),
+        ],
+      ),
+    );
+    final note = notes.text;
+    notes.dispose();
+    if (confirmed != true) return;
+    final success = await _controller.submitToPharmacy(
+      prescription: prescription,
+      providerId: providerId,
+      customerNotes: note,
+    );
+    if (!mounted) return;
+    final request = _controller.submittedRequest;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          success
+              ? 'Prescription request ${request?['id'] ?? ''} submitted.'
+              : 'Prescription request could not be submitted. Please retry.',
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<List<Document>>(
@@ -200,7 +277,7 @@ class _CustomerPrescriptionsScreenState
                 padding: const EdgeInsets.only(bottom: 12),
                 child: AppCard(
                   child: const Text(
-                    'A pharmacy was selected. Choose or upload a prescription first; pharmacy submission is not available until SHIELD provides a secure request contract.',
+                    'A pharmacy was selected from Services. Choose a prescription below, review the request, then confirm before it is shared.',
                     style: AppTypography.small,
                   ),
                 ),
@@ -234,7 +311,6 @@ class _CustomerPrescriptionsScreenState
                       meta: _formatDate(prescription.uploadedAt),
                       status: _statusText(prescription.status),
                       highlights: [
-                        'Upload source: ${prescription.uploadedBy ?? 'Provider'}',
                         'Current state: ${_statusText(prescription.status)}',
                         if (prescription.mimeType != null)
                           'File type: ${prescription.mimeType}',
@@ -259,6 +335,14 @@ class _CustomerPrescriptionsScreenState
                             color: AppColors.shieldBlue,
                           ),
                         ),
+                        if (_pharmacyProviderId != null ||
+                            _controller.preferredPharmacy != null)
+                          TextButton(
+                            onPressed: _controller.isSubmitting
+                                ? null
+                                : () => _reviewAndSubmit(prescription),
+                            child: const Text('Send'),
+                          ),
                         const SizedBox(width: 12),
                         Expanded(
                           child: Column(

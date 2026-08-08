@@ -13,13 +13,19 @@ class CustomerPrescriptionsController extends ChangeNotifier {
   bool isSubmitting = false;
   Object? error;
   Map<String, dynamic>? submittedRequest;
+  Map<String, dynamic>? preferredPharmacy;
 
   Future<void> load() async {
     isLoading = true;
     error = null;
     notifyListeners();
     try {
-      prescriptions = await _repository.list();
+      final results = await Future.wait([
+        _repository.list(),
+        _repository.preferredPharmacy(),
+      ]);
+      prescriptions = results[0] as List<Document>;
+      preferredPharmacy = results[1] as Map<String, dynamic>?;
     } catch (value) {
       error = value;
     } finally {
