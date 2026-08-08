@@ -11140,3 +11140,11 @@ px prisma validate, Nest build, 17 focused Documents/Pharmacy controller tests, 
 - Frontend: switched the existing customer notification view to the self-scoped endpoint; mark-read mutations retain existing backend ownership enforcement.
 - Database: current_schema.md was read and not modified. No SQL or database mutation was run.
 - Verification: Prisma validation, backend build, focused notification controller tests, and targeted Flutter analysis passed.
+
+
+## 65. Customer-safe activity projection — 2026-08-08 18:03:07 IST
+
+- Backend: /timeline/me now uses a customer projection that keeps only recorded event title description timestamp status category and an allowlisted entity hint. Provider-facing actor patient metadata and raw event payloads are excluded.
+- Existing Activity UI continues to consume actual membership card visit document wallet and notification records without manufacturing lifecycle history.
+- Database: current_schema.md was read and not modified. No SQL or database mutation was run.
+- Verification: Prisma validation, backend build, and focused timeline controller tests passed.

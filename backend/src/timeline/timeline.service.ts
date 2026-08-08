@@ -319,6 +319,34 @@ export class TimelineService {
     return this.sortEvents(events);
   }
 
+  async getCustomerTimeline(customerId: bigint) {
+    const events = await this.getPatientTimeline(customerId);
+    return events.map((event, index) => ({
+      id: `${event.eventType}:${event.timestamp}:${index}`,
+      category: event.category,
+      displayTitle: event.displayTitle,
+      description: event.description,
+      timestamp: event.timestamp,
+      status: event.status,
+      entity: this.customerTimelineEntity(event.clickAction),
+    }));
+  }
+
+  private customerTimelineEntity(action: TimelineEventRecord['clickAction']) {
+    const allowedTargets = new Set([
+      'membership',
+      'wallet-transaction',
+      'document',
+      'notification',
+      'appointment',
+      'prescription',
+      'order',
+    ]);
+    return allowedTargets.has(action.target)
+      ? { target: action.target, id: action.recordId ?? null }
+      : null;
+  }
+
   async getVisitTimeline(appointmentId: bigint) {
     const appointment = await this.prisma.appointment.findUnique({
       where: { id: appointmentId },

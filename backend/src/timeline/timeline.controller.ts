@@ -24,7 +24,7 @@ export class TimelineController {
     return {
       success: true,
       message: 'Customer activity timeline retrieved successfully.',
-      data: await this.timelineService.getPatientTimeline(
+      data: await this.timelineService.getCustomerTimeline(
         BigInt(principal.customerId),
       ),
     };
