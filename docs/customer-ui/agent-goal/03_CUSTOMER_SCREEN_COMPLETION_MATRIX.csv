@@ -119,27 +119,27 @@
 118,Booking & Visits,Cancellation Result,same cancel flow,Show status/refund effect,appointment result,,NO,NO,NO,NO,NO,NO,NO,TODO
 119,Booking & Visits,Online Consultation Detail,/portal/customer/visits/:id/online,Join/instructions where supported,consultation API,,NO,NO,NO,NO,NO,NO,NO,TODO
 120,Booking & Visits,No Available Slots,booking state,Truthful no-slot recovery,availability API,,NO,NO,NO,NO,NO,NO,NO,TODO
-121,Documents & Prescriptions,Documents Landing,/portal/customer/documents,Document overview/categories,documents API,,NO,NO,NO,NO,NO,NO,NO,TODO
-122,Documents & Prescriptions,Document Categories,/portal/customer/documents/categories,Browse supported types,document metadata,,NO,NO,NO,NO,NO,NO,NO,TODO
-123,Documents & Prescriptions,Document List,/portal/customer/documents/list,List owned documents,documents API,,NO,NO,NO,NO,NO,NO,NO,TODO
+121,Documents & Prescriptions,Documents Landing,/portal/customer/documents,Document overview/categories,documents API,Repository/controller-backed customer-safe archive with loading empty retry,YES,YES,YES,YES,NO,NO,YES,COMPLETE
+122,Documents & Prescriptions,Document Categories,/portal/customer/documents,Browse supported types,document metadata,Supported categories are filters on the archive route,YES,YES,YES,YES,NO,NO,YES,COMPLETE
+123,Documents & Prescriptions,Document List,/portal/customer/documents,List owned documents,documents API,Session-bound customer projection only,YES,YES,YES,YES,NO,NO,YES,COMPLETE
 124,Documents & Prescriptions,Document Detail,/portal/customer/documents/:id,Metadata/actions,document API,,NO,NO,NO,NO,NO,NO,NO,TODO
 125,Documents & Prescriptions,Secure Document Viewer,/portal/customer/documents/:id/view,Authorized view,signed access API,,NO,NO,NO,NO,NO,NO,NO,TODO
-126,Documents & Prescriptions,Upload Document,/portal/customer/documents/upload,Upload with metadata,document upload API,,NO,NO,NO,NO,NO,NO,NO,TODO
+126,Documents & Prescriptions,Upload Document,/portal/customer/documents,Upload with metadata,document upload API,PDF JPEG PNG WebP server allowlist and session ownership,YES,YES,YES,YES,NO,NO,YES,COMPLETE
 127,Documents & Prescriptions,Document Upload Progress,same upload flow,Progress/cancel/retry,upload API,,NO,NO,NO,NO,NO,NO,NO,TODO
-128,Documents & Prescriptions,Document Share,/portal/customer/documents/:id/share,Authorized sharing where supported,document access API,,NO,NO,NO,NO,NO,NO,NO,TODO
+128,Documents & Prescriptions,Document Share,,Authorized sharing where supported,document access API,No secure sharing contract and no UI action,NO,NO,NO,NO,NO,NO,NO,DEFERRED SECURITY CONTRACT REQUIRED
 129,Documents & Prescriptions,Document Download,same document surface,Authorized download,signed access API,,NO,NO,NO,NO,NO,NO,NO,TODO
 130,Documents & Prescriptions,Lab Reports,/portal/customer/documents/lab-reports,Lab report list,documents/lab API,,NO,NO,NO,NO,NO,NO,NO,TODO
 131,Documents & Prescriptions,Lab Result Detail,/portal/customer/documents/lab-reports/:id,View result safely,lab report API,,NO,NO,NO,NO,NO,NO,NO,TODO
 132,Documents & Prescriptions,Medical Records,/portal/customer/documents/medical-records,Medical record grouping,documents API,,NO,NO,NO,NO,NO,NO,NO,TODO
 133,Documents & Prescriptions,Vaccination Records,/portal/customer/documents/vaccinations,Vaccination records where supported,documents API,,NO,NO,NO,NO,NO,NO,NO,TODO
-134,Documents & Prescriptions,Prescriptions List,/portal/customer/prescriptions,Owned prescriptions,documents/prescription API,,NO,NO,NO,NO,NO,NO,NO,TODO
+134,Documents & Prescriptions,Prescriptions List,/portal/customer/prescriptions,Owned prescriptions,documents/prescription API,Truthful document status and signed R2 actions,YES,YES,YES,YES,NO,NO,YES,COMPLETE
 135,Documents & Prescriptions,Upload Prescription,/portal/customer/prescriptions/upload,Upload prescription,document upload API,,NO,NO,NO,NO,NO,NO,NO,TODO
 136,Documents & Prescriptions,Prescription Detail,/portal/customer/prescriptions/:id,Metadata/status/actions,prescription API,,NO,NO,NO,NO,NO,NO,NO,TODO
 137,Documents & Prescriptions,Prescription Viewer,/portal/customer/prescriptions/:id/view,Secure view,signed access API,,NO,NO,NO,NO,NO,NO,NO,TODO
 138,Documents & Prescriptions,Prescription Processing,prescription state,Show processing without invented OCR,document status,,NO,NO,NO,NO,NO,NO,NO,TODO
 139,Documents & Prescriptions,Prescription Verified,prescription state,Show verified status,document status,,NO,NO,NO,NO,NO,NO,NO,TODO
 140,Documents & Prescriptions,Prescription Rejected,prescription state,Explain rejection/reupload,document status,,NO,NO,NO,NO,NO,NO,NO,TODO
-141,Documents & Prescriptions,Prescription to Pharmacy,/portal/customer/prescriptions/:id/pharmacy,Send/link where supported,pharmacy request API,,NO,NO,NO,NO,NO,NO,NO,TODO
+141,Documents & Prescriptions,Prescription to Pharmacy,/portal/customer/prescriptions,Send/link where supported,pharmacy request API,Explicit review consent active Pharmacy validation audit and duplicate guard,YES,YES,YES,YES,NO,NO,YES,COMPLETE
 142,Wellness Shop & Orders,Wellness Shop Landing,/portal/customer/shop,Catalogue landing,wellness products API,Authenticated shop route now resolves to the existing Services Wellness catalogue; dedicated presentation extraction remains next.,YES,YES,PARTIAL,YES,NO,NO,IN PROGRESS
 143,Wellness Shop & Orders,Product Search,/portal/customer/shop/search,Search catalogue,product search API,,NO,NO,NO,NO,NO,NO,NO,TODO
 144,Wellness Shop & Orders,Search Suggestions,same search surface,Suggestions/recent searches,search API/local history,,NO,NO,NO,NO,NO,NO,NO,TODO

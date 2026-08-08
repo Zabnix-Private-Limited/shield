@@ -12,7 +12,8 @@ Audited: 2026-08-05. This is a route-to-contract index; `CUSTOMER_UI_AUDIT.md` r
 | `services` | Customer provider discovery | Customer-safe provider categories/list/detail | `?type=&q=&page=&provider=` restores category, search, loaded page, and detail; no coverage/location/favourites/rating claims |
 | `book-appointment` | Customer Booking | Customer-safe provider lookup/list and appointment create | Supports `?provider=&type=` revalidated preselection, preferred datetime request, notes, safe submit/success/error; no slots/quote/coverage |
 | `appointments` | My Visits | Customer appointment list/cancel/reschedule | Extracted customer-self Visits feature with backend status filters, safe detail, cancel/reschedule where supported |
-| `documents`, `prescriptions` | Archive | Customer document APIs and signed downloads | Supported owned documents and prescription upload |
+| `documents` | Documents archive | Customer-safe document list/upload/detail/download | `?type=PRESCRIPTION&provider=` preserves upload context; category/search, safe detail, and signed R2 view/download supported |
+| `prescriptions` | Prescriptions archive | Customer-safe prescription documents and `POST/GET /pharmacy/prescriptions` | Services Pharmacy context or validated preferred Pharmacy; explicit review/consent and duplicate-safe request submission |
 | `orders` | My Orders | `GET /pharmacy/purchases?customer_id=` | Customer-scoped read-only history |
 | `referrals` | Referral & Rewards | `GET /referrals/summary/:customerId` | Customer-scoped status/history |
 | `activity` | Activity Timeline | `GET /timeline/me` | Customer-self read-only timeline |

@@ -10,7 +10,7 @@
 | Customer provider discovery | Loading indicator | No active provider / no query results | Retryable provider load failure | Route retains query, type, loaded page, and detail selection; unsupported provider metadata is absent rather than fabricated |
 | Booking | Provider progress / submission progress | No provider search results | Preselection/submission retry state | No booking submits offline or twice; quote/slot/coverage absent until backend-owned contract exists |
 | Visits | Access/load states | Backend-status-filtered empty state | Retryable list/mutation error | Mutations remain self-scoped; prior list is retained on action failure |
-| Documents/prescriptions | List/category/search/upload and Pharmacy review | Customer archive/filtered empty state | Generic retryable error, upload retry, duplicate-submit guard | No storage URL exposure; explicit consent before pharmacy request |
+| Documents/prescriptions | List/category/search/upload and Pharmacy review | Customer archive/filtered empty state | Generic retryable error, upload retry, duplicate-submit guard | Query-backed Pharmacy context, no storage URL exposure, and explicit consent before pharmacy request |
 | Wellness catalogue | Progress indicator | Catalogue empty state | Retry action | Product data remains API/database-derived |
 | Orders/referrals/activity | Screen loading | Per-feature empty state | Retryable error | No shared demo records in authenticated accounts |
 | Notifications | Inbox loading | No notifications | Retryable mutation/error message | Do not mark read locally on failed API |
