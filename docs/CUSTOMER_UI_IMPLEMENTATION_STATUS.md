@@ -85,3 +85,10 @@ Not complete:
 - Full commerce, rewards, card lifecycle, referral, family, timeline, booking, and responsive visual QA. Wellness live browser evidence remains pending while the restarted local Flutter server is unavailable.
 - Physical-card history, replacement, lost and damaged card API contracts.
 - Feature extraction for portal-shell-only customer screens.
+# Documents and prescriptions closure — 2026-08-08
+
+Classification: `COMPLETE — SUPPORTED FUNCTIONAL SCOPE` pending final aggregate regression run.
+
+- Customer document and prescription archive extraction, safe metadata projection, signed R2 view/download, allowlisted upload, category/search states, and Pharmacy request review/submission are implemented.
+- The additive `prescription_pharmacy_requests` migration source is committed but deliberately not applied to a shared database.
+- Secure share links, local-streaming download, OCR/medicine interpretation, fulfilment, payment, and delivery are explicitly deferred/not supported rather than fabricated.

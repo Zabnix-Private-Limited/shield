@@ -10995,3 +10995,16 @@ Added a customer-self, read-only subscription projection to the existing members
 
 - Changed the Services provider-detail booking action to push the booking URL rather than replace Services history, so browser Back returns to the route-backed provider detail/category/search state.
 - Passed targeted Flutter analysis, Services and Booking tests, and git diff check.
+## 52. Customer Documents, Prescriptions, and Pharmacy linkage — 2026-08-08 22:10:00 IST
+
+### Frontend Files
+- Extracted customer Documents and Prescriptions repositories/controllers with safe archive states, category/search, allowlisted upload, signed URL actions, Pharmacy context preservation, preferred Pharmacy fallback, explicit review/consent, and duplicate-submit protection.
+
+### Backend Files
+- Hardened document customer ownership/projection/upload validation and added additive `prescription_pharmacy_requests` migration/API with active Pharmacy validation, duplicate request protection, and audit records.
+
+### Verification
+- Passed Prisma validation, Nest build, 17 focused backend controller tests, targeted Flutter analysis, and focused Documents/Prescriptions widgets/controllers. Migration source was not applied to any database.
+
+### Remaining Boundaries
+- Secure sharing, local-storage streaming download, OCR/clinical interpretation, fulfilment, payment, and delivery are intentionally not exposed without contracts. Authenticated screenshot QA remains deferred pending workable browser controls.

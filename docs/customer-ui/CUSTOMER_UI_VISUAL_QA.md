@@ -61,3 +61,8 @@ Functional and responsive automated QA passed. Authenticated screenshot QA is **
 
 - Route: `/portal/customer/dashboard`; browser-session capture verified the Operations carousel, active membership card, Cash Wallet header value, and Reward Points header value in the authenticated session.
 - A short local backend interruption was used only to confirm health recovery; the service was restored to `200` on the browser loopback target immediately. No customer data or session state was modified.
+# Documents and prescriptions follow-up — 2026-08-08
+
+- Static widget coverage verifies archive failure, category/search controller state, duplicate upload protection, prescription archive failure, and responsive surrounding customer shell coverage.
+- Authenticated screenshot QA remains `DEFERRED — TOOLING FAILURE` until a controlled local session exposes actionable rendered controls. No screenshot evidence is claimed.
+- Secure sharing, local-storage download streaming, OCR/clinical interpretation, fulfilment, payment, and delivery remain outside the current customer contract.
