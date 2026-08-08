@@ -11015,3 +11015,30 @@ Added a customer-self, read-only subscription projection to the existing members
 
 ### Verification
 - Passed targeted Flutter test and analyzer. This is static/widget evidence; authenticated browser/device QA remains separate.
+
+## 54. Documents and Prescriptions final route-state and browser QA closure — 2026-08-08 22:40:00 IST
+
+### Frontend Files
+- Preserved Pharmacy context from Services into the customer Prescription archive through query-backed navigation. The selected Pharmacy takes precedence; the existing preferred Pharmacy is a validated fallback.
+- Added an explicit Prescription-to-Pharmacy review and consent step with optional customer notes. Submission is never automatic and duplicate concurrent submissions are prevented.
+- Finalized Documents/Prescriptions route inventory, state matrix, completion matrix, implementation audits, API bindings, and visual-QA records.
+
+### Backend Files
+- The committed additive prescription_pharmacy_requests migration/model/API remains intentionally unapplied to any database. The request workflow verifies authenticated customer ownership of the prescription, active PHARMACY provider type, duplicate open request protection, customer-safe response projection, and an append-only audit record.
+
+### Verification
+- Verified 
+px prisma validate, Nest build, 17 focused Documents/Pharmacy controller tests, targeted Flutter analysis, focused Documents/Prescriptions/Services controller and widget tests, and responsive widths 350, 375, 390, 412, 448, 480, 768, and 1200.
+- Commits recorded after the prior log entry: 1bd410d (route/state documentation) and cbe5768 (browser QA limitation).
+
+### Browser QA
+- Bounded local attempt started the approved Flutter Chrome server and reached HTTP 200. Playwright produced an empty accessibility snapshot with no actionable controls, so approved OTP login and authenticated interaction were not attempted by bypassing stable UI controls.
+- The matching local Flutter process was stopped. Authenticated screenshot QA is DEFERRED — TOOLING FAILURE; no screenshot or browser-flow evidence is claimed.
+
+### Remaining Boundaries
+- Secure sharing, authenticated local-storage streaming download, OCR/clinical interpretation, pharmacist approval, fulfilment, payment, delivery, and offline document behavior remain deferred or unsupported by the current contract. No customer, provider, document, prescription, pharmacy-request, wallet, reward, membership, or appointment data was written during QA.
+
+## 55. Log clarification for Documents and Prescriptions verification — 2026-08-08 22:45:00 IST
+
+- Correction to entry 54: verification included Prisma schema validation using npx prisma validate, Nest build, 17 focused Documents/Pharmacy controller tests, targeted Flutter analysis, focused Documents/Prescriptions/Services controller and widget tests, and responsive widths 350, 375, 390, 412, 448, 480, 768, and 1200.
+- This clarification is append-only; no implementation, database, or customer data changed.
