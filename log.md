@@ -11148,3 +11148,9 @@ px prisma validate, Nest build, 17 focused Documents/Pharmacy controller tests, 
 - Existing Activity UI continues to consume actual membership card visit document wallet and notification records without manufacturing lifecycle history.
 - Database: current_schema.md was read and not modified. No SQL or database mutation was run.
 - Verification: Prisma validation, backend build, and focused timeline controller tests passed.
+
+
+## 66. Customer engagement contract matrices — 2026-08-08 18:03:58 IST
+
+- Added Referral, Notification, and Activity API matrices and supported-scope implementation audits based on current_schema.md and verified APIs.
+- Documents distinguish supported customer-safe reads/mutations from deferred sharing, deep links, pagination, and internal commission/timeline behavior. No database SQL is required and current_schema.md was not modified.
