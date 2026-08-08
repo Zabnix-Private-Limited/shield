@@ -1097,6 +1097,11 @@ class ApiService {
     return _readEnvelope(response);
   }
 
+  static Future<Map<String, dynamic>> getCustomerReferralSummary() async {
+    _requireCustomerId();
+    return _readEnvelope(await _dio.get('/referrals/me'));
+  }
+
   static Future<Appointment> createInternalAppointment({
     required String customerId,
     required String providerId,

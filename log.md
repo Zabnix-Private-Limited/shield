@@ -11124,3 +11124,11 @@ px prisma validate, Nest build, 17 focused Documents/Pharmacy controller tests, 
 
 - Added populated My Orders regression coverage at 350, 375, 390, 412, 448, 480, 768, and 1200 logical px with deliberately long provider and invoice values.
 - Passed targeted Flutter analysis and Orders model/screen tests; no database, financial, or customer mutation occurred.
+
+
+## 63. Customer referral self-scoped projection foundation — 2026-08-08 17:56:19 IST
+
+- Backend: added GET /referrals/me, which derives the customer only from the authenticated session and returns referral code, aggregate statuses, and safe reward lifecycle fields without customer IDs, tree data, wallet balances, or internal commission fields.
+- Frontend: the Referral screen now uses this self-scoped endpoint and offers safe clipboard copy for the public referral code.
+- Database: current_schema.md was read and not modified. No SQL or database mutation was run; existing referral_reward_events supports this read-only slice.
+- Verification: Prisma validation, backend build, and targeted Flutter analysis passed.

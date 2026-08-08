@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../../../../app/theme/app_colors.dart';
 import '../../../../../app/theme/app_typography.dart';
@@ -26,9 +27,9 @@ class _CustomerReferralsScreenState extends State<CustomerReferralsScreen> {
   }
 
   void _loadSummary() {
-    _summaryFuture = ApiService.getReferralSummary(
-      ApiService.requireAuthenticatedCustomerId(),
-    ).then(CustomerReferralSummary.fromJson);
+    _summaryFuture = ApiService.getCustomerReferralSummary().then(
+      CustomerReferralSummary.fromJson,
+    );
   }
 
   @override
@@ -112,6 +113,20 @@ class _ReferralCodeCard extends StatelessWidget {
               ),
             ],
           ),
+        ),
+        IconButton(
+          onPressed: code.isEmpty
+              ? null
+              : () async {
+                  await Clipboard.setData(ClipboardData(text: code));
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Referral code copied.')),
+                    );
+                  }
+                },
+          icon: const Icon(Icons.copy_outlined),
+          tooltip: 'Copy referral code',
         ),
       ],
     ),

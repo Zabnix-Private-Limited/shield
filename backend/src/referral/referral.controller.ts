@@ -30,6 +30,21 @@ export class ReferralController {
   }
 
   @RequirePermissions('referrals.view')
+  @Get('me')
+  async customerSummary(@CurrentPrincipal() principal?: ShieldPrincipal) {
+    if (principal?.principalType !== 'CUSTOMER' || !principal.customerId) {
+      throw new ForbiddenException('Authenticated customer context is required.');
+    }
+    return {
+      success: true,
+      message: 'Customer referral summary retrieved successfully.',
+      data: await this.referralService.getCustomerReferralSummary(
+        BigInt(principal.customerId),
+      ),
+    };
+  }
+
+  @RequirePermissions('referrals.view')
   @Get('tree/:customerId')
   async tree(
     @Param('customerId') customerId: string,

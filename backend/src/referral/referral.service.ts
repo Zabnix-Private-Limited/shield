@@ -176,6 +176,42 @@ export class ReferralService {
     };
   }
 
+  async getCustomerReferralSummary(customerId: bigint) {
+    const customer = await this.prisma.customer.findUnique({
+      where: { id: customerId },
+      select: { referralCode: true },
+    });
+    if (!customer) throw new NotFoundException('Customer not found.');
+    const events = await this.prisma.referralRewardEvent.findMany({
+      where: { referrerCustomerId: customerId },
+      select: {
+        status: true,
+        rewardPoints: true,
+        createdAt: true,
+        qualifiedAt: true,
+        rewardedAt: true,
+      },
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+    });
+    const statuses = events.reduce<Record<string, number>>((result, event) => {
+      result[event.status] = (result[event.status] ?? 0) + 1;
+      return result;
+    }, {});
+    return {
+      referralCode: customer.referralCode ?? null,
+      directReferrals: events.length,
+      totalReferrals: events.length,
+      statuses,
+      history: events.map((event) => ({
+        status: event.status,
+        rewardPoints: Number(event.rewardPoints),
+        createdAt: event.createdAt,
+        qualifiedAt: event.qualifiedAt,
+        rewardedAt: event.rewardedAt,
+      })),
+    };
+  }
+
   private async rewardQualifiedReferral(eventId: bigint, performedBy?: bigint) {
     const event = await this.prisma.referralRewardEvent.findUnique({
       where: { id: eventId },
