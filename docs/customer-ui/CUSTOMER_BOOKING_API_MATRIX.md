@@ -20,6 +20,11 @@ Audited: 2026-08-08. `current_schema.md`, `backend/prisma/schema.prisma`, and th
 | Timeline | Visit details | event/notification internals | No customer-safe appointment status-history response | NOT SUPPORTED IN CURRENT CONTRACT |
 | Duplicate/idempotency | Create appointment | `POST /appointments` | No idempotency key/slot locking field in current request/model | DEFERRED - BACKEND CONTRACT REQUIRED; Flutter still prevents repeat taps |
 
+## Implemented customer surfaces
+
+- `/portal/customer/book-appointment?provider=&type=` restores a provider only after a customer-safe authoritative provider read; invalid selections are rejected into the picker.
+- `/portal/customer/appointments` renders the extracted Visits feature using the existing authenticated list/cancel/reschedule APIs.
+
 ## Safety rules
 
 - Customer identity comes from the authenticated principal; client `customer_id` is overwritten by the controller.

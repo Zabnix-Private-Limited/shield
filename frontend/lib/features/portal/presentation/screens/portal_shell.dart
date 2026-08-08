@@ -57,6 +57,7 @@ import '../../../../shared/services/internal_auth_session.dart';
 import '../../../../shared/services/portal_resolver.dart';
 import '../../../customer/services/presentation/screens/customer_services_screen.dart';
 import '../../../customer/booking/presentation/customer_booking_screen.dart';
+import '../../../customer/visits/presentation/customer_visits_screen.dart';
 import '../../../../shared/utils/prescription_file_picker.dart';
 import '../../../../shared/widgets/customer_support_sheet.dart';
 import '../../../../shared/widgets/portal_support.dart';
@@ -627,7 +628,7 @@ class _RoleContent extends StatelessWidget {
     } else if (isCustomerAppointments) {
       content = _CustomerProtectedSection(
         sectionKey: section.key,
-        child: _CustomerAppointmentsView(section: section),
+        child: const CustomerVisitsScreen(),
       );
     } else if (isCustomerNotifications) {
       content = _CustomerNotificationsView(section: section);

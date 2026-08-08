@@ -10963,3 +10963,19 @@ Added a customer-self, read-only subscription projection to the existing members
 ### Verification
 
 - Passed targeted Flutter analysis, booking controller test, and git diff check.
+
+
+## 49. Customer Visits supported extraction - 2026-08-08 19:55:00 IST
+
+### Frontend Files
+
+- Added eatures/customer/visits repository/controller/screen and routed the customer appointments section through it.
+- Supports real customer-owned list, status filters, loading/empty/error/retry, safe visit detail, cancellation confirmation/action, and existing date-request reschedule action.
+
+### Contract Boundary
+
+- No service catalogue, dependent linkage, slots, pricing, SHIELD Benefit coverage, instructions, online links, or status timeline is fabricated because the current appointment contract does not expose them.
+
+### Verification
+
+- Passed targeted Flutter analysis, visits controller filter test, and git diff check.
