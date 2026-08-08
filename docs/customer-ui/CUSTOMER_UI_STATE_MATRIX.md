@@ -12,6 +12,6 @@
 | Visits | Access/load states | Backend-status-filtered empty state | Retryable list/mutation error | Mutations remain self-scoped; prior list is retained on action failure |
 | Documents/prescriptions | List/category/search/upload and Pharmacy review | Customer archive/filtered empty state | Generic retryable error, upload retry, duplicate-submit guard | Query-backed Pharmacy context, no storage URL exposure, and explicit consent before pharmacy request |
 | Wellness catalogue | Progress indicator | Catalogue empty state | Retry action | Product data remains API/database-derived |
-| Orders/referrals/activity | Screen loading | Per-feature empty state | Retryable error | No shared demo records in authenticated accounts |
+| Orders | Screen loading | No recorded orders | Retryable error and detail-load SnackBar | Principal-scoped history; current status only, no fabricated timeline/cancel/refund/reorder |
 | Notifications | Inbox loading | No notifications | Retryable mutation/error message | Do not mark read locally on failed API |
 | Settings/support | N/A for unsupported preferences | Explicit unavailable labels | Generic submit failure | Do not present local-only settings as persisted |

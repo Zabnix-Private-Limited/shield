@@ -57,6 +57,11 @@ Functional and responsive automated QA passed. Authenticated screenshot QA is **
 - Detail verification: a product detail sheet opened from a card and retained the demo disclosure. Back/drop-dismiss returned to the catalogue without signing out. No cart records, orders, balances, memberships, or customer records were changed.
 - Error/retry: verified live without stopping the backend. Chrome blocked only `/customer/wellness-products*` after Services access had loaded; the catalogue displayed its error card and Retry action. The block was removed, Retry restored the selected `Diagnostic devices` results, and no session or customer data changed.
 
+## 2026-08-08 commerce QA checkpoint
+
+- Deterministic Orders model/screen tests and targeted analysis passed.
+- A bounded Playwright run reached the local Flutter page but returned an empty accessibility snapshot; the backend was not listening on port 3000. Authenticated order-history visual QA is `DEFERRED — TOOLING/RUNTIME FAILURE`; no OTP, order, payment, or ledger action was attempted.
+
 ## 2026-08-06 customer home completion
 
 - Route: `/portal/customer/dashboard`; browser-session capture verified the Operations carousel, active membership card, Cash Wallet header value, and Reward Points header value in the authenticated session.

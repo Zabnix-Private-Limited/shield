@@ -14,7 +14,7 @@ Audited: 2026-08-05. This is a route-to-contract index; `CUSTOMER_UI_AUDIT.md` r
 | `appointments` | My Visits | Customer appointment list/cancel/reschedule | Extracted customer-self Visits feature with backend status filters, safe detail, cancel/reschedule where supported |
 | `documents` | Documents archive | Customer-safe document list/upload/detail/download | `?type=PRESCRIPTION&provider=` preserves upload context; category/search, safe detail, and signed R2 view/download supported |
 | `prescriptions` | Prescriptions archive | Customer-safe prescription documents and `POST/GET /pharmacy/prescriptions` | Services Pharmacy context or validated preferred Pharmacy; explicit review/consent and duplicate-safe request submission |
-| `orders` | My Orders | `GET /pharmacy/purchases?customer_id=` | Customer-scoped read-only history |
+| `orders` | My Orders | `GET /customer/orders`; `GET /customer/orders/:id` | Principal-scoped recorded-purchase history and safe item details |
 | `referrals` | Referral & Rewards | `GET /referrals/summary/:customerId` | Customer-scoped status/history |
 | `activity` | Activity Timeline | `GET /timeline/me` | Customer-self read-only timeline |
 | `notifications` | Notifications | Customer notification read APIs | Customer-self read/mutation flow |

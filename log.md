@@ -11106,3 +11106,9 @@ px prisma validate, Nest build, 17 focused Documents/Pharmacy controller tests, 
 
 - Bounded Playwright QA reached http://localhost:53431 and confirmed the local Flutter page responded, but its accessibility snapshot was empty and the backend was not listening on 127.0.0.1:3000.
 - No OTP interaction, order, payment, ledger change, or customer-data mutation was attempted. Authenticated browser QA is DEFERRED — TOOLING/RUNTIME FAILURE; deterministic tests remain the verification evidence.
+
+
+## 60. Commerce documentation source-of-truth alignment — 2026-08-08 14:46:52 IST
+
+- Updated the customer UI audit, route inventory, state matrix, and visual-QA record to replace the old provider-oriented purchase binding with GET /customer/orders and GET /customer/orders/:id.
+- Preserved explicit deferrals for cart, checkout, payment, delivery, tracking, cancellation, refund, and reorder; no database or financial change was made.
