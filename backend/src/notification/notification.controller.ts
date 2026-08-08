@@ -45,6 +45,23 @@ export class NotificationController {
   }
 
   @RequirePermissions('notifications.view')
+  @Get('me')
+  async listCustomerNotifications(
+    @CurrentPrincipal() principal?: ShieldPrincipal,
+  ) {
+    if (principal?.principalType !== 'CUSTOMER' || !principal.customerId) {
+      throw new ForbiddenException('Authenticated customer context is required.');
+    }
+    return {
+      success: true,
+      message: 'Customer notifications retrieved successfully.',
+      data: await this.notificationService.listCustomerNotifications(
+        BigInt(principal.customerId),
+      ),
+    };
+  }
+
+  @RequirePermissions('notifications.view')
   @Get()
   async list(
     @Query('customer_id') customerId?: string,

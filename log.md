@@ -11132,3 +11132,11 @@ px prisma validate, Nest build, 17 focused Documents/Pharmacy controller tests, 
 - Frontend: the Referral screen now uses this self-scoped endpoint and offers safe clipboard copy for the public referral code.
 - Database: current_schema.md was read and not modified. No SQL or database mutation was run; existing referral_reward_events supports this read-only slice.
 - Verification: Prisma validation, backend build, and targeted Flutter analysis passed.
+
+
+## 64. Customer notification safe projection foundation — 2026-08-08 18:00:39 IST
+
+- Backend: added session-derived GET /notifications/me with a safe notification projection and server-calculated unread count. It excludes customer IDs and internal delivery/device data.
+- Frontend: switched the existing customer notification view to the self-scoped endpoint; mark-read mutations retain existing backend ownership enforcement.
+- Database: current_schema.md was read and not modified. No SQL or database mutation was run.
+- Verification: Prisma validation, backend build, focused notification controller tests, and targeted Flutter analysis passed.

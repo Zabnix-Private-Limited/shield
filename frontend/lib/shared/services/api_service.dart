@@ -634,6 +634,11 @@ class ApiService {
       ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
   }
 
+  static Future<Map<String, dynamic>> getCustomerNotificationCenter() async {
+    _requireCustomerId();
+    return _readEnvelope(await _dio.get('/notifications/me'));
+  }
+
   static Future<Customer> getCustomerProfile(String customerId) async {
     final resolvedCustomerId = _requireCustomerId(customerId);
     final payload = await _getCustomerPayload(resolvedCustomerId);

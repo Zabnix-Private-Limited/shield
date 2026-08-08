@@ -55,6 +55,34 @@ export class NotificationService {
     });
   }
 
+  async listCustomerNotifications(customerId: bigint) {
+    const notifications = await this.prisma.notification.findMany({
+      where: { customerId },
+      select: {
+        id: true,
+        title: true,
+        message: true,
+        channel: true,
+        status: true,
+        sentAt: true,
+      },
+      orderBy: [{ sentAt: 'desc' }, { id: 'desc' }],
+    });
+    return {
+      unreadCount: notifications.filter(
+        (notification) => notification.status?.toUpperCase() !== 'READ',
+      ).length,
+      items: notifications.map((notification) => ({
+        id: notification.id.toString(),
+        title: notification.title ?? 'Notification',
+        message: notification.message ?? '',
+        channel: notification.channel ?? 'IN_APP',
+        status: notification.status ?? 'UNREAD',
+        sentAt: notification.sentAt,
+      })),
+    };
+  }
+
   async notificationBelongsToCustomer(
     notificationId: bigint,
     customerId: bigint,

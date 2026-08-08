@@ -6048,7 +6048,15 @@ class _CustomerNotificationsViewState
   }
 
   void _loadNotifications() {
-    _notificationsFuture = ApiService.getNotifications(SHIELDRole.customer);
+    _notificationsFuture = ApiService.getCustomerNotificationCenter().then(
+      (payload) => ((payload['items'] as List?) ?? const <dynamic>[])
+          .whereType<Map>()
+          .map(
+            (item) =>
+                NotificationModel.fromJson(Map<String, dynamic>.from(item)),
+          )
+          .toList(),
+    );
   }
 
   Future<void> _markAllRead(List<NotificationModel> notifications) async {
