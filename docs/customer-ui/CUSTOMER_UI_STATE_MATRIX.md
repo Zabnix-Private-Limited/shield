@@ -8,7 +8,8 @@
 | Wallet/Rewards | Wallet shimmer | No visible transactions | Retryable wallet error | Failed API is not zero balance; benefit stays hidden |
 | Services/providers | Access skeleton and provider progress | No active backend provider | Provider retry panel | Do not substitute a provider or service locally |
 | Customer provider discovery | Loading indicator | No active provider / no query results | Retryable provider load failure | Route retains query, type, loaded page, and detail selection; unsupported provider metadata is absent rather than fabricated |
-| Visits | Access/load states | Upcoming/history empty state | Retryable error card | Mutations remain self-scoped |
+| Booking | Provider progress / submission progress | No provider search results | Preselection/submission retry state | No booking submits offline or twice; quote/slot/coverage absent until backend-owned contract exists |
+| Visits | Access/load states | Backend-status-filtered empty state | Retryable list/mutation error | Mutations remain self-scoped; prior list is retained on action failure |
 | Documents/prescriptions | List/upload progress | Customer archive empty state | Generic retryable error | No storage URL exposure |
 | Wellness catalogue | Progress indicator | Catalogue empty state | Retry action | Product data remains API/database-derived |
 | Orders/referrals/activity | Screen loading | Per-feature empty state | Retryable error | No shared demo records in authenticated accounts |

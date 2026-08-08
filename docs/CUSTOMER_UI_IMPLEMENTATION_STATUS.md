@@ -1,5 +1,9 @@
 # Customer UI Implementation Status
 
+## Booking and Visits closure — 2026-08-08
+
+Classification: **COMPLETE — SUPPORTED FUNCTIONAL SCOPE**. Booking uses a customer-safe provider preselection/query contract, active-provider revalidation, preferred date/time request, notes, real appointment submission, duplicate-submit protection, success, and recoverable failure. Visits is extracted with backend-status filters, safe detail, loading/empty/error/retry, cancellation confirmation/action, and reschedule request. Slots, service selection, dependent appointment linkage, quotes/pricing/coverage, timeline, online links, and offline cache are explicitly unavailable without backend contracts. Static 350–1200px coverage passes; authenticated browser screenshots remain **DEFERRED — TOOLING FAILURE**.
+
 ## Services/provider discovery closure — 2026-08-08
 
 Classification: **COMPLETE — SUPPORTED FUNCTIONAL SCOPE**. The existing Services route now persists its supported category, trimmed search, loaded pagination page, and provider detail in route state. Back and refresh reload the same active directory state; stale search responses and duplicate load-more rows are prevented. Customer provider responses are projection-tested for internal finance, settlement, credential, note, staff, and operational-data leakage. Required-width widget coverage passes from 350 through 1200px. Booking and prescription entry remain their existing flows; booking provider preselection is a documented backend/UI contract gap. Authenticated browser screenshots remain **DEFERRED — TOOLING FAILURE**.

@@ -97,25 +97,25 @@
 096,Services & Providers,Cosmetic/Wellness Services,/portal/customer/wellness-services,Supported wellness services,service/provider API,,NO,NO,NO,NO,NO,NO,NO,TODO
 097,Services & Providers,Nearby Services,/portal/customer/services/nearby,Location-aware list where supported,provider/location API,,NO,NO,NO,NO,NO,NO,NO,TODO
 098,Services & Providers,Favourite Providers,/portal/customer/providers/favourites,Saved providers where supported,favourites API,,NO,NO,NO,NO,NO,NO,NO,TODO
-099,Booking & Visits,Book Visit Start,/portal/customer/book,Start booking,service/provider APIs,,NO,NO,NO,NO,NO,NO,NO,TODO
+099,Booking & Visits,Book Visit Start,/portal/customer/book-appointment?provider=&type=,Start booking,customer provider and appointment APIs,Provider preselection revalidated from customer-safe provider API.,YES,YES,YES,YES,YES,YES,DEFERRED - TOOLING FAILURE,COMPLETE - SUPPORTED FUNCTIONAL SCOPE
 100,Booking & Visits,Select Service,same booking flow,Choose service,service API,,NO,NO,NO,NO,NO,NO,NO,TODO
-101,Booking & Visits,Select Provider,same booking flow,Choose provider/branch,provider API,,NO,NO,NO,NO,NO,NO,NO,TODO
+101,Booking & Visits,Select Provider,same booking flow,Choose provider,customer provider API,Active provider search/change and direct preselection are supported.,YES,YES,YES,YES,YES,YES,DEFERRED - TOOLING FAILURE,COMPLETE - SUPPORTED FUNCTIONAL SCOPE
 102,Booking & Visits,Select Practitioner,same booking flow,Choose doctor/practitioner,practitioner API,,NO,NO,NO,NO,NO,NO,NO,TODO
 103,Booking & Visits,Select Patient,same booking flow,Choose self/family where supported,customer/family API,,NO,NO,NO,NO,NO,NO,NO,TODO
 104,Booking & Visits,Select Visit Type,same booking flow,In-person/online/home where supported,service config,,NO,NO,NO,NO,NO,NO,NO,TODO
-105,Booking & Visits,Select Date,same booking flow,Choose date,availability API,,NO,NO,NO,NO,NO,NO,NO,TODO
+105,Booking & Visits,Select Date,same booking flow,Choose preferred date/time,appointment API,Appointment request has no availability/slot contract.,YES,YES,YES,YES,YES,YES,DEFERRED - TOOLING FAILURE,COMPLETE - SUPPORTED FUNCTIONAL SCOPE
 106,Booking & Visits,Select Time Slot,same booking flow,Choose live slot,slot API,,NO,NO,NO,NO,NO,NO,NO,TODO
-107,Booking & Visits,Booking Notes,same booking flow,Capture allowed notes,appointment DTO,,NO,NO,NO,NO,NO,NO,NO,TODO
+107,Booking & Visits,Booking Notes,same booking flow,Capture optional reason,appointment remarks DTO,Length-bounded customer note submits through existing remarks field.,YES,YES,YES,YES,YES,YES,DEFERRED - TOOLING FAILURE,COMPLETE - SUPPORTED FUNCTIONAL SCOPE
 108,Booking & Visits,Pricing and Coverage,same booking flow,Display backend quote/benefit,pricing evaluate API,,NO,NO,NO,NO,NO,NO,NO,TODO
 109,Booking & Visits,Booking Review,same booking flow,Review details,booking draft/quote,,NO,NO,NO,NO,NO,NO,NO,TODO
 110,Booking & Visits,Booking Confirmation,same booking flow,Confirm mutation,appointment API,,NO,NO,NO,NO,NO,NO,NO,TODO
 111,Booking & Visits,Booking Success,same booking flow,Show persisted appointment,appointment result,,NO,NO,NO,NO,NO,NO,NO,TODO
 112,Booking & Visits,Booking Failure,same booking flow,Retry without duplicates,appointment error,,NO,NO,NO,NO,NO,NO,NO,TODO
-113,Booking & Visits,My Visits,/portal/customer/visits,Upcoming/completed/cancelled,appointment API,,NO,NO,NO,NO,NO,NO,NO,TODO
+113,Booking & Visits,My Visits,/portal/customer/appointments,Upcoming/completed/cancelled,customer appointment APIs,Extracted Visits feature with backend status filters.,YES,YES,YES,YES,YES,YES,DEFERRED - TOOLING FAILURE,COMPLETE - SUPPORTED FUNCTIONAL SCOPE
 114,Booking & Visits,Visit Filters,same visits surface,Filter status/type/date,appointment API,,NO,NO,NO,NO,NO,NO,NO,TODO
 115,Booking & Visits,Visit Detail,/portal/customer/visits/:id,Full appointment information,appointment API,,NO,NO,NO,NO,NO,NO,NO,TODO
 116,Booking & Visits,Reschedule Visit,/portal/customer/visits/:id/reschedule,Select new slot,appointment API,,NO,NO,NO,NO,NO,NO,NO,TODO
-117,Booking & Visits,Cancel Visit,/portal/customer/visits/:id/cancel,Confirm cancellation,appointment API,,NO,NO,NO,NO,NO,NO,NO,TODO
+117,Booking & Visits,Cancel Visit,/portal/customer/appointments,Confirm cancellation,customer appointment cancel API,Customer-owned cancel action requires confirmation and refreshes the list.,YES,YES,YES,YES,YES,YES,DEFERRED - TOOLING FAILURE,COMPLETE - SUPPORTED FUNCTIONAL SCOPE
 118,Booking & Visits,Cancellation Result,same cancel flow,Show status/refund effect,appointment result,,NO,NO,NO,NO,NO,NO,NO,TODO
 119,Booking & Visits,Online Consultation Detail,/portal/customer/visits/:id/online,Join/instructions where supported,consultation API,,NO,NO,NO,NO,NO,NO,NO,TODO
 120,Booking & Visits,No Available Slots,booking state,Truthful no-slot recovery,availability API,,NO,NO,NO,NO,NO,NO,NO,TODO

@@ -13,6 +13,11 @@
 - A later bounded Playwright check confirmed the Flutter app redirects to customer login when unauthenticated. It did not reach an authenticated form/control snapshot, so it is not evidence of Services rendering or responsive completion.
 - Deterministic widget coverage now mounts the Services screen at 350, 375, 390, 412, 448, 480, 768, and 1200 logical pixels with no Flutter layout exception. This is static responsive evidence only; authenticated screenshot QA remains deferred.
 
+## Booking and Visits static responsive checkpoint — 2026-08-08
+
+- Deterministic widget coverage mounts Booking and Visits at 350, 375, 390, 412, 448, 480, 768, and 1200 logical pixels, including a long provider name, with no Flutter layout exception.
+- This is not authenticated screenshot evidence. Browser QA remains separately deferred until the approved local login controls are reachable.
+
 ## Membership/Card QA closure — 2026-08-06
 
 Functional and responsive automated QA passed. Authenticated screenshot QA is **DEFERRED — TOOLING FAILURE** because the existing Chrome-control integration timed out and Playwright CLI crashed with a native Windows assertion. No screenshot evidence was fabricated. Manual authenticated screenshot review remains a release-QA follow-up.

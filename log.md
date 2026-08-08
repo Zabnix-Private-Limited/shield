@@ -10979,3 +10979,13 @@ Added a customer-self, read-only subscription projection to the existing members
 ### Verification
 
 - Passed targeted Flutter analysis, visits controller filter test, and git diff check.
+
+
+## 50. Customer Booking and Visits regression closure - 2026-08-08 20:15:00 IST
+
+### Verification
+
+- Passed Prisma schema validation and backend Nest build.
+- Passed focused appointment controller tests including customer-safe projection of provider/customer fields.
+- Passed combined Flutter analysis and Booking, Visits, Services, route-restoration, and 350-1200px responsive widget tests.
+- Authenticated browser screenshot QA remains deferred because the prior bounded localhost browser session could reach only the unauthenticated login redirect; no booking was created or customer data changed.
