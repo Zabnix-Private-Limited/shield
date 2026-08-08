@@ -11180,4 +11180,7 @@ px prisma validate, Nest build, 17 focused Documents/Pharmacy controller tests, 
 
 - Added a Riverpod repository seam for the existing CustomerAccountScreen so tests exercise its real populated address, dependent, contact and pharmacy tabs without network calls.
 - Added customer_account_responsive_test.dart covering 350, 375, 390, 412, 448, 480, 768 and 1200 pixel widths plus tab navigation. The test confirms no Flutter layout exception with long customer data.
-- Verified Dart format, targeted Flutter test (2 passed) and targeted Flutter analyze. current_schema.md and the database were not modified.
+- Verified Dart format, targeted Flutter test (2 passed) and targeted Flutter analyze. current_schema.md and the database were not modified.## 12. Customer session ownership regression coverage - 2026-08-08 18:37:05 IST
+
+- Added focused AuthService tests proving customer session lists query only the authenticated owner, session/device projections exclude refresh hashes and user-agent data, a foreign session cannot be revoked, and bulk other-device revocation excludes the current session.
+- Verified focused customer and auth Jest suites (17 tests) plus Nest build. No database command was run and current_schema.md was not modified.
