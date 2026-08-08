@@ -11118,3 +11118,9 @@ px prisma validate, Nest build, 17 focused Documents/Pharmacy controller tests, 
 
 - Updated the customer screen completion matrix to reflect the current customer Wellness catalogue and principal-scoped Orders list/detail contracts.
 - Cart, checkout, payment, delivery, tracking, cancellation, refund, reorder, and unsupported Order filters remain explicitly deferred rather than marked complete.
+
+
+## 62. Orders responsive regression coverage — 2026-08-08 14:50:21 IST
+
+- Added populated My Orders regression coverage at 350, 375, 390, 412, 448, 480, 768, and 1200 logical px with deliberately long provider and invoice values.
+- Passed targeted Flutter analysis and Orders model/screen tests; no database, financial, or customer mutation occurred.

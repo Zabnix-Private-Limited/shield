@@ -22,4 +22,6 @@ or a fabricated lifecycle timeline.
 
 Focused controller/service tests cover session-derived ownership, denied access
 without a customer session, cross-customer not-found behaviour, and projection
-exclusion. Flutter analysis and the existing order model/screen tests pass.
+exclusion. Flutter analysis and order model/screen tests pass, including
+populated cards with long provider and invoice values at 350, 375, 390, 412,
+448, 480, 768, and 1200 logical px.
