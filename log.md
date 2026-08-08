@@ -11100,3 +11100,9 @@ px prisma validate, Nest build, 17 focused Documents/Pharmacy controller tests, 
 
 - Updated CUSTOMER_UI_IMPLEMENTATION_STATUS.md and CUSTOMER_UI_API_BINDINGS.md to identify CustomerOrdersRepository and the authenticated customer-owned Orders endpoints.
 - This is documentation-only; no database SQL, data mutation, payment, or ledger operation was run.
+
+
+## 59. Commerce browser QA limitation — 2026-08-08 14:45:58 IST
+
+- Bounded Playwright QA reached http://localhost:53431 and confirmed the local Flutter page responded, but its accessibility snapshot was empty and the backend was not listening on 127.0.0.1:3000.
+- No OTP interaction, order, payment, ledger change, or customer-data mutation was attempted. Authenticated browser QA is DEFERRED — TOOLING/RUNTIME FAILURE; deterministic tests remain the verification evidence.
