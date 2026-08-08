@@ -258,3 +258,4 @@
 257,Global States,Update Required,global state,Minimum-version enforcement where supported,app config,,NO,NO,NO,NO,NO,NO,NO,TODO
 258,Global States,Not Found,global state,Unknown route/resource,router/API 404,,NO,NO,NO,NO,NO,NO,NO,TODO
 259,Global States,Account Suspended,global state,Restricted customer,customer status,,NO,NO,NO,NO,NO,NO,NO,TODO
+260,Account,Profile Family and Security,/portal/customer/profile + account + settings,"Customer-owned profile, address book, dependents, contacts, pharmacy preference and sessions",GET/PATCH /customer/profile + customer account APIs + auth sessions,"Primary phone is read-only login identity; no image, deletion, export, dependent booking or arbitrary completion percentage",YES,YES,YES,YES,YES,NO,COMPLETE — SUPPORTED FUNCTIONAL SCOPE
