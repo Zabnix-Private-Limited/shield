@@ -10926,3 +10926,9 @@ Added a customer-self, read-only subscription projection to the existing members
 - Prisma validation passed against backend/prisma/schema.prisma.
 - Backend npm run build passed, including Prisma client generation and Nest TypeScript compilation.
 - Final worktree check was clean; no database schema apply, migration, seed, customer, provider, appointment, or prescription write was run.
+
+
+## 46. Customer Services route restoration regression test - 2026-08-08 18:45:00 IST
+
+- Added focused controller coverage proving route restoration reloads selected type, trimmed search query, and each recorded pagination page in order.
+- Passed targeted Flutter analysis and combined Services screen/controller tests.
