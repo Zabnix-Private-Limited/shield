@@ -301,7 +301,7 @@ class _CustomerServicesScreenState extends State<CustomerServicesScreen> {
       if (providerId != null && providerId.isNotEmpty) 'provider': providerId,
       if (type.trim().isNotEmpty) 'type': type.trim().toUpperCase(),
     };
-    context.go(
+    context.push(
       Uri(
         path: '/portal/customer/book-appointment',
         queryParameters: query,

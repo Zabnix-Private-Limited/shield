@@ -10989,3 +10989,9 @@ Added a customer-self, read-only subscription projection to the existing members
 - Passed focused appointment controller tests including customer-safe projection of provider/customer fields.
 - Passed combined Flutter analysis and Booking, Visits, Services, route-restoration, and 350-1200px responsive widget tests.
 - Authenticated browser screenshot QA remains deferred because the prior bounded localhost browser session could reach only the unauthenticated login redirect; no booking was created or customer data changed.
+
+
+## 51. Services-to-Booking browser-back preservation - 2026-08-08 20:25:00 IST
+
+- Changed the Services provider-detail booking action to push the booking URL rather than replace Services history, so browser Back returns to the route-backed provider detail/category/search state.
+- Passed targeted Flutter analysis, Services and Booking tests, and git diff check.
