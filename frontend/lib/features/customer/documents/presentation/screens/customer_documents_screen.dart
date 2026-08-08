@@ -1,20 +1,21 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../../../app/theme/app_colors.dart';
 import '../../../../../app/theme/app_typography.dart';
 import '../../../../../shared/models/document.dart';
-import '../../../../../shared/services/api_service.dart';
 import '../../../../../shared/services/platform_file_actions.dart';
 import '../../../../../shared/utils/prescription_file_picker.dart';
 import '../../../../../shared/widgets/app_card.dart';
 import '../../../../../shared/widgets/app_skeleton.dart';
 import '../../../../../shared/widgets/portal_support.dart';
 import '../../../shared/widgets/error_card.dart';
+import '../customer_documents_controller.dart';
 
 class CustomerDocumentsScreen extends StatefulWidget {
-  const CustomerDocumentsScreen({super.key, this.loadDocuments});
+  const CustomerDocumentsScreen({super.key, this.controller});
 
-  final Future<List<Document>> Function()? loadDocuments;
+  final CustomerDocumentsController? controller;
 
   @override
   State<CustomerDocumentsScreen> createState() =>
@@ -22,29 +23,53 @@ class CustomerDocumentsScreen extends StatefulWidget {
 }
 
 class _CustomerDocumentsScreenState extends State<CustomerDocumentsScreen> {
+  late final CustomerDocumentsController _controller;
+  late final bool _ownsController;
+  final _search = TextEditingController();
   late Future<List<Document>> _documentsFuture;
   var _isUploading = false;
+  String? _forcedDocumentType;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    try {
+      _forcedDocumentType = GoRouterState.of(
+        context,
+      ).uri.queryParameters['type'];
+    } catch (_) {
+      _forcedDocumentType = null;
+    }
+  }
 
   @override
   void initState() {
     super.initState();
+    _ownsController = widget.controller == null;
+    _controller = widget.controller ?? CustomerDocumentsController();
     _loadDocuments();
+  }
+
+  @override
+  void dispose() {
+    _search.dispose();
+    if (_ownsController) _controller.dispose();
+    super.dispose();
   }
 
   void _loadDocuments() {
     setState(() {
-      _documentsFuture =
-          widget.loadDocuments?.call() ??
-          ApiService.getCustomerDocumentsStrict(
-            ApiService.requireAuthenticatedCustomerId(),
-          );
+      _documentsFuture = _controller.load().then((_) {
+        if (_controller.error != null) throw _controller.error!;
+        return _controller.documents;
+      });
     });
   }
 
   Future<void> _openDocument(Document document) async {
     final messenger = ScaffoldMessenger.of(context);
     try {
-      final url = await ApiService.getDocumentDownloadUrl(document.id);
+      final url = await _controller.viewerUrl(document);
       if (url.trim().isEmpty || !await openPlatformUrl(url)) {
         throw StateError('Document link unavailable');
       }
@@ -62,7 +87,7 @@ class _CustomerDocumentsScreenState extends State<CustomerDocumentsScreen> {
   Future<void> _downloadDocument(Document document) async {
     final messenger = ScaffoldMessenger.of(context);
     try {
-      final url = await ApiService.getDocumentDownloadUrl(document.id);
+      final url = await _controller.viewerUrl(document);
       if (url.trim().isEmpty ||
           !await downloadPlatformUrl(url, fileName: document.fileName)) {
         throw StateError('Document link unavailable');
@@ -78,24 +103,27 @@ class _CustomerDocumentsScreenState extends State<CustomerDocumentsScreen> {
     }
   }
 
-  Future<void> _uploadPrescription() async {
+  Future<void> _uploadDocument(DocumentType type) async {
     final picked = await pickPrescriptionFile();
     if (!mounted || picked == null) return;
 
     setState(() => _isUploading = true);
     try {
-      await ApiService.uploadCustomerDocument(
+      final uploaded = await _controller.upload(
         fileName: picked.name.isEmpty ? 'prescription.pdf' : picked.name,
-        documentType: 'PRESCRIPTION',
+        documentType: _documentTypeCode(type),
         fileBytes: picked.bytes,
         mimeType: picked.mimeType ?? 'application/pdf',
         fileSize: picked.size <= 0 ? 1024 : picked.size,
       );
       if (!mounted) return;
+      if (uploaded == null) throw StateError('Upload could not be completed.');
       _loadDocuments();
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Prescription uploaded and saved to your records.'),
+        SnackBar(
+          content: Text(
+            '${type.typeLabel} uploaded and saved to your records.',
+          ),
         ),
       );
     } catch (_) {
@@ -111,6 +139,31 @@ class _CustomerDocumentsScreenState extends State<CustomerDocumentsScreen> {
     } finally {
       if (mounted) setState(() => _isUploading = false);
     }
+  }
+
+  Future<void> _chooseUploadType() async {
+    if (_forcedDocumentType?.trim().toUpperCase() == 'PRESCRIPTION') {
+      await _uploadDocument(DocumentType.prescription);
+      return;
+    }
+    final type = await showModalBottomSheet<DocumentType>(
+      context: context,
+      builder: (context) => SafeArea(
+        child: ListView(
+          shrinkWrap: true,
+          children: DocumentType.values
+              .map(
+                (type) => ListTile(
+                  leading: Icon(_typeIcon(type)),
+                  title: Text(type.typeLabel),
+                  onTap: () => Navigator.pop(context, type),
+                ),
+              )
+              .toList(),
+        ),
+      ),
+    );
+    if (type != null) await _uploadDocument(type);
   }
 
   @override
@@ -135,6 +188,7 @@ class _CustomerDocumentsScreenState extends State<CustomerDocumentsScreen> {
         }
 
         final documents = snapshot.data ?? const <Document>[];
+        final visible = _controller.visible;
         final approvedCount = documents
             .where((document) => document.status == DocumentStatus.approved)
             .length;
@@ -168,7 +222,7 @@ class _CustomerDocumentsScreenState extends State<CustomerDocumentsScreen> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Prescriptions, reports, and invoices uploaded through SHIELD appear here with their latest processing status.',
+                    'Prescriptions, reports, and invoices uploaded through SHIELD appear here with their real archive status.',
                     style: AppTypography.small.copyWith(
                       color: AppColors.white.withValues(alpha: 0.82),
                     ),
@@ -186,15 +240,11 @@ class _CustomerDocumentsScreenState extends State<CustomerDocumentsScreen> {
                         label: '$processingCount processing',
                         icon: Icons.timelapse_outlined,
                       ),
-                      _ArchiveChip(
-                        label: 'Backend synced',
-                        icon: Icons.cloud_done_outlined,
-                      ),
                     ],
                   ),
                   const SizedBox(height: 12),
                   OutlinedButton.icon(
-                    onPressed: _isUploading ? null : _uploadPrescription,
+                    onPressed: _isUploading ? null : _chooseUploadType,
                     icon: _isUploading
                         ? const SizedBox(
                             width: 16,
@@ -206,11 +256,61 @@ class _CustomerDocumentsScreenState extends State<CustomerDocumentsScreen> {
                           )
                         : const Icon(Icons.upload_file_outlined),
                     label: Text(
-                      _isUploading ? 'Uploading…' : 'Upload prescription',
+                      _isUploading ? 'Uploading…' : 'Upload document',
                     ),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: AppColors.white,
                       side: const BorderSide(color: AppColors.white),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 18),
+            TextField(
+              controller: _search,
+              onChanged: (value) {
+                _controller.setQuery(value);
+                setState(() {});
+              },
+              decoration: InputDecoration(
+                hintText: 'Search documents',
+                prefixIcon: const Icon(Icons.search),
+                suffixIcon: _search.text.isEmpty
+                    ? null
+                    : IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () {
+                          _search.clear();
+                          _controller.setQuery('');
+                          setState(() {});
+                        },
+                      ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  ChoiceChip(
+                    label: const Text('All'),
+                    selected: _controller.selectedType == null,
+                    onSelected: (_) =>
+                        setState(() => _controller.setType(null)),
+                  ),
+                  ...DocumentType.values.map(
+                    (type) => Padding(
+                      padding: const EdgeInsets.only(left: 8),
+                      child: ChoiceChip(
+                        label: Text(type.typeLabel),
+                        selected: _controller.selectedType == type,
+                        onSelected: (_) => setState(
+                          () => _controller.setType(
+                            _controller.selectedType == type ? null : type,
+                          ),
+                        ),
+                      ),
                     ),
                   ),
                 ],
@@ -231,10 +331,17 @@ class _CustomerDocumentsScreenState extends State<CustomerDocumentsScreen> {
                   ],
                 ),
               )
+            else if (visible.isEmpty)
+              AppCard(
+                child: const Text(
+                  'No documents match the selected filter.',
+                  style: AppTypography.body,
+                ),
+              )
             else ...[
               Text('Archive', style: AppTypography.h4),
               const SizedBox(height: 12),
-              ...documents.map(
+              ...visible.map(
                 (document) => Padding(
                   padding: const EdgeInsets.only(bottom: 10),
                   child: AppCard(
@@ -247,13 +354,9 @@ class _CustomerDocumentsScreenState extends State<CustomerDocumentsScreen> {
                           '${document.typeLabel} • ${_formatDate(document.uploadedAt)}',
                       status: _statusText(document.status),
                       highlights: [
-                        'Uploaded by: ${document.uploadedBy ?? 'System'}',
-                        if (document.processedAt != null)
-                          'Processed on ${_formatDate(document.processedAt!)}',
-                        if ((document.extractionPreview ?? '')
-                            .trim()
-                            .isNotEmpty)
-                          'OCR preview: ${document.extractionPreview}',
+                        'File type: ${document.mimeType ?? 'Unavailable'}',
+                        if (document.fileSize != null)
+                          'Size: ${document.fileSize} bytes',
                       ],
                       actionText: 'Open secure document',
                       onAction: () => _openDocument(document),
@@ -333,6 +436,14 @@ class _CustomerDocumentsScreenState extends State<CustomerDocumentsScreen> {
 
   String _formatDate(DateTime value) =>
       '${value.day}/${value.month}/${value.year}';
+
+  String _documentTypeCode(DocumentType type) => switch (type) {
+    DocumentType.prescription => 'PRESCRIPTION',
+    DocumentType.labReport => 'LAB_REPORT',
+    DocumentType.dentalRecord => 'DENTAL_RECORD',
+    DocumentType.invoice => 'INVOICE',
+    DocumentType.other => 'OTHER',
+  };
 
   IconData _typeIcon(DocumentType? type) {
     switch (type) {

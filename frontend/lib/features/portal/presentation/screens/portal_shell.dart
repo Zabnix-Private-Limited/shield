@@ -1907,69 +1907,7 @@ String _customerRegionLabel(Customer? customer) {
 }
 
 void _showPrescriptionUploadPicker(BuildContext context) {
-  showModalBottomSheet<void>(
-    context: context,
-    backgroundColor: AppColors.white,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-    ),
-    builder: (context) {
-      return SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 20, 20, 28),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Upload prescription', style: AppTypography.h4),
-              const SizedBox(height: 8),
-              Text(
-                'Choose how you want to add the prescription file.',
-                style: AppTypography.small.copyWith(color: AppColors.gray),
-              ),
-              const SizedBox(height: 18),
-              _BottomActionTile(
-                icon: Icons.picture_as_pdf_outlined,
-                title: 'Choose PDF',
-                subtitle: 'Upload a stored doctor prescription PDF',
-                onTap: () {
-                  Navigator.pop(context);
-                  showPortalSnackBar(
-                    context,
-                    'PDF picker opened in frontend flow.',
-                  );
-                },
-              ),
-              _BottomActionTile(
-                icon: Icons.photo_library_outlined,
-                title: 'Choose image',
-                subtitle: 'Pick a prescription image from the device',
-                onTap: () {
-                  Navigator.pop(context);
-                  showPortalSnackBar(
-                    context,
-                    'Image picker opened in frontend flow.',
-                  );
-                },
-              ),
-              _BottomActionTile(
-                icon: Icons.camera_alt_outlined,
-                title: 'Scan now',
-                subtitle: 'Capture a prescription photo using the camera',
-                onTap: () {
-                  Navigator.pop(context);
-                  showPortalSnackBar(
-                    context,
-                    'Camera capture opened in frontend flow.',
-                  );
-                },
-              ),
-            ],
-          ),
-        ),
-      );
-    },
-  );
+  context.go('/portal/customer/prescriptions');
 }
 
 void _showSharePdfSheet(BuildContext context) {
@@ -6839,71 +6777,6 @@ class _ConsultationModeOption extends StatelessWidget {
           const SizedBox(width: 2),
           Text(label, style: AppTypography.small),
         ],
-      ),
-    );
-  }
-}
-
-class _BottomActionTile extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final VoidCallback onTap;
-
-  const _BottomActionTile({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(18),
-        child: Ink(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: AppColors.lightGray,
-            borderRadius: BorderRadius.circular(18),
-          ),
-          child: Row(
-            children: [
-              Container(
-                width: 42,
-                height: 42,
-                decoration: BoxDecoration(
-                  color: AppColors.white,
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: Icon(icon, color: AppColors.shieldBlue, size: 20),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: AppTypography.body.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const SizedBox(height: 3),
-                    Text(
-                      subtitle,
-                      style: AppTypography.tiny.copyWith(color: AppColors.gray),
-                    ),
-                  ],
-                ),
-              ),
-              const Icon(Icons.chevron_right_rounded, color: AppColors.gray),
-            ],
-          ),
-        ),
       ),
     );
   }

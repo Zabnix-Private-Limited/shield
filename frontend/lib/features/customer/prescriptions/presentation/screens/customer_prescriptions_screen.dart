@@ -4,17 +4,17 @@ import 'package:go_router/go_router.dart';
 import '../../../../../app/theme/app_colors.dart';
 import '../../../../../app/theme/app_typography.dart';
 import '../../../../../shared/models/document.dart';
-import '../../../../../shared/services/api_service.dart';
 import '../../../../../shared/services/platform_file_actions.dart';
 import '../../../../../shared/widgets/app_card.dart';
 import '../../../../../shared/widgets/app_skeleton.dart';
 import '../../../../../shared/widgets/portal_support.dart';
 import '../../../shared/widgets/error_card.dart';
+import '../customer_prescriptions_controller.dart';
 
 class CustomerPrescriptionsScreen extends StatefulWidget {
-  const CustomerPrescriptionsScreen({super.key, this.loadDocuments});
+  const CustomerPrescriptionsScreen({super.key, this.controller});
 
-  final Future<List<Document>> Function()? loadDocuments;
+  final CustomerPrescriptionsController? controller;
 
   @override
   State<CustomerPrescriptionsScreen> createState() =>
@@ -23,34 +23,50 @@ class CustomerPrescriptionsScreen extends StatefulWidget {
 
 class _CustomerPrescriptionsScreenState
     extends State<CustomerPrescriptionsScreen> {
+  late final CustomerPrescriptionsController _controller;
+  late final bool _ownsController;
   late Future<List<Document>> _prescriptionsFuture;
+  String? _pharmacyProviderId;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    try {
+      _pharmacyProviderId = GoRouterState.of(
+        context,
+      ).uri.queryParameters['provider'];
+    } catch (_) {
+      _pharmacyProviderId = null;
+    }
+  }
 
   @override
   void initState() {
     super.initState();
+    _ownsController = widget.controller == null;
+    _controller = widget.controller ?? CustomerPrescriptionsController();
     _loadPrescriptions();
+  }
+
+  @override
+  void dispose() {
+    if (_ownsController) _controller.dispose();
+    super.dispose();
   }
 
   void _loadPrescriptions() {
     setState(() {
-      _prescriptionsFuture =
-          (widget.loadDocuments?.call() ??
-                  ApiService.getCustomerDocumentsStrict(
-                    ApiService.requireAuthenticatedCustomerId(),
-                  ))
-              .then(
-                (documents) => documents
-                  ..retainWhere(
-                    (document) => document.type == DocumentType.prescription,
-                  ),
-              );
+      _prescriptionsFuture = _controller.load().then((_) {
+        if (_controller.error != null) throw _controller.error!;
+        return _controller.prescriptions;
+      });
     });
   }
 
   Future<void> _openPrescription(Document prescription) async {
     final messenger = ScaffoldMessenger.of(context);
     try {
-      final url = await ApiService.getDocumentDownloadUrl(prescription.id);
+      final url = await _controller.viewerUrl(prescription);
       if (url.trim().isEmpty || !await openPlatformUrl(url)) {
         throw StateError('Prescription link unavailable');
       }
@@ -68,7 +84,7 @@ class _CustomerPrescriptionsScreenState
   Future<void> _downloadPrescription(Document prescription) async {
     final messenger = ScaffoldMessenger.of(context);
     try {
-      final url = await ApiService.getDocumentDownloadUrl(prescription.id);
+      final url = await _controller.viewerUrl(prescription);
       if (url.trim().isEmpty ||
           !await downloadPlatformUrl(url, fileName: prescription.fileName)) {
         throw StateError('Prescription link unavailable');
@@ -136,7 +152,7 @@ class _CustomerPrescriptionsScreenState
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Uploaded and provider-linked prescriptions stay visible here with OCR and review status when available.',
+                    'Uploaded prescriptions remain in your private SHIELD archive with their real status.',
                     style: AppTypography.small.copyWith(
                       color: AppColors.white.withValues(alpha: 0.82),
                     ),
@@ -158,7 +174,16 @@ class _CustomerPrescriptionsScreenState
                   ),
                   const SizedBox(height: 12),
                   OutlinedButton.icon(
-                    onPressed: () => context.go('/portal/customer/documents'),
+                    onPressed: () => context.push(
+                      Uri(
+                        path: '/portal/customer/documents',
+                        queryParameters: {
+                          'type': 'PRESCRIPTION',
+                          if (_pharmacyProviderId != null)
+                            'provider': _pharmacyProviderId!,
+                        },
+                      ).toString(),
+                    ),
                     icon: const Icon(Icons.upload_file_outlined),
                     label: const Text('Upload prescription'),
                     style: OutlinedButton.styleFrom(
@@ -170,6 +195,16 @@ class _CustomerPrescriptionsScreenState
               ),
             ),
             const SizedBox(height: 18),
+            if (_pharmacyProviderId != null)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: AppCard(
+                  child: const Text(
+                    'A pharmacy was selected. Choose or upload a prescription first; pharmacy submission is not available until SHIELD provides a secure request contract.',
+                    style: AppTypography.small,
+                  ),
+                ),
+              ),
             if (prescriptions.isEmpty)
               AppCard(
                 child: const Column(
@@ -201,10 +236,8 @@ class _CustomerPrescriptionsScreenState
                       highlights: [
                         'Upload source: ${prescription.uploadedBy ?? 'Provider'}',
                         'Current state: ${_statusText(prescription.status)}',
-                        if ((prescription.extractionPreview ?? '')
-                            .trim()
-                            .isNotEmpty)
-                          'OCR preview: ${prescription.extractionPreview}',
+                        if (prescription.mimeType != null)
+                          'File type: ${prescription.mimeType}',
                       ],
                       actionText: 'Open secure prescription',
                       onAction: () => _openPrescription(prescription),

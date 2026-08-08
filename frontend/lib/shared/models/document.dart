@@ -12,6 +12,16 @@ enum DocumentStatus {
   rejected,
 }
 
+extension DocumentTypeCustomerLabel on DocumentType {
+  String get typeLabel => switch (this) {
+    DocumentType.prescription => 'Prescription',
+    DocumentType.labReport => 'Lab report',
+    DocumentType.dentalRecord => 'Dental record',
+    DocumentType.invoice => 'Invoice',
+    DocumentType.other => 'Other document',
+  };
+}
+
 class Document extends Equatable {
   final String id;
   final String uuid;
@@ -142,13 +152,7 @@ class Document extends Equatable {
     );
   }
 
-  String get typeLabel => switch (type) {
-    DocumentType.prescription => 'Prescription',
-    DocumentType.labReport => 'Lab report',
-    DocumentType.dentalRecord => 'Dental record',
-    DocumentType.invoice => 'Invoice',
-    DocumentType.other || null => 'Document',
-  };
+  String get typeLabel => type?.typeLabel ?? 'Document';
 
   String get statusLabel => switch (status) {
     DocumentStatus.uploaded => 'Uploaded',

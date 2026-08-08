@@ -1,6 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shield/shared/models/document.dart';
+import 'package:shield/features/customer/prescriptions/data/customer_prescriptions_repository.dart';
+import 'package:shield/features/customer/prescriptions/presentation/customer_prescriptions_controller.dart';
 import 'package:shield/features/customer/prescriptions/presentation/screens/customer_prescriptions_screen.dart';
+
+class _FailingPrescriptionsRepository extends CustomerPrescriptionsRepository {
+  @override
+  Future<List<Document>> list() async =>
+      throw StateError('Archive unavailable');
+}
 
 void main() {
   testWidgets('shows a retryable prescription archive failure', (tester) async {
@@ -8,7 +17,9 @@ void main() {
       MaterialApp(
         home: Scaffold(
           body: CustomerPrescriptionsScreen(
-            loadDocuments: () async => throw StateError('Archive unavailable'),
+            controller: CustomerPrescriptionsController(
+              repository: _FailingPrescriptionsRepository(),
+            ),
           ),
         ),
       ),

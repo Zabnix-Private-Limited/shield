@@ -294,7 +294,16 @@ class _CustomerServicesScreenState extends State<CustomerServicesScreen> {
 
   void _openProviderAction({required String type, String? providerId}) {
     if (type.trim().toUpperCase() == 'PHARMACY') {
-      context.go('/portal/customer/prescriptions');
+      context.push(
+        Uri(
+          path: '/portal/customer/prescriptions',
+          queryParameters: {
+            if (providerId != null && providerId.isNotEmpty)
+              'provider': providerId,
+            'type': 'PHARMACY',
+          },
+        ).toString(),
+      );
       return;
     }
     final query = <String, String>{

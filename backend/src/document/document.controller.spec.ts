@@ -9,9 +9,17 @@ describe('DocumentController customer scope', () => {
     getPrescriptionReview: jest.fn(),
     getLogs: jest.fn(),
     softDelete: jest.fn(),
+    upload: jest.fn(),
+    list: jest.fn(),
   };
-  const agentScope = { assertAgentCanAccessDocument: jest.fn() };
-  const providerScope = { assertProviderCanAccessDocument: jest.fn() };
+  const agentScope = {
+    assertAgentCanAccessDocument: jest.fn(),
+    assertAgentCanAccessCustomer: jest.fn(),
+  };
+  const providerScope = {
+    assertProviderCanAccessDocument: jest.fn(),
+    assertProviderCanAccessCustomer: jest.fn(),
+  };
   const controller = new DocumentController(
     service as any,
     agentScope as any,
@@ -100,5 +108,57 @@ describe('DocumentController customer scope', () => {
     await expect(controller.getLogs('7', customer)).rejects.toThrow(
       'Document processing details are not available in the customer archive.',
     );
+  });
+
+  it('binds a customer upload to the authenticated customer, not body input', async () => {
+    service.upload.mockResolvedValue({ id: BigInt(8), fileName: 'record.pdf' });
+    agentScope.assertAgentCanAccessCustomer.mockResolvedValue(undefined);
+    providerScope.assertProviderCanAccessCustomer.mockResolvedValue(undefined);
+
+    await controller.upload(
+      {
+        originalname: 'record.pdf',
+        size: 32,
+        mimetype: 'application/pdf',
+        buffer: Buffer.from('synthetic'),
+      },
+      { customer_id: '99', document_type: 'LAB_REPORT' },
+      customer,
+    );
+
+    expect(service.upload).toHaveBeenCalledWith(
+      expect.objectContaining({
+        customerId: BigInt(11),
+        documentType: 'LAB_REPORT',
+      }),
+    );
+  });
+
+  it('rejects an unsafe customer upload before storage is called', async () => {
+    await expect(
+      controller.upload(
+        {
+          originalname: 'malware.exe',
+          size: 32,
+          mimetype: 'application/octet-stream',
+          buffer: Buffer.from('synthetic'),
+        },
+        { document_type: 'OTHER' },
+        customer,
+      ),
+    ).rejects.toThrow(
+      'Only PDF, JPEG, PNG, and WebP document files are accepted.',
+    );
+    expect(service.upload).not.toHaveBeenCalled();
+  });
+
+  it('uses the authenticated customer for list queries', async () => {
+    service.list.mockResolvedValue([]);
+    agentScope.assertAgentCanAccessCustomer.mockResolvedValue(undefined);
+    providerScope.assertProviderCanAccessCustomer.mockResolvedValue(undefined);
+
+    await controller.list('99', customer);
+
+    expect(service.list).toHaveBeenCalledWith(BigInt(11), customer);
   });
 });
