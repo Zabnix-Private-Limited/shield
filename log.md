@@ -10947,3 +10947,19 @@ Added a customer-self, read-only subscription projection to the existing members
 ### Verification
 
 - Passed focused appointment controller test, backend build, targeted Flutter analysis, and Services widget/controller tests. No appointment, customer, provider, financial, or database record was written.
+
+
+## 48. Customer Booking supported appointment-request flow - 2026-08-08 19:35:00 IST
+
+### Frontend Files
+
+- Added the extracted customer booking feature with repository/controller separation. It supports authoritative provider preselection/search, preferred date and time request, optional reason, loading/error/success states, and duplicate-submit prevention.
+- The portal booking route now renders this focused feature instead of the legacy mixed Services/Wellness booking view.
+
+### Contract Boundary
+
+- The flow does not invent services, dependent patients, slots, quotes, pricing, SHIELD Benefit coverage, or online links because none are returned by the current appointment contract.
+
+### Verification
+
+- Passed targeted Flutter analysis, booking controller test, and git diff check.

@@ -1,0 +1,56 @@
+import 'package:flutter_test/flutter_test.dart';
+import 'package:shield/features/customer/booking/data/customer_booking_repository.dart';
+import 'package:shield/features/customer/booking/presentation/customer_booking_controller.dart';
+import 'package:shield/features/customer/services/data/models/customer_provider.dart';
+import 'package:shield/shared/models/appointment.dart';
+
+void main() {
+  test(
+    'restores an authoritative preselected provider and submits once',
+    () async {
+      final repository = _Repository();
+      final controller = CustomerBookingController(repository: repository);
+
+      await controller.restorePreselection('7');
+      await controller.submit();
+      await controller.submit();
+
+      expect(controller.provider?.id, '7');
+      expect(controller.completedAppointment?.id, '42');
+      expect(repository.submissions, 1);
+    },
+  );
+}
+
+class _Repository extends CustomerBookingRepository {
+  int submissions = 0;
+
+  @override
+  Future<CustomerProvider> provider(String id) async => const CustomerProvider(
+    id: '7',
+    name: 'Active Clinic',
+    type: 'CLINIC',
+    typeLabel: 'Consultation',
+    availabilityLabel: 'Active provider',
+  );
+
+  @override
+  Future<Appointment> submit({
+    required CustomerProvider provider,
+    required DateTime preferredDateTime,
+    String? notes,
+  }) async {
+    submissions++;
+    return Appointment(
+      id: '42',
+      uuid: 'appointment-42',
+      customerId: '1',
+      providerId: provider.id,
+      type: AppointmentType.clinic,
+      appointmentDate: preferredDateTime,
+      status: AppointmentStatus.scheduled,
+      createdAt: preferredDateTime,
+      updatedAt: preferredDateTime,
+    );
+  }
+}
