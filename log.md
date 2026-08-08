@@ -11176,4 +11176,8 @@ px prisma validate, Nest build, 17 focused Documents/Pharmacy controller tests, 
 - Added a customer-self GET/PATCH /customer/profile contract. The backend derives the customer only from the authenticated principal and returns a narrow profile projection; primary login mobile, customer status and auth/internal fields cannot be updated through the customer UI.
 - Preserved schema-backed address, typed contact, dependent, preferred pharmacy and session flows. Account ownership remains service-side and contacts retain normalized primary-number protection.
 - Added profile, family and session API matrices plus implementation audits, and updated customer UI binding/status/state/route/QA documentation. No DB command was run and current_schema.md was not modified.
-- Verified: focused customer Jest suites (14 tests), prisma validate, Nest build, Dart format and targeted Flutter analyze.
+- Verified: focused customer Jest suites (14 tests), prisma validate, Nest build, Dart format and targeted Flutter analyze.## 11. Customer account responsive regression coverage - 2026-08-08 18:35:02 IST
+
+- Added a Riverpod repository seam for the existing CustomerAccountScreen so tests exercise its real populated address, dependent, contact and pharmacy tabs without network calls.
+- Added customer_account_responsive_test.dart covering 350, 375, 390, 412, 448, 480, 768 and 1200 pixel widths plus tab navigation. The test confirms no Flutter layout exception with long customer data.
+- Verified Dart format, targeted Flutter test (2 passed) and targeted Flutter analyze. current_schema.md and the database were not modified.

@@ -8,10 +8,14 @@ import '../../../../../shared/widgets/app_button.dart';
 import '../../../../../shared/widgets/app_card.dart';
 import '../../data/customer_account_repository.dart';
 
+final customerAccountRepositoryProvider = Provider<CustomerAccountRepository>(
+  (ref) => const CustomerAccountRepository(),
+);
+
 final customerAccountDataProvider = FutureProvider.autoDispose<_AccountData>((
   ref,
 ) async {
-  const repository = CustomerAccountRepository();
+  final repository = ref.watch(customerAccountRepositoryProvider);
   final results = await Future.wait([
     repository.addresses(),
     repository.dependents(),
@@ -38,8 +42,10 @@ class CustomerAccountScreen extends ConsumerStatefulWidget {
 
 class _CustomerAccountScreenState extends ConsumerState<CustomerAccountScreen>
     with SingleTickerProviderStateMixin {
-  final _repository = const CustomerAccountRepository();
   late final TabController _tabs;
+
+  CustomerAccountRepository get _repository =>
+      ref.read(customerAccountRepositoryProvider);
 
   @override
   void initState() {

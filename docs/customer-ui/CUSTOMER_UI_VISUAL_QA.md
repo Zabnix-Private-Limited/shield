@@ -76,3 +76,7 @@ Functional and responsive automated QA passed. Authenticated screenshot QA is **
 # Account/Profile QA note — 2026-08-08
 
 Static responsive verification remains required across 350–1200px before claiming device QA. The profile, account workspace and session sheet use constrained cards, wrapping text and safe-area-aware scroll content. Authenticated browser evidence is not claimed in this document until an active local customer session is exercised.
+
+## Account workspace widget regression — 2026-08-08
+
+`test/customer_account_responsive_test.dart` verifies populated Address, Family, Contacts and Pharmacy records at 350, 375, 390, 412, 448, 480, 768 and 1200 pixels, plus tab navigation at 390 pixels. It exercises the actual `CustomerAccountScreen` through a Riverpod repository override and asserts that no Flutter layout exception occurs. Authenticated browser/device QA remains separate and unclaimed.
