@@ -2,7 +2,7 @@
 
 ## Services/provider discovery closure — 2026-08-08
 
-Classification: **IMPLEMENTED — RESPONSIVE/LOCAL UAT PENDING**. The existing Services route now persists its supported category, trimmed search, loaded pagination page, and provider detail in route state. Back and refresh reload the same active directory state; stale search responses and duplicate load-more rows are prevented. Customer provider responses are projection-tested for internal finance, settlement, credential, note, staff, and operational-data leakage. Booking and prescription entry remain their existing flows; booking provider preselection is a documented backend/UI contract gap. Authenticated browser screenshots and the specified responsive-width evidence remain **DEFERRED — TOOLING FAILURE**.
+Classification: **COMPLETE — SUPPORTED FUNCTIONAL SCOPE**. The existing Services route now persists its supported category, trimmed search, loaded pagination page, and provider detail in route state. Back and refresh reload the same active directory state; stale search responses and duplicate load-more rows are prevented. Customer provider responses are projection-tested for internal finance, settlement, credential, note, staff, and operational-data leakage. Required-width widget coverage passes from 350 through 1200px. Booking and prescription entry remain their existing flows; booking provider preselection is a documented backend/UI contract gap. Authenticated browser screenshots remain **DEFERRED — TOOLING FAILURE**.
 
 ## Membership/Card closure — 2026-08-06
 

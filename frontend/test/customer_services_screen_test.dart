@@ -28,6 +28,33 @@ void main() {
       );
     },
   );
+
+  testWidgets('stays within every required responsive width', (tester) async {
+    for (final width in const [
+      350.0,
+      375.0,
+      390.0,
+      412.0,
+      448.0,
+      480.0,
+      768.0,
+      1200.0,
+    ]) {
+      await tester.binding.setSurfaceSize(Size(width, 800));
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: CustomerServicesScreen(controller: _Controller()),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Active Pharmacy'), findsOneWidget);
+      expect(tester.takeException(), isNull, reason: 'width: $width');
+    }
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+  });
 }
 
 class _Controller extends CustomerServicesController {

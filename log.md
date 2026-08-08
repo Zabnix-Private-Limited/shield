@@ -10908,3 +10908,14 @@ Added a customer-self, read-only subscription projection to the existing members
 - Passed: targeted `flutter analyze` and Services widget test after the visual/action follow-up.
 - Local Nest eventually bound at `127.0.0.1:3000`; Playwright reached the Flutter app but was redirected to customer login while unauthenticated. Its semantic snapshot did not expose usable login controls, so no OTP was submitted and no authenticated Services evidence is claimed.
 - Responsive 350–1200px UAT and booking-provider preselection remain pending. No customer data, appointment, prescription, or database record was changed.
+
+## 44. Customer Services responsive coverage - 2026-08-08 18:25:00 IST
+
+### Frontend Files
+
+- frontend/test/customer_services_screen_test.dart: mounts the Services provider-discovery surface at 350, 375, 390, 412, 448, 480, 768, and 1200 logical pixels to guard against layout exceptions.
+
+### Verification
+
+- Passed: targeted Flutter analysis and Services widget suite, including all required static responsive widths.
+- Browser screenshots remain deferred: the live frontend correctly redirected its unauthenticated Playwright session to customer login, but no usable authenticated control snapshot was available. This does not weaken the static width result or claim authenticated visual evidence.
