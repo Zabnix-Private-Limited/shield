@@ -7781,6 +7781,10 @@ class _CustomerServicesViewState extends State<_CustomerServicesView> {
                       locale: 'en_IN',
                       symbol: '₹',
                     ).format(price);
+              final purchasable = product['purchasable'] == true;
+              final availabilityMessage = product['purchasabilityReason']
+                  ?.toString()
+                  .trim();
               return Padding(
                 padding: const EdgeInsets.only(bottom: 10),
                 child: InkWell(
@@ -7817,6 +7821,17 @@ class _CustomerServicesViewState extends State<_CustomerServicesView> {
                                 const SizedBox(height: 3),
                                 Text(
                                   unit,
+                                  style: AppTypography.tiny.copyWith(
+                                    color: AppColors.gray,
+                                  ),
+                                ),
+                              ],
+                              if (!purchasable) ...[
+                                const SizedBox(height: 4),
+                                Text(
+                                  availabilityMessage?.isNotEmpty == true
+                                      ? availabilityMessage!
+                                      : 'Catalogue only — ordering is not available.',
                                   style: AppTypography.tiny.copyWith(
                                     color: AppColors.gray,
                                   ),

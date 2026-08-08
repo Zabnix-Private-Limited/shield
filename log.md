@@ -11042,3 +11042,24 @@ px prisma validate, Nest build, 17 focused Documents/Pharmacy controller tests, 
 
 - Correction to entry 54: verification included Prisma schema validation using npx prisma validate, Nest build, 17 focused Documents/Pharmacy controller tests, targeted Flutter analysis, focused Documents/Prescriptions/Services controller and widget tests, and responsive widths 350, 375, 390, 412, 448, 480, 768, and 1200.
 - This clarification is append-only; no implementation, database, or customer data changed.
+
+## 56. Customer Wellness Commerce Contract Audit and Safe Catalogue Eligibility (2026-08-08 14:40:00 IST)
+
+- Completed the required Orders/Checkout preflight and repository audit before altering commerce behaviour.
+- Backend Files:
+  - `backend/src/pharmacy/pharmacy.service.ts`
+    - Added backend-owned `purchasable: false` and a customer-safe reason to every current customer Wellness catalogue projection.
+    - Why: the schema/API exposes catalogue records and recorded provider purchases, but no customer cart, checkout, payment, delivery, or order-creation contract. A price, stock field, ACTIVE status, or imported-demo visibility cannot safely be treated as orderability.
+- Frontend Files:
+  - `frontend/lib/features/portal/presentation/screens/portal_shell.dart`
+    - Displays the backend availability explanation in the existing Wellness catalogue without replacing it or exposing a non-functional Add to Cart/Checkout flow.
+- Documentation:
+  - Added `docs/customer-ui/CUSTOMER_COMMERCE_API_MATRIX.md` with supported catalogue/history surfaces, missing commerce contracts, financial invariants, ownership/security requirements, and the backend-owned product decision required before checkout can be built.
+- Migration preflight:
+  - `npx prisma migrate status` identified exactly one pending additive migration: `20260808_prescription_pharmacy_requests`.
+  - Reviewed its SQL: creates only the prescription-pharmacy request table, indexes, foreign keys, and partial duplicate-prevention index; no destructive operations.
+  - Two `pg_dump` backup attempts and one read-only baseline-count query timed out because the configured database was unreachable from this machine. Both zero-byte dump artifacts remain untrusted and the processes started for them were stopped. `prisma migrate deploy` was not run; the pending migration and database data remain unchanged.
+- Verification:
+  - Passed `backend`: `npx prisma validate` and `npm run build`.
+  - Passed `frontend`: `flutter analyze lib\\features\\portal\\presentation\\screens\\portal_shell.dart lib\\features\\customer\\orders`.
+  - Browser/authenticated UAT and the migration verification remain deferred: database connectivity must be restored first so a successful backup, baseline, approved deploy, and post-deploy constraint/data verification can be completed.

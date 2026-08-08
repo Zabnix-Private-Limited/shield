@@ -107,6 +107,13 @@ export class PharmacyService {
         : null,
       catalogueKind:
         product.dataSource === 'LEGACY_XLS_20260805' ? 'DEMO' : 'STANDARD',
+      // A customer catalogue record is not an orderable offer.  There is no
+      // customer cart/checkout/order-creation contract yet, so exposing this
+      // explicitly prevents Flutter from inferring purchasability from a price
+      // or stock field.
+      purchasable: false,
+      purchasabilityReason:
+        'Online checkout is not available for this catalogue yet.',
     };
   }
 
