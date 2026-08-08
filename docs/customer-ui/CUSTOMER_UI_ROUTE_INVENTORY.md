@@ -9,7 +9,7 @@ Audited: 2026-08-05. This is a route-to-contract index; `CUSTOMER_UI_AUDIT.md` r
 | `privilege-card` | Privilege Card | Membership, profile, `GET /customers/:id/card-profile`, `POST /customers/:id/card-requests` | Supported issued QR card and physical-card request/status |
 | `wallet`, `wallet-history` | Cash Wallet | `GET /customer/wallet` | Database-backed read-only ledger/history |
 | `rewards` | Reward Points | `GET /customer/wallet` filtered to `REWARD_POINTS` | Database-backed read-only balance/history |
-| `services` | Customer provider discovery | Customer-safe provider categories/list/detail | Active provider search and type filtering; no coverage/location/favourites/rating claims |
+| `services` | Customer provider discovery | Customer-safe provider categories/list/detail | `?type=&q=&page=&provider=` restores category, search, loaded page, and detail; no coverage/location/favourites/rating claims |
 | `book-appointment` | Existing booking | Membership, providers, appointments | Preserved booking flow |
 | `appointments` | My Visits | Customer appointment list/cancel/reschedule | Supported customer-self operations |
 | `documents`, `prescriptions` | Archive | Customer document APIs and signed downloads | Supported owned documents and prescription upload |

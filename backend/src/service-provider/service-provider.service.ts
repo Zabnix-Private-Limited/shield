@@ -92,9 +92,17 @@ export class ServiceProviderService {
       ...(query
         ? {
             OR: [
-              { providerName: { contains: query, mode: 'insensitive' as const } },
-              { providerType: { contains: query, mode: 'insensitive' as const } },
-              { business: { name: { contains: query, mode: 'insensitive' as const } } },
+              {
+                providerName: { contains: query, mode: 'insensitive' as const },
+              },
+              {
+                providerType: { contains: query, mode: 'insensitive' as const },
+              },
+              {
+                business: {
+                  name: { contains: query, mode: 'insensitive' as const },
+                },
+              },
             ],
           }
         : {}),
@@ -115,8 +123,15 @@ export class ServiceProviderService {
       }),
     ]);
     return {
-      items: providers.map((provider) => this.customerProviderSummary(provider)),
-      pagination: { page, pageSize, total, totalPages: Math.ceil(total / pageSize) },
+      items: providers.map((provider) =>
+        this.customerProviderSummary(provider),
+      ),
+      pagination: {
+        page,
+        pageSize,
+        total,
+        totalPages: Math.ceil(total / pageSize),
+      },
     };
   }
 
@@ -144,10 +159,13 @@ export class ServiceProviderService {
       id: provider.id.toString(),
       name: provider.providerName?.trim() || 'SHIELD provider',
       type: provider.providerType || 'GENERAL',
-      typeLabel: this.customerProviderTypeLabel(provider.providerType || 'GENERAL'),
+      typeLabel: this.customerProviderTypeLabel(
+        provider.providerType || 'GENERAL',
+      ),
       businessName: provider.business?.name?.trim() || null,
-      availability: 'AVAILABLE',
-      availabilityLabel: 'Available',
+      // This is directory eligibility, not an appointment-slot assertion.
+      availability: 'ACTIVE',
+      availabilityLabel: 'Active provider',
     };
   }
 
@@ -220,8 +238,12 @@ export class ServiceProviderService {
       uniquePatientsPurchases,
     ] = await Promise.all([
       this.prisma.appointment.count({ where: { providerId: id } }),
-      this.prisma.appointment.count({ where: { providerId: id, status: 'COMPLETED' } }),
-      this.prisma.appointment.count({ where: { providerId: id, status: 'CANCELLED' } }),
+      this.prisma.appointment.count({
+        where: { providerId: id, status: 'COMPLETED' },
+      }),
+      this.prisma.appointment.count({
+        where: { providerId: id, status: 'CANCELLED' },
+      }),
       this.prisma.purchase.count({ where: { providerId: id } }),
       this.prisma.purchase.aggregate({
         where: { providerId: id },
@@ -260,7 +282,10 @@ export class ServiceProviderService {
       revenue,
       totalBilled,
       uniquePatients: patientIds.size,
-      completionRate: totalAppointments > 0 ? (completedAppointments / totalAppointments) * 100 : 0,
+      completionRate:
+        totalAppointments > 0
+          ? (completedAppointments / totalAppointments) * 100
+          : 0,
     };
   }
 
@@ -289,7 +314,10 @@ export class ServiceProviderService {
     );
 
     // Group-level summary
-    const typeSummary: Record<string, { count: number; appointments: number; revenue: number }> = {};
+    const typeSummary: Record<
+      string,
+      { count: number; appointments: number; revenue: number }
+    > = {};
     let totalRevenue = 0;
     let totalAppointments = 0;
 
@@ -321,10 +349,16 @@ export class ServiceProviderService {
 
   async getCurrentProviderProfile(principal?: ShieldPrincipal) {
     const context = await this.resolveCurrentProviderContext(principal);
-    return this.buildCurrentProviderProfileResponse(context.user, context.profile);
+    return this.buildCurrentProviderProfileResponse(
+      context.user,
+      context.profile,
+    );
   }
 
-  async updateCurrentProviderProfile(principal: ShieldPrincipal | undefined, data: any) {
+  async updateCurrentProviderProfile(
+    principal: ShieldPrincipal | undefined,
+    data: any,
+  ) {
     const context = await this.resolveCurrentProviderContext(principal);
     const normalized = await this.normalizeProviderProfileInput(
       data,
@@ -392,7 +426,10 @@ export class ServiceProviderService {
       });
     });
 
-    return this.buildCurrentProviderProfileResponse(profile, profile?.providerProfile);
+    return this.buildCurrentProviderProfileResponse(
+      profile,
+      profile?.providerProfile,
+    );
   }
 
   async updateCurrentProviderPreferences(
@@ -472,7 +509,10 @@ export class ServiceProviderService {
       include: this.providerProfileInclude(),
     });
 
-    return this.buildCurrentProviderProfileResponse(user, profile ?? user?.providerProfile);
+    return this.buildCurrentProviderProfileResponse(
+      user,
+      profile ?? user?.providerProfile,
+    );
   }
 
   async getPatientWorkspace(customerId: bigint, principal?: ShieldPrincipal) {
@@ -544,41 +584,43 @@ export class ServiceProviderService {
       (notification) =>
         (notification.status || '').toString().toUpperCase() !== 'READ',
     );
-    const printing = this.platformPrintService.buildProviderPatientPrintContext({
-      providerContext: principal
-        ? {
-            providerName: 'SHIELD Provider',
-            role: principal.roleCode ?? 'Provider',
-            branch: { name: 'Branch not assigned' },
-            business: { name: 'SHIELD' },
-          }
-        : null,
-      patient: patient as Record<string, any>,
-      membership: membership as Record<string, any>,
-      wallet: wallet as Record<string, any>,
-      activeVisit: activeAppointment
-        ? {
-            appointmentId: activeAppointment.id.toString(),
-            appointment: activeAppointment,
-            status:
-              activeVisitWorkspace?.statusLabel ??
-              this.humanizeCode(activeAppointment.status),
-            workspace: activeVisitWorkspace,
-          }
-        : null,
-      billing: {
-        summary: {
-          totalInvoices: purchases.length,
-          totalBilled,
-          totalPayable,
-          totalDiscount,
-          lastInvoiceDate: purchases[0]?.purchaseDate ?? null,
-          lastInvoiceNumber: purchases[0]?.invoiceNumber ?? null,
+    const printing = this.platformPrintService.buildProviderPatientPrintContext(
+      {
+        providerContext: principal
+          ? {
+              providerName: 'SHIELD Provider',
+              role: principal.roleCode ?? 'Provider',
+              branch: { name: 'Branch not assigned' },
+              business: { name: 'SHIELD' },
+            }
+          : null,
+        patient: patient as Record<string, any>,
+        membership: membership as Record<string, any>,
+        wallet: wallet as Record<string, any>,
+        activeVisit: activeAppointment
+          ? {
+              appointmentId: activeAppointment.id.toString(),
+              appointment: activeAppointment,
+              status:
+                activeVisitWorkspace?.statusLabel ??
+                this.humanizeCode(activeAppointment.status),
+              workspace: activeVisitWorkspace,
+            }
+          : null,
+        billing: {
+          summary: {
+            totalInvoices: purchases.length,
+            totalBilled,
+            totalPayable,
+            totalDiscount,
+            lastInvoiceDate: purchases[0]?.purchaseDate ?? null,
+            lastInvoiceNumber: purchases[0]?.invoiceNumber ?? null,
+          },
         },
+        timeline: timeline as Array<Record<string, any>>,
+        documents: documents as Array<Record<string, any>>,
       },
-      timeline: timeline as Array<Record<string, any>>,
-      documents: documents as Array<Record<string, any>>,
-    });
+    );
 
     return {
       patient,
@@ -588,7 +630,9 @@ export class ServiceProviderService {
         ? {
             appointmentId: activeAppointment.id.toString(),
             appointment: activeAppointment,
-            status: activeVisitWorkspace?.statusLabel ?? this.humanizeCode(activeAppointment.status),
+            status:
+              activeVisitWorkspace?.statusLabel ??
+              this.humanizeCode(activeAppointment.status),
             workspace: activeVisitWorkspace,
           }
         : null,
@@ -604,7 +648,10 @@ export class ServiceProviderService {
             this.matchesAnyCode(document.documentType, ['LAB_REPORT']),
           ).length,
           invoices: documents.filter((document) =>
-            this.matchesAnyCode(document.documentType, ['INVOICE', 'PHARMACY_BILL']),
+            this.matchesAnyCode(document.documentType, [
+              'INVOICE',
+              'PHARMACY_BILL',
+            ]),
           ).length,
           other: documents.filter(
             (document) =>
@@ -682,7 +729,9 @@ export class ServiceProviderService {
 
   private async resolveCurrentProviderContext(principal?: ShieldPrincipal) {
     if (!principal?.userId) {
-      throw new UnauthorizedException('Authenticated provider context is required.');
+      throw new UnauthorizedException(
+        'Authenticated provider context is required.',
+      );
     }
 
     const user = await this.prisma.user.findUnique({
@@ -761,10 +810,14 @@ export class ServiceProviderService {
     }
 
     const photoUrl = profile?.profilePhotoStoragePath
-      ? await this.storageService.createDownloadUrl(profile.profilePhotoStoragePath)
+      ? await this.storageService.createDownloadUrl(
+          profile.profilePhotoStoragePath,
+        )
       : null;
     const signatureUrl = profile?.signatureStoragePath
-      ? await this.storageService.createDownloadUrl(profile.signatureStoragePath)
+      ? await this.storageService.createDownloadUrl(
+          profile.signatureStoragePath,
+        )
       : null;
 
     return {
@@ -823,12 +876,15 @@ export class ServiceProviderService {
         },
       },
       preferences: {
-        notifications: this.normalizeStoredObject(profile?.notificationPreferences, {
-          appointmentChanges: true,
-          visitUpdates: true,
-          prescriptionUpdates: true,
-          billingUpdates: true,
-        }),
+        notifications: this.normalizeStoredObject(
+          profile?.notificationPreferences,
+          {
+            appointmentChanges: true,
+            visitUpdates: true,
+            prescriptionUpdates: true,
+            billingUpdates: true,
+          },
+        ),
         theme: profile?.themePreference ?? 'system',
         language: profile?.languagePreference ?? 'en',
         defaultPrinter: profile?.defaultPrinter ?? '',
@@ -863,10 +919,16 @@ export class ServiceProviderService {
     };
   }
 
-  private async normalizeProviderProfileInput(data: any, user: any, profile: any) {
+  private async normalizeProviderProfileInput(
+    data: any,
+    user: any,
+    profile: any,
+  ) {
     const preferences = this.normalizeObject(data?.preferences);
     const existingAssignedBranchIds = [
-      ...(profile?.branchAssignments ?? []).map((assignment: any) => assignment.businessId),
+      ...(profile?.branchAssignments ?? []).map(
+        (assignment: any) => assignment.businessId,
+      ),
       ...(user.branchBusinessId != null ? [user.branchBusinessId] : []),
     ];
     const branchIds = this.normalizeIdList(
@@ -877,12 +939,17 @@ export class ServiceProviderService {
     const primaryBranchId = this.normalizeOptionalBigInt(
       data?.primaryBranchId ?? data?.primaryBranch?.id ?? user.branchBusinessId,
     );
-    if (primaryBranchId != null && !branchIds.some((branchId) => branchId === primaryBranchId)) {
+    if (
+      primaryBranchId != null &&
+      !branchIds.some((branchId) => branchId === primaryBranchId)
+    ) {
       branchIds.unshift(primaryBranchId);
     }
 
     const uniqueBranchIds = Array.from(
-      new Map(branchIds.map((branchId) => [branchId.toString(), branchId])).values(),
+      new Map(
+        branchIds.map((branchId) => [branchId.toString(), branchId]),
+      ).values(),
     );
     if (uniqueBranchIds.length > 0) {
       const branchCount = await this.prisma.business.count({
@@ -891,7 +958,9 @@ export class ServiceProviderService {
         },
       });
       if (branchCount !== uniqueBranchIds.length) {
-        throw new BadRequestException('One or more assigned branches are invalid.');
+        throw new BadRequestException(
+          'One or more assigned branches are invalid.',
+        );
       }
     }
 
@@ -933,7 +1002,9 @@ export class ServiceProviderService {
         data?.specialization ?? profile?.specialization,
       ),
       registrationDetails: this.normalizeObject(
-        data?.registration ?? data?.registrationDetails ?? profile?.registrationDetails,
+        data?.registration ??
+          data?.registrationDetails ??
+          profile?.registrationDetails,
       ),
       consultationAvailability: this.normalizeObject(
         data?.consultationAvailability ?? profile?.consultationAvailability,
@@ -947,10 +1018,14 @@ export class ServiceProviderService {
           profile?.notificationPreferences,
       ),
       printPreferences: this.normalizeObject(
-        preferences['print'] ?? data?.printPreferences ?? profile?.printPreferences,
+        preferences['print'] ??
+          data?.printPreferences ??
+          profile?.printPreferences,
       ),
       themePreference: this.normalizeOptionalText(
-        preferences['theme'] ?? data?.themePreference ?? profile?.themePreference,
+        preferences['theme'] ??
+          data?.themePreference ??
+          profile?.themePreference,
       ),
       languagePreference: this.normalizeOptionalText(
         preferences['language'] ??
@@ -1006,7 +1081,10 @@ export class ServiceProviderService {
     return JSON.parse(JSON.stringify(value));
   }
 
-  private normalizeStoredObject(value: unknown, fallback: Record<string, any> = {}) {
+  private normalizeStoredObject(
+    value: unknown,
+    fallback: Record<string, any> = {},
+  ) {
     if (!value || typeof value !== 'object' || Array.isArray(value)) {
       return fallback;
     }
@@ -1136,7 +1214,10 @@ export class ServiceProviderService {
     return (status || '').toString().toUpperCase() === 'CANCELLED';
   }
 
-  private matchesAnyCode(value: string | null | undefined, codes: Array<string>) {
+  private matchesAnyCode(
+    value: string | null | undefined,
+    codes: Array<string>,
+  ) {
     const normalized = (value || '').toString().trim().toUpperCase();
     return codes.includes(normalized);
   }

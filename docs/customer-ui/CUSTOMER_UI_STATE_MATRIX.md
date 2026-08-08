@@ -7,7 +7,7 @@
 | Privilege Card | Membership/profile/card-status progress | No issued digital card | Retryable card-status panel | QR only from server payload |
 | Wallet/Rewards | Wallet shimmer | No visible transactions | Retryable wallet error | Failed API is not zero balance; benefit stays hidden |
 | Services/providers | Access skeleton and provider progress | No active backend provider | Provider retry panel | Do not substitute a provider or service locally |
-| Customer provider discovery | Loading indicator | No active provider / no query results | Retryable provider load failure | Search/type filters retain the requested state; unsupported provider metadata is absent rather than fabricated |
+| Customer provider discovery | Loading indicator | No active provider / no query results | Retryable provider load failure | Route retains query, type, loaded page, and detail selection; unsupported provider metadata is absent rather than fabricated |
 | Visits | Access/load states | Upcoming/history empty state | Retryable error card | Mutations remain self-scoped |
 | Documents/prescriptions | List/upload progress | Customer archive empty state | Generic retryable error | No storage URL exposure |
 | Wellness catalogue | Progress indicator | Catalogue empty state | Retry action | Product data remains API/database-derived |

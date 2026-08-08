@@ -1,5 +1,9 @@
 # Customer UI Implementation Status
 
+## Services/provider discovery closure — 2026-08-08
+
+Classification: **IMPLEMENTED — RESPONSIVE/LOCAL UAT PENDING**. The existing Services route now persists its supported category, trimmed search, loaded pagination page, and provider detail in route state. Back and refresh reload the same active directory state; stale search responses and duplicate load-more rows are prevented. Customer provider responses are projection-tested for internal finance, settlement, credential, note, staff, and operational-data leakage. Booking and prescription entry remain their existing flows; booking provider preselection is a documented backend/UI contract gap. Authenticated browser screenshots and the specified responsive-width evidence remain **DEFERRED — TOOLING FAILURE**.
+
 ## Membership/Card closure — 2026-08-06
 
 Classification: **COMPLETE — SUPPORTED FUNCTIONAL SCOPE**. Membership overview, subscription/entitlement display, active/pending/expired/suspended states, digital card, supported physical-card request/status/history, offline cached-data state, refresh/recovery, 350px responsive coverage, and automated regression coverage are complete. Authenticated screenshot QA is **DEFERRED — TOOLING FAILURE**: the existing Chrome-control integration timed out and Playwright CLI crashed with a Windows native assertion; no evidence was fabricated. Manual authenticated screenshot review remains a release-QA follow-up.

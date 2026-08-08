@@ -6,6 +6,11 @@
 - Widget coverage verified loading completion, backend category/provider render, and the provider-detail unavailable boundary.
 - Authenticated screenshot review is pending release QA; no screenshot was fabricated because the existing Chrome-control integration and Playwright CLI are not usable in this workspace.
 
+## Services discovery route-state checkpoint — 2026-08-08
+
+- Static widget and route-state coverage was updated for route-backed category, query, pagination, and provider-detail navigation.
+- Authenticated browser and width screenshots remain **DEFERRED — TOOLING FAILURE** until the approved localhost customer session can be controlled; no visual evidence is claimed by static checks.
+
 ## Membership/Card QA closure — 2026-08-06
 
 Functional and responsive automated QA passed. Authenticated screenshot QA is **DEFERRED — TOOLING FAILURE** because the existing Chrome-control integration timed out and Playwright CLI crashed with a native Windows assertion. No screenshot evidence was fabricated. Manual authenticated screenshot review remains a release-QA follow-up.

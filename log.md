@@ -10877,3 +10877,23 @@ Added a customer-self, read-only subscription projection to the existing members
 
 ### Backend Files
 - None; reused the customer provider discovery contract introduced in the preceding commit.
+
+## 42. Customer Services provider discovery route-state closure — 2026-08-08 17:30:00 IST
+
+- Why: the initial directory was API-backed but category, search, page, and provider-detail state lived only in the widget, making direct links, refresh, and browser back unreliable.
+
+### Frontend Files
+
+- `frontend/lib/features/customer/services/presentation/screens/customer_services_screen.dart`: stores supported `type`, trimmed `q`, loaded `page`, and `provider` detail in the existing Services route; restores route state, keeps the Services shell hierarchy, and preserves the existing booking entry.
+- `frontend/lib/features/customer/services/presentation/controllers/customer_services_controller.dart`: adds route restoration, stale-request protection, and duplicate-safe pagination.
+
+### Backend Files
+
+- `backend/src/service-provider/service-provider.service.ts`: labels the active directory status accurately rather than implying appointment availability.
+- `backend/src/service-provider/service-provider.service.spec.ts`: verifies the customer projection excludes internal costs, commission, settlement, credentials, internal notes, and other private fields.
+
+### Verification and Remaining Risk
+
+- Passed: focused customer-provider backend Jest tests; targeted Flutter analysis; Services widget test; `git diff --check`.
+- Full Prisma validation/build exceeded the bounded local command timeout after loading the Prisma schema; no database schema apply or data write was attempted.
+- Authenticated browser and responsive screenshot evidence remain deferred because the controlled local customer session/tooling was not available in this turn. Static checks do not substitute for that UAT.

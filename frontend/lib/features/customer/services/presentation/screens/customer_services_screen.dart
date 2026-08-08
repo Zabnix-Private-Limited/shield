@@ -23,20 +23,47 @@ class _CustomerServicesScreenState extends State<CustomerServicesScreen> {
   late final CustomerServicesController _controller;
   late final bool _ownsController;
   final _search = TextEditingController();
+  final _scroll = ScrollController();
   Timer? _debounce;
+  String? _lastRoute;
+  bool _openingProvider = false;
 
   @override
   void initState() {
     super.initState();
     _ownsController = widget.controller == null;
     _controller = widget.controller ?? CustomerServicesController();
-    _controller.load();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final uri = _routeUri(context);
+    final route = uri.toString();
+    if (_lastRoute == route) return;
+    _lastRoute = route;
+    final query = uri.queryParameters['q'] ?? '';
+    final type = uri.queryParameters['type'];
+    final loadedPage = int.tryParse(uri.queryParameters['page'] ?? '') ?? 1;
+    _search.value = _search.value.copyWith(text: query);
+    if (_ownsController) {
+      _controller.restore(query: query, type: type, loadedPage: loadedPage);
+    } else {
+      _controller.load(query: query, type: type);
+    }
+    final providerId = uri.queryParameters['provider'];
+    if (providerId != null && providerId.isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && !_openingProvider) _showProvider(providerId);
+      });
+    }
   }
 
   @override
   void dispose() {
     _debounce?.cancel();
     _search.dispose();
+    _scroll.dispose();
     if (_ownsController) _controller.dispose();
     super.dispose();
   }
@@ -58,6 +85,7 @@ class _CustomerServicesScreenState extends State<CustomerServicesScreen> {
       return RefreshIndicator(
         onRefresh: _controller.load,
         child: ListView(
+          controller: _scroll,
           physics: const AlwaysScrollableScrollPhysics(),
           children: [
             Text('Services', style: AppTypography.h3),
@@ -79,7 +107,7 @@ class _CustomerServicesScreenState extends State<CustomerServicesScreen> {
                         icon: const Icon(Icons.close),
                         onPressed: () {
                           _search.clear();
-                          _controller.load(
+                          _applyRoute(
                             query: '',
                             type: _controller.selectedType,
                           );
@@ -93,7 +121,7 @@ class _CustomerServicesScreenState extends State<CustomerServicesScreen> {
               categories: _controller.categories,
               selected: _controller.selectedType,
               onSelected: (type) =>
-                  _controller.load(query: _search.text, type: type),
+                  _applyRoute(query: _search.text, type: type),
             ),
             const SizedBox(height: 20),
             Row(
@@ -130,16 +158,14 @@ class _CustomerServicesScreenState extends State<CustomerServicesScreen> {
                   padding: const EdgeInsets.only(bottom: 10),
                   child: _ProviderCard(
                     provider: provider,
-                    loadDetails: _controller.provider,
+                    onTap: () => _openProvider(provider),
                   ),
                 ),
               ),
             if (_controller.page.page < _controller.page.totalPages)
               Center(
                 child: TextButton(
-                  onPressed: _controller.isLoading
-                      ? null
-                      : _controller.loadNextPage,
+                  onPressed: _controller.isLoading ? null : _loadNextPage,
                   child: Text(
                     _controller.isLoading
                         ? 'Loading more…'
@@ -181,9 +207,97 @@ class _CustomerServicesScreenState extends State<CustomerServicesScreen> {
     setState(() {});
     _debounce?.cancel();
     _debounce = Timer(const Duration(milliseconds: 300), () {
-      _controller.load(query: value, type: _controller.selectedType);
+      _applyRoute(query: value, type: _controller.selectedType);
     });
   }
+
+  void _applyRoute({required String query, required String? type}) {
+    final trimmed = query.trim();
+    final route = _servicesRoute(query: trimmed, type: type);
+    if (_routeUri(context).toString() == route) {
+      _controller.applyFilters(query: trimmed, type: type);
+      return;
+    }
+    context.go(route);
+  }
+
+  Future<void> _loadNextPage() async {
+    await _controller.loadNextPage();
+    if (!mounted || _controller.error != null) return;
+    context.replace(
+      _servicesRoute(
+        query: _controller.query,
+        type: _controller.selectedType,
+        page: _controller.page.page,
+      ),
+    );
+  }
+
+  void _openProvider(CustomerProvider provider) {
+    try {
+      context.push(
+        _servicesRoute(
+          query: _controller.query,
+          type: _controller.selectedType,
+          page: _controller.page.page,
+          provider: provider.id,
+        ),
+      );
+    } catch (_) {
+      _showProvider(provider.id);
+    }
+  }
+
+  Future<void> _showProvider(String id) async {
+    _openingProvider = true;
+    try {
+      final provider = _controller.page.items
+          .where((item) => item.id == id)
+          .firstOrNull;
+      await showModalBottomSheet<void>(
+        context: context,
+        useSafeArea: true,
+        isScrollControlled: true,
+        builder: (sheetContext) => _ProviderDetailsSheet(
+          provider: provider,
+          loadDetails: _controller.provider,
+          onBook: () => context.go('/portal/customer/book-appointment'),
+        ),
+      );
+      if (mounted &&
+          _routeUri(context).queryParameters.containsKey('provider')) {
+        context.pop();
+      }
+    } finally {
+      _openingProvider = false;
+    }
+  }
+}
+
+Uri _routeUri(BuildContext context) {
+  try {
+    return GoRouterState.of(context).uri;
+  } catch (_) {
+    return Uri.parse('/portal/customer/services');
+  }
+}
+
+String _servicesRoute({
+  required String query,
+  required String? type,
+  int page = 1,
+  String? provider,
+}) {
+  final parameters = <String, String>{
+    if (query.isNotEmpty) 'q': query,
+    if (type != null && type.isNotEmpty) 'type': type,
+    if (page > 1) 'page': '$page',
+    if (provider != null && provider.isNotEmpty) 'provider': provider,
+  };
+  return Uri(
+    path: '/portal/customer/services',
+    queryParameters: parameters,
+  ).toString();
 }
 
 class _CategoryFilters extends StatelessWidget {
@@ -222,58 +336,13 @@ class _CategoryFilters extends StatelessWidget {
 }
 
 class _ProviderCard extends StatelessWidget {
-  const _ProviderCard({required this.provider, required this.loadDetails});
+  const _ProviderCard({required this.provider, required this.onTap});
   final CustomerProvider provider;
-  final Future<CustomerProvider> Function(String id) loadDetails;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) => AppCard(
-    onTap: () => showModalBottomSheet<void>(
-      context: context,
-      builder: (context) => FutureBuilder<CustomerProvider>(
-        future: loadDetails(provider.id),
-        builder: (context, snapshot) => Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                snapshot.data?.name ?? provider.name,
-                style: AppTypography.h4,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                snapshot.data?.typeLabel ?? provider.typeLabel,
-                style: AppTypography.small.copyWith(color: AppColors.gray),
-              ),
-              if (snapshot.connectionState == ConnectionState.waiting)
-                const Padding(
-                  padding: EdgeInsets.only(top: 12),
-                  child: LinearProgressIndicator(),
-                ),
-              if (provider.businessName != null) ...[
-                const SizedBox(height: 8),
-                Text(provider.businessName!),
-              ],
-              const SizedBox(height: 16),
-              Text(
-                snapshot.hasError
-                    ? 'Provider details could not be loaded. You can still continue to the existing booking flow.'
-                    : 'Additional provider details, coverage, hours, ratings, and location are not available in the current customer contract.',
-                style: AppTypography.small.copyWith(color: AppColors.gray),
-              ),
-              const SizedBox(height: 12),
-              TextButton(
-                onPressed: () =>
-                    context.go('/portal/customer/book-appointment'),
-                child: const Text('Continue to booking'),
-              ),
-            ],
-          ),
-        ),
-      ),
-    ),
+    onTap: onTap,
     child: Row(
       children: [
         const CircleAvatar(child: Icon(Icons.medical_services_outlined)),
@@ -307,4 +376,70 @@ class _ProviderCard extends StatelessWidget {
       ],
     ),
   );
+}
+
+class _ProviderDetailsSheet extends StatelessWidget {
+  const _ProviderDetailsSheet({
+    required this.provider,
+    required this.loadDetails,
+    required this.onBook,
+  });
+
+  final CustomerProvider? provider;
+  final Future<CustomerProvider> Function(String id) loadDetails;
+  final VoidCallback onBook;
+
+  @override
+  Widget build(BuildContext context) {
+    final id =
+        provider?.id ??
+        GoRouterState.of(context).uri.queryParameters['provider'];
+    return FutureBuilder<CustomerProvider>(
+      future: id == null ? null : loadDetails(id),
+      builder: (context, snapshot) {
+        final details = snapshot.data ?? provider;
+        return Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                details?.name ?? 'Provider details',
+                style: AppTypography.h4,
+              ),
+              if (details != null) ...[
+                const SizedBox(height: 8),
+                Text(
+                  details.typeLabel,
+                  style: AppTypography.small.copyWith(color: AppColors.gray),
+                ),
+                if (details.businessName != null) ...[
+                  const SizedBox(height: 8),
+                  Text(details.businessName!),
+                ],
+              ],
+              if (snapshot.connectionState == ConnectionState.waiting)
+                const Padding(
+                  padding: EdgeInsets.only(top: 12),
+                  child: LinearProgressIndicator(),
+                ),
+              const SizedBox(height: 16),
+              Text(
+                snapshot.hasError
+                    ? 'Provider details could not be loaded. You can still continue to the existing booking flow.'
+                    : 'Only customer-visible provider details are shown. Coverage, hours, ratings, and location are not available in the current customer contract.',
+                style: AppTypography.small.copyWith(color: AppColors.gray),
+              ),
+              const SizedBox(height: 12),
+              TextButton(
+                onPressed: onBook,
+                child: const Text('Continue to booking'),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
 }
