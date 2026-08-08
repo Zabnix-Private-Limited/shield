@@ -24,3 +24,6 @@ Audited: 2026-08-05. This is a route-to-contract index; `CUSTOMER_UI_AUDIT.md` r
 
 - Customer subscription entitlement, card history/replacement/lost/damaged card, wallet top-up, reward redemption/expiry, cart/checkout, order tracking/returns, and referral QR/share are not registered as completed customer workflows because a customer-safe backend contract has not been verified.
 - No route uses shared customer records, locally fabricated financial data, or management-demo subscription APIs.
+# Account profile completion — 2026-08-08
+
+`/portal/customer/profile`, `/portal/customer/account`, and Settings security are the current supported account destinations. Personal profile uses `GET/PATCH /customer/profile`; address, family, contacts and pharmacy workflows remain within the Account workspace; session/device controls remain in Settings. No duplicate customer-ID route is required because all account ownership derives from the authenticated principal.

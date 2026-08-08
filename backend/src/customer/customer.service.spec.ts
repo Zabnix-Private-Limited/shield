@@ -2,13 +2,14 @@ import { CustomerService } from './customer.service';
 
 describe('CustomerService alternative contacts', () => {
   const prisma = {
-    customer: { findUnique: jest.fn() },
+    customer: { findUnique: jest.fn(), findFirst: jest.fn(), update: jest.fn() },
     customerContact: {
       findMany: jest.fn(),
       update: jest.fn(),
       create: jest.fn(),
       deleteMany: jest.fn(),
     },
+    auditLog: { create: jest.fn() },
   };
   const service = new CustomerService(
     prisma as any,
@@ -104,5 +105,49 @@ describe('CustomerService alternative contacts', () => {
         deletedAt: null,
       },
     });
+  });
+
+  it('projects only customer-safe fields for the signed-in profile', async () => {
+    prisma.customer.findFirst.mockResolvedValue({ id: 11n, mobile: '9876543210' });
+
+    await service.getCustomerSelfProfile(11n);
+
+    expect(prisma.customer.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { id: 11n, deletedAt: null } }),
+    );
+    expect(prisma.customer.findFirst.mock.calls[0][0].select).toEqual(
+      expect.objectContaining({ mobile: true }),
+    );
+    expect(
+      prisma.customer.findFirst.mock.calls[0][0].select,
+    ).not.toHaveProperty('firebaseUid');
+  });
+
+  it('does not permit the customer profile contract to update phone or status', async () => {
+    prisma.customer.update.mockResolvedValue({ id: 11n });
+    prisma.customer.findFirst.mockResolvedValue({ id: 11n, mobile: '9876543210' });
+    prisma.auditLog.create.mockResolvedValue({});
+
+    await service.updateCustomerSelfProfile(11n, {
+      firstName: ' Asha ',
+      lastName: ' Kumar ',
+      email: 'asha@example.com',
+    } as any);
+
+    expect(prisma.customer.update).toHaveBeenCalledWith({
+      where: { id: 11n },
+      data: expect.not.objectContaining({ mobile: expect.anything(), status: expect.anything() }),
+    });
+    expect(prisma.auditLog.create).toHaveBeenCalled();
+  });
+
+  it('rejects a future date of birth for the customer profile', async () => {
+    await expect(
+      service.updateCustomerSelfProfile(11n, {
+        firstName: 'Asha',
+        lastName: 'Kumar',
+        dob: '2999-01-01',
+      }),
+    ).rejects.toThrow('Date of birth must be a valid past date.');
   });
 });

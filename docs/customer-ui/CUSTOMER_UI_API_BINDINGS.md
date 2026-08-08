@@ -16,7 +16,9 @@ All entries use the authenticated customer session. Flutter route guards improve
 | Orders | `CustomerOrdersRepository`, `CustomerOrdersScreen` | `GET /customer/orders`; `GET /customer/orders/:id` | Backend derives customer identity from the principal and constrains detail by customer ownership; customer-safe recorded-purchase history only |
 | Referrals | `CustomerReferralsScreen` | `GET /referrals/me` | Customer identity derives from session; code/history omit referred-customer IDs and internal commission/tree data |
 | Activity/notifications | Customer timeline/inbox views | `GET /timeline/me`; `GET /notifications/me`; notification read APIs | Timeline and inbox resolve self; activity projection omits actors/raw metadata and unread count is server-authoritative |
-| Profile/support | Profile/settings views | Profile/alternative contact/support/feedback APIs | Contacts and mutations are self-scoped; support/feedback persist through their existing APIs |
+| Profile/support | Profile/settings views | `GET/PATCH /customer/profile`; account/alternative contact/support/feedback APIs | Profile and mutations are self-scoped; dedicated safe profile projection prevents customer mutation of login phone/status; support/feedback persist through their existing APIs |
+| Family/account | `/portal/customer/account` | Customer-self addresses, dependents, contacts, pharmacy preference APIs | Customer ID derives only from JWT. Dedicated address/dependent/contact tables support soft archive; booking a dependent is not implied. |
+| Sessions | Settings security sheet | `GET /auth/sessions`; session revoke APIs | Owner-scoped safe device/session summaries only; no tokens, hashes, IPs, or raw user agents are returned. |
 
 ## Operations banner configuration
 

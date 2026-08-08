@@ -11167,3 +11167,13 @@ px prisma validate, Nest build, 17 focused Documents/Pharmacy controller tests, 
 
 - Updated the customer UI audit, API bindings, and route inventory to use the session-derived Referrals and Notifications contracts and to document the safe activity projection.
 - Preserved contract boundaries: share links, QR, deep links, pagination, and internal commission/audit data remain deferred. current_schema.md was not modified.
+## 9. Prescription pharmacy request migration duplicate-index diagnosis - 2026-08-08 00:00:00 IST
+
+- Confirmed from current_schema.md that prescription_pharmacy_requests and idx_prescription_pharmacy_requests_customer already exist, along with the document, provider/status, and open-request indexes.
+- PostgreSQL 42P07 is caused by re-executing 20260808_prescription_pharmacy_requests, not a schema omission.
+- No database command was run and current_schema.md was not modified. Stop this migration script and reconcile migration-history state through the normal repository migration process; use read-only catalog checks before any repair.## 10. Customer account profile, family and security completion - 2026-08-08 18:30:14 IST
+
+- Added a customer-self GET/PATCH /customer/profile contract. The backend derives the customer only from the authenticated principal and returns a narrow profile projection; primary login mobile, customer status and auth/internal fields cannot be updated through the customer UI.
+- Preserved schema-backed address, typed contact, dependent, preferred pharmacy and session flows. Account ownership remains service-side and contacts retain normalized primary-number protection.
+- Added profile, family and session API matrices plus implementation audits, and updated customer UI binding/status/state/route/QA documentation. No DB command was run and current_schema.md was not modified.
+- Verified: focused customer Jest suites (14 tests), prisma validate, Nest build, Dart format and targeted Flutter analyze.

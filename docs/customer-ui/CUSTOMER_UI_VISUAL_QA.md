@@ -73,3 +73,6 @@ Functional and responsive automated QA passed. Authenticated screenshot QA is **
 - Authenticated screenshot QA remains `DEFERRED — TOOLING FAILURE` until a controlled local session exposes actionable rendered controls. No screenshot evidence is claimed.
 - Final bounded attempt: localhost reached HTTP 200, but Playwright produced an empty accessibility snapshot, so approved local OTP could not be entered without bypassing stable controls. The matching local Flutter process was stopped after the attempt.
 - Secure sharing, local-storage download streaming, OCR/clinical interpretation, fulfilment, payment, and delivery remain outside the current customer contract.
+# Account/Profile QA note — 2026-08-08
+
+Static responsive verification remains required across 350–1200px before claiming device QA. The profile, account workspace and session sheet use constrained cards, wrapping text and safe-area-aware scroll content. Authenticated browser evidence is not claimed in this document until an active local customer session is exercised.

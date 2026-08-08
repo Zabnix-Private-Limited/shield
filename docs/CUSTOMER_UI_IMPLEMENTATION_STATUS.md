@@ -101,3 +101,11 @@ Classification: `COMPLETE — SUPPORTED FUNCTIONAL SCOPE` pending final aggregat
 - Customer document and prescription archive extraction, safe metadata projection, signed R2 view/download, allowlisted upload, category/search states, and Pharmacy request review/submission are implemented.
 - The additive `prescription_pharmacy_requests` migration source is committed but deliberately not applied to a shared database.
 - Secure share links, local-streaming download, OCR/medicine interpretation, fulfilment, payment, and delivery are explicitly deferred/not supported rather than fabricated.
+
+# Account/Profile closure — 2026-08-08
+
+Classification: `COMPLETE — SUPPORTED FUNCTIONAL SCOPE`.
+
+- Customer personal edits now use a dedicated session-owned profile API that omits authentication/internal fields and cannot mutate primary mobile or account status.
+- Existing account workspace remains the source for schema-backed addresses, contacts, dependents and pharmacy preference; settings owns session/device revocation.
+- No database SQL is required. Primary-number migration, account deletion/export, profile image/completion and dependent booking remain deferred by contract.

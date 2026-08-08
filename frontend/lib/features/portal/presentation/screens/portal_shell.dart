@@ -66,7 +66,7 @@ import '../portal_role_data.dart';
 Future<_CustomerAccessContext> _loadCustomerAccessContext() async {
   final customerId = ApiService.requireAuthenticatedCustomerId();
   final results = await Future.wait<Object>([
-    ApiService.getCustomerProfile(customerId),
+    ApiService.getMyCustomerProfile(),
     ApiService.getCustomerMembershipBundle(customerId),
   ]);
 
@@ -1771,9 +1771,7 @@ void _showMembershipCardDialog(BuildContext context) {
   showDialog<void>(
     context: context,
     builder: (context) {
-      final customerFuture = ApiService.getCustomerProfile(
-        ApiService.requireAuthenticatedCustomerId(),
-      );
+      final customerFuture = ApiService.getMyCustomerProfile();
       return FutureBuilder<Customer>(
         future: customerFuture,
         builder: (context, snapshot) {
@@ -3408,7 +3406,7 @@ class _CustomerProfilePortalViewState
     try {
       final customerId = ApiService.requireAuthenticatedCustomerId();
       final results = await Future.wait<Object?>([
-        ApiService.getCustomerProfile(customerId),
+        ApiService.getMyCustomerProfile(),
         _loadProfileMembership(customerId),
       ]);
       final customer = results[0]! as Customer;
@@ -3481,8 +3479,7 @@ class _CustomerProfilePortalViewState
     });
 
     try {
-      final savedCustomer = await ApiService.updateCustomerProfile(
-        _customer!.id,
+      final savedCustomer = await ApiService.updateMyCustomerProfile(
         _customer!.copyWith(
           firstName: _firstNameController.text.trim(),
           lastName: _lastNameController.text.trim(),
@@ -4413,9 +4410,7 @@ class _CustomerMembershipPortalViewState
   void initState() {
     super.initState();
     _dataFuture = Future.wait([
-      ApiService.getCustomerProfile(
-        ApiService.requireAuthenticatedCustomerId(),
-      ),
+      ApiService.getMyCustomerProfile(),
       ApiService.getCustomerMembership(
         ApiService.requireAuthenticatedCustomerId(),
       ),

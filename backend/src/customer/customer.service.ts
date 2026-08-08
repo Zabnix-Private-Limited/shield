@@ -256,6 +256,93 @@ export class CustomerService {
     });
   }
 
+  async getCustomerSelfProfile(customerId: bigint) {
+    const customer = await this.prisma.customer.findFirst({
+      where: { id: customerId, deletedAt: null },
+      select: {
+        id: true,
+        uuid: true,
+        customerCode: true,
+        firstName: true,
+        lastName: true,
+        dob: true,
+        gender: true,
+        mobile: true,
+        email: true,
+        addressLine1: true,
+        addressLine2: true,
+        city: true,
+        district: true,
+        state: true,
+        pincode: true,
+        bloodGroup: true,
+        status: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+    if (!customer) throw new NotFoundException('Customer not found.');
+    return customer;
+  }
+
+  async updateCustomerSelfProfile(
+    customerId: bigint,
+    data: {
+      firstName?: string;
+      lastName?: string;
+      dob?: string | null;
+      gender?: string | null;
+      email?: string | null;
+      addressLine1?: string | null;
+      addressLine2?: string | null;
+      city?: string | null;
+      district?: string | null;
+      state?: string | null;
+      pincode?: string | null;
+      bloodGroup?: string | null;
+    },
+  ) {
+    const cleanOptional = (value: string | null | undefined) =>
+      value == null ? null : value.trim() || null;
+    const firstName = cleanOptional(data.firstName);
+    const lastName = cleanOptional(data.lastName);
+    if (!firstName || !lastName) {
+      throw new BadRequestException('First and last name are required.');
+    }
+    const email = cleanOptional(data.email);
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      throw new BadRequestException('Email address is invalid.');
+    }
+    const dob = data.dob ? new Date(data.dob) : null;
+    if (dob && (Number.isNaN(dob.getTime()) || dob > new Date())) {
+      throw new BadRequestException('Date of birth must be a valid past date.');
+    }
+    const customer = await this.prisma.customer.update({
+      where: { id: customerId },
+      data: {
+        firstName,
+        lastName,
+        dob,
+        gender: cleanOptional(data.gender),
+        email,
+        addressLine1: cleanOptional(data.addressLine1),
+        addressLine2: cleanOptional(data.addressLine2),
+        city: cleanOptional(data.city),
+        district: cleanOptional(data.district),
+        state: cleanOptional(data.state),
+        pincode: cleanOptional(data.pincode),
+        bloodGroup: cleanOptional(data.bloodGroup),
+      },
+    });
+    await this.recordCustomerAccountAudit(
+      'CUSTOMER_SELF_PROFILE_UPDATED',
+      'CUSTOMER_PROFILE',
+      customer.id,
+      customerId,
+    );
+    return this.getCustomerSelfProfile(customerId);
+  }
+
   async search(query: {
     mobile?: string;
     name?: string;

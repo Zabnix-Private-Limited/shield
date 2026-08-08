@@ -670,6 +670,32 @@ class ApiService {
     return Customer.fromJson(_readEnvelope(response));
   }
 
+  static Future<Customer> getMyCustomerProfile() async {
+    final response = await _dio.get('/customer/profile');
+    return Customer.fromJson(_readEnvelope(response));
+  }
+
+  static Future<Customer> updateMyCustomerProfile(Customer customer) async {
+    final response = await _dio.patch(
+      '/customer/profile',
+      data: {
+        'firstName': customer.firstName,
+        'lastName': customer.lastName,
+        'dob': customer.dob?.toIso8601String(),
+        'gender': customer.gender,
+        'email': customer.email,
+        'addressLine1': customer.addressLine1,
+        'addressLine2': customer.addressLine2,
+        'city': customer.city,
+        'district': customer.district,
+        'state': customer.state,
+        'pincode': customer.pincode,
+        'bloodGroup': customer.bloodGroup,
+      },
+    );
+    return Customer.fromJson(_readEnvelope(response));
+  }
+
   static Future<Map<String, dynamic>> getWalletProfile(
     String customerId,
   ) async {

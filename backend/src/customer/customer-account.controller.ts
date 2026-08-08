@@ -33,6 +33,32 @@ export class CustomerAccountController {
   }
 
   @RequirePermissions('customers.view')
+  @Get('profile')
+  async profile(@CurrentPrincipal() principal?: ShieldPrincipal) {
+    return {
+      success: true,
+      data: await this.customerService.getCustomerSelfProfile(
+        this.customerId(principal),
+      ),
+    };
+  }
+
+  @RequirePermissions('customers.update')
+  @Patch('profile')
+  async updateProfile(
+    @Body() body: any,
+    @CurrentPrincipal() principal?: ShieldPrincipal,
+  ) {
+    return {
+      success: true,
+      data: await this.customerService.updateCustomerSelfProfile(
+        this.customerId(principal),
+        body,
+      ),
+    };
+  }
+
+  @RequirePermissions('customers.view')
   @Get('addresses')
   async addresses(@CurrentPrincipal() principal?: ShieldPrincipal) {
     return {

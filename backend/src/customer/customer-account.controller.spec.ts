@@ -2,6 +2,8 @@ import { CustomerAccountController } from './customer-account.controller';
 
 describe('CustomerAccountController', () => {
   const service = {
+    getCustomerSelfProfile: jest.fn(),
+    updateCustomerSelfProfile: jest.fn(),
     listAddresses: jest.fn(),
     saveAddress: jest.fn(),
     removeAddress: jest.fn(),
@@ -38,6 +40,24 @@ describe('CustomerAccountController', () => {
       99n,
       expect.anything(),
     );
+  });
+
+  it('derives profile ownership from the customer principal', async () => {
+    service.getCustomerSelfProfile.mockResolvedValue({ id: 11n });
+    service.updateCustomerSelfProfile.mockResolvedValue({ id: 11n });
+
+    await controller.profile(customer);
+    await controller.updateProfile(
+      { firstName: 'Asha', status: 'APPROVED', mobile: '9999999999' },
+      customer,
+    );
+
+    expect(service.getCustomerSelfProfile).toHaveBeenCalledWith(11n);
+    expect(service.updateCustomerSelfProfile).toHaveBeenCalledWith(11n, {
+      firstName: 'Asha',
+      status: 'APPROVED',
+      mobile: '9999999999',
+    });
   });
 
   it('rejects a missing or non-customer principal before resource access', async () => {

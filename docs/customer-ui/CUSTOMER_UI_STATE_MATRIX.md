@@ -15,3 +15,6 @@
 | Orders | Screen loading | No recorded orders | Retryable error and detail-load SnackBar | Principal-scoped history; current status only, no fabricated timeline/cancel/refund/reorder |
 | Notifications | Inbox loading | No notifications | Retryable mutation/error message | Do not mark read locally on failed API |
 | Settings/support | N/A for unsupported preferences | Explicit unavailable labels | Generic submit failure | Do not present local-only settings as persisted |
+# Account/Profile state completion — 2026-08-08
+
+Profile: initial skeleton, retryable load failure, client validation, save in progress, save failure, acknowledgement and discard confirmation are supported. Account workspace: loading, retryable failure, empty and mutation states apply to addresses, dependents, contacts and pharmacy selection. Security: loading, empty, revoke confirmation, mutation-disabled and retryable failure states are supported. Unsupported account/privacy actions are hidden rather than rendered as locally persisted controls.
