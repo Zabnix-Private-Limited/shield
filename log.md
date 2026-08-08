@@ -11154,3 +11154,10 @@ px prisma validate, Nest build, 17 focused Documents/Pharmacy controller tests, 
 
 - Added Referral, Notification, and Activity API matrices and supported-scope implementation audits based on current_schema.md and verified APIs.
 - Documents distinguish supported customer-safe reads/mutations from deferred sharing, deep links, pagination, and internal commission/timeline behavior. No database SQL is required and current_schema.md was not modified.
+
+
+## 67. Customer header notification badge authority — 2026-08-08 18:05:24 IST
+
+- Updated CustomerAppBar to load the server-calculated unread count from GET /notifications/me instead of deriving a potentially stale count from the dashboard notification preview.
+- Inbox lookup failure remains non-fatal and does not render a false zero; retry reloads both dashboard data and unread count.
+- Database: current_schema.md was not modified. Verification: targeted Flutter analysis passed.

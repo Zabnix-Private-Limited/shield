@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_typography.dart';
 import '../../../../shared/utils/app_display_formatters.dart';
+import '../../../../shared/services/api_service.dart';
 import '../../../../shared/widgets/shield_brand_lockup.dart';
 import '../../dashboard/presentation/controllers/dashboard_controller.dart';
 import '../../../portal/presentation/portal_role_data.dart';
@@ -29,6 +30,7 @@ class CustomerAppBar extends StatefulWidget {
 
 class _CustomerAppBarState extends State<CustomerAppBar> {
   late final DashboardController _dashboardController;
+  late Future<int?> _unreadNotificationsFuture;
 
   bool get _isMainPage => const {
     'dashboard',
@@ -41,6 +43,7 @@ class _CustomerAppBarState extends State<CustomerAppBar> {
   void initState() {
     super.initState();
     _dashboardController = DashboardController()..load();
+    _unreadNotificationsFuture = _loadUnreadNotifications();
   }
 
   @override
@@ -57,6 +60,15 @@ class _CustomerAppBarState extends State<CustomerAppBar> {
     context.go('/portal/customer/dashboard');
   }
 
+  Future<int?> _loadUnreadNotifications() async {
+    try {
+      final payload = await ApiService.getCustomerNotificationCenter();
+      return int.tryParse(payload['unreadCount']?.toString() ?? '');
+    } catch (_) {
+      return null;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     if (!_isMainPage) {
@@ -71,23 +83,29 @@ class _CustomerAppBarState extends State<CustomerAppBar> {
       padding: const EdgeInsets.fromLTRB(16, 6, 16, 6),
       child: ListenableBuilder(
         listenable: _dashboardController,
-        builder: (context, _) => _CustomerMainHeader(
-          onMenuPressed: widget.onMenuPressed,
-          onNotificationsPressed: () =>
-              context.go('/portal/customer/notifications'),
-          onWalletPressed: () => context.go('/portal/customer/wallet'),
-          onRewardsPressed: () => context.go('/portal/customer/rewards'),
-          cashBalance: _dashboardController.dashboard?.wallet.cashBalance,
-          rewardPoints: _dashboardController.dashboard?.wallet.pointsBalance,
-          unreadNotifications: _dashboardController.dashboard?.notifications
-              .where((item) => !item.isRead)
-              .length,
-          isLoading:
-              _dashboardController.isLoading && !_dashboardController.hasData,
-          hasError:
-              _dashboardController.error != null &&
-              !_dashboardController.hasData,
-          onRetry: _dashboardController.load,
+        builder: (context, _) => FutureBuilder<int?>(
+          future: _unreadNotificationsFuture,
+          builder: (context, notificationSnapshot) => _CustomerMainHeader(
+            onMenuPressed: widget.onMenuPressed,
+            onNotificationsPressed: () =>
+                context.go('/portal/customer/notifications'),
+            onWalletPressed: () => context.go('/portal/customer/wallet'),
+            onRewardsPressed: () => context.go('/portal/customer/rewards'),
+            cashBalance: _dashboardController.dashboard?.wallet.cashBalance,
+            rewardPoints: _dashboardController.dashboard?.wallet.pointsBalance,
+            unreadNotifications: notificationSnapshot.data,
+            isLoading:
+                _dashboardController.isLoading && !_dashboardController.hasData,
+            hasError:
+                _dashboardController.error != null &&
+                !_dashboardController.hasData,
+            onRetry: () {
+              _dashboardController.load();
+              setState(
+                () => _unreadNotificationsFuture = _loadUnreadNotifications(),
+              );
+            },
+          ),
         ),
       ),
     );
