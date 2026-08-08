@@ -11008,3 +11008,10 @@ Added a customer-self, read-only subscription projection to the existing members
 
 ### Remaining Boundaries
 - Secure sharing, local-storage streaming download, OCR/clinical interpretation, fulfilment, payment, and delivery are intentionally not exposed without contracts. Authenticated screenshot QA remains deferred pending workable browser controls.
+## 53. Documents and Prescriptions responsive regression — 2026-08-08 22:25:00 IST
+
+### Frontend Files
+- Added deterministic Documents/Prescriptions responsive coverage with a long filename at 350, 375, 390, 412, 448, 480, 768, and 1200 logical pixels.
+
+### Verification
+- Passed targeted Flutter test and analyzer. This is static/widget evidence; authenticated browser/device QA remains separate.

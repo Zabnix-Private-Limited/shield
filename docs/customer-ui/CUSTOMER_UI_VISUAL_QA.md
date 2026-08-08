@@ -64,5 +64,6 @@ Functional and responsive automated QA passed. Authenticated screenshot QA is **
 # Documents and prescriptions follow-up — 2026-08-08
 
 - Static widget coverage verifies archive failure, category/search controller state, duplicate upload protection, prescription archive failure, and responsive surrounding customer shell coverage.
+- Documents and Prescriptions responsive widget coverage passed at 350, 375, 390, 412, 448, 480, 768, and 1200 logical pixels with a long prescription filename.
 - Authenticated screenshot QA remains `DEFERRED — TOOLING FAILURE` until a controlled local session exposes actionable rendered controls. No screenshot evidence is claimed.
 - Secure sharing, local-storage download streaming, OCR/clinical interpretation, fulfilment, payment, and delivery remain outside the current customer contract.
