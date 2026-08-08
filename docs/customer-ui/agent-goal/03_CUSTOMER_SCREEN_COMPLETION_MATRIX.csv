@@ -140,11 +140,11 @@
 139,Documents & Prescriptions,Prescription Verified,prescription state,Show verified status,document status,,NO,NO,NO,NO,NO,NO,NO,TODO
 140,Documents & Prescriptions,Prescription Rejected,prescription state,Explain rejection/reupload,document status,,NO,NO,NO,NO,NO,NO,NO,TODO
 141,Documents & Prescriptions,Prescription to Pharmacy,/portal/customer/prescriptions,Send/link where supported,pharmacy request API,Explicit review consent active Pharmacy validation audit and duplicate guard,YES,YES,YES,YES,NO,NO,YES,COMPLETE
-142,Wellness Shop & Orders,Wellness Shop Landing,/portal/customer/shop,Catalogue landing,wellness products API,Authenticated shop route now resolves to the existing Services Wellness catalogue; dedicated presentation extraction remains next.,YES,YES,PARTIAL,YES,NO,NO,IN PROGRESS
+142,Wellness Shop & Orders,Wellness Shop Landing,/portal/customer/shop,Catalogue landing,customer wellness products API,Authenticated shop route resolves to the customer Wellness catalogue with search category pagination detail and explicit catalogue-only eligibility.,YES,YES,YES,YES,NO,NO,COMPLETE — SUPPORTED FUNCTIONAL SCOPE
 143,Wellness Shop & Orders,Product Search,/portal/customer/shop/search,Search catalogue,product search API,,NO,NO,NO,NO,NO,NO,NO,TODO
 144,Wellness Shop & Orders,Search Suggestions,same search surface,Suggestions/recent searches,search API/local history,,NO,NO,NO,NO,NO,NO,NO,TODO
 145,Wellness Shop & Orders,Product Categories,/portal/customer/shop/categories,Browse categories,product categories API,,NO,NO,NO,NO,NO,NO,NO,TODO
-146,Wellness Shop & Orders,Product Listing,/portal/customer/shop/products,List database products,products API,Active catalogue is API-backed with loading error retry and empty states; obsolete demo wording removed and product-detail route remains next.,YES,YES,PARTIAL,YES,NO,NO,IN PROGRESS
+146,Wellness Shop & Orders,Product Listing,/portal/customer/shop/products,List database products,customer wellness products API,API-backed customer-safe listing with loading error retry empty states product detail and an explicit non-purchasable state.,YES,YES,YES,YES,NO,NO,COMPLETE — SUPPORTED FUNCTIONAL SCOPE
 147,Wellness Shop & Orders,Product Filters,same listing surface,Category/brand/price/availability,products API,,NO,NO,NO,NO,NO,NO,NO,TODO
 148,Wellness Shop & Orders,Product Sort,same listing surface,Sort supported fields,products API,,NO,NO,NO,NO,NO,NO,NO,TODO
 149,Wellness Shop & Orders,Product Detail,/portal/customer/shop/products/:id,Product information/price/stock,product API,,NO,NO,NO,NO,NO,NO,NO,TODO
@@ -163,9 +163,9 @@
 162,Wellness Shop & Orders,Place Order Processing,same checkout flow,Idempotent creation,orders API,,NO,NO,NO,NO,NO,NO,NO,TODO
 163,Wellness Shop & Orders,Order Success,same checkout flow,Show persisted order,orders API,,NO,NO,NO,NO,NO,NO,NO,TODO
 164,Wellness Shop & Orders,Order Failure,same checkout flow,Recover safely,orders error,,NO,NO,NO,NO,NO,NO,NO,TODO
-165,Wellness Shop & Orders,My Orders,/portal/customer/orders,List owned orders,orders API,,NO,NO,NO,NO,NO,NO,NO,TODO
+165,Wellness Shop & Orders,My Orders,/portal/customer/orders,List owned orders,GET /customer/orders,Principal-scoped recorded purchase list with loading empty retry refresh and safe detail entry.,YES,YES,YES,YES,NO,NO,COMPLETE — SUPPORTED FUNCTIONAL SCOPE
 166,Wellness Shop & Orders,Order Filters,same orders surface,Filter statuses/date,orders API,,NO,NO,NO,NO,NO,NO,NO,TODO
-167,Wellness Shop & Orders,Order Detail,/portal/customer/orders/:id,Items/totals/status/address,order API,,NO,NO,NO,NO,NO,NO,NO,TODO
+167,Wellness Shop & Orders,Order Detail,/portal/customer/orders/:id,Items totals status,GET /customer/orders/:id,Backend customer ownership check and safe item snapshot detail; delivery address is not supported by the current Purchase contract.,YES,YES,YES,YES,NO,NO,COMPLETE — SUPPORTED FUNCTIONAL SCOPE
 168,Wellness Shop & Orders,Order Tracking,/portal/customer/orders/:id/tracking,Status timeline,order events API,,NO,NO,NO,NO,NO,NO,NO,TODO
 169,Wellness Shop & Orders,Cancel Order,/portal/customer/orders/:id/cancel,Cancel when eligible,orders API,,NO,NO,NO,NO,NO,NO,NO,TODO
 170,Wellness Shop & Orders,Return Request,/portal/customer/orders/:id/return,Return where supported,return API,,NO,NO,NO,NO,NO,NO,NO,TODO

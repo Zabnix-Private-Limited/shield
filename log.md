@@ -11112,3 +11112,9 @@ px prisma validate, Nest build, 17 focused Documents/Pharmacy controller tests, 
 
 - Updated the customer UI audit, route inventory, state matrix, and visual-QA record to replace the old provider-oriented purchase binding with GET /customer/orders and GET /customer/orders/:id.
 - Preserved explicit deferrals for cart, checkout, payment, delivery, tracking, cancellation, refund, and reorder; no database or financial change was made.
+
+
+## 61. Commerce completion-matrix correction — 2026-08-08 14:48:03 IST
+
+- Updated the customer screen completion matrix to reflect the current customer Wellness catalogue and principal-scoped Orders list/detail contracts.
+- Cart, checkout, payment, delivery, tracking, cancellation, refund, reorder, and unsupported Order filters remain explicitly deferred rather than marked complete.
