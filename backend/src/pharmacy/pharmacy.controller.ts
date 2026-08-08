@@ -1,5 +1,6 @@
 import {
   Body,
+  BadRequestException,
   Controller,
   ForbiddenException,
   Get,
@@ -28,6 +29,59 @@ export class PharmacyController {
       success: true,
       message: 'Product created successfully',
       data: prod,
+    };
+  }
+
+  private requireCustomer(principal?: ShieldPrincipal) {
+    if (principal?.principalType !== 'CUSTOMER' || !principal.customerId) {
+      throw new ForbiddenException(
+        'Authenticated customer context is required.',
+      );
+    }
+    return BigInt(principal.customerId);
+  }
+
+  private parseId(value: unknown, label: string) {
+    const normalized = String(value ?? '').trim();
+    if (!/^\d+$/.test(normalized)) {
+      throw new BadRequestException(`${label} is required.`);
+    }
+    return BigInt(normalized);
+  }
+
+  @RequirePermissions('documents.create')
+  @Post('pharmacy/prescriptions')
+  async submitCustomerPrescription(
+    @Body() body: any,
+    @CurrentPrincipal() principal?: ShieldPrincipal,
+  ) {
+    const request =
+      await this.pharmacyService.createCustomerPrescriptionRequest({
+        customerId: this.requireCustomer(principal),
+        documentId: this.parseId(body.document_id, 'Prescription document ID'),
+        providerId: this.parseId(body.provider_id, 'Pharmacy provider ID'),
+        customerNotes: String(body.customer_notes ?? '').trim() || undefined,
+      });
+    return {
+      success: true,
+      message: 'Prescription request submitted to the selected pharmacy.',
+      data: request,
+    };
+  }
+
+  @RequirePermissions('documents.view')
+  @Get('pharmacy/prescriptions')
+  async listCustomerPrescriptionRequests(
+    @CurrentPrincipal() principal?: ShieldPrincipal,
+  ) {
+    const requests =
+      await this.pharmacyService.listCustomerPrescriptionRequests(
+        this.requireCustomer(principal),
+      );
+    return {
+      success: true,
+      message: 'Prescription pharmacy requests retrieved.',
+      data: requests,
     };
   }
 
@@ -147,7 +201,9 @@ export class PharmacyController {
     @CurrentPrincipal() principal?: ShieldPrincipal,
   ) {
     if (principal?.principalType === 'CUSTOMER' && !principal.customerId) {
-      throw new ForbiddenException('Authenticated customer context is required.');
+      throw new ForbiddenException(
+        'Authenticated customer context is required.',
+      );
     }
     const targetCustomerId =
       principal?.principalType === 'CUSTOMER'

@@ -1,4 +1,5 @@
 import '../../../../shared/models/document.dart';
+import '../../../../shared/services/api_service.dart';
 import '../../documents/data/customer_documents_repository.dart';
 
 class CustomerPrescriptionsRepository {
@@ -13,4 +14,14 @@ class CustomerPrescriptionsRepository {
 
   Future<String> viewerUrl(String documentId) =>
       _documents.viewerUrl(documentId);
+
+  Future<Map<String, dynamic>> submitToPharmacy({
+    required String documentId,
+    required String providerId,
+    String? customerNotes,
+  }) => ApiService.submitCustomerPrescriptionToPharmacy(
+    documentId: documentId,
+    providerId: providerId,
+    customerNotes: customerNotes,
+  );
 }

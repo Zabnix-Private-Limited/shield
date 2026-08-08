@@ -167,7 +167,12 @@ export class PharmacyService {
     ]);
     return {
       items: products.map((product) => this.customerWellnessProduct(product)),
-      pagination: { page, pageSize, total, totalPages: Math.ceil(total / pageSize) },
+      pagination: {
+        page,
+        pageSize,
+        total,
+        totalPages: Math.ceil(total / pageSize),
+      },
       categories: categories.map((category) => ({
         id: category.id.toString(),
         name: this.customerCategoryName(category.name),
@@ -183,6 +188,111 @@ export class PharmacyService {
     });
     if (!product) throw new NotFoundException('Wellness product not found.');
     return this.customerWellnessProduct(product);
+  }
+
+  private customerPrescriptionRequest(value: any) {
+    return {
+      id: value.id.toString(),
+      uuid: value.uuid,
+      status: value.status,
+      customerNotes: value.customerNotes ?? null,
+      createdAt: value.createdAt,
+      updatedAt: value.updatedAt,
+      prescription: {
+        id: value.document.id.toString(),
+        title: value.document.fileName ?? 'Prescription',
+        fileName: value.document.fileName ?? 'Prescription',
+        status: value.document.status ?? 'UPLOADED',
+      },
+      pharmacy: {
+        id: value.provider.id.toString(),
+        name: value.provider.providerName ?? 'Pharmacy',
+        businessName: value.provider.business?.name ?? null,
+      },
+    };
+  }
+
+  async createCustomerPrescriptionRequest(data: {
+    customerId: bigint;
+    documentId: bigint;
+    providerId: bigint;
+    customerNotes?: string;
+  }) {
+    const [document, provider] = await Promise.all([
+      this.prisma.document.findFirst({
+        where: {
+          id: data.documentId,
+          customerId: data.customerId,
+          documentType: { equals: 'PRESCRIPTION', mode: 'insensitive' },
+          status: { not: 'DELETED' },
+        },
+      }),
+      this.prisma.serviceProvider.findFirst({
+        where: {
+          id: data.providerId,
+          status: 'ACTIVE',
+          providerType: { equals: 'PHARMACY', mode: 'insensitive' },
+        },
+      }),
+    ]);
+    if (!document) {
+      throw new NotFoundException('Prescription document not found.');
+    }
+    if (!provider) {
+      throw new BadRequestException('The selected pharmacy is not available.');
+    }
+
+    const duplicate = await this.prisma.prescriptionPharmacyRequest.findFirst({
+      where: {
+        documentId: data.documentId,
+        providerId: data.providerId,
+        status: 'SUBMITTED',
+      },
+      select: { id: true },
+    });
+    if (duplicate) {
+      throw new BadRequestException(
+        'This prescription has already been submitted to the selected pharmacy.',
+      );
+    }
+
+    const request = await this.prisma.$transaction(async (tx) => {
+      const created = await tx.prescriptionPharmacyRequest.create({
+        data: {
+          uuid: randomUUID(),
+          customerId: data.customerId,
+          documentId: data.documentId,
+          providerId: data.providerId,
+          status: 'SUBMITTED',
+          customerNotes: data.customerNotes,
+        },
+        include: { document: true, provider: { include: { business: true } } },
+      });
+      await tx.auditLog.create({
+        data: {
+          action: 'CUSTOMER_PRESCRIPTION_PHARMACY_SUBMITTED',
+          entityType: 'PRESCRIPTION_PHARMACY_REQUEST',
+          entityId: created.id,
+          newData: {
+            customerId: data.customerId.toString(),
+            documentId: data.documentId.toString(),
+            providerId: data.providerId.toString(),
+            status: 'SUBMITTED',
+          },
+        },
+      });
+      return created;
+    });
+    return this.customerPrescriptionRequest(request);
+  }
+
+  async listCustomerPrescriptionRequests(customerId: bigint) {
+    const requests = await this.prisma.prescriptionPharmacyRequest.findMany({
+      where: { customerId },
+      include: { document: true, provider: { include: { business: true } } },
+      orderBy: { createdAt: 'desc' },
+    });
+    return requests.map((request) => this.customerPrescriptionRequest(request));
   }
 
   async createPurchase(data: {

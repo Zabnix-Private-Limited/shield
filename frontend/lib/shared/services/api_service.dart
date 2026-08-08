@@ -1431,6 +1431,31 @@ class ApiService {
     return Document.fromJson(_readEnvelope(response));
   }
 
+  static Future<Map<String, dynamic>> submitCustomerPrescriptionToPharmacy({
+    required String documentId,
+    required String providerId,
+    String? customerNotes,
+  }) async {
+    final response = await _dio.post(
+      '/pharmacy/prescriptions',
+      data: {
+        'document_id': documentId,
+        'provider_id': providerId,
+        if (customerNotes != null && customerNotes.trim().isNotEmpty)
+          'customer_notes': customerNotes.trim(),
+      },
+    );
+    return _readEnvelope(response);
+  }
+
+  static Future<List<Map<String, dynamic>>>
+  getCustomerPrescriptionPharmacyRequests() async {
+    final response = await _dio.get('/pharmacy/prescriptions');
+    return _readEnvelopeList(
+      response,
+    ).map((item) => Map<String, dynamic>.from(item as Map)).toList();
+  }
+
   static Future<PrescriptionAnalysis> getPrescriptionAnalysis(
     String documentId,
   ) async {

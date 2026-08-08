@@ -245,6 +245,7 @@ model Customer {
   consultations                  Consultation[]
   documents                      Document[]
   prescriptions                  Prescription[]
+  prescriptionPharmacyRequests   PrescriptionPharmacyRequest[]
   labReports                     LabReport[]
   dentalRecords                  DentalRecord[]
   crmActivities                  CrmActivity[]
@@ -689,6 +690,7 @@ model ServiceProvider {
   business     Business?     @relation(fields: [businessId], references: [id])
   purchases    Purchase[]
   appointments Appointment[]
+  prescriptionPharmacyRequests PrescriptionPharmacyRequest[]
 
   @@map("service_providers")
 }
@@ -880,6 +882,7 @@ model Document {
   documentExtractions     DocumentExtraction[]
   documentProcessingLogs  DocumentProcessingLog[]
   prescriptions           Prescription[]
+  prescriptionPharmacyRequests PrescriptionPharmacyRequest[]
   labReports              LabReport[]
 
   @@map("documents")
@@ -934,6 +937,27 @@ model Prescription {
   document     Document?     @relation(fields: [documentId], references: [id])
 
   @@map("prescriptions")
+}
+
+model PrescriptionPharmacyRequest {
+  id            BigInt   @id @default(autoincrement())
+  uuid          String   @unique @db.Uuid
+  customerId    BigInt   @map("customer_id")
+  documentId    BigInt   @map("document_id")
+  providerId    BigInt   @map("provider_id")
+  status        String   @default("SUBMITTED") @db.VarChar(50)
+  customerNotes String?  @map("customer_notes") @db.Text
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  customer Customer        @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  document Document        @relation(fields: [documentId], references: [id], onDelete: Restrict)
+  provider ServiceProvider @relation(fields: [providerId], references: [id], onDelete: Restrict)
+
+  @@index([customerId, createdAt], map: "idx_prescription_pharmacy_requests_customer")
+  @@index([providerId, status], map: "idx_prescription_pharmacy_requests_provider_status")
+  @@index([documentId], map: "idx_prescription_pharmacy_requests_document")
+  @@map("prescription_pharmacy_requests")
 }
 
 model LabReport {
