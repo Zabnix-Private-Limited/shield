@@ -1,4 +1,14 @@
 CREATE SCHEMA "public";
+CREATE TABLE "_prisma_migrations" (
+	"id" varchar(36) PRIMARY KEY,
+	"checksum" varchar(64) NOT NULL,
+	"finished_at" timestamp with time zone,
+	"migration_name" varchar(255) NOT NULL,
+	"logs" text,
+	"rolled_back_at" timestamp with time zone,
+	"started_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"applied_steps_count" integer DEFAULT 0 NOT NULL
+);
 CREATE TABLE "activity_events" (
 	"id" bigserial PRIMARY KEY,
 	"uuid" uuid NOT NULL CONSTRAINT "activity_events_uuid_key" UNIQUE,
@@ -260,6 +270,22 @@ CREATE TABLE "crm_tasks" (
 	"status" varchar(50),
 	"notes" text
 );
+CREATE TABLE "customer_addresses" (
+	"id" bigserial PRIMARY KEY,
+	"uuid" uuid NOT NULL CONSTRAINT "customer_addresses_uuid_key" UNIQUE,
+	"customer_id" bigint NOT NULL,
+	"label" varchar(50) DEFAULT 'HOME' NOT NULL,
+	"address_line1" text NOT NULL,
+	"address_line2" text,
+	"city" varchar(100),
+	"district" varchar(100),
+	"state" varchar(100),
+	"pincode" varchar(20),
+	"is_default" boolean DEFAULT false NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"deleted_at" timestamp with time zone
+);
 CREATE TABLE "customer_contacts" (
 	"id" bigserial PRIMARY KEY,
 	"customer_id" bigint NOT NULL,
@@ -267,7 +293,22 @@ CREATE TABLE "customer_contacts" (
 	"relation" varchar(100),
 	"mobile" varchar(20),
 	"is_primary" boolean DEFAULT false,
-	"created_at" timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+	"created_at" timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+	"contact_type" varchar(30) DEFAULT 'ALTERNATIVE' NOT NULL,
+	"deleted_at" timestamp with time zone
+);
+CREATE TABLE "customer_dependents" (
+	"id" bigserial PRIMARY KEY,
+	"uuid" uuid NOT NULL CONSTRAINT "customer_dependents_uuid_key" UNIQUE,
+	"customer_id" bigint NOT NULL,
+	"first_name" varchar(255) NOT NULL,
+	"last_name" varchar(255),
+	"relation" varchar(100) NOT NULL,
+	"dob" date,
+	"gender" varchar(20),
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"deleted_at" timestamp with time zone
 );
 CREATE TABLE "customer_import_batches" (
 	"id" bigserial PRIMARY KEY,
@@ -294,6 +335,17 @@ CREATE TABLE "customer_import_rows" (
 	"status" varchar(50) DEFAULT 'PENDING' NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	CONSTRAINT "customer_import_rows_batch_id_external_customer_id_key" UNIQUE("batch_id","external_customer_id")
+);
+CREATE TABLE "customer_preferences" (
+	"id" bigserial PRIMARY KEY,
+	"uuid" uuid NOT NULL CONSTRAINT "customer_preferences_uuid_key" UNIQUE,
+	"customer_id" bigint NOT NULL CONSTRAINT "customer_preferences_customer_id_key" UNIQUE,
+	"notification_preferences" jsonb,
+	"language" varchar(20),
+	"theme" varchar(30),
+	"preferred_provider_id" bigint,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 CREATE TABLE "customer_status_history" (
 	"id" bigserial PRIMARY KEY,
@@ -480,6 +532,17 @@ CREATE TABLE "permissions" (
 	"code" varchar(100),
 	"name" varchar(255),
 	"description" text
+);
+CREATE TABLE "prescription_pharmacy_requests" (
+	"id" bigserial PRIMARY KEY,
+	"uuid" uuid NOT NULL CONSTRAINT "prescription_pharmacy_requests_uuid_key" UNIQUE,
+	"customer_id" bigint NOT NULL,
+	"document_id" bigint NOT NULL,
+	"provider_id" bigint NOT NULL,
+	"status" varchar(50) DEFAULT 'SUBMITTED' NOT NULL,
+	"customer_notes" text,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 CREATE TABLE "prescriptions" (
 	"id" bigserial PRIMARY KEY,
@@ -758,6 +821,7 @@ CREATE TABLE "wallets" (
 	"status" varchar(50),
 	"created_at" timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
+CREATE UNIQUE INDEX "_prisma_migrations_pkey" ON "_prisma_migrations" ("id");
 CREATE UNIQUE INDEX "activity_events_pkey" ON "activity_events" ("id");
 CREATE UNIQUE INDEX "activity_events_uuid_key" ON "activity_events" ("uuid");
 CREATE INDEX "idx_activity_events_customer" ON "activity_events" ("customer_id","created_at");
@@ -826,13 +890,22 @@ CREATE UNIQUE INDEX "credit_transactions_pkey" ON "credit_transactions" ("id");
 CREATE UNIQUE INDEX "credit_transactions_uuid_key" ON "credit_transactions" ("uuid");
 CREATE UNIQUE INDEX "crm_activities_pkey" ON "crm_activities" ("id");
 CREATE UNIQUE INDEX "crm_tasks_pkey" ON "crm_tasks" ("id");
+CREATE UNIQUE INDEX "customer_addresses_pkey" ON "customer_addresses" ("id");
+CREATE UNIQUE INDEX "customer_addresses_uuid_key" ON "customer_addresses" ("uuid");
+CREATE INDEX "idx_customer_addresses_customer" ON "customer_addresses" ("customer_id","deleted_at");
 CREATE UNIQUE INDEX "customer_contacts_pkey" ON "customer_contacts" ("id");
+CREATE UNIQUE INDEX "customer_dependents_pkey" ON "customer_dependents" ("id");
+CREATE UNIQUE INDEX "customer_dependents_uuid_key" ON "customer_dependents" ("uuid");
+CREATE INDEX "idx_customer_dependents_customer" ON "customer_dependents" ("customer_id","deleted_at");
 CREATE UNIQUE INDEX "customer_import_batches_pkey" ON "customer_import_batches" ("id");
 CREATE UNIQUE INDEX "customer_import_batches_uuid_key" ON "customer_import_batches" ("uuid");
 CREATE INDEX "idx_customer_import_batches_business" ON "customer_import_batches" ("business_id","status");
 CREATE UNIQUE INDEX "customer_import_rows_batch_id_external_customer_id_key" ON "customer_import_rows" ("batch_id","external_customer_id");
 CREATE UNIQUE INDEX "customer_import_rows_pkey" ON "customer_import_rows" ("id");
 CREATE INDEX "idx_customer_import_rows_mobile" ON "customer_import_rows" ("mobile");
+CREATE UNIQUE INDEX "customer_preferences_customer_id_key" ON "customer_preferences" ("customer_id");
+CREATE UNIQUE INDEX "customer_preferences_pkey" ON "customer_preferences" ("id");
+CREATE UNIQUE INDEX "customer_preferences_uuid_key" ON "customer_preferences" ("uuid");
 CREATE UNIQUE INDEX "customer_status_history_pkey" ON "customer_status_history" ("id");
 CREATE UNIQUE INDEX "customer_status_history_uuid_key" ON "customer_status_history" ("uuid");
 CREATE INDEX "idx_customer_status_history_customer" ON "customer_status_history" ("customer_id");
@@ -881,6 +954,12 @@ CREATE UNIQUE INDEX "notifications_pkey" ON "notifications" ("id");
 CREATE UNIQUE INDEX "permissions_code_key" ON "permissions" ("code");
 CREATE UNIQUE INDEX "permissions_pkey" ON "permissions" ("id");
 CREATE UNIQUE INDEX "permissions_uuid_key" ON "permissions" ("uuid");
+CREATE INDEX "idx_prescription_pharmacy_requests_customer" ON "prescription_pharmacy_requests" ("customer_id","created_at");
+CREATE INDEX "idx_prescription_pharmacy_requests_document" ON "prescription_pharmacy_requests" ("document_id");
+CREATE INDEX "idx_prescription_pharmacy_requests_provider_status" ON "prescription_pharmacy_requests" ("provider_id","status");
+CREATE UNIQUE INDEX "prescription_pharmacy_requests_pkey" ON "prescription_pharmacy_requests" ("id");
+CREATE UNIQUE INDEX "prescription_pharmacy_requests_uuid_key" ON "prescription_pharmacy_requests" ("uuid");
+CREATE UNIQUE INDEX "uq_prescription_pharmacy_requests_open" ON "prescription_pharmacy_requests" ("document_id","provider_id");
 CREATE UNIQUE INDEX "prescriptions_pkey" ON "prescriptions" ("id");
 CREATE INDEX "idx_pricing_rule_audits_customer" ON "pricing_rule_audits" ("customer_id");
 CREATE INDEX "idx_pricing_rule_audits_date" ON "pricing_rule_audits" ("created_at");
@@ -986,12 +1065,15 @@ ALTER TABLE "crm_activities" ADD CONSTRAINT "crm_activities_created_by_fkey" FOR
 ALTER TABLE "crm_activities" ADD CONSTRAINT "crm_activities_customer_id_fkey" FOREIGN KEY ("customer_id") REFERENCES "customers"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 ALTER TABLE "crm_tasks" ADD CONSTRAINT "crm_tasks_assigned_to_fkey" FOREIGN KEY ("assigned_to") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 ALTER TABLE "crm_tasks" ADD CONSTRAINT "crm_tasks_customer_id_fkey" FOREIGN KEY ("customer_id") REFERENCES "customers"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "customer_addresses" ADD CONSTRAINT "customer_addresses_customer_id_fkey" FOREIGN KEY ("customer_id") REFERENCES "customers"("id") ON DELETE CASCADE;
 ALTER TABLE "customer_contacts" ADD CONSTRAINT "customer_contacts_customer_id_fkey" FOREIGN KEY ("customer_id") REFERENCES "customers"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "customer_dependents" ADD CONSTRAINT "customer_dependents_customer_id_fkey" FOREIGN KEY ("customer_id") REFERENCES "customers"("id") ON DELETE CASCADE;
 ALTER TABLE "customer_import_batches" ADD CONSTRAINT "customer_import_batches_approved_by_fkey" FOREIGN KEY ("approved_by") REFERENCES "users"("id");
 ALTER TABLE "customer_import_batches" ADD CONSTRAINT "customer_import_batches_business_id_fkey" FOREIGN KEY ("business_id") REFERENCES "businesses"("id");
 ALTER TABLE "customer_import_batches" ADD CONSTRAINT "customer_import_batches_requested_by_fkey" FOREIGN KEY ("requested_by") REFERENCES "users"("id");
 ALTER TABLE "customer_import_rows" ADD CONSTRAINT "customer_import_rows_batch_id_fkey" FOREIGN KEY ("batch_id") REFERENCES "customer_import_batches"("id") ON DELETE CASCADE;
 ALTER TABLE "customer_import_rows" ADD CONSTRAINT "customer_import_rows_matched_customer_id_fkey" FOREIGN KEY ("matched_customer_id") REFERENCES "customers"("id");
+ALTER TABLE "customer_preferences" ADD CONSTRAINT "customer_preferences_customer_id_fkey" FOREIGN KEY ("customer_id") REFERENCES "customers"("id") ON DELETE CASCADE;
 ALTER TABLE "customer_status_history" ADD CONSTRAINT "customer_status_history_changed_by_fkey" FOREIGN KEY ("changed_by") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 ALTER TABLE "customer_status_history" ADD CONSTRAINT "customer_status_history_customer_id_fkey" FOREIGN KEY ("customer_id") REFERENCES "customers"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 ALTER TABLE "customers" ADD CONSTRAINT "customers_approved_by_fkey" FOREIGN KEY ("approved_by") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
@@ -1013,6 +1095,9 @@ ALTER TABLE "membership_subscriptions" ADD CONSTRAINT "membership_subscriptions_
 ALTER TABLE "memberships" ADD CONSTRAINT "memberships_customer_id_fkey" FOREIGN KEY ("customer_id") REFERENCES "customers"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 ALTER TABLE "memberships" ADD CONSTRAINT "memberships_membership_type_id_fkey" FOREIGN KEY ("membership_type_id") REFERENCES "membership_types"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 ALTER TABLE "notifications" ADD CONSTRAINT "notifications_customer_id_fkey" FOREIGN KEY ("customer_id") REFERENCES "customers"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "prescription_pharmacy_requests" ADD CONSTRAINT "prescription_pharmacy_requests_customer_id_fkey" FOREIGN KEY ("customer_id") REFERENCES "customers"("id") ON DELETE CASCADE;
+ALTER TABLE "prescription_pharmacy_requests" ADD CONSTRAINT "prescription_pharmacy_requests_document_id_fkey" FOREIGN KEY ("document_id") REFERENCES "documents"("id") ON DELETE RESTRICT;
+ALTER TABLE "prescription_pharmacy_requests" ADD CONSTRAINT "prescription_pharmacy_requests_provider_id_fkey" FOREIGN KEY ("provider_id") REFERENCES "service_providers"("id") ON DELETE RESTRICT;
 ALTER TABLE "prescriptions" ADD CONSTRAINT "prescriptions_consultation_id_fkey" FOREIGN KEY ("consultation_id") REFERENCES "consultations"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 ALTER TABLE "prescriptions" ADD CONSTRAINT "prescriptions_customer_id_fkey" FOREIGN KEY ("customer_id") REFERENCES "customers"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 ALTER TABLE "prescriptions" ADD CONSTRAINT "prescriptions_document_id_fkey" FOREIGN KEY ("document_id") REFERENCES "documents"("id") ON DELETE SET NULL ON UPDATE CASCADE;
@@ -1041,29 +1126,3 @@ ALTER TABLE "users" ADD CONSTRAINT "users_role_id_fkey" FOREIGN KEY ("role_id") 
 ALTER TABLE "wallet_transactions" ADD CONSTRAINT "wallet_transactions_created_by_fkey" FOREIGN KEY ("created_by") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 ALTER TABLE "wallet_transactions" ADD CONSTRAINT "wallet_transactions_wallet_id_fkey" FOREIGN KEY ("wallet_id") REFERENCES "wallets"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 ALTER TABLE "wallets" ADD CONSTRAINT "wallets_customer_id_fkey" FOREIGN KEY ("customer_id") REFERENCES "customers"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-
--- Applied migration snapshot: 20260805_customer_account_capabilities
-ALTER TABLE "customer_contacts" ADD COLUMN "contact_type" varchar(30) NOT NULL DEFAULT 'ALTERNATIVE', ADD COLUMN "deleted_at" timestamp with time zone;
-CREATE TABLE "customer_addresses" (
-  "id" bigserial PRIMARY KEY, "uuid" uuid NOT NULL UNIQUE,
-  "customer_id" bigint NOT NULL REFERENCES "customers"("id") ON DELETE CASCADE,
-  "label" varchar(50) NOT NULL DEFAULT 'HOME', "address_line1" text NOT NULL,
-  "address_line2" text, "city" varchar(100), "district" varchar(100), "state" varchar(100), "pincode" varchar(20),
-  "is_default" boolean NOT NULL DEFAULT false,
-  "created_at" timestamp with time zone NOT NULL DEFAULT now(), "updated_at" timestamp with time zone NOT NULL DEFAULT now(), "deleted_at" timestamp with time zone
-);
-CREATE INDEX "idx_customer_addresses_customer" ON "customer_addresses" ("customer_id", "deleted_at");
-CREATE TABLE "customer_dependents" (
-  "id" bigserial PRIMARY KEY, "uuid" uuid NOT NULL UNIQUE,
-  "customer_id" bigint NOT NULL REFERENCES "customers"("id") ON DELETE CASCADE,
-  "first_name" varchar(255) NOT NULL, "last_name" varchar(255), "relation" varchar(100) NOT NULL,
-  "dob" date, "gender" varchar(20),
-  "created_at" timestamp with time zone NOT NULL DEFAULT now(), "updated_at" timestamp with time zone NOT NULL DEFAULT now(), "deleted_at" timestamp with time zone
-);
-CREATE INDEX "idx_customer_dependents_customer" ON "customer_dependents" ("customer_id", "deleted_at");
-CREATE TABLE "customer_preferences" (
-  "id" bigserial PRIMARY KEY, "uuid" uuid NOT NULL UNIQUE,
-  "customer_id" bigint NOT NULL UNIQUE REFERENCES "customers"("id") ON DELETE CASCADE,
-  "notification_preferences" jsonb, "language" varchar(20), "theme" varchar(30), "preferred_provider_id" bigint,
-  "created_at" timestamp with time zone NOT NULL DEFAULT now(), "updated_at" timestamp with time zone NOT NULL DEFAULT now()
-);
