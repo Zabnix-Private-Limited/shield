@@ -8,6 +8,7 @@ describe('DocumentController customer scope', () => {
     extract: jest.fn(),
     getPrescriptionReview: jest.fn(),
     getLogs: jest.fn(),
+    softDelete: jest.fn(),
   };
   const agentScope = { assertAgentCanAccessDocument: jest.fn() };
   const providerScope = { assertProviderCanAccessDocument: jest.fn() };
@@ -74,6 +75,30 @@ describe('DocumentController customer scope', () => {
 
     const response = await controller.findOne('7', customer);
 
-    expect(response.data).toEqual({ id: BigInt(7), fileName: 'report.pdf' });
+    expect(response.data).toMatchObject({
+      id: BigInt(7),
+      title: 'report.pdf',
+      fileName: 'report.pdf',
+    });
+    expect(response.data).not.toHaveProperty('storagePath');
+    expect(response.data).not.toHaveProperty('customer');
+    expect(response.data).not.toHaveProperty('documentProcessingLogs');
+  });
+
+  it('rejects a customer archiving another customer document', async () => {
+    service.documentBelongsToCustomer.mockResolvedValue(false);
+
+    await expect(controller.softDelete('7', customer)).rejects.toThrow(
+      'Customers can only access their own documents.',
+    );
+    expect(service.softDelete).not.toHaveBeenCalled();
+  });
+
+  it('does not expose internal processing routes to a document owner', async () => {
+    service.documentBelongsToCustomer.mockResolvedValue(true);
+
+    await expect(controller.getLogs('7', customer)).rejects.toThrow(
+      'Document processing details are not available in the customer archive.',
+    );
   });
 });

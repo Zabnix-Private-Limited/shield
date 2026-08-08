@@ -5,6 +5,7 @@ import {
   Delete,
   Param,
   Body,
+  BadRequestException,
   ForbiddenException,
   Query,
   HttpCode,
@@ -23,6 +24,23 @@ import { DocumentService } from './document.service';
 
 @Controller()
 export class DocumentController {
+  private static readonly customerDocumentTypes = new Set([
+    'PRESCRIPTION',
+    'LAB_REPORT',
+    'DENTAL_RECORD',
+    'DENTAL_REPORT',
+    'INVOICE',
+    'PHARMACY_BILL',
+    'OTHER',
+  ]);
+
+  private static readonly acceptedFiles = new Map<string, string[]>([
+    ['application/pdf', ['pdf']],
+    ['image/jpeg', ['jpg', 'jpeg']],
+    ['image/png', ['png']],
+    ['image/webp', ['webp']],
+  ]);
+
   constructor(
     private documentService: DocumentService,
     private readonly agentScopeService: AgentScopeService,
@@ -58,8 +76,57 @@ export class DocumentController {
         this.customerSafeDocument(item, principal),
       ) as T;
     }
-    const { storagePath: _storagePath, ...safeDocument } = value as any;
-    return safeDocument as T;
+    const document = value as any;
+    return {
+      id: document.id,
+      uuid: document.uuid,
+      title: document.fileName ?? 'Document',
+      fileName: document.fileName ?? 'Document',
+      documentType: document.documentType ?? 'OTHER',
+      status: document.status ?? 'UPLOADED',
+      fileSize: document.fileSize ?? null,
+      mimeType: document.mimeType ?? null,
+      createdAt: document.createdAt ?? null,
+    } as T;
+  }
+
+  private customerUploadMetadata(file: any, body: any) {
+    if (!file?.buffer?.length || !file.originalname) {
+      throw new BadRequestException('A document file is required.');
+    }
+
+    const fileName = String(file.originalname).trim();
+    const extension = fileName.split('.').pop()?.toLowerCase() ?? '';
+    const mimeType = String(file.mimetype ?? '').toLowerCase();
+    const allowedExtensions = DocumentController.acceptedFiles.get(mimeType);
+    if (
+      !allowedExtensions ||
+      !allowedExtensions.includes(extension) ||
+      fileName.includes('/') ||
+      fileName.includes('\\') ||
+      fileName.includes('..')
+    ) {
+      throw new BadRequestException(
+        'Only PDF, JPEG, PNG, and WebP document files are accepted.',
+      );
+    }
+
+    const documentType = String(body.document_type ?? '')
+      .trim()
+      .toUpperCase();
+    if (!DocumentController.customerDocumentTypes.has(documentType)) {
+      throw new BadRequestException('Unsupported document category.');
+    }
+
+    return { fileName, mimeType, documentType };
+  }
+
+  private assertNotCustomerInternalProcessing(principal?: ShieldPrincipal) {
+    if (principal?.principalType === 'CUSTOMER') {
+      throw new ForbiddenException(
+        'Document processing details are not available in the customer archive.',
+      );
+    }
   }
 
   @RequirePermissions('documents.create')
@@ -75,6 +142,7 @@ export class DocumentController {
     @Body() body: any,
     @CurrentPrincipal() principal?: ShieldPrincipal,
   ) {
+    const customerUpload = this.customerUploadMetadata(file, body);
     const uploaderId =
       principal?.userId != null
         ? BigInt(principal.userId)
@@ -99,10 +167,10 @@ export class DocumentController {
     );
     const doc = await this.documentService.upload({
       customerId: BigInt(body.customer_id),
-      fileName: file?.originalname || body.file_name || 'prescription.pdf',
-      fileSize: Number(file?.size || body.file_size || 1024),
-      mimeType: file?.mimetype || body.mime_type || 'application/pdf',
-      documentType: body.document_type || 'prescription',
+      fileName: customerUpload.fileName,
+      fileSize: Number(file.size),
+      mimeType: customerUpload.mimeType,
+      documentType: customerUpload.documentType,
       uploadedBy: uploaderId,
       fileBuffer: file?.buffer,
     });
@@ -203,6 +271,7 @@ export class DocumentController {
     @Param('id') id: string,
     @CurrentPrincipal() principal?: ShieldPrincipal,
   ) {
+    await this.assertCustomerOwnDocument(BigInt(id), principal);
     await this.providerScopeService.assertProviderCanAccessDocument(
       BigInt(id),
       principal,
@@ -239,6 +308,7 @@ export class DocumentController {
     @CurrentPrincipal() principal?: ShieldPrincipal,
   ) {
     await this.assertCustomerOwnDocument(BigInt(body.document_id), principal);
+    this.assertNotCustomerInternalProcessing(principal);
     await this.providerScopeService.assertProviderCanAccessDocument(
       BigInt(body.document_id),
       principal,
@@ -290,6 +360,7 @@ export class DocumentController {
     @CurrentPrincipal() principal?: ShieldPrincipal,
   ) {
     await this.assertCustomerOwnDocument(BigInt(documentId), principal);
+    this.assertNotCustomerInternalProcessing(principal);
     await this.providerScopeService.assertProviderCanAccessDocument(
       BigInt(documentId),
       principal,
@@ -345,6 +416,7 @@ export class DocumentController {
     @CurrentPrincipal() principal?: ShieldPrincipal,
   ) {
     await this.assertCustomerOwnDocument(BigInt(documentId), principal);
+    this.assertNotCustomerInternalProcessing(principal);
     await this.providerScopeService.assertProviderCanAccessDocument(
       BigInt(documentId),
       principal,

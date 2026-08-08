@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { randomUUID } from 'crypto';
 import type { ShieldPrincipal } from '../auth/auth.types';
@@ -425,6 +429,9 @@ export class DocumentService {
     uploadedBy?: bigint;
     fileBuffer?: Buffer;
   }) {
+    if (!data.fileBuffer?.length) {
+      throw new BadRequestException('A document file is required.');
+    }
     const docUuid = randomUUID();
     const persistedFile = await this.storageService.persistPrivateObject({
       customerId: data.customerId,
@@ -434,9 +441,9 @@ export class DocumentService {
       mimeType: data.mimeType,
       buffer: data.fileBuffer,
     });
-    const storagePath =
-      persistedFile?.storagePath ??
-      `customers/${data.customerId.toString()}/documents/${docUuid}_${data.fileName}`;
+    if (!persistedFile?.storagePath) {
+      throw new BadRequestException('The document file could not be stored.');
+    }
 
     const created = await this.prisma.document.create({
       data: {
@@ -446,8 +453,8 @@ export class DocumentService {
         fileSize: BigInt(data.fileSize),
         mimeType: data.mimeType,
         documentType: data.documentType,
-        storagePath,
-        status: 'PROCESSING',
+        storagePath: persistedFile.storagePath,
+        status: 'UPLOADED',
         uploadedBy: data.uploadedBy,
       },
     });
