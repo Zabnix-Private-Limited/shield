@@ -10897,3 +10897,14 @@ Added a customer-self, read-only subscription projection to the existing members
 - Passed: focused customer-provider backend Jest tests; targeted Flutter analysis; Services widget test; `git diff --check`.
 - Full Prisma validation/build exceeded the bounded local command timeout after loading the Prisma schema; no database schema apply or data write was attempted.
 - Authenticated browser and responsive screenshot evidence remain deferred because the controlled local customer session/tooling was not available in this turn. Static checks do not substitute for that UAT.
+## 43. Customer Services category presentation and supported-action follow-up — 2026-08-08 18:10:00 IST
+
+### Frontend Files
+
+- `frontend/lib/features/customer/services/presentation/screens/customer_services_screen.dart`: category-specific customer copy and icons now derive from the real provider type code, without creating a second feature path. Pharmacy details open the existing customer prescription archive/upload flow; other types retain only the existing booking entry.
+
+### Verification and Remaining Risk
+
+- Passed: targeted `flutter analyze` and Services widget test after the visual/action follow-up.
+- Local Nest eventually bound at `127.0.0.1:3000`; Playwright reached the Flutter app but was redirected to customer login while unauthenticated. Its semantic snapshot did not expose usable login controls, so no OTP was submitted and no authenticated Services evidence is claimed.
+- Responsive 350–1200px UAT and booking-provider preselection remain pending. No customer data, appointment, prescription, or database record was changed.

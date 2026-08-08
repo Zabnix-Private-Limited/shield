@@ -10,6 +10,7 @@
 
 - Static widget and route-state coverage was updated for route-backed category, query, pagination, and provider-detail navigation.
 - Authenticated browser and width screenshots remain **DEFERRED — TOOLING FAILURE** until the approved localhost customer session can be controlled; no visual evidence is claimed by static checks.
+- A later bounded Playwright check confirmed the Flutter app redirects to customer login when unauthenticated. It did not reach an authenticated form/control snapshot, so it is not evidence of Services rendering or responsive completion.
 
 ## Membership/Card QA closure — 2026-08-06
 

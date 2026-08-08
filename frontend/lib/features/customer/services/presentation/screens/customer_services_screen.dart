@@ -91,7 +91,7 @@ class _CustomerServicesScreenState extends State<CustomerServicesScreen> {
             Text('Services', style: AppTypography.h3),
             const SizedBox(height: 6),
             Text(
-              'Find active SHIELD providers and continue to existing care flows.',
+              _categoryPresentation(_controller.selectedType).intro,
               style: AppTypography.small.copyWith(color: AppColors.gray),
             ),
             const SizedBox(height: 16),
@@ -126,7 +126,12 @@ class _CustomerServicesScreenState extends State<CustomerServicesScreen> {
             const SizedBox(height: 20),
             Row(
               children: [
-                Expanded(child: Text('Providers', style: AppTypography.h4)),
+                Expanded(
+                  child: Text(
+                    _categoryPresentation(_controller.selectedType).heading,
+                    style: AppTypography.h4,
+                  ),
+                ),
                 TextButton(
                   onPressed: () =>
                       context.go('/portal/customer/book-appointment'),
@@ -261,7 +266,8 @@ class _CustomerServicesScreenState extends State<CustomerServicesScreen> {
         builder: (sheetContext) => _ProviderDetailsSheet(
           provider: provider,
           loadDetails: _controller.provider,
-          onBook: () => context.go('/portal/customer/book-appointment'),
+          actionLabel: _providerActionLabel(provider?.type ?? ''),
+          onAction: () => _openProviderAction(provider?.type ?? ''),
         ),
       );
       if (mounted &&
@@ -271,6 +277,24 @@ class _CustomerServicesScreenState extends State<CustomerServicesScreen> {
     } finally {
       _openingProvider = false;
     }
+  }
+
+  String _providerActionLabel(String type) =>
+      type.trim().toUpperCase() == 'PHARMACY'
+      ? 'Open prescription upload'
+      : _supportsBooking(type)
+      ? 'Continue to booking'
+      : 'View booking options';
+
+  bool _supportsBooking(String type) =>
+      const {'CLINIC', 'DENTAL'}.contains(type.trim().toUpperCase());
+
+  void _openProviderAction(String type) {
+    if (type.trim().toUpperCase() == 'PHARMACY') {
+      context.go('/portal/customer/prescriptions');
+      return;
+    }
+    context.go('/portal/customer/book-appointment');
   }
 }
 
@@ -324,6 +348,7 @@ class _CategoryFilters extends StatelessWidget {
           (category) => Padding(
             padding: const EdgeInsets.only(left: 8),
             child: ChoiceChip(
+              avatar: Icon(_categoryPresentation(category.code).icon, size: 18),
               label: Text(category.label),
               selected: selected == category.code,
               onSelected: (_) => onSelected(category.code),
@@ -345,7 +370,7 @@ class _ProviderCard extends StatelessWidget {
     onTap: onTap,
     child: Row(
       children: [
-        const CircleAvatar(child: Icon(Icons.medical_services_outlined)),
+        CircleAvatar(child: Icon(_categoryPresentation(provider.type).icon)),
         const SizedBox(width: 12),
         Expanded(
           child: Column(
@@ -382,12 +407,14 @@ class _ProviderDetailsSheet extends StatelessWidget {
   const _ProviderDetailsSheet({
     required this.provider,
     required this.loadDetails,
-    required this.onBook,
+    required this.actionLabel,
+    required this.onAction,
   });
 
   final CustomerProvider? provider;
   final Future<CustomerProvider> Function(String id) loadDetails;
-  final VoidCallback onBook;
+  final String actionLabel;
+  final VoidCallback onAction;
 
   @override
   Widget build(BuildContext context) {
@@ -432,14 +459,75 @@ class _ProviderDetailsSheet extends StatelessWidget {
                 style: AppTypography.small.copyWith(color: AppColors.gray),
               ),
               const SizedBox(height: 12),
-              TextButton(
-                onPressed: onBook,
-                child: const Text('Continue to booking'),
-              ),
+              TextButton(onPressed: onAction, child: Text(actionLabel)),
             ],
           ),
         );
       },
     );
+  }
+}
+
+class _CategoryPresentation {
+  const _CategoryPresentation(this.heading, this.intro, this.icon);
+
+  final String heading;
+  final String intro;
+  final IconData icon;
+}
+
+_CategoryPresentation _categoryPresentation(String? type) {
+  switch (type?.trim().toUpperCase()) {
+    case 'PHARMACY':
+      return const _CategoryPresentation(
+        'Pharmacies',
+        'Find active pharmacy providers and use the existing prescription upload flow when needed.',
+        Icons.local_pharmacy_outlined,
+      );
+    case 'LAB':
+    case 'LABORATORY':
+      return const _CategoryPresentation(
+        'Laboratories',
+        'Find active laboratory providers. Booking is shown only when the existing flow supports it.',
+        Icons.science_outlined,
+      );
+    case 'DENTAL':
+      return const _CategoryPresentation(
+        'Dental care',
+        'Find active dental providers and continue to the supported booking flow.',
+        Icons.mood_outlined,
+      );
+    case 'HOMECARE':
+    case 'HOME_CARE':
+      return const _CategoryPresentation(
+        'Home care',
+        'Find active home-care providers and view the available next steps.',
+        Icons.home_outlined,
+      );
+    case 'DIETITIAN':
+      return const _CategoryPresentation(
+        'Dietitian services',
+        'Find active dietitian providers and view the available next steps.',
+        Icons.restaurant_menu_outlined,
+      );
+    case 'WELLNESS':
+      return const _CategoryPresentation(
+        'Wellness providers',
+        'Discover active wellness providers. This is separate from the Wellness Shop catalogue.',
+        Icons.spa_outlined,
+      );
+    case 'CLINIC':
+    case 'DOCTOR':
+      return const _CategoryPresentation(
+        'Consultations',
+        'Find active consultation providers and continue to the supported booking flow.',
+        Icons.medical_services_outlined,
+      );
+    default:
+      return const _CategoryPresentation(
+        'Providers',
+        'Find active SHIELD providers and continue to existing care flows.',
+        Icons.medical_services_outlined,
+      );
   }
 }
