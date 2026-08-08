@@ -11161,3 +11161,9 @@ px prisma validate, Nest build, 17 focused Documents/Pharmacy controller tests, 
 - Updated CustomerAppBar to load the server-calculated unread count from GET /notifications/me instead of deriving a potentially stale count from the dashboard notification preview.
 - Inbox lookup failure remains non-fatal and does not render a false zero; retry reloads both dashboard data and unread count.
 - Database: current_schema.md was not modified. Verification: targeted Flutter analysis passed.
+
+
+## 68. Customer engagement cross-document alignment — 2026-08-08 18:06:17 IST
+
+- Updated the customer UI audit, API bindings, and route inventory to use the session-derived Referrals and Notifications contracts and to document the safe activity projection.
+- Preserved contract boundaries: share links, QR, deep links, pagination, and internal commission/audit data remain deferred. current_schema.md was not modified.

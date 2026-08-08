@@ -17,7 +17,7 @@ Audited: 2026-08-05. This is a route-to-contract index; `CUSTOMER_UI_AUDIT.md` r
 | `orders` | My Orders | `GET /customer/orders`; `GET /customer/orders/:id` | Principal-scoped recorded-purchase history and safe item details |
 | `referrals` | Referral & Rewards | `GET /referrals/summary/:customerId` | Customer-scoped status/history |
 | `activity` | Activity Timeline | `GET /timeline/me` | Customer-self read-only timeline |
-| `notifications` | Notifications | Customer notification read APIs | Customer-self read/mutation flow |
+| `notifications` | Notifications | `GET /notifications/me`; customer notification read APIs | Customer-self safe inbox/read flow with server unread count |
 | `profile`, `settings` | Account | Profile, alternative contacts, support and feedback APIs | Supported persisted actions only |
 
 ## Explicitly absent routes

@@ -14,8 +14,8 @@ All entries use the authenticated customer session. Flutter route guards improve
 | Documents/prescriptions | Customer document screens | Customer document read/upload/detail/signed download APIs; `POST/GET /pharmacy/prescriptions` | Session-bound ownership; safe projection omits storage keys, staff notes, audit/extraction fields, and other customer IDs. R2 URLs are short-lived; local raw paths are never returned. |
 | Wellness catalogue | `ApiService.getCustomerWellnessProducts`, `getCustomerWellnessProduct` | `GET /customer/wellness-products?query=&categoryId=&page=&pageSize=`; `GET /customer/wellness-products/:id` | Customer-safe paginated records only; imported batch renders as `DEMO` with the required non-live inventory disclosure |
 | Orders | `CustomerOrdersRepository`, `CustomerOrdersScreen` | `GET /customer/orders`; `GET /customer/orders/:id` | Backend derives customer identity from the principal and constrains detail by customer ownership; customer-safe recorded-purchase history only |
-| Referrals | `CustomerReferralsScreen` | `GET /referrals/summary/:customerId` | Customer-scoped lifecycle history; no client reward calculation |
-| Activity/notifications | Customer timeline/inbox views | `GET /timeline/me`; notification read APIs | Timeline resolves self; notification mutations are ownership-scoped |
+| Referrals | `CustomerReferralsScreen` | `GET /referrals/me` | Customer identity derives from session; code/history omit referred-customer IDs and internal commission/tree data |
+| Activity/notifications | Customer timeline/inbox views | `GET /timeline/me`; `GET /notifications/me`; notification read APIs | Timeline and inbox resolve self; activity projection omits actors/raw metadata and unread count is server-authoritative |
 | Profile/support | Profile/settings views | Profile/alternative contact/support/feedback APIs | Contacts and mutations are self-scoped; support/feedback persist through their existing APIs |
 
 ## Operations banner configuration
