@@ -6971,6 +6971,46 @@ class _CustomerServicesViewState extends State<_CustomerServicesView> {
     _accessFuture = _loadCustomerAccessContext();
     _providersFuture = ApiService.getProviders();
     _wellnessProductsFuture = _loadWellnessProducts();
+    _restoreProviderPreselection();
+  }
+
+  void _restoreProviderPreselection() {
+    final query = GoRouterState.of(context).uri.queryParameters;
+    final providerId = query['provider']?.trim();
+    if (providerId == null || providerId.isEmpty) return;
+    final requestedType = query['type']?.trim().toUpperCase();
+    final specialist = _specialistForProviderType(requestedType);
+    if (specialist == null) {
+      _lastBookingStatus =
+          'This provider type is not supported by the current booking workflow.';
+      return;
+    }
+    _specialistType = specialist;
+    _providersFuture = _providersFuture.then((providers) {
+      final matching = _filterConsultationProviders(providers);
+      final isAvailable = matching.any(
+        (provider) => provider['id']?.toString() == providerId,
+      );
+      if (isAvailable) {
+        _selectedProviderId = providerId;
+      } else {
+        _lastBookingStatus =
+            'The selected provider is unavailable. Please choose another provider.';
+      }
+      return providers;
+    });
+  }
+
+  String? _specialistForProviderType(String? providerType) {
+    switch (providerType) {
+      case 'CLINIC':
+      case 'DOCTOR':
+        return 'DOCTOR';
+      case 'DENTAL':
+        return 'DENTAL';
+      default:
+        return null;
+    }
   }
 
   @override

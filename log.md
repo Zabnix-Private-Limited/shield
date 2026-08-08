@@ -10932,3 +10932,18 @@ Added a customer-self, read-only subscription projection to the existing members
 
 - Added focused controller coverage proving route restoration reloads selected type, trimmed search query, and each recorded pagination page in order.
 - Passed targeted Flutter analysis and combined Services screen/controller tests.
+
+
+## 47. Customer Booking contract audit and provider-preselection foundation - 2026-08-08 19:10:00 IST
+
+### Frontend Files
+
+- Services booking entry now carries only provider ID and provider type to the existing booking route. The booking view verifies that selection against the authoritative active provider list before preselecting it.
+
+### Backend Files
+
+- Appointment creation now rejects invalid or inactive providers. Customer appointment response projection strips raw provider/customer payloads and returns only customer-safe appointment and public provider identity fields.
+
+### Verification
+
+- Passed focused appointment controller test, backend build, targeted Flutter analysis, and Services widget/controller tests. No appointment, customer, provider, financial, or database record was written.

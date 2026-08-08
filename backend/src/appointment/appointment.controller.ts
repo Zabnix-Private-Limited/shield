@@ -50,6 +50,32 @@ export class AppointmentController {
     }
   }
 
+  private customerAppointmentProjection(appointment: any) {
+    return {
+      id: appointment.id?.toString(),
+      uuid: appointment.uuid ?? null,
+      customerId: appointment.customerId?.toString(),
+      providerId: appointment.providerId?.toString() ?? null,
+      appointmentType: appointment.appointmentType ?? null,
+      appointmentDate: appointment.appointmentDate ?? null,
+      status: appointment.status ?? null,
+      remarks: appointment.remarks ?? null,
+      provider: appointment.provider
+        ? {
+            id: appointment.provider.id?.toString(),
+            providerName: appointment.provider.providerName ?? null,
+            providerType: appointment.provider.providerType ?? null,
+          }
+        : null,
+    };
+  }
+
+  private projectForPrincipal(appointment: any, principal?: ShieldPrincipal) {
+    return principal?.principalType === 'CUSTOMER'
+      ? this.customerAppointmentProjection(appointment)
+      : appointment;
+  }
+
   @RequirePermissions('appointments.view')
   @Get()
   async list(
@@ -80,7 +106,12 @@ export class AppointmentController {
     return {
       success: true,
       message: 'Appointments list retrieved',
-      data: appts,
+      data:
+        principal?.principalType === 'CUSTOMER'
+          ? appts.map((appointment) =>
+              this.customerAppointmentProjection(appointment),
+            )
+          : appts,
     };
   }
 
@@ -106,7 +137,7 @@ export class AppointmentController {
     return {
       success: true,
       message: 'Appointment booked successfully',
-      data: appt,
+      data: this.projectForPrincipal(appt, principal),
     };
   }
 
@@ -125,7 +156,7 @@ export class AppointmentController {
     return {
       success: true,
       message: 'Appointment details retrieved',
-      data: appt,
+      data: this.projectForPrincipal(appt, principal),
     };
   }
 
@@ -144,7 +175,7 @@ export class AppointmentController {
     return {
       success: true,
       message: 'Appointment cancelled successfully',
-      data: appt,
+      data: this.projectForPrincipal(appt, principal),
     };
   }
 
@@ -190,7 +221,7 @@ export class AppointmentController {
     return {
       success: true,
       message: 'Appointment rescheduled successfully',
-      data: appt,
+      data: this.projectForPrincipal(appt, principal),
     };
   }
 

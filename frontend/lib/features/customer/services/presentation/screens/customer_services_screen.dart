@@ -267,7 +267,10 @@ class _CustomerServicesScreenState extends State<CustomerServicesScreen> {
           provider: provider,
           loadDetails: _controller.provider,
           actionLabel: _providerActionLabel(provider?.type ?? ''),
-          onAction: () => _openProviderAction(provider?.type ?? ''),
+          onAction: () => _openProviderAction(
+            type: provider?.type ?? '',
+            providerId: provider?.id,
+          ),
         ),
       );
       if (mounted &&
@@ -289,12 +292,21 @@ class _CustomerServicesScreenState extends State<CustomerServicesScreen> {
   bool _supportsBooking(String type) =>
       const {'CLINIC', 'DENTAL'}.contains(type.trim().toUpperCase());
 
-  void _openProviderAction(String type) {
+  void _openProviderAction({required String type, String? providerId}) {
     if (type.trim().toUpperCase() == 'PHARMACY') {
       context.go('/portal/customer/prescriptions');
       return;
     }
-    context.go('/portal/customer/book-appointment');
+    final query = <String, String>{
+      if (providerId != null && providerId.isNotEmpty) 'provider': providerId,
+      if (type.trim().isNotEmpty) 'type': type.trim().toUpperCase(),
+    };
+    context.go(
+      Uri(
+        path: '/portal/customer/book-appointment',
+        queryParameters: query,
+      ).toString(),
+    );
   }
 }
 

@@ -156,13 +156,25 @@ export class AppointmentService {
   }
 
   async create(data: any) {
+    const providerId = this.parseRequiredId(data.provider_id, 'Provider');
+    const provider = await this.prisma.serviceProvider.findFirst({
+      where: { id: providerId, status: 'ACTIVE' },
+      select: { id: true },
+    });
+    if (!provider) {
+      throw new BadRequestException('The selected provider is unavailable.');
+    }
+    const appointmentDate = new Date(data.appointment_date);
+    if (Number.isNaN(appointmentDate.getTime())) {
+      throw new BadRequestException('Appointment date is invalid.');
+    }
     return this.prisma.appointment.create({
       data: {
         uuid: randomUUID(),
         customerId: BigInt(data.customer_id),
-        providerId: BigInt(data.provider_id),
+        providerId,
         appointmentType: data.appointment_type,
-        appointmentDate: new Date(data.appointment_date),
+        appointmentDate,
         status: data.status || 'PENDING',
         remarks: data.remarks || data.notes,
       },
@@ -2552,6 +2564,14 @@ export class AppointmentService {
   private normalizeText(value?: unknown, fallback = '') {
     const text = value?.toString().trim();
     return text && text.length > 0 ? text : fallback;
+  }
+
+  private parseRequiredId(value: unknown, label: string) {
+    const normalized = value?.toString().trim();
+    if (!normalized || !/^\d+$/.test(normalized)) {
+      throw new BadRequestException(`${label} is required.`);
+    }
+    return BigInt(normalized);
   }
 
   private normalizeNumber(value?: unknown, fallback = 0) {
