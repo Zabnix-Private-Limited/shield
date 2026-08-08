@@ -66,4 +66,5 @@ Functional and responsive automated QA passed. Authenticated screenshot QA is **
 - Static widget coverage verifies archive failure, category/search controller state, duplicate upload protection, prescription archive failure, and responsive surrounding customer shell coverage.
 - Documents and Prescriptions responsive widget coverage passed at 350, 375, 390, 412, 448, 480, 768, and 1200 logical pixels with a long prescription filename.
 - Authenticated screenshot QA remains `DEFERRED — TOOLING FAILURE` until a controlled local session exposes actionable rendered controls. No screenshot evidence is claimed.
+- Final bounded attempt: localhost reached HTTP 200, but Playwright produced an empty accessibility snapshot, so approved local OTP could not be entered without bypassing stable controls. The matching local Flutter process was stopped after the attempt.
 - Secure sharing, local-storage download streaming, OCR/clinical interpretation, fulfilment, payment, and delivery remain outside the current customer contract.
