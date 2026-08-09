@@ -1,6 +1,6 @@
 # Customer UI route inventory
 
-Audited: 2026-08-05. This is a route-to-contract index; `CUSTOMER_UI_AUDIT.md` remains the detailed gap audit. Customer routes are rendered through `/portal/customer/:section` and use the authenticated customer session.
+Audited: 2026-08-09. This is a route-to-contract index; `CUSTOMER_UI_AUDIT.md` remains the detailed gap audit. Customer routes are rendered through `/portal/customer/:section` and use the authenticated customer session.
 
 | Section | Screen | Backing contract | Status |
 |---|---|---|---|
@@ -15,10 +15,10 @@ Audited: 2026-08-05. This is a route-to-contract index; `CUSTOMER_UI_AUDIT.md` r
 | `documents` | Documents archive | Customer-safe document list/upload/detail/download | `?type=PRESCRIPTION&provider=` preserves upload context; category/search, safe detail, and signed R2 view/download supported |
 | `prescriptions` | Prescriptions archive | Customer-safe prescription documents and `POST/GET /pharmacy/prescriptions` | Services Pharmacy context or validated preferred Pharmacy; explicit review/consent and duplicate-safe request submission |
 | `orders` | My Orders | `GET /customer/orders`; `GET /customer/orders/:id` | Principal-scoped recorded-purchase history and safe item details |
-| `referrals` | Referral & Rewards | `GET /referrals/summary/:customerId` | Customer-scoped status/history |
+| `referrals` | Referral & Rewards | `GET /referrals/me` | Session-owned status/history |
 | `activity` | Activity Timeline | `GET /timeline/me` | Customer-self read-only timeline |
 | `notifications` | Notifications | `GET /notifications/me`; customer notification read APIs | Customer-self safe inbox/read flow with server unread count |
-| `profile`, `settings` | Account | Profile, alternative contacts, support and feedback APIs | Supported persisted actions only |
+| `profile`, `account`, `settings` | Account | `GET/PATCH /customer/profile`, customer-self account APIs and owner-scoped sessions | Safe personal projection, addresses, typed contacts, dependents, preferred pharmacy and security controls |
 
 ## Explicitly absent routes
 

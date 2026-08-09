@@ -178,10 +178,7 @@ class _CustomerPrivilegeCardScreenState
   }
 
   Future<Customer> _loadCustomer() =>
-      widget.loadCustomer?.call() ??
-      ApiService.getCustomerProfile(
-        ApiService.requireAuthenticatedCustomerId(),
-      );
+      widget.loadCustomer?.call() ?? ApiService.getMyCustomerProfile();
 
   Future<Map<String, dynamic>> _loadCardProfile() async {
     try {

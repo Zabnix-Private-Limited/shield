@@ -2,6 +2,8 @@
 
 All entries use the authenticated customer session. Flutter route guards improve UX only; backend ownership and role checks remain authoritative.
 
+Final audit note: active Wallet and Privilege Card identity reads use `GET /customer/profile`; generic customer self reads are now narrowed server-side to the same safe-profile boundary.
+
 | Feature | Flutter binding | API contract | Customer-data rule |
 |---|---|---|---|
 | Dashboard/header | `DashboardRepository` | `GET /customer/dashboard` | Dashboard bundle belongs to the principal; header derives CASH and reward totals from it |

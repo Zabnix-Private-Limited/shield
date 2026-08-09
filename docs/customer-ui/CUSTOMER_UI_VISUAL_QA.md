@@ -1,5 +1,9 @@
 # Customer UI visual QA
 
+## Final integration status — 2026-08-09
+
+Account responsive widget coverage is green at 350–1200px. Authenticated screenshots are not claimed because a stable local browser/session was unavailable; manual QA steps are in `CUSTOMER_APP_MANUAL_QA_CHECKLIST.md`.
+
 ## Services discovery — automated visual-adjacent coverage — 2026-08-06
 
 - Route: `/portal/customer/services`.

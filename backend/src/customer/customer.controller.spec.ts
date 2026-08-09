@@ -9,6 +9,8 @@ describe('CustomerController card scope', () => {
     removeAlternativeContact: jest.fn(),
     search: jest.fn(),
     findExistingCustomerByMobile: jest.fn(),
+    findOne: jest.fn(),
+    getCustomerSelfProfile: jest.fn(),
   };
   const agentScope = { assertAgentCanAccessCustomer: jest.fn() };
   const providerScope = { assertProviderCanAccessCustomer: jest.fn() };
@@ -78,5 +80,15 @@ describe('CustomerController card scope', () => {
       controller.removeAlternativeContact('12', '7', customer),
     ).rejects.toThrow('Customers can only access their own customer record.');
     expect(service.removeAlternativeContact).not.toHaveBeenCalled();
+  });
+
+  it('returns the narrow self-profile projection for customer profile reads', async () => {
+    service.getCustomerSelfProfile.mockResolvedValue({ id: 11n, mobile: '9876543210' });
+
+    await controller.me(customer);
+    await controller.findOne('11', customer);
+
+    expect(service.getCustomerSelfProfile).toHaveBeenCalledWith(11n);
+    expect(service.findOne).not.toHaveBeenCalled();
   });
 });

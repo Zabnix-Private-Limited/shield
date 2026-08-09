@@ -11186,4 +11186,11 @@ px prisma validate, Nest build, 17 focused Documents/Pharmacy controller tests, 
 - Verified focused customer and auth Jest suites (17 tests) plus Nest build. No database command was run and current_schema.md was not modified.## 13. Customer account completion matrix alignment - 2026-08-08 18:37:52 IST
 
 - Added the supported Profile, Family and Security scope to the customer screen completion matrix with its authenticated API bindings, verified state/responsive/test evidence, and explicit browser QA deferral.
-- No database command was run and current_schema.md was not modified.
+- No database command was run and current_schema.md was not modified.## 14. Customer final integration audit and safe-profile regression - 2026-08-09 10:09:39 IST
+
+- Final route/security audit found active Wallet and Privilege Card screens still used the generic customer profile endpoint, which can carry internal operational relationships. Switched those customer surfaces to the dedicated safe self-profile endpoint and narrowed generic customer self reads server-side.
+- Added controller regression coverage for the safe projection. Focused backend customer/auth suite passed 24 tests; affected Flutter suite passed 9 tests and targeted analyze passed.
+- Added final release audit, manual QA checklist and deferred-scope register. Recommendation is READY FOR INTERNAL QA pending stable full-suite and authenticated browser smoke tooling. No database command was run and current_schema.md was not modified.## 15. Final customer release documentation alignment - 2026-08-09 10:10:29 IST
+
+- Updated master customer audit, status, API binding, state, visual QA and completion-matrix references to the final integration report and manual QA handoff.
+- Final status is READY FOR INTERNAL QA: no P0/P1 supported-scope defect found; browser/full-run checks remain explicitly deferred due runner/tooling contention, not marked as pass.

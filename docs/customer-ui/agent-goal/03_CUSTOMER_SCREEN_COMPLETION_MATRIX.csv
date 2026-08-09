@@ -259,3 +259,4 @@
 258,Global States,Not Found,global state,Unknown route/resource,router/API 404,,NO,NO,NO,NO,NO,NO,NO,TODO
 259,Global States,Account Suspended,global state,Restricted customer,customer status,,NO,NO,NO,NO,NO,NO,NO,TODO
 260,Account,Profile Family and Security,/portal/customer/profile + account + settings,"Customer-owned profile, address book, dependents, contacts, pharmacy preference and sessions",GET/PATCH /customer/profile + customer account APIs + auth sessions,"Primary phone is read-only login identity; no image, deletion, export, dependent booking or arbitrary completion percentage",YES,YES,YES,YES,YES,NO,COMPLETE — SUPPORTED FUNCTIONAL SCOPE
+261,Release,Final Customer Integration,all customer routes,"Release-readiness audit, security regression and QA handoff",CUSTOMER_FINAL_RELEASE_AUDIT.md,"No P0/P1 found; focused backend and affected Flutter tests pass; browser/full-run tooling evidence deferred",YES,YES,YES,YES,YES,NO,READY FOR INTERNAL QA

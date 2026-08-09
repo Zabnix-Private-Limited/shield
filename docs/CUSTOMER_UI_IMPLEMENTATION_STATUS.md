@@ -1,5 +1,9 @@
 # Customer UI Implementation Status
 
+## Final integration status — 2026-08-09
+
+`READY FOR INTERNAL QA`. The final pass closed a customer-safe profile DTO regression in Wallet/Privilege Card and generic self reads. Focused backend and affected Flutter tests pass; full-run/browser evidence remains explicitly deferred due local runner/tooling contention.
+
 ## Booking and Visits closure — 2026-08-08
 
 Classification: **COMPLETE — SUPPORTED FUNCTIONAL SCOPE**. Booking uses a customer-safe provider preselection/query contract, active-provider revalidation, preferred date/time request, notes, real appointment submission, duplicate-submit protection, success, and recoverable failure. Visits is extracted with backend-status filters, safe detail, loading/empty/error/retry, cancellation confirmation/action, and reschedule request. Slots, service selection, dependent appointment linkage, quotes/pricing/coverage, timeline, online links, and offline cache are explicitly unavailable without backend contracts. Static 350–1200px coverage passes; authenticated browser screenshots remain **DEFERRED — TOOLING FAILURE**.

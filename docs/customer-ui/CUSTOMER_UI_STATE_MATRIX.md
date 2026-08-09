@@ -1,5 +1,7 @@
 # Customer UI state matrix
 
+Final integration note (2026-08-09): full browser observation is deferred rather than represented as an empty/zero state. Deterministic error and retry semantics remain the source of truth for release evidence.
+
 | Feature | Loading | Empty | Failure | Safety rule |
 |---|---|---|---|---|
 | Dashboard | Dashboard shimmer | Backend-provided no-data state | Retryable error card | Never show cached/shared customer values as current data |

@@ -292,7 +292,7 @@ export class CustomerController {
       throw new ForbiddenException('Only customers can use /customers/me.');
     }
 
-    const customer = await this.customerService.findOne(
+    const customer = await this.customerService.getCustomerSelfProfile(
       BigInt(principal.customerId),
     );
     return {
@@ -318,7 +318,9 @@ export class CustomerController {
       BigInt(id),
       principal,
     );
-    const customer = await this.customerService.findOne(BigInt(id));
+    const customer = principal?.principalType === 'CUSTOMER'
+      ? await this.customerService.getCustomerSelfProfile(BigInt(id))
+      : await this.customerService.findOne(BigInt(id));
     return {
       success: true,
       message: 'Customer details retrieved',

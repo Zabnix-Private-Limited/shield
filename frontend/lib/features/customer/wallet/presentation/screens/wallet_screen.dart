@@ -207,10 +207,7 @@ class _CustomerWalletScreenState extends State<CustomerWalletScreen> {
   }
 
   Future<Customer> _loadCustomer() =>
-      widget.loadCustomer?.call() ??
-      ApiService.getCustomerProfile(
-        ApiService.requireAuthenticatedCustomerId(),
-      );
+      widget.loadCustomer?.call() ?? ApiService.getMyCustomerProfile();
 
   void _onDateRangeSelected(String value) {
     setState(() => _selectedDateRange = value);

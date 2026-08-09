@@ -1,6 +1,6 @@
 # SHIELD Customer UI Audit
 
-Last audited: 2026-08-08. The customer portal is protected by the customer JWT/session and rendered through `/portal/customer/:section`.
+Last audited: 2026-08-09. The customer portal is protected by the customer JWT/session and rendered through `/portal/customer/:section`. Final release classification: `READY FOR INTERNAL QA`; see `CUSTOMER_FINAL_RELEASE_AUDIT.md` for evidence and remaining tooling-dependent QA.
 
 Route-level and membership/card screen manifests are maintained in `CUSTOMER_UI_ROUTE_INVENTORY.md` and `CUSTOMER_UI_SCREEN_MANIFEST.md`.
 `CUSTOMER_UI_API_BINDINGS.md` and `CUSTOMER_UI_STATE_MATRIX.md` record the customer-safe API ownership and screen-state rules.
