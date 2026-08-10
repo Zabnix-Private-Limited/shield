@@ -3,6 +3,7 @@
 Implemented against the existing Agent platform instead of a parallel Operations portal:
 
 - Added a stable routed selection at `/portal/agent/customers/:customerId`.
+- Added an agent-scoped server-side customer list/search contract with pagination; the UI no longer treats the dashboard's 24-row preview as the complete customer graph.
 - Retained the existing agent-scoped workspace aggregation and direct list workflow.
 - Exposed existing prescription records explicitly in the workspace projection.
 - Organised the UI into Overview, Membership, Wallet & Rewards, Documents, Visits, Prescriptions, Orders, Family, Referrals, Notifications, Activity, and Audit tabs.

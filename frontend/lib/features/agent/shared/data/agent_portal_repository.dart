@@ -7,6 +7,16 @@ import '../../../../shared/services/api_service.dart';
 class AgentPortalRepository {
   Future<Map<String, dynamic>> getWorkspace() => ApiService.getAgentWorkspace();
 
+  Future<Map<String, dynamic>> getCustomers({
+    String? query,
+    int page = 1,
+    int pageSize = 25,
+  }) => ApiService.getAgentCustomers(
+    query: query,
+    page: page,
+    pageSize: pageSize,
+  );
+
   Future<Map<String, dynamic>> getCustomerWorkspace(String customerId) =>
       ApiService.getAgentCustomerWorkspace(customerId);
 

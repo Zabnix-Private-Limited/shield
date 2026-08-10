@@ -315,6 +315,60 @@ export class AgentService {
     };
   }
 
+  async listCustomers(
+    principal: ShieldPrincipal | undefined,
+    options: { query?: string; page?: number; pageSize?: number } = {},
+  ) {
+    const context = await this.requireAgentContext(principal);
+    const query = options.query?.trim();
+    const page = Number.isFinite(options.page) ? Math.max(1, options.page!) : 1;
+    const pageSize = Number.isFinite(options.pageSize)
+      ? Math.min(100, Math.max(1, options.pageSize!))
+      : 25;
+    const where = {
+      agentCode: context.agentCode,
+      deletedAt: null,
+      ...(query
+        ? {
+            OR: [
+              { firstName: { contains: query, mode: 'insensitive' as const } },
+              { lastName: { contains: query, mode: 'insensitive' as const } },
+              { mobile: { contains: query, mode: 'insensitive' as const } },
+              { customerCode: { contains: query, mode: 'insensitive' as const } },
+            ],
+          }
+        : {}),
+    };
+    const [total, customers] = await this.prisma.$transaction([
+      this.prisma.customer.count({ where }),
+      this.prisma.customer.findMany({
+        where,
+        include: { membership: true, shieldCard: true },
+        orderBy: [{ updatedAt: 'desc' }, { id: 'desc' }],
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+      }),
+    ]);
+
+    return {
+      items: customers.map((customer) => ({
+        id: customer.id.toString(),
+        customerCode: customer.customerCode,
+        fullName:
+          `${customer.firstName ?? ''} ${customer.lastName ?? ''}`.trim() ||
+          'Customer',
+        mobile: customer.mobile,
+        status: customer.status ?? 'PENDING',
+        cardStatus: customer.shieldCard?.status ?? 'PENDING',
+        membershipStatus: customer.membership?.status ?? 'PENDING',
+      })),
+      page,
+      pageSize,
+      total,
+      totalPages: Math.max(1, Math.ceil(total / pageSize)),
+    };
+  }
+
   async getCustomerWorkspace(customerId: bigint, principal?: ShieldPrincipal) {
     await this.agentScopeService.assertAgentCanAccessCustomer(
       customerId,

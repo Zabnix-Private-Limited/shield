@@ -784,6 +784,23 @@ class ApiService {
     return _readEnvelope(response);
   }
 
+  static Future<Map<String, dynamic>> getAgentCustomers({
+    String? query,
+    int page = 1,
+    int pageSize = 25,
+  }) async {
+    final response = await _getWithRetry(
+      '/agents/customers',
+      queryParameters: {
+        if (query != null && query.trim().isNotEmpty) 'query': query.trim(),
+        'page': page,
+        'pageSize': pageSize,
+      },
+      maxAttempts: 3,
+    );
+    return _readEnvelope(response);
+  }
+
   static Future<Map<String, dynamic>> getAgentCustomerWorkspace(
     String customerId,
   ) async {

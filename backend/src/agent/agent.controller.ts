@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Put } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Put, Query } from '@nestjs/common';
 import type { ShieldPrincipal } from '../auth/auth.types';
 import { CurrentPrincipal } from '../auth/current-principal.decorator';
 import { RequirePermissions } from '../auth/permissions.decorator';
@@ -15,6 +15,25 @@ export class AgentController {
       success: true,
       message: 'Agent workspace retrieved successfully.',
       data: await this.agentService.getWorkspace(principal),
+    };
+  }
+
+  @RequirePermissions('agent.customer.view')
+  @Get('customers')
+  async listCustomers(
+    @Query('query') query?: string,
+    @Query('page') page?: string,
+    @Query('pageSize') pageSize?: string,
+    @CurrentPrincipal() principal?: ShieldPrincipal,
+  ) {
+    return {
+      success: true,
+      message: 'Agent customers retrieved successfully.',
+      data: await this.agentService.listCustomers(principal, {
+        query,
+        page: page == null ? undefined : Number(page),
+        pageSize: pageSize == null ? undefined : Number(pageSize),
+      }),
     };
   }
 

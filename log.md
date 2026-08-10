@@ -11214,4 +11214,13 @@ px prisma validate, Nest build, 17 focused Documents/Pharmacy controller tests, 
 
 ### Verification
 - Follow-up Flutter smoke compilation passed: flutter test test/widget_test.dart (1 passed). It caught and then verified the selected-customer route plumbing through PortalShell and the internal content renderer.
-- The earlier full Flutter analyzer and Nest build timeout remain unclaimed; this entry records only the focused smoke result.
+- The earlier full Flutter analyzer and Nest build timeout remain unclaimed; this entry records only the focused smoke result.## 19. Agent Customer 360 scoped search and pagination - 2026-08-10 08:53:22 IST
+
+### Frontend Files
+- Connected the Customer 360 list to the dedicated /agents/customers page contract. Search is submitted to the server and the list has explicit previous/next page controls.
+
+### Backend Files
+- Added GET /agents/customers with agent.customer.view permission, SHIELD agent graph enforcement, case-insensitive name/mobile/SHIELD ID search, pagination, and a server-side page-size ceiling of 100.
+
+### Verification
+- Passed dart format and Flutter root smoke test (1 passed). No database command was run and current_schema.md was not modified.

@@ -69,6 +69,10 @@ class _AgentCustomersScreenState extends ConsumerState<AgentCustomersScreen> {
   @override
   Widget build(BuildContext context) {
     final controller = ref.watch(agentPortalControllerProvider);
+    final customerPage = controller.customerListPage;
+    final currentPage = (customerPage['page'] as num?)?.toInt() ?? 1;
+    final totalPages = (customerPage['totalPages'] as num?)?.toInt() ?? 1;
+    final totalCustomers = (customerPage['total'] as num?)?.toInt() ?? 0;
     final filteredCustomers = controller.customers.where((customer) {
       final combined =
           '${customer['fullName'] ?? ''} ${customer['mobile'] ?? ''} ${customer['customerCode'] ?? ''} ${customer['status'] ?? ''}'
@@ -103,7 +107,44 @@ class _AgentCustomersScreenState extends ConsumerState<AgentCustomersScreen> {
               prefixIcon: Icon(Icons.search),
             ),
             onChanged: (value) => setState(() => _query = value),
+            onSubmitted: (value) => ref
+                .read(agentPortalControllerProvider)
+                .loadCustomerPage(query: value, page: 1),
           ),
+          if (customerPage.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Text('$totalCustomers assigned customers'),
+                const Spacer(),
+                IconButton(
+                  tooltip: 'Previous page',
+                  onPressed: currentPage <= 1
+                      ? null
+                      : () => ref
+                            .read(agentPortalControllerProvider)
+                            .loadCustomerPage(
+                              query: _query,
+                              page: currentPage - 1,
+                            ),
+                  icon: const Icon(Icons.chevron_left),
+                ),
+                Text('$currentPage / $totalPages'),
+                IconButton(
+                  tooltip: 'Next page',
+                  onPressed: currentPage >= totalPages
+                      ? null
+                      : () => ref
+                            .read(agentPortalControllerProvider)
+                            .loadCustomerPage(
+                              query: _query,
+                              page: currentPage + 1,
+                            ),
+                  icon: const Icon(Icons.chevron_right),
+                ),
+              ],
+            ),
+          ],
           const SizedBox(height: 12),
           SizedBox(
             height: workspaceHeight,

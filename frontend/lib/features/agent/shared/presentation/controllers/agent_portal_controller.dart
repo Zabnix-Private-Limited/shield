@@ -24,6 +24,7 @@ class AgentPortalController extends ChangeNotifier {
   List<Map<String, dynamic>> _membershipTypes = const <Map<String, dynamic>>[];
   List<Map<String, dynamic>> _sessions = const <Map<String, dynamic>>[];
   List<Map<String, dynamic>> _loginHistory = const <Map<String, dynamic>>[];
+  Map<String, dynamic> _customerListPage = const <String, dynamic>{};
 
   bool get isLoading => _loading;
   bool get isCustomerLoading => _customerLoading;
@@ -43,6 +44,7 @@ class AgentPortalController extends ChangeNotifier {
   List<Map<String, dynamic>> get membershipTypes => _membershipTypes;
   List<Map<String, dynamic>> get sessions => _sessions;
   List<Map<String, dynamic>> get loginHistory => _loginHistory;
+  Map<String, dynamic> get customerListPage => _customerListPage;
 
   Map<String, dynamic> get summary =>
       Map<String, dynamic>.from(workspace['summary'] ?? const {});
@@ -57,9 +59,10 @@ class AgentPortalController extends ChangeNotifier {
   );
 
   List<Map<String, dynamic>> get customers => List<Map<String, dynamic>>.from(
-    (workspace['customers'] as List? ?? const <dynamic>[]).map(
-      (item) => Map<String, dynamic>.from(item as Map),
-    ),
+    ((_customerListPage['items'] as List?) ??
+            (workspace['customers'] as List?) ??
+            const <dynamic>[])
+        .map((item) => Map<String, dynamic>.from(item as Map)),
   );
 
   List<Map<String, dynamic>> get tasks => List<Map<String, dynamic>>.from(
@@ -198,6 +201,7 @@ class AgentPortalController extends ChangeNotifier {
     notifyListeners();
     try {
       _workspace = await _repository.getWorkspace();
+      _customerListPage = await _repository.getCustomers();
       await _ensureReferenceData();
       _selectedCustomerId ??= customers.isNotEmpty
           ? customers.first['id']?.toString()
@@ -209,6 +213,28 @@ class AgentPortalController extends ChangeNotifier {
       _error = error.toString();
     } finally {
       _loading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> loadCustomerPage({
+    String? query,
+    int page = 1,
+    int pageSize = 25,
+  }) async {
+    _customerLoading = true;
+    _error = null;
+    notifyListeners();
+    try {
+      _customerListPage = await _repository.getCustomers(
+        query: query,
+        page: page,
+        pageSize: pageSize,
+      );
+    } catch (error) {
+      _error = error.toString();
+    } finally {
+      _customerLoading = false;
       notifyListeners();
     }
   }
