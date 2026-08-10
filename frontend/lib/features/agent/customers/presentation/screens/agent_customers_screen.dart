@@ -485,6 +485,11 @@ class _CustomerWorkspaceDetail extends ConsumerWidget {
     final membership = Map<String, dynamic>.from(
       controller.customerMembership['membership'] ?? const {},
     );
+    final subscription = Map<String, dynamic>.from(
+      controller.customerMembership['subscription'] ?? const {},
+    );
+    final shieldBenefitPaise = (subscription['shieldBenefitPaise'] as num?)
+        ?.toInt();
     final wallet = controller.customerWallet;
     final referralSummary = controller.customerReferralSummary;
     final family = controller.customerFamilyDetails;
@@ -742,6 +747,30 @@ class _CustomerWorkspaceDetail extends ConsumerWidget {
                             controller
                                 .customerMembership['shieldCard']?['status'],
                           ),
+                        ),
+                        _SummaryItem(
+                          label: 'Valid from',
+                          value: _formatDate(membership['activationDate']),
+                        ),
+                        _SummaryItem(
+                          label: 'Valid until',
+                          value: _formatDate(membership['expiryDate']),
+                        ),
+                        _SummaryItem(
+                          label: 'Subscription plan',
+                          value:
+                              subscription['planName']?.toString() ??
+                              'Not recorded',
+                        ),
+                        _SummaryItem(
+                          label: 'Subscription status',
+                          value: _humanize(subscription['status']),
+                        ),
+                        _SummaryItem(
+                          label: 'SHIELD Benefit entitlement',
+                          value: shieldBenefitPaise == null
+                              ? 'Not recorded'
+                              : '₹ ${shieldBenefitPaise / 100}',
                         ),
                       ],
                     ),

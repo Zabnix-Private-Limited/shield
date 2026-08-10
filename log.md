@@ -11271,4 +11271,11 @@ px prisma validate, Nest build, 17 focused Documents/Pharmacy controller tests, 
 - Added saved-address and preferred-care-provider panels to the Family workspace tab. The live schema has no separate preferred-pharmacy field, so none was invented.
 
 ### Verification
+- Passed dart format and Flutter root smoke test (1 passed). No database command was run and current_schema.md was not modified.## 26. Agent Customer 360 membership entitlement clarity - 2026-08-10 09:07:41 IST
+
+### Frontend Files
+- Expanded the Membership tab with backend-owned validity, subscription plan/status, and SHIELD Benefit entitlement fields.
+- SHIELD Benefit remains explicitly an entitlement and is displayed separately from cash wallet and reward points; no financial value is calculated or combined in Flutter.
+
+### Verification
 - Passed dart format and Flutter root smoke test (1 passed). No database command was run and current_schema.md was not modified.
