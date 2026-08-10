@@ -11193,4 +11193,7 @@ px prisma validate, Nest build, 17 focused Documents/Pharmacy controller tests, 
 - Added final release audit, manual QA checklist and deferred-scope register. Recommendation is READY FOR INTERNAL QA pending stable full-suite and authenticated browser smoke tooling. No database command was run and current_schema.md was not modified.## 15. Final customer release documentation alignment - 2026-08-09 10:10:29 IST
 
 - Updated master customer audit, status, API binding, state, visual QA and completion-matrix references to the final integration report and manual QA handoff.
-- Final status is READY FOR INTERNAL QA: no P0/P1 supported-scope defect found; browser/full-run checks remain explicitly deferred due runner/tooling contention, not marked as pass.
+- Final status is READY FOR INTERNAL QA: no P0/P1 supported-scope defect found; browser/full-run checks remain explicitly deferred due runner/tooling contention, not marked as pass.## 16. Duplicate prescription-request index migration diagnosis - 2026-08-10 08:38:07 IST
+
+- **Why:** The current database truth already contains idx_prescription_pharmacy_requests_customer on prescription_pharmacy_requests(customer_id, created_at). A replayed unconditional CREATE INDEX therefore fails with SQLSTATE 42P07.
+- **Outcome:** No database command was executed. The supplied remediation uses PostgreSQL-safe idempotent index creation and retains the existing index definition.
