@@ -11285,4 +11285,11 @@ px prisma validate, Nest build, 17 focused Documents/Pharmacy controller tests, 
 - Cash Wallet, Reward Points, and SHIELD Benefit remain visually and functionally distinct; no balance-edit or adjustment control was introduced.
 
 ### Verification
-- Passed dart format and Flutter root smoke test (1 passed). No database command was run and current_schema.md was not modified.
+- Passed dart format and Flutter root smoke test (1 passed). No database command was run and current_schema.md was not modified.## 28. Customer 360 requirement-evidence handoff - 2026-08-10 09:10:16 IST
+
+### Documentation
+- Expanded CUSTOMER_360_IMPLEMENTATION_AUDIT.md into a requirement-by-requirement evidence matrix that distinguishes implemented read-only surfaces, scoped actions, unsupported schema gaps, and pending browser/RBAC acceptance evidence.
+- Explicitly recorded that preferred pharmacy is unsupported by the current schema and must not be fabricated, while preferred provider is supported as a safe read projection.
+
+### Verification
+- Documentation-only clarification; no database command or runtime mutation was performed.
