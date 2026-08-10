@@ -219,6 +219,8 @@ class AgentPortalController extends ChangeNotifier {
 
   Future<void> loadCustomerPage({
     String? query,
+    String? status,
+    String? membershipStatus,
     int page = 1,
     int pageSize = 25,
   }) async {
@@ -228,6 +230,8 @@ class AgentPortalController extends ChangeNotifier {
     try {
       _customerListPage = await _repository.getCustomers(
         query: query,
+        status: status,
+        membershipStatus: membershipStatus,
         page: page,
         pageSize: pageSize,
       );

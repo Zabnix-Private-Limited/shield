@@ -317,10 +317,18 @@ export class AgentService {
 
   async listCustomers(
     principal: ShieldPrincipal | undefined,
-    options: { query?: string; page?: number; pageSize?: number } = {},
+    options: {
+      query?: string;
+      status?: string;
+      membershipStatus?: string;
+      page?: number;
+      pageSize?: number;
+    } = {},
   ) {
     const context = await this.requireAgentContext(principal);
     const query = options.query?.trim();
+    const status = options.status?.trim().toUpperCase();
+    const membershipStatus = options.membershipStatus?.trim().toUpperCase();
     const page = Number.isFinite(options.page) ? Math.max(1, options.page!) : 1;
     const pageSize = Number.isFinite(options.pageSize)
       ? Math.min(100, Math.max(1, options.pageSize!))
@@ -328,6 +336,8 @@ export class AgentService {
     const where = {
       agentCode: context.agentCode,
       deletedAt: null,
+      ...(status ? { status } : {}),
+      ...(membershipStatus ? { membership: { status: membershipStatus } } : {}),
       ...(query
         ? {
             OR: [

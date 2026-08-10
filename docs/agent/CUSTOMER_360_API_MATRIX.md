@@ -3,7 +3,7 @@
 | Surface | Contract | Scope | Status |
 |---|---|---|---|
 | Dashboard preview | `GET /agents/workspace` | SHIELD_AGENT graph; newest 24 summary rows | Supported |
-| Customer list/search | `GET /agents/customers?query=&page=&pageSize=` | SHIELD_AGENT graph; server-side page size capped at 100 | Supported |
+| Customer list/search | `GET /agents/customers?query=&status=&membershipStatus=&page=&pageSize=` | SHIELD_AGENT graph; server-side page size capped at 100 | Supported |
 | Customer 360 | `GET /agents/customers/:customerId/workspace` | Assigned customer only | Supported |
 | Customer update | `PUT /customers/:id` | Existing staff permission and agent graph check | Supported |
 | Follow-up | CRM task/activity APIs | Assigned customer | Supported |

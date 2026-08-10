@@ -786,6 +786,8 @@ class ApiService {
 
   static Future<Map<String, dynamic>> getAgentCustomers({
     String? query,
+    String? status,
+    String? membershipStatus,
     int page = 1,
     int pageSize = 25,
   }) async {
@@ -793,6 +795,9 @@ class ApiService {
       '/agents/customers',
       queryParameters: {
         if (query != null && query.trim().isNotEmpty) 'query': query.trim(),
+        if (status != null && status.trim().isNotEmpty) 'status': status.trim(),
+        if (membershipStatus != null && membershipStatus.trim().isNotEmpty)
+          'membershipStatus': membershipStatus.trim(),
         'page': page,
         'pageSize': pageSize,
       },

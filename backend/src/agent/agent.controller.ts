@@ -22,6 +22,8 @@ export class AgentController {
   @Get('customers')
   async listCustomers(
     @Query('query') query?: string,
+    @Query('status') status?: string,
+    @Query('membershipStatus') membershipStatus?: string,
     @Query('page') page?: string,
     @Query('pageSize') pageSize?: string,
     @CurrentPrincipal() principal?: ShieldPrincipal,
@@ -31,6 +33,8 @@ export class AgentController {
       message: 'Agent customers retrieved successfully.',
       data: await this.agentService.listCustomers(principal, {
         query,
+        status,
+        membershipStatus,
         page: page == null ? undefined : Number(page),
         pageSize: pageSize == null ? undefined : Number(pageSize),
       }),

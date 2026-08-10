@@ -11229,4 +11229,13 @@ px prisma validate, Nest build, 17 focused Documents/Pharmacy controller tests, 
 - Added AgentService coverage for the dedicated paginated customer-list contract, including authenticated agent-code filtering, case-insensitive query path, server page-size cap, stable page offset, and customer-safe row projection.
 
 ### Verification
-- Passed focused AgentService and AgentScopeService Jest suites: 3 tests passed. No database command was run and current_schema.md was not modified.
+- Passed focused AgentService and AgentScopeService Jest suites: 3 tests passed. No database command was run and current_schema.md was not modified.## 21. Agent Customer 360 debounced search and verified filters - 2026-08-10 08:59:18 IST
+
+### Frontend Files
+- Replaced local list filtering with a 350ms debounced server search, clear-query control, account-status filter, membership-status filter, reset action, and filter-preserving pagination.
+
+### Backend Files
+- Extended the agent-scoped customer list with validated status and membership-status predicates while retaining employee-code graph enforcement and the page-size cap.
+
+### Verification
+- Passed Flutter root smoke test (1 passed) and focused AgentService pagination/filter regression (1 passed). No database command was run and current_schema.md was not modified.

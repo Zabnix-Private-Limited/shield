@@ -9,10 +9,14 @@ class AgentPortalRepository {
 
   Future<Map<String, dynamic>> getCustomers({
     String? query,
+    String? status,
+    String? membershipStatus,
     int page = 1,
     int pageSize = 25,
   }) => ApiService.getAgentCustomers(
     query: query,
+    status: status,
+    membershipStatus: membershipStatus,
     page: page,
     pageSize: pageSize,
   );

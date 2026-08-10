@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -23,6 +25,9 @@ class AgentCustomersScreen extends ConsumerStatefulWidget {
 
 class _AgentCustomersScreenState extends ConsumerState<AgentCustomersScreen> {
   String _query = '';
+  String? _statusFilter;
+  String? _membershipStatusFilter;
+  Timer? _searchDebounce;
   bool _editingProfile = false;
   final _firstNameController = TextEditingController();
   final _lastNameController = TextEditingController();
@@ -48,6 +53,7 @@ class _AgentCustomersScreenState extends ConsumerState<AgentCustomersScreen> {
 
   @override
   void dispose() {
+    _searchDebounce?.cancel();
     _firstNameController.dispose();
     _lastNameController.dispose();
     _mobileController.dispose();
@@ -55,6 +61,19 @@ class _AgentCustomersScreenState extends ConsumerState<AgentCustomersScreen> {
     _cityController.dispose();
     _addressController.dispose();
     super.dispose();
+  }
+
+  void _queueCustomerSearch() {
+    _searchDebounce?.cancel();
+    _searchDebounce = Timer(const Duration(milliseconds: 350), () {
+      ref
+          .read(agentPortalControllerProvider)
+          .loadCustomerPage(
+            query: _query,
+            status: _statusFilter,
+            membershipStatus: _membershipStatusFilter,
+          );
+    });
   }
 
   void _loadProfileDraft(Map<String, dynamic> customer) {
@@ -73,12 +92,7 @@ class _AgentCustomersScreenState extends ConsumerState<AgentCustomersScreen> {
     final currentPage = (customerPage['page'] as num?)?.toInt() ?? 1;
     final totalPages = (customerPage['totalPages'] as num?)?.toInt() ?? 1;
     final totalCustomers = (customerPage['total'] as num?)?.toInt() ?? 0;
-    final filteredCustomers = controller.customers.where((customer) {
-      final combined =
-          '${customer['fullName'] ?? ''} ${customer['mobile'] ?? ''} ${customer['customerCode'] ?? ''} ${customer['status'] ?? ''}'
-              .toLowerCase();
-      return combined.contains(_query.toLowerCase());
-    }).toList();
+    final filteredCustomers = controller.customers;
     final workspaceHeight = (MediaQuery.sizeOf(context).height - 280).clamp(
       360.0,
       1200.0,
@@ -102,14 +116,62 @@ class _AgentCustomersScreenState extends ConsumerState<AgentCustomersScreen> {
           ),
           const SizedBox(height: 12),
           TextField(
-            decoration: const InputDecoration(
+            onChanged: (value) {
+              setState(() => _query = value);
+              _queueCustomerSearch();
+            },
+            onSubmitted: (_) => _queueCustomerSearch(),
+            decoration: InputDecoration(
               labelText: 'Search by name, phone, SHIELD ID, or status',
-              prefixIcon: Icon(Icons.search),
+              prefixIcon: const Icon(Icons.search),
+              suffixIcon: _query.isEmpty
+                  ? null
+                  : IconButton(
+                      tooltip: 'Clear search',
+                      icon: const Icon(Icons.clear),
+                      onPressed: () {
+                        setState(() => _query = '');
+                        _queueCustomerSearch();
+                      },
+                    ),
             ),
-            onChanged: (value) => setState(() => _query = value),
-            onSubmitted: (value) => ref
-                .read(agentPortalControllerProvider)
-                .loadCustomerPage(query: value, page: 1),
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 12,
+            runSpacing: 8,
+            children: [
+              _CustomerFilterDropdown(
+                label: 'Account status',
+                value: _statusFilter,
+                values: const ['ACTIVE', 'PENDING', 'WAITING', 'SUSPENDED'],
+                onChanged: (value) {
+                  setState(() => _statusFilter = value);
+                  _queueCustomerSearch();
+                },
+              ),
+              _CustomerFilterDropdown(
+                label: 'Membership status',
+                value: _membershipStatusFilter,
+                values: const ['ACTIVE', 'PENDING', 'SUSPENDED', 'EXPIRED'],
+                onChanged: (value) {
+                  setState(() => _membershipStatusFilter = value);
+                  _queueCustomerSearch();
+                },
+              ),
+              if (_statusFilter != null || _membershipStatusFilter != null)
+                TextButton.icon(
+                  onPressed: () {
+                    setState(() {
+                      _statusFilter = null;
+                      _membershipStatusFilter = null;
+                    });
+                    _queueCustomerSearch();
+                  },
+                  icon: const Icon(Icons.filter_alt_off_outlined),
+                  label: const Text('Reset filters'),
+                ),
+            ],
           ),
           if (customerPage.isNotEmpty) ...[
             const SizedBox(height: 8),
@@ -125,6 +187,8 @@ class _AgentCustomersScreenState extends ConsumerState<AgentCustomersScreen> {
                             .read(agentPortalControllerProvider)
                             .loadCustomerPage(
                               query: _query,
+                              status: _statusFilter,
+                              membershipStatus: _membershipStatusFilter,
                               page: currentPage - 1,
                             ),
                   icon: const Icon(Icons.chevron_left),
@@ -138,6 +202,8 @@ class _AgentCustomersScreenState extends ConsumerState<AgentCustomersScreen> {
                             .read(agentPortalControllerProvider)
                             .loadCustomerPage(
                               query: _query,
+                              status: _statusFilter,
+                              membershipStatus: _membershipStatusFilter,
                               page: currentPage + 1,
                             ),
                   icon: const Icon(Icons.chevron_right),
@@ -341,6 +407,38 @@ class _CustomerListPane extends StatelessWidget {
       ),
     );
   }
+}
+
+class _CustomerFilterDropdown extends StatelessWidget {
+  const _CustomerFilterDropdown({
+    required this.label,
+    required this.value,
+    required this.values,
+    required this.onChanged,
+  });
+
+  final String label;
+  final String? value;
+  final List<String> values;
+  final ValueChanged<String?> onChanged;
+
+  @override
+  Widget build(BuildContext context) => SizedBox(
+    width: 220,
+    child: DropdownButtonFormField<String>(
+      value: value,
+      decoration: InputDecoration(labelText: label),
+      items: values
+          .map(
+            (item) => DropdownMenuItem<String>(
+              value: item,
+              child: Text(_humanize(item)),
+            ),
+          )
+          .toList(),
+      onChanged: onChanged,
+    ),
+  );
 }
 
 class _CustomerWorkspaceDetail extends ConsumerWidget {

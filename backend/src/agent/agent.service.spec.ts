@@ -42,13 +42,19 @@ describe('AgentService customer list', () => {
 
     const result = await service.listCustomers({} as any, {
       query: 'asha',
+      status: 'active',
+      membershipStatus: 'suspended',
       page: 2,
       pageSize: 500,
     });
 
     expect(prisma.customer.count).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: expect.objectContaining({ agentCode: 'AG-42' }),
+        where: expect.objectContaining({
+          agentCode: 'AG-42',
+          status: 'ACTIVE',
+          membership: { status: 'SUSPENDED' },
+        }),
       }),
     );
     expect(prisma.customer.findMany).toHaveBeenCalledWith(
