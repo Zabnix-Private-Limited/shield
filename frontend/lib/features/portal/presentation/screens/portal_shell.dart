@@ -81,8 +81,14 @@ Future<_CustomerAccessContext> _loadCustomerAccessContext() async {
 class PortalShell extends StatefulWidget {
   final SHIELDRole role;
   final String? sectionKey;
+  final String? customerId;
 
-  const PortalShell({super.key, required this.role, required this.sectionKey});
+  const PortalShell({
+    super.key,
+    required this.role,
+    required this.sectionKey,
+    this.customerId,
+  });
 
   @override
   State<PortalShell> createState() => _PortalShellState();
@@ -291,7 +297,11 @@ class _PortalShellState extends State<PortalShell> {
                             activeSectionKey: activeKey,
                             inDrawer: true,
                           ),
-                          body: _RoleContent(portal: portal, section: section),
+                          body: _RoleContent(
+                            portal: portal,
+                            section: section,
+                            customerId: widget.customerId,
+                          ),
                         ),
                       ),
                     ),
@@ -319,6 +329,7 @@ class _PortalShellState extends State<PortalShell> {
                         builder: (scaffoldContext) => _RoleContent(
                           portal: portal,
                           section: section,
+                          customerId: widget.customerId,
                           onSidebarToggle: () =>
                               Scaffold.of(scaffoldContext).openDrawer(),
                           isSidebarExpanded: false,
@@ -340,6 +351,7 @@ class _PortalShellState extends State<PortalShell> {
                           body: _RoleContent(
                             portal: portal,
                             section: section,
+                            customerId: widget.customerId,
                             onSidebarToggle: _toggleInternalSidebar,
                             isSidebarExpanded: _isInternalSidebarExpanded,
                           ),
@@ -520,12 +532,14 @@ IconData _portalSectionIcon(String key) {
 class _RoleContent extends StatelessWidget {
   final PortalRoleData portal;
   final PortalSectionData section;
+  final String? customerId;
   final VoidCallback? onSidebarToggle;
   final bool isSidebarExpanded;
 
   const _RoleContent({
     required this.portal,
     required this.section,
+    this.customerId,
     this.onSidebarToggle,
     this.isSidebarExpanded = true,
   });
@@ -772,7 +786,7 @@ class _RoleContent extends StatelessWidget {
       case 'dashboard':
         return const AgentDashboardScreen();
       case 'customers':
-        return const AgentCustomersScreen();
+        return AgentCustomersScreen(initialCustomerId: customerId);
       case 'registration':
         return const AgentRegistrationScreen();
       case 'followups':

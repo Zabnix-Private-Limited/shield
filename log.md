@@ -11196,4 +11196,22 @@ px prisma validate, Nest build, 17 focused Documents/Pharmacy controller tests, 
 - Final status is READY FOR INTERNAL QA: no P0/P1 supported-scope defect found; browser/full-run checks remain explicitly deferred due runner/tooling contention, not marked as pass.## 16. Duplicate prescription-request index migration diagnosis - 2026-08-10 08:38:07 IST
 
 - **Why:** The current database truth already contains idx_prescription_pharmacy_requests_customer on prescription_pharmacy_requests(customer_id, created_at). A replayed unconditional CREATE INDEX therefore fails with SQLSTATE 42P07.
-- **Outcome:** No database command was executed. The supplied remediation uses PostgreSQL-safe idempotent index creation and retains the existing index definition.
+- **Outcome:** No database command was executed. The supplied remediation uses PostgreSQL-safe idempotent index creation and retains the existing index definition.## 17. Agent Customer 360 routed workspace - 2026-08-10 08:48:58 IST
+
+### Frontend Files
+- Added the guarded stable Customer 360 route /portal/agent/customers/:customerId and connected list selection to it, so refresh/navigation retains the selected customer without relying on transient state.
+- Expanded the existing Agent workspace into real schema-backed Overview, Membership, Wallet and Rewards, Documents, Visits, Prescriptions, Orders, Family, Referrals, Notifications, Activity, and Audit tabs.
+
+### Backend Files
+- Added an explicit consultation-linked prescription projection to the existing agent customer workspace response; no schema change or database command was needed.
+- Added AgentScopeService regression coverage proving assigned customer access and foreign-customer denial.
+
+### Documentation
+- Added Customer 360 API, permission, route, state, security, implementation, manual QA, and release-status handoffs under docs/agent.
+
+### Verification
+- Passed focused Jest agent scope suite (2 tests). Dart formatting and git diff checks passed. Full Flutter analysis and Nest build timed out in the local Windows runner without diagnostic output and are not claimed as passes. current_schema.md was read and not modified.## 18. Agent Customer 360 Flutter smoke correction - 2026-08-10 08:50:51 IST
+
+### Verification
+- Follow-up Flutter smoke compilation passed: flutter test test/widget_test.dart (1 passed). It caught and then verified the selected-customer route plumbing through PortalShell and the internal content renderer.
+- The earlier full Flutter analyzer and Nest build timeout remain unclaimed; this entry records only the focused smoke result.

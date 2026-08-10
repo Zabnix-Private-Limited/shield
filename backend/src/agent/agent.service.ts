@@ -515,6 +515,15 @@ export class AgentService {
         paymentStatus: purchase.paymentStatus ?? 'PENDING',
         itemCount: purchase.purchaseItems?.length ?? 0,
       })),
+      prescriptions: consultations.flatMap((consultation: any) =>
+        (consultation.prescriptions ?? []).map((prescription: any) => ({
+          id: prescription.id.toString(),
+          consultationId: consultation.id.toString(),
+          documentId: prescription.documentId?.toString() ?? null,
+          issueDate: prescription.issueDate?.toISOString() ?? null,
+          diagnosis: consultation.diagnosis?.trim() || null,
+        })),
+      ),
       medicalRecords,
       statusHistory: statusHistory.map((entry) => ({
         id: entry.id.toString(),

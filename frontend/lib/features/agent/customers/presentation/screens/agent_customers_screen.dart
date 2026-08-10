@@ -10,7 +10,11 @@ import '../../../shared/presentation/widgets/agent_experience_widgets.dart';
 import '../../../shared/presentation/widgets/agent_section_header.dart';
 
 class AgentCustomersScreen extends ConsumerStatefulWidget {
-  const AgentCustomersScreen({super.key});
+  const AgentCustomersScreen({super.key, this.initialCustomerId});
+
+  /// A stable internal route can target a specific customer workspace without
+  /// relying on the in-memory selection from the customer list.
+  final String? initialCustomerId;
 
   @override
   ConsumerState<AgentCustomersScreen> createState() =>
@@ -30,9 +34,16 @@ class _AgentCustomersScreenState extends ConsumerState<AgentCustomersScreen> {
   @override
   void initState() {
     super.initState();
-    Future.microtask(
-      () => ref.read(agentPortalControllerProvider).ensureLoaded(),
-    );
+    Future.microtask(() async {
+      final controller = ref.read(agentPortalControllerProvider);
+      await controller.ensureLoaded();
+      final initialCustomerId = widget.initialCustomerId?.trim();
+      if (initialCustomerId != null &&
+          initialCustomerId.isNotEmpty &&
+          controller.selectedCustomerId != initialCustomerId) {
+        await controller.selectCustomer(initialCustomerId);
+      }
+    });
   }
 
   @override
@@ -104,9 +115,7 @@ class _AgentCustomersScreenState extends ConsumerState<AgentCustomersScreen> {
                   selectedCustomerId: controller.selectedCustomerId,
                   onTap: (customerId) {
                     setState(() => _editingProfile = false);
-                    ref
-                        .read(agentPortalControllerProvider)
-                        .selectCustomer(customerId);
+                    context.go('/portal/agent/customers/$customerId');
                   },
                 );
                 final detailPane = controller.isCustomerLoading
@@ -346,7 +355,8 @@ class _CustomerWorkspaceDetail extends ConsumerWidget {
     final tasks = controller.customerTasks;
     final notifications = controller.customerNotifications;
     final purchases = controller.customerPurchases;
-    final records = controller.customerMedicalRecords;
+    final prescriptions = controller.customerPrescriptions;
+    final statusHistory = controller.customerStatusHistory;
     final timeline = controller.customerTimeline;
     final customerId = customer['id']?.toString() ?? '';
     final fullName =
@@ -373,7 +383,7 @@ class _CustomerWorkspaceDetail extends ConsumerWidget {
     );
 
     return DefaultTabController(
-      length: 8,
+      length: 12,
       child: AgentWorkspaceSurface(
         child: Column(
           children: [
@@ -439,13 +449,17 @@ class _CustomerWorkspaceDetail extends ConsumerWidget {
               tabAlignment: TabAlignment.start,
               tabs: [
                 Tab(text: 'Overview'),
-                Tab(text: 'Timeline'),
-                Tab(text: 'Tasks'),
+                Tab(text: 'Membership'),
+                Tab(text: 'Wallet & Rewards'),
                 Tab(text: 'Documents'),
                 Tab(text: 'Visits'),
-                Tab(text: 'Medical'),
-                Tab(text: 'Wallet'),
-                Tab(text: 'Profile'),
+                Tab(text: 'Prescriptions'),
+                Tab(text: 'Orders'),
+                Tab(text: 'Family'),
+                Tab(text: 'Referrals'),
+                Tab(text: 'Notifications'),
+                Tab(text: 'Activity'),
+                Tab(text: 'Audit'),
               ],
             ),
             const SizedBox(height: 12),
@@ -564,38 +578,65 @@ class _CustomerWorkspaceDetail extends ConsumerWidget {
                     ),
                   ),
                   SingleChildScrollView(
-                    child: _TimelineCard(
-                      title: 'Customer Timeline',
-                      emptyLabel:
-                          'No activity is recorded in the timeline yet.',
-                      entries: storyEntries,
+                    child: _SummarySection(
+                      title: 'Membership',
+                      items: [
+                        _SummaryItem(label: 'Plan', value: membershipName),
+                        _SummaryItem(
+                          label: 'Status',
+                          value: _humanize(membership['status']),
+                        ),
+                        _SummaryItem(
+                          label: 'Membership number',
+                          value:
+                              membership['membershipNumber']
+                                  ?.toString()
+                                  .ifBlank('Pending') ??
+                              'Pending',
+                        ),
+                        _SummaryItem(
+                          label: 'Card status',
+                          value: _humanize(
+                            controller
+                                .customerMembership['shieldCard']?['status'],
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  _SimpleListView(
-                    title: 'Tasks',
-                    emptyLabel: 'No follow-up activity is recorded yet.',
-                    items: [
-                      ...tasks.map(
-                        (item) => _TimelineEntry(
-                          title: _humanize(item['status']),
-                          subtitle:
-                              item['notes']?.toString().ifBlank('No remarks') ??
-                              'No remarks',
-                          timeLabel: _formatDateTime(item['dueDate']),
-                          icon: Icons.assignment_outlined,
+                  SingleChildScrollView(
+                    child: _TwoColumnOverview(
+                      leftChildren: [
+                        _SummarySection(
+                          title: 'Wallet',
+                          items: [
+                            _SummaryItem(
+                              label: 'Cash available',
+                              value: '${activeWallet ?? 0}',
+                            ),
+                            _SummaryItem(
+                              label: 'Reward points',
+                              value: '${rewardPoints ?? 0}',
+                            ),
+                          ],
                         ),
-                      ),
-                      ...activities.map(
-                        (item) => _TimelineEntry(
-                          title: _humanize(item['activityType']),
-                          subtitle:
-                              item['notes']?.toString().ifBlank('No remarks') ??
-                              'No remarks',
-                          timeLabel: _formatDateTime(item['createdAt']),
-                          icon: Icons.sticky_note_2_outlined,
+                      ],
+                      rightChildren: [
+                        _SummarySection(
+                          title: 'Reward lifecycle',
+                          items: [
+                            _SummaryItem(
+                              label: 'Network rewards',
+                              value: '${referralSummary['rewardPoints'] ?? 0}',
+                            ),
+                            const _SummaryItem(
+                              label: 'SHIELD benefit',
+                              value: 'Not presented as a customer balance',
+                            ),
+                          ],
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                   _SimpleListView(
                     title: 'Uploaded Documents',
@@ -637,64 +678,42 @@ class _CustomerWorkspaceDetail extends ConsumerWidget {
                         .toList(),
                   ),
                   _SimpleListView(
-                    title: 'Medical Records',
-                    emptyLabel: 'No medical records are linked yet.',
-                    items: records
+                    title: 'Prescriptions',
+                    emptyLabel: 'No prescription records are linked yet.',
+                    items: prescriptions
                         .map(
                           (item) => _TimelineEntry(
                             title:
-                                item['title']?.toString().ifBlank('Record') ??
-                                'Record',
-                            subtitle:
-                                '${item['category'] ?? 'Record'} • ${item['status'] ?? 'Pending'}',
-                            timeLabel: _formatDateTime(item['createdAt']),
-                            icon: Icons.medical_information_outlined,
+                                item['diagnosis']?.toString().ifBlank(
+                                  'Prescription',
+                                ) ??
+                                'Prescription',
+                            subtitle: item['documentId'] == null
+                                ? 'Consultation-linked prescription'
+                                : 'Document-linked prescription',
+                            timeLabel: _formatDate(item['issueDate']),
+                            icon: Icons.receipt_long_outlined,
                           ),
                         )
                         .toList(),
                   ),
                   SingleChildScrollView(
-                    child: _TwoColumnOverview(
-                      leftChildren: [
-                        _SummarySection(
-                          title: 'Wallet',
-                          items: [
-                            _SummaryItem(
-                              label: 'Cash available',
-                              value: '${activeWallet ?? 0}',
+                    child: _SimpleListView(
+                      title: 'Orders',
+                      emptyLabel: 'No recorded provider purchases yet.',
+                      items: purchases
+                          .map(
+                            (item) => _TimelineEntry(
+                              title:
+                                  item['providerName']?.toString() ??
+                                  'Provider',
+                              subtitle:
+                                  '${item['invoiceNumber'] ?? 'Purchase'} • ${_humanize(item['paymentStatus'])}',
+                              timeLabel: _formatDate(item['purchaseDate']),
+                              icon: Icons.receipt_outlined,
                             ),
-                            _SummaryItem(
-                              label: 'Reward points',
-                              value: '${rewardPoints ?? 0}',
-                            ),
-                            _SummaryItem(
-                              label: 'Membership status',
-                              value: _humanize(membership['status']),
-                            ),
-                          ],
-                        ),
-                      ],
-                      rightChildren: [
-                        _SummarySection(
-                          title: 'Customer network',
-                          items: [
-                            _SummaryItem(
-                              label: 'Direct customers',
-                              value:
-                                  '${referralSummary['directReferrals'] ?? 0}',
-                            ),
-                            _SummaryItem(
-                              label: 'Total network',
-                              value:
-                                  '${referralSummary['totalReferrals'] ?? 0}',
-                            ),
-                            _SummaryItem(
-                              label: 'Network rewards',
-                              value: '${referralSummary['rewardPoints'] ?? 0}',
-                            ),
-                          ],
-                        ),
-                      ],
+                          )
+                          .toList(),
                     ),
                   ),
                   SingleChildScrollView(
@@ -808,6 +827,77 @@ class _CustomerWorkspaceDetail extends ConsumerWidget {
                           ),
                       ],
                     ),
+                  ),
+                  SingleChildScrollView(
+                    child: _SummarySection(
+                      title: 'Referral network',
+                      items: [
+                        _SummaryItem(
+                          label: 'Direct customers',
+                          value: '${referralSummary['directReferrals'] ?? 0}',
+                        ),
+                        _SummaryItem(
+                          label: 'Total network',
+                          value: '${referralSummary['totalReferrals'] ?? 0}',
+                        ),
+                        _SummaryItem(
+                          label: 'Reward points',
+                          value: '${referralSummary['rewardPoints'] ?? 0}',
+                        ),
+                      ],
+                    ),
+                  ),
+                  _SimpleListView(
+                    title: 'Notifications',
+                    emptyLabel:
+                        'No notifications are recorded for this customer.',
+                    items: notifications
+                        .map(
+                          (item) => _TimelineEntry(
+                            title: item['title']?.toString() ?? 'Notification',
+                            subtitle: item['message']?.toString() ?? '',
+                            timeLabel: _formatDateTime(item['sentAt']),
+                            icon: Icons.notifications_outlined,
+                          ),
+                        )
+                        .toList(),
+                  ),
+                  _SimpleListView(
+                    title: 'Activity',
+                    emptyLabel: 'No follow-up or activity record is available.',
+                    items: [
+                      ...tasks.map(
+                        (item) => _TimelineEntry(
+                          title: _humanize(item['status']),
+                          subtitle: item['notes']?.toString() ?? '',
+                          timeLabel: _formatDateTime(item['dueDate']),
+                          icon: Icons.assignment_outlined,
+                        ),
+                      ),
+                      ...activities.map(
+                        (item) => _TimelineEntry(
+                          title: _humanize(item['activityType']),
+                          subtitle: item['notes']?.toString() ?? '',
+                          timeLabel: _formatDateTime(item['createdAt']),
+                          icon: Icons.sticky_note_2_outlined,
+                        ),
+                      ),
+                    ],
+                  ),
+                  _SimpleListView(
+                    title: 'Audit',
+                    emptyLabel: 'No recorded customer-status changes.',
+                    items: statusHistory
+                        .map(
+                          (item) => _TimelineEntry(
+                            title:
+                                '${_humanize(item['oldStatus'])} → ${_humanize(item['newStatus'])}',
+                            subtitle: item['remarks']?.toString() ?? '',
+                            timeLabel: _formatDateTime(item['createdAt']),
+                            icon: Icons.history_outlined,
+                          ),
+                        )
+                        .toList(),
                   ),
                 ],
               ),

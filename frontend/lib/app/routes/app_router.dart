@@ -232,6 +232,19 @@ final GoRouter router = GoRouter(
       ),
     ),
     GoRoute(
+      path: '/portal/agent/customers/:customerId',
+      name: 'agent-customer-workspace',
+      redirect: (context, state) => PortalResolver.guardPortalRoute(
+        requestedRoleKey: SHIELDRole.agent.routeKey,
+        sectionKey: 'customers',
+      ),
+      builder: (context, state) => PortalShell(
+        role: SHIELDRole.agent,
+        sectionKey: 'customers',
+        customerId: state.pathParameters['customerId'],
+      ),
+    ),
+    GoRoute(
       path: '/portal/:role/:section',
       name: 'role-portal',
       builder: (context, state) {
