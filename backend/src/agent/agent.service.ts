@@ -406,6 +406,8 @@ export class AgentService {
       dentalRecords,
       statusHistory,
       pharmacyRequests,
+      addresses,
+      preferences,
     ] = await Promise.all([
       this.customerService.findOne(customerId),
       this.customerService.getCustomerPortalMembership(customerId),
@@ -474,7 +476,19 @@ export class AgentService {
         orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
         take: 20,
       }),
+      this.prisma.customerAddress.findMany({
+        where: { customerId, deletedAt: null },
+        orderBy: [{ isDefault: 'desc' }, { updatedAt: 'desc' }],
+      }),
+      this.prisma.customerPreference.findUnique({ where: { customerId } }),
     ]);
+
+    const preferredProvider = preferences?.preferredProviderId
+      ? await this.prisma.serviceProvider.findUnique({
+          where: { id: preferences.preferredProviderId },
+          select: { providerName: true, providerType: true, status: true },
+        })
+      : null;
 
     const timeline = [
       ...activities.map((activity) => ({
@@ -567,6 +581,24 @@ export class AgentService {
         mobile: contact.mobile ?? '',
         isPrimary: Boolean(contact.isPrimary),
       })),
+      addresses: addresses.map((address) => ({
+        id: address.id.toString(),
+        label: address.label,
+        addressLine1: address.addressLine1,
+        addressLine2: address.addressLine2,
+        city: address.city,
+        district: address.district,
+        state: address.state,
+        pincode: address.pincode,
+        isDefault: address.isDefault,
+      })),
+      preferredProvider: preferredProvider
+        ? {
+            name: preferredProvider.providerName,
+            type: preferredProvider.providerType,
+            status: preferredProvider.status,
+          }
+        : null,
       membership,
       wallet,
       documents,

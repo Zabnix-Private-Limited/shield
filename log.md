@@ -11262,4 +11262,13 @@ px prisma validate, Nest build, 17 focused Documents/Pharmacy controller tests, 
 - Added the resulting Pharmacy request history to the Prescriptions tab with provider, status, and timestamp. No fulfilment or status mutation is exposed.
 
 ### Verification
+- Passed dart format and Flutter root smoke test (1 passed). No database command was run and current_schema.md was not modified.## 25. Agent Customer 360 address and preferred-provider visibility - 2026-08-10 09:06:31 IST
+
+### Backend Files
+- Added agent-scoped read projections for non-deleted customer addresses and the stored preferred provider, resolving the provider to a safe name/type/status display contract instead of exposing an internal identifier.
+
+### Frontend Files
+- Added saved-address and preferred-care-provider panels to the Family workspace tab. The live schema has no separate preferred-pharmacy field, so none was invented.
+
+### Verification
 - Passed dart format and Flutter root smoke test (1 passed). No database command was run and current_schema.md was not modified.

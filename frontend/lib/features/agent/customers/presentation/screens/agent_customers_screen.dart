@@ -488,6 +488,8 @@ class _CustomerWorkspaceDetail extends ConsumerWidget {
     final wallet = controller.customerWallet;
     final referralSummary = controller.customerReferralSummary;
     final family = controller.customerFamilyDetails;
+    final addresses = controller.customerAddresses;
+    final preferredProvider = controller.customerPreferredProvider;
     final appointments = controller.customerAppointments;
     final documents = controller.customerDocuments;
     final activities = controller.customerActivities;
@@ -949,8 +951,63 @@ class _CustomerWorkspaceDetail extends ConsumerWidget {
                                   ),
                                 ],
                               ),
+                              _SummarySection(
+                                title: 'Saved addresses',
+                                items: addresses.isEmpty
+                                    ? const [
+                                        _SummaryItem(
+                                          label: 'Addresses',
+                                          value: 'No saved address',
+                                        ),
+                                      ]
+                                    : addresses
+                                          .map(
+                                            (address) => _SummaryItem(
+                                              label:
+                                                  address['isDefault'] == true
+                                                  ? '${_humanize(address['label'])} (default)'
+                                                  : _humanize(address['label']),
+                                              value:
+                                                  [
+                                                        address['addressLine1'],
+                                                        address['addressLine2'],
+                                                        address['city'],
+                                                        address['district'],
+                                                        address['state'],
+                                                        address['pincode'],
+                                                      ]
+                                                      .where(
+                                                        (item) =>
+                                                            item != null &&
+                                                            item
+                                                                .toString()
+                                                                .trim()
+                                                                .isNotEmpty,
+                                                      )
+                                                      .join(', '),
+                                            ),
+                                          )
+                                          .toList(),
+                              ),
                             ],
                             rightChildren: [
+                              _SummarySection(
+                                title: 'Preferred care provider',
+                                items: [
+                                  _SummaryItem(
+                                    label: 'Provider',
+                                    value:
+                                        preferredProvider['name']?.toString() ??
+                                        'Not selected',
+                                  ),
+                                  _SummaryItem(
+                                    label: 'Type / status',
+                                    value: preferredProvider.isEmpty
+                                        ? 'Not recorded'
+                                        : '${_humanize(preferredProvider['type'])} • ${_humanize(preferredProvider['status'])}',
+                                  ),
+                                ],
+                              ),
                               _TimelineCard(
                                 title: 'Family and contacts',
                                 emptyLabel:
