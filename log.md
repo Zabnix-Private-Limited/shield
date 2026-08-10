@@ -11223,4 +11223,10 @@ px prisma validate, Nest build, 17 focused Documents/Pharmacy controller tests, 
 - Added GET /agents/customers with agent.customer.view permission, SHIELD agent graph enforcement, case-insensitive name/mobile/SHIELD ID search, pagination, and a server-side page-size ceiling of 100.
 
 ### Verification
-- Passed dart format and Flutter root smoke test (1 passed). No database command was run and current_schema.md was not modified.
+- Passed dart format and Flutter root smoke test (1 passed). No database command was run and current_schema.md was not modified.## 20. Agent Customer 360 paginated-scope regression coverage - 2026-08-10 08:55:07 IST
+
+### Backend Files
+- Added AgentService coverage for the dedicated paginated customer-list contract, including authenticated agent-code filtering, case-insensitive query path, server page-size cap, stable page offset, and customer-safe row projection.
+
+### Verification
+- Passed focused AgentService and AgentScopeService Jest suites: 3 tests passed. No database command was run and current_schema.md was not modified.
