@@ -11297,4 +11297,11 @@ px prisma validate, Nest build, 17 focused Documents/Pharmacy controller tests, 
 ### Verification
 - Passed focused Nest AgentService, AgentScopeService, and CustomerController suites: 11 tests passed.
 - Passed Customer 360 responsive widget matrix: 8 checks passed at 768, 1024, 1280, 1366, 1440, 1600, 1920, and 960 logical pixels.
-- Updated release status with the verified static/widget evidence while retaining authenticated browser/RBAC UAT and stable full-run evidence as separate pending gates. No database command was run.
+- Updated release status with the verified static/widget evidence while retaining authenticated browser/RBAC UAT and stable full-run evidence as separate pending gates. No database command was run.## 30. Customer 360 authenticated RBAC UAT handoff - 2026-08-10 10:18:55 IST
+
+### Documentation
+- Added docs/agent/CUSTOMER_360_AUTHENTICATED_UAT.md with environment prerequisites, required QA roles without credentials, routes, PASS/FAIL evidence fields, RBAC/security scenarios, mutation/audit checks, and desktop viewport checks.
+- Updated Customer 360 release status to classify authenticated RBAC UAT as PENDING — EXTERNAL QA GATE. This is a release-validation gate, not unfinished local implementation.
+
+### Verification
+- Final deterministic repository verification: clean git status, git diff --check passed, and reviewed the latest 15 commits. No database command was run and current_schema.md was not modified.

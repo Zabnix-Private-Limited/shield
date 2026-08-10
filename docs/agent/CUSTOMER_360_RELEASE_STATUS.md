@@ -12,8 +12,14 @@ Focused evidence recorded on 2026-08-10:
 
 ## Open acceptance evidence
 
-- Authenticated browser checks for allowed and denied principals.
-- Responsive visual checks at the documented desktop widths.
-- Full-suite execution where the Windows runner is stable.
+### AUTHENTICATED RBAC UAT: PENDING — EXTERNAL QA GATE
+
+Execute the human checklist in `CUSTOMER_360_AUTHENTICATED_UAT.md` using QA
+accounts for an authorised Agent, an unauthorised internal role, a Customer,
+and a Provider. This includes direct-route enforcement, mutation audit events,
+tab/action RBAC, and representative desktop browser verification.
+
+Full-suite execution where the Windows runner is stable remains a separate
+release-evidence improvement; it is not claimed as completed.
 
 These are release-evidence gates, not permission to bypass the existing agent scope.
