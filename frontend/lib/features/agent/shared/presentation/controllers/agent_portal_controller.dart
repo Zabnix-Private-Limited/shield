@@ -145,6 +145,13 @@ class AgentPortalController extends ChangeNotifier {
             .map((item) => Map<String, dynamic>.from(item as Map)),
       );
 
+  List<Map<String, dynamic>> get customerPharmacyRequests =>
+      List<Map<String, dynamic>>.from(
+        (selectedCustomerWorkspace['pharmacyRequests'] as List? ??
+                const <dynamic>[])
+            .map((item) => Map<String, dynamic>.from(item as Map)),
+      );
+
   List<Map<String, dynamic>> get customerStatusHistory =>
       List<Map<String, dynamic>>.from(
         (selectedCustomerWorkspace['statusHistory'] as List? ??

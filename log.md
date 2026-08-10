@@ -11253,4 +11253,13 @@ px prisma validate, Nest build, 17 focused Documents/Pharmacy controller tests, 
 - Updated the Agent portal test harness for the paginated customer-list contract and extended the desktop matrix with 768 and 1024 widths.
 
 ### Verification
-- Passed Customer workspace responsive widget coverage at 768, 1024, 1280, 1366, 1440, 1600, 1920, and narrow 960 logical-pixel widths (8 tests). This is deterministic layout evidence, not authenticated browser proof.
+- Passed Customer workspace responsive widget coverage at 768, 1024, 1280, 1366, 1440, 1600, 1920, and narrow 960 logical-pixel widths (8 tests). This is deterministic layout evidence, not authenticated browser proof.## 24. Agent Customer 360 pharmacy-request visibility - 2026-08-10 09:04:49 IST
+
+### Backend Files
+- Added a selected-customer-only, read-only pharmacy-request projection to the existing Agent workspace using the current prescription_pharmacy_requests table and provider relationship.
+
+### Frontend Files
+- Added the resulting Pharmacy request history to the Prescriptions tab with provider, status, and timestamp. No fulfilment or status mutation is exposed.
+
+### Verification
+- Passed dart format and Flutter root smoke test (1 passed). No database command was run and current_schema.md was not modified.

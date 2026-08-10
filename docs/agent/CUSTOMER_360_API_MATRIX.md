@@ -11,4 +11,4 @@
 | Documents | Scoped document APIs | Assigned customer | Supported |
 | Card | Customer card profile/request APIs | Existing staff contract | Supported |
 
-The workspace response uses live customer, membership, ledger-derived wallet, documents, appointments, purchases, referrals, notifications, prescription, activity, and status-history records. It does not create a new database contract.
+The workspace response uses live customer, membership, ledger-derived wallet, documents, appointments, purchases, referrals, notifications, prescription, pharmacy-request, activity, and status-history records. It does not create a new database contract.

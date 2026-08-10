@@ -495,6 +495,7 @@ class _CustomerWorkspaceDetail extends ConsumerWidget {
     final notifications = controller.customerNotifications;
     final purchases = controller.customerPurchases;
     final prescriptions = controller.customerPrescriptions;
+    final pharmacyRequests = controller.customerPharmacyRequests;
     final statusHistory = controller.customerStatusHistory;
     final timeline = controller.customerTimeline;
     final customerId = customer['id']?.toString() ?? '';
@@ -818,23 +819,33 @@ class _CustomerWorkspaceDetail extends ConsumerWidget {
                   ),
                   _SimpleListView(
                     title: 'Prescriptions',
-                    emptyLabel: 'No prescription records are linked yet.',
-                    items: prescriptions
-                        .map(
-                          (item) => _TimelineEntry(
-                            title:
-                                item['diagnosis']?.toString().ifBlank(
-                                  'Prescription',
-                                ) ??
+                    emptyLabel:
+                        'No prescription or pharmacy request records are linked yet.',
+                    items: [
+                      ...prescriptions.map(
+                        (item) => _TimelineEntry(
+                          title:
+                              item['diagnosis']?.toString().ifBlank(
                                 'Prescription',
-                            subtitle: item['documentId'] == null
-                                ? 'Consultation-linked prescription'
-                                : 'Document-linked prescription',
-                            timeLabel: _formatDate(item['issueDate']),
-                            icon: Icons.receipt_long_outlined,
-                          ),
-                        )
-                        .toList(),
+                              ) ??
+                              'Prescription',
+                          subtitle: item['documentId'] == null
+                              ? 'Consultation-linked prescription'
+                              : 'Document-linked prescription',
+                          timeLabel: _formatDate(item['issueDate']),
+                          icon: Icons.receipt_long_outlined,
+                        ),
+                      ),
+                      ...pharmacyRequests.map(
+                        (item) => _TimelineEntry(
+                          title: item['providerName']?.toString() ?? 'Pharmacy',
+                          subtitle:
+                              'Pharmacy request • ${_humanize(item['status'])}',
+                          timeLabel: _formatDateTime(item['createdAt']),
+                          icon: Icons.local_pharmacy_outlined,
+                        ),
+                      ),
+                    ],
                   ),
                   SingleChildScrollView(
                     child: _SimpleListView(

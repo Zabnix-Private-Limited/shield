@@ -405,6 +405,7 @@ export class AgentService {
       labReports,
       dentalRecords,
       statusHistory,
+      pharmacyRequests,
     ] = await Promise.all([
       this.customerService.findOne(customerId),
       this.customerService.getCustomerPortalMembership(customerId),
@@ -466,6 +467,12 @@ export class AgentService {
         where: { customerId },
         orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
         take: 10,
+      }),
+      this.prisma.prescriptionPharmacyRequest.findMany({
+        where: { customerId },
+        include: { provider: true },
+        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+        take: 20,
       }),
     ]);
 
@@ -588,6 +595,13 @@ export class AgentService {
           diagnosis: consultation.diagnosis?.trim() || null,
         })),
       ),
+      pharmacyRequests: pharmacyRequests.map((request: any) => ({
+        id: request.id.toString(),
+        documentId: request.documentId.toString(),
+        providerName: request.provider?.providerName ?? 'Pharmacy provider',
+        status: request.status ?? 'SUBMITTED',
+        createdAt: request.createdAt.toISOString(),
+      })),
       medicalRecords,
       statusHistory: statusHistory.map((entry) => ({
         id: entry.id.toString(),
