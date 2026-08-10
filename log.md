@@ -11292,4 +11292,9 @@ px prisma validate, Nest build, 17 focused Documents/Pharmacy controller tests, 
 - Explicitly recorded that preferred pharmacy is unsupported by the current schema and must not be fabricated, while preferred provider is supported as a safe read projection.
 
 ### Verification
-- Documentation-only clarification; no database command or runtime mutation was performed.
+- Documentation-only clarification; no database command or runtime mutation was performed.## 29. Customer 360 focused verification handoff - 2026-08-10 09:11:58 IST
+
+### Verification
+- Passed focused Nest AgentService, AgentScopeService, and CustomerController suites: 11 tests passed.
+- Passed Customer 360 responsive widget matrix: 8 checks passed at 768, 1024, 1280, 1366, 1440, 1600, 1920, and 960 logical pixels.
+- Updated release status with the verified static/widget evidence while retaining authenticated browser/RBAC UAT and stable full-run evidence as separate pending gates. No database command was run.

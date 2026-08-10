@@ -2,7 +2,13 @@
 
 ## Current state
 
-The implemented Agent Customer 360 slice is ready for targeted internal QA once focused Flutter and Nest checks are recorded. It reuses current schema-backed tables and therefore requires no SQL or migration.
+The implemented Agent Customer 360 slice is ready for targeted internal QA. It reuses current schema-backed tables and therefore requires no SQL or migration.
+
+Focused evidence recorded on 2026-08-10:
+
+- Nest authorization/scope regression suites: 11 passed.
+- Customer 360 responsive widget matrix: 8 passed at 768, 1024, 1280, 1366, 1440, 1600, 1920, and 960 logical pixels.
+- Flutter root smoke compilation has passed for the routed portal shell.
 
 ## Open acceptance evidence
 
