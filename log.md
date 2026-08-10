@@ -11278,4 +11278,11 @@ px prisma validate, Nest build, 17 focused Documents/Pharmacy controller tests, 
 - SHIELD Benefit remains explicitly an entitlement and is displayed separately from cash wallet and reward points; no financial value is calculated or combined in Flutter.
 
 ### Verification
+- Passed dart format and Flutter root smoke test (1 passed). No database command was run and current_schema.md was not modified.## 27. Agent Customer 360 read-only wallet ledger history - 2026-08-10 09:09:32 IST
+
+### Frontend Files
+- Added the existing backend-derived recent wallet ledger projection to the Wallet and Rewards tab with transaction type, ledger type, safe reference/remarks, and timestamp.
+- Cash Wallet, Reward Points, and SHIELD Benefit remain visually and functionally distinct; no balance-edit or adjustment control was introduced.
+
+### Verification
 - Passed dart format and Flutter root smoke test (1 passed). No database command was run and current_schema.md was not modified.

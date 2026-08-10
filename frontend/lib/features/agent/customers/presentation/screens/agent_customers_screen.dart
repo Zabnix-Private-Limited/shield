@@ -491,6 +491,11 @@ class _CustomerWorkspaceDetail extends ConsumerWidget {
     final shieldBenefitPaise = (subscription['shieldBenefitPaise'] as num?)
         ?.toInt();
     final wallet = controller.customerWallet;
+    final walletTransactions = List<Map<String, dynamic>>.from(
+      (wallet['recentTransactions'] as List? ?? const <dynamic>[]).map(
+        (item) => Map<String, dynamic>.from(item as Map),
+      ),
+    );
     final referralSummary = controller.customerReferralSummary;
     final family = controller.customerFamilyDetails;
     final addresses = controller.customerAddresses;
@@ -776,35 +781,59 @@ class _CustomerWorkspaceDetail extends ConsumerWidget {
                     ),
                   ),
                   SingleChildScrollView(
-                    child: _TwoColumnOverview(
-                      leftChildren: [
-                        _SummarySection(
-                          title: 'Wallet',
-                          items: [
-                            _SummaryItem(
-                              label: 'Cash available',
-                              value: '${activeWallet ?? 0}',
+                    child: Column(
+                      children: [
+                        _TwoColumnOverview(
+                          leftChildren: [
+                            _SummarySection(
+                              title: 'Wallet',
+                              items: [
+                                _SummaryItem(
+                                  label: 'Cash available',
+                                  value: '${activeWallet ?? 0}',
+                                ),
+                                _SummaryItem(
+                                  label: 'Reward points',
+                                  value: '${rewardPoints ?? 0}',
+                                ),
+                              ],
                             ),
-                            _SummaryItem(
-                              label: 'Reward points',
-                              value: '${rewardPoints ?? 0}',
+                          ],
+                          rightChildren: [
+                            _SummarySection(
+                              title: 'Reward lifecycle',
+                              items: [
+                                _SummaryItem(
+                                  label: 'Network rewards',
+                                  value:
+                                      '${referralSummary['rewardPoints'] ?? 0}',
+                                ),
+                                const _SummaryItem(
+                                  label: 'SHIELD benefit',
+                                  value: 'Not presented as a customer balance',
+                                ),
+                              ],
                             ),
                           ],
                         ),
-                      ],
-                      rightChildren: [
-                        _SummarySection(
-                          title: 'Reward lifecycle',
-                          items: [
-                            _SummaryItem(
-                              label: 'Network rewards',
-                              value: '${referralSummary['rewardPoints'] ?? 0}',
-                            ),
-                            const _SummaryItem(
-                              label: 'SHIELD benefit',
-                              value: 'Not presented as a customer balance',
-                            ),
-                          ],
+                        const SizedBox(height: 12),
+                        _SimpleListView(
+                          title: 'Recent ledger transactions',
+                          emptyLabel:
+                              'No wallet transactions are recorded yet.',
+                          items: walletTransactions
+                              .map(
+                                (item) => _TimelineEntry(
+                                  title: _humanize(item['transaction_type']),
+                                  subtitle:
+                                      '${_humanize(item['sub_ledger_type'])} • ${item['remarks'] ?? item['reference_type'] ?? 'No reference'}',
+                                  timeLabel: _formatDateTime(
+                                    item['created_at'],
+                                  ),
+                                  icon: Icons.receipt_long_outlined,
+                                ),
+                              )
+                              .toList(),
                         ),
                       ],
                     ),
