@@ -11247,4 +11247,10 @@ px prisma validate, Nest build, 17 focused Documents/Pharmacy controller tests, 
 - Expanded the Customer 360 permission matrix into an explicit supported/read-only/not-exposed capability decision for the current SHIELD_AGENT role.
 
 ### Verification
-- Passed focused CustomerController regression suite (8 tests). No database command was run and current_schema.md was not modified.
+- Passed focused CustomerController regression suite (8 tests). No database command was run and current_schema.md was not modified.## 23. Agent Customer 360 desktop responsive matrix - 2026-08-10 09:03:12 IST
+
+### Frontend Files
+- Updated the Agent portal test harness for the paginated customer-list contract and extended the desktop matrix with 768 and 1024 widths.
+
+### Verification
+- Passed Customer workspace responsive widget coverage at 768, 1024, 1280, 1366, 1440, 1600, 1920, and narrow 960 logical-pixel widths (8 tests). This is deterministic layout evidence, not authenticated browser proof.

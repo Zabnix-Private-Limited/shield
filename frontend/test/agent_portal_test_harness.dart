@@ -65,6 +65,21 @@ Widget buildAgentTestApp({
 
 class AgentPortalTestRepository extends AgentPortalRepository {
   @override
+  Future<Map<String, dynamic>> getCustomers({
+    String? query,
+    String? status,
+    String? membershipStatus,
+    int page = 1,
+    int pageSize = 25,
+  }) async => const {
+    'items': <Map<String, dynamic>>[],
+    'page': 1,
+    'pageSize': 25,
+    'total': 0,
+    'totalPages': 1,
+  };
+
+  @override
   Future<Map<String, dynamic>> getWorkspace() async => {
     'summary': const <String, dynamic>{
       'pendingRegistrations': 0,

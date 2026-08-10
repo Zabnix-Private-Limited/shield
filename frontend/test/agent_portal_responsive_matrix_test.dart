@@ -5,6 +5,8 @@ import 'agent_portal_test_harness.dart';
 
 void main() {
   final viewports = <({String name, Size size})>[
+    (name: '768x1024', size: const Size(768, 1024)),
+    (name: '1024x768', size: const Size(1024, 768)),
     (name: '1280x720', size: const Size(1280, 720)),
     (name: '1366x768', size: const Size(1366, 768)),
     (name: '1440x900', size: const Size(1440, 900)),
