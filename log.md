@@ -11238,4 +11238,13 @@ px prisma validate, Nest build, 17 focused Documents/Pharmacy controller tests, 
 - Extended the agent-scoped customer list with validated status and membership-status predicates while retaining employee-code graph enforcement and the page-size cap.
 
 ### Verification
-- Passed Flutter root smoke test (1 passed) and focused AgentService pagination/filter regression (1 passed). No database command was run and current_schema.md was not modified.
+- Passed Flutter root smoke test (1 passed) and focused AgentService pagination/filter regression (1 passed). No database command was run and current_schema.md was not modified.## 22. Customer lifecycle actor and scope hardening - 2026-08-10 09:01:48 IST
+
+### Backend Files
+- Hardened existing approve and suspend endpoints: lifecycle audit identity is now always derived from the authenticated principal, and provider/agent graph checks run before the mutation. Caller-supplied staff IDs can no longer forge the audit actor.
+
+### Documentation
+- Expanded the Customer 360 permission matrix into an explicit supported/read-only/not-exposed capability decision for the current SHIELD_AGENT role.
+
+### Verification
+- Passed focused CustomerController regression suite (8 tests). No database command was run and current_schema.md was not modified.

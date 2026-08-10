@@ -11,6 +11,8 @@ describe('CustomerController card scope', () => {
     findExistingCustomerByMobile: jest.fn(),
     findOne: jest.fn(),
     getCustomerSelfProfile: jest.fn(),
+    approve: jest.fn(),
+    suspend: jest.fn(),
   };
   const agentScope = { assertAgentCanAccessCustomer: jest.fn() };
   const providerScope = { assertProviderCanAccessCustomer: jest.fn() };
@@ -90,5 +92,22 @@ describe('CustomerController card scope', () => {
 
     expect(service.getCustomerSelfProfile).toHaveBeenCalledWith(11n);
     expect(service.findOne).not.toHaveBeenCalled();
+  });
+
+  it('derives lifecycle audit identity from the authenticated principal and applies scope checks', async () => {
+    service.approve.mockResolvedValue({ id: 11n, status: 'ACTIVE' });
+    const principal = { principalType: 'USER', userId: '77', roleCode: 'ADMIN' } as any;
+
+    await controller.approve('11', principal);
+
+    expect(providerScope.assertProviderCanAccessCustomer).toHaveBeenCalledWith(
+      11n,
+      principal,
+    );
+    expect(agentScope.assertAgentCanAccessCustomer).toHaveBeenCalledWith(
+      11n,
+      principal,
+    );
+    expect(service.approve).toHaveBeenCalledWith(11n, 77n);
   });
 });
