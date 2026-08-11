@@ -5,6 +5,7 @@ describe('ServiceProviderService customer directory projection', () => {
     serviceProvider: {
       count: jest.fn(),
       findMany: jest.fn(),
+      groupBy: jest.fn(),
     },
     $transaction: jest.fn(),
   };
@@ -64,6 +65,19 @@ describe('ServiceProviderService customer directory projection', () => {
       expect.objectContaining({
         where: expect.objectContaining({ status: 'ACTIVE' }),
       }),
+    );
+  });
+
+  it('returns the supported customer directory taxonomy when no providers are active', async () => {
+    prisma.serviceProvider.groupBy.mockResolvedValue([]);
+
+    await expect(service.listCustomerProviderCategories()).resolves.toEqual(
+      expect.arrayContaining([
+        { code: 'PHARMACY', label: 'Pharmacy', providerCount: 0 },
+        { code: 'LAB', label: 'Lab', providerCount: 0 },
+        { code: 'DOCTOR', label: 'Doctor', providerCount: 0 },
+        { code: 'HOMECARE', label: 'Homecare', providerCount: 0 },
+      ]),
     );
   });
 });

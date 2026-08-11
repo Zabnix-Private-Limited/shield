@@ -14,10 +14,12 @@ class CustomerAccessState {
 
   bool get isCustomerActive => customerStatus.trim().toUpperCase() == 'ACTIVE';
 
+  String get cardStatus => membership?.cardStatus?.trim().toUpperCase() ?? '';
+
   bool get hasIssuedMembershipCard =>
       isCustomerActive &&
       (membership?.isActive ?? false) &&
-      ((membership?.customerCode.trim().isNotEmpty ?? false));
+      (cardStatus == 'ISSUED' || cardStatus == 'ACTIVE');
 
   bool get serviceAccessEnabled => hasIssuedMembershipCard;
 
@@ -27,11 +29,16 @@ class CustomerAccessState {
   bool get isExpired => membershipStatus == 'EXPIRED';
   bool get isSuspended => membershipStatus == 'SUSPENDED';
 
-  String get heroStatusLabel =>
-      serviceAccessEnabled ? 'ACTIVE' : membershipStatus;
+  String get heroStatusLabel => serviceAccessEnabled
+      ? 'ACTIVE'
+      : membership?.isActive ?? false
+      ? 'CARD PENDING'
+      : membershipStatus;
 
   String get membershipHeadline => serviceAccessEnabled
       ? membership?.tierLabel ?? 'SHIELD Member'
+      : membership?.isActive ?? false
+      ? 'Membership active'
       : isExpired
       ? 'Membership expired'
       : isSuspended
@@ -40,6 +47,8 @@ class CustomerAccessState {
 
   String get membershipSupportingText => serviceAccessEnabled
       ? 'Issued by SHIELD admin or agent team'
+      : membership?.isActive ?? false
+      ? 'Your membership is active. Card issuance is pending before care services can be used.'
       : isExpired
       ? 'Your membership has expired. Renewal is unavailable until a verified payment workflow is provided.'
       : isSuspended

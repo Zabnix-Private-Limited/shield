@@ -40,7 +40,10 @@ class DashboardModel extends DashboardEntity with EquatableMixin {
         .toList();
     final membership = Membership.fromApi(
       customer: customer,
-      customerPayload: {'membership': membershipPayload},
+      customerPayload: {
+        'membership': membershipPayload,
+        'shieldCard': json['shieldCard'],
+      },
       transactions: transactions,
     );
     final walletPayload = Map<String, dynamic>.from(
@@ -156,6 +159,15 @@ class DashboardModel extends DashboardEntity with EquatableMixin {
         'updatedAt': membership.updatedAt.toIso8601String(),
         'membershipType': {'name': membership.tierLabel},
       },
+      if (membership.cardNumber != null ||
+          membership.cardQrPayload != null ||
+          membership.cardStatus != null)
+        'shieldCard': {
+          'cardNumber': membership.cardNumber,
+          'qrCode': membership.cardQrPayload,
+          'status': membership.cardStatus,
+          'issuedAt': membership.cardIssuedAt?.toIso8601String(),
+        },
       'wallet': {
         'walletId': wallet.walletId,
         'customerId': wallet.customerId,

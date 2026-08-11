@@ -100,6 +100,7 @@ export class DashboardService {
             membershipType: true,
           },
         },
+        shieldCard: true,
         wallet: true,
         creditAccount: true,
       },
@@ -204,6 +205,15 @@ export class DashboardService {
                   status: customer.membership.membershipType.status,
                 }
               : null,
+          }
+        : null,
+      shieldCard: customer.shieldCard
+        ? {
+            id: customer.shieldCard.id.toString(),
+            cardNumber: customer.shieldCard.cardNumber,
+            qrCode: customer.shieldCard.qrCode,
+            status: customer.shieldCard.status,
+            issuedAt: customer.shieldCard.issuedAt,
           }
         : null,
       appointments,

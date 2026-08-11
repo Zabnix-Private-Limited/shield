@@ -11319,3 +11319,76 @@ px prisma validate, Nest build, 17 focused Documents/Pharmacy controller tests, 
 ### Remaining risks
 - No runtime, database, migration, deployment, or customer-data mutation was performed.
 - The hardening priorities remain global validation/rate/security headers, stable full CI, deep RBAC/ABAC and ledger/pricing/referral invariant tests, mutation audit/notification consistency, portal-shell and large-service decomposition, and authenticated browser/RBAC UAT.
+## 32. Customer portal membership/card and reward-ledger consistency correction — 2026-08-11 16:15:00 IST
+
+### Frontend Files
+- `frontend/lib/features/customer/shared/domain/customer_access_state.dart`
+  - Replaced membership-number-based card eligibility with explicit `shield_cards.status` semantics. Care access now requires customer ACTIVE, membership ACTIVE, and a card status of ISSUED or ACTIVE.
+  - Why: an active membership without an issued card is valid. It must be shown as `Membership active` with `Card pending`, not as a contradictory pending membership or an unlocked care entitlement.
+- `frontend/lib/features/customer/wallet/presentation/screens/reward_points_screen.dart`
+  - Accepts production `REWARD_POINTS` ledger entries, retaining legacy `POINTS` only for cached historical payloads.
+  - Why: the backend produces reward activity from `reward_point_transactions` as `REWARD_POINTS`; the old UI filter hid that history even while the reward total used the correct dedicated ledger.
+- `frontend/test/customer_access_state_test.dart`
+  - Added regression coverage for active membership/card-pending and issued/active-card eligibility states.
+
+### Evidence and limits
+- Read-only tracing confirmed current customer portal code resolves the authenticated customer ID; the pasted hard-coded customer-ID examples are not present in current customer flows.
+- The backend customer membership bundle already returns separate `membership` and `shieldCard.status`, and wallet summaries use `reward_point_transactions` separately from CASH. No schema, database, transaction, or customer data was changed.
+- `dart format` completed. Targeted `flutter test` and `dart analyze` each timed out without diagnostic output in the known local Windows runner contention, so they are not claimed as passes. `git diff --check` passed.
+- Authenticated browser checks remain required to verify the deployed customer account/preferences failures and the corrected membership/card messaging against real session data.
+## 33. Dashboard customer-card context propagation — 2026-08-11 16:28:00 IST
+
+### Backend Files
+- `backend/src/dashboard/dashboard.service.ts`
+  - Added the customer `shieldCard` to the authenticated customer dashboard query and safe dashboard projection.
+  - Why: the dashboard previously received membership data but no card status, forcing its entitlement UI to infer card issuance from unrelated membership data.
+
+### Frontend Files
+- `frontend/lib/features/customer/dashboard/data/models/dashboard_model.dart`
+  - Preserves the dashboard `shieldCard` projection while building and caching `Membership`, so the dashboard, membership, wallet and booking surfaces share the same card-state input.
+- `frontend/test/customer_dashboard_card_context_test.dart`
+  - Adds a regression fixture for an ACTIVE membership with a NOT_ISSUED card; it must remain care-locked while displaying membership as active.
+
+### Verification
+- `npx prisma validate` passed.
+- Dart formatting passed for the changed dashboard model and test; `git diff --check` passed.
+- No database command, migration, data mutation, deployment, or browser/authenticated operation was performed. Focused Flutter execution remains pending stable local runner availability.
+## 34. Customer context focused Flutter verification — 2026-08-11 16:31:00 IST
+
+### Verification correction
+- `flutter test test\\customer_access_state_test.dart test\\customer_dashboard_card_context_test.dart` passed: 3 tests.
+- This verifies the code-level membership/card entitlement state and dashboard shield-card propagation. It does not replace authenticated production-browser verification of the deployed account, preferences, services, wallet, and navigation surfaces.
+## 35. Customer account partial-data resilience — 2026-08-11 16:42:00 IST
+
+### Frontend Files
+- `frontend/lib/features/customer/account/presentation/screens/customer_account_screen.dart`
+  - Replaced the all-or-nothing account `Future.wait` interpretation with independently captured customer-safe address, dependent, contact, pharmacy, and preferred-provider reads.
+  - Why: one failing optional account endpoint previously rendered the whole Profile & Family workspace as unavailable, even when the customer could still read or manage other supported records.
+  - Each affected tab now gives a scoped retry explanation; it does not present an empty list as a successful response or fabricate pharmacy/preference data.
+
+### Verification
+- `flutter test test\\customer_account_responsive_test.dart test\\customer_access_state_test.dart test\\customer_dashboard_card_context_test.dart` passed: 5 tests.
+- Dart formatting and `git diff --check` passed.
+- No database, migration, customer-data, deployment, or authenticated-browser action was performed. The deployed Preferences/Services failures still need an authenticated runtime/API check after the source changes are released through the approved Git workflow.
+## 36. Customer Services taxonomy for empty provider directories — 2026-08-11 16:55:00 IST
+
+### Backend Files
+- `backend/src/service-provider/service-provider.service.ts`
+  - Customer provider categories now return the supported directory taxonomy (Pharmacy, Lab, Doctor, Clinic, Homecare, Dental, Dietitian, Cosmetic) with counts derived from active records.
+  - Why: categories are a backend-owned discovery taxonomy, not a claim that a provider has a live appointment slot. A zero count is truthful and allows the customer app to show categories plus an honest empty directory instead of a blank Services surface.
+- `backend/src/service-provider/service-provider.service.spec.ts`
+  - Added coverage for the zero-active-provider taxonomy result while retaining safe provider-directory projection coverage.
+
+### Verification
+- `npx jest src/service-provider/service-provider.service.spec.ts --runInBand` passed: 2 tests.
+- `npx prisma validate` passed; `git diff --check` passed.
+- No database, migration, customer data, deployment, availability claim, or authenticated-browser action was performed.
+## 37. Customer consistency pass compile verification — 2026-08-11 17:10:00 IST
+
+### Verification
+- `backend`: `npm run build` passed (`prisma generate` and `nest build`).
+- `frontend`: targeted `flutter analyze` over the changed account, dashboard, membership/card state, reward screen, and regression tests passed with no issues.
+- Existing focused Flutter customer suite passed 5 tests and the customer-directory backend suite passed 2 tests. `npx prisma validate` and `git diff --check` passed.
+
+### Remaining release evidence
+- No authenticated browser/API session or deployment was run. The deployed screenshots can only be closed after the reviewed changes are released through Git and an authorised customer QA account verifies the Services, Profile & Family, Preferences, membership/card, wallet/reward, and visit-gating paths against the live backend.

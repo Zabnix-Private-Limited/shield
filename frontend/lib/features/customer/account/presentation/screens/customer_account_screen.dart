@@ -16,19 +16,27 @@ final customerAccountDataProvider = FutureProvider.autoDispose<_AccountData>((
   ref,
 ) async {
   final repository = ref.watch(customerAccountRepositoryProvider);
+  Future<_AccountLoad<T>> load<T>(Future<T> request) async {
+    try {
+      return _AccountLoad(value: await request);
+    } catch (error) {
+      return _AccountLoad(error: error);
+    }
+  }
+
   final results = await Future.wait([
-    repository.addresses(),
-    repository.dependents(),
-    repository.contacts(),
-    repository.pharmacies(),
-    repository.preferredProvider(),
+    load(repository.addresses()),
+    load(repository.dependents()),
+    load(repository.contacts()),
+    load(repository.pharmacies()),
+    load(repository.preferredProvider()),
   ]);
   return _AccountData(
-    addresses: results[0] as List<Map<String, dynamic>>,
-    dependents: results[1] as List<Map<String, dynamic>>,
-    contacts: results[2] as List<Map<String, dynamic>>,
-    pharmacies: results[3] as List<Map<String, dynamic>>,
-    preferredProvider: results[4] as Map<String, dynamic>?,
+    addresses: results[0] as _AccountLoad<List<Map<String, dynamic>>>,
+    dependents: results[1] as _AccountLoad<List<Map<String, dynamic>>>,
+    contacts: results[2] as _AccountLoad<List<Map<String, dynamic>>>,
+    pharmacies: results[3] as _AccountLoad<List<Map<String, dynamic>>>,
+    preferredProvider: results[4] as _AccountLoad<Map<String, dynamic>?>,
   );
 });
 
@@ -217,7 +225,8 @@ class _CustomerAccountScreenState extends ConsumerState<CustomerAccountScreen>
                     _RecordList(
                       empty: 'No saved addresses yet.',
                       addLabel: 'Add address',
-                      records: data.addresses,
+                      records: data.addresses.value ?? const [],
+                      loadError: data.addresses.error,
                       title: (row) => (row['label'] as String?) ?? 'Address',
                       detail: (row) =>
                           [
@@ -237,7 +246,8 @@ class _CustomerAccountScreenState extends ConsumerState<CustomerAccountScreen>
                     _RecordList(
                       empty: 'No family members saved yet.',
                       addLabel: 'Add family member',
-                      records: data.dependents,
+                      records: data.dependents.value ?? const [],
+                      loadError: data.dependents.error,
                       title: (row) =>
                           '${row['firstName'] ?? ''} ${row['lastName'] ?? ''}'
                               .trim(),
@@ -252,7 +262,8 @@ class _CustomerAccountScreenState extends ConsumerState<CustomerAccountScreen>
                     _RecordList(
                       empty: 'No emergency or alternative contacts saved yet.',
                       addLabel: 'Add contact',
-                      records: data.contacts,
+                      records: data.contacts.value ?? const [],
+                      loadError: data.contacts.error,
                       title: (row) => (row['name'] as String?) ?? 'Contact',
                       detail: (row) =>
                           '${row['contactType'] ?? 'ALTERNATIVE'} • ${row['mobile'] ?? ''}',
@@ -265,8 +276,11 @@ class _CustomerAccountScreenState extends ConsumerState<CustomerAccountScreen>
                       ),
                     ),
                     _PharmacyList(
-                      pharmacies: data.pharmacies,
-                      selectedId: data.preferredProvider?['id']?.toString(),
+                      pharmacies: data.pharmacies.value ?? const [],
+                      loadError:
+                          data.pharmacies.error ?? data.preferredProvider.error,
+                      selectedId: data.preferredProvider.value?['id']
+                          ?.toString(),
                       onSelect: _setPreferredProvider,
                     ),
                   ],
@@ -286,11 +300,18 @@ class _AccountData {
     required this.pharmacies,
     required this.preferredProvider,
   });
-  final List<Map<String, dynamic>> addresses;
-  final List<Map<String, dynamic>> dependents;
-  final List<Map<String, dynamic>> contacts;
-  final List<Map<String, dynamic>> pharmacies;
-  final Map<String, dynamic>? preferredProvider;
+  final _AccountLoad<List<Map<String, dynamic>>> addresses;
+  final _AccountLoad<List<Map<String, dynamic>>> dependents;
+  final _AccountLoad<List<Map<String, dynamic>>> contacts;
+  final _AccountLoad<List<Map<String, dynamic>>> pharmacies;
+  final _AccountLoad<Map<String, dynamic>?> preferredProvider;
+}
+
+class _AccountLoad<T> {
+  const _AccountLoad({this.value, this.error});
+
+  final T? value;
+  final Object? error;
 }
 
 class _RecordList extends StatelessWidget {
@@ -298,6 +319,7 @@ class _RecordList extends StatelessWidget {
     required this.empty,
     required this.addLabel,
     required this.records,
+    this.loadError,
     required this.title,
     required this.detail,
     required this.onAdd,
@@ -306,6 +328,7 @@ class _RecordList extends StatelessWidget {
   });
   final String empty, addLabel;
   final List<Map<String, dynamic>> records;
+  final Object? loadError;
   final String Function(Map<String, dynamic>) title, detail;
   final VoidCallback onAdd;
   final ValueChanged<Map<String, dynamic>> onEdit, onRemove;
@@ -318,7 +341,14 @@ class _RecordList extends StatelessWidget {
           child: AppButton(text: addLabel, onPressed: onAdd),
         ),
         const SizedBox(height: 12),
-        if (records.isEmpty)
+        if (loadError != null)
+          AppCard(
+            child: Text(
+              'This section could not be loaded. Retry the account screen to try again.',
+              style: AppTypography.body.copyWith(color: AppColors.gray),
+            ),
+          )
+        else if (records.isEmpty)
           AppCard(
             child: Text(
               empty,
@@ -680,10 +710,12 @@ class _ContactEditorState extends State<_ContactEditor> {
 class _PharmacyList extends StatelessWidget {
   const _PharmacyList({
     required this.pharmacies,
+    this.loadError,
     required this.selectedId,
     required this.onSelect,
   });
   final List<Map<String, dynamic>> pharmacies;
+  final Object? loadError;
   final String? selectedId;
   final ValueChanged<String?> onSelect;
 
@@ -698,7 +730,14 @@ class _PharmacyList extends StatelessWidget {
             child: const Text('Remove preference'),
           ),
         ),
-      if (pharmacies.isEmpty)
+      if (loadError != null)
+        AppCard(
+          child: Text(
+            'Pharmacy preferences could not be loaded. Retry the account screen to try again.',
+            style: AppTypography.body.copyWith(color: AppColors.gray),
+          ),
+        )
+      else if (pharmacies.isEmpty)
         AppCard(
           child: Text(
             'No active pharmacies are available.',

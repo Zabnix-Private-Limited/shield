@@ -54,7 +54,14 @@ class _CustomerRewardPointsScreenState
         );
       }
       final transactions = wallet.recentTransactions
-          .where((entry) => entry.subLedgerType == 'POINTS')
+          // The production wallet bundle identifies its dedicated reward
+          // ledger as REWARD_POINTS. POINTS is retained only for legacy
+          // cached transactions created before the ledger split.
+          .where(
+            (entry) =>
+                entry.subLedgerType.toUpperCase() == 'REWARD_POINTS' ||
+                entry.subLedgerType.toUpperCase() == 'POINTS',
+          )
           .toList();
       return RefreshIndicator(
         onRefresh: _controller.refresh,

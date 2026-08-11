@@ -69,10 +69,30 @@ export class ServiceProviderService {
       _count: { _all: true },
       orderBy: { providerType: 'asc' },
     });
-    return categories.map((category) => ({
-      code: category.providerType!,
-      label: this.customerProviderTypeLabel(category.providerType!),
-      providerCount: category._count._all,
+    const counts = new Map(
+      categories.map((category) => [
+        category.providerType!.trim().toUpperCase(),
+        category._count._all,
+      ]),
+    );
+
+    // This is a directory taxonomy, not an availability claim. Returning the
+    // supported healthcare categories with a zero count lets the customer
+    // app explain an empty directory rather than rendering an empty surface.
+    const supportedCategories = [
+      'PHARMACY',
+      'LAB',
+      'DOCTOR',
+      'CLINIC',
+      'HOMECARE',
+      'DENTAL',
+      'DIETITIAN',
+      'COSMETIC',
+    ];
+    return supportedCategories.map((code) => ({
+      code,
+      label: this.customerProviderTypeLabel(code),
+      providerCount: counts.get(code) ?? 0,
     }));
   }
 
