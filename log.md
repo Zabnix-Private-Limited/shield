@@ -11305,3 +11305,17 @@ px prisma validate, Nest build, 17 focused Documents/Pharmacy controller tests, 
 
 ### Verification
 - Final deterministic repository verification: clean git status, git diff --check passed, and reviewed the latest 15 commits. No database command was run and current_schema.md was not modified.
+## 31. Full repository context refresh — 2026-08-11 15:30:00 IST
+
+### Documentation
+- Added `docs/REPO_CONTEXT_2026-08-11.md` as a durable, source-of-truth-aware repository handoff.
+- Why: it records the present architecture, guarded schema/auth/financial rules, supported portal status, current test-evidence boundaries, prioritised hardening work, and documentation drift without altering production behaviour.
+
+### Analysis evidence
+- Confirmed the live schema snapshot has 65 tables: 64 domain tables represented by 64 Prisma models and the expected `_prisma_migrations` metadata table.
+- Reviewed runtime composition, routing and session separation, backend domain modules, customer and Agent Customer 360 release handoffs, source/test inventories, largest ownership seams, deployment configuration, and the current clean Git state.
+- Identified documentation conflicts: starter READMEs still recommend manual production Vercel CLI deployment, contrary to the repository Git-push rule; `project-rules.md` still describes internal password auth, while governing rules/code use Firebase Google sign-in.
+
+### Remaining risks
+- No runtime, database, migration, deployment, or customer-data mutation was performed.
+- The hardening priorities remain global validation/rate/security headers, stable full CI, deep RBAC/ABAC and ledger/pricing/referral invariant tests, mutation audit/notification consistency, portal-shell and large-service decomposition, and authenticated browser/RBAC UAT.
