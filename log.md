@@ -11392,3 +11392,61 @@ px prisma validate, Nest build, 17 focused Documents/Pharmacy controller tests, 
 
 ### Remaining release evidence
 - No authenticated browser/API session or deployment was run. The deployed screenshots can only be closed after the reviewed changes are released through Git and an authorised customer QA account verifies the Services, Profile & Family, Preferences, membership/card, wallet/reward, and visit-gating paths against the live backend.
+## 38. Consolidated customer consistency pass handoff — 2026-08-11 17:20:00 IST
+
+### Scope and source-of-truth decisions
+- Reviewed the supplied authenticated customer screenshots and reconciled all source changes against `current_schema.md`. No schema change was required or applied.
+- Customer identity is resolved from the authenticated session in current customer flows; the pasted legacy examples using hard-coded customer ID `1` are not present in the implemented customer dashboard, wallet, membership, or account controllers.
+- Preserved financial separation: CASH is calculated only from cash ledger entries; reward points use `reward_point_transactions`; SHIELD_BENEFIT remains hidden from customer remaining-wallet balances.
+- Preserved truthful service semantics: directory ACTIVE means an active provider record, not appointment availability; zero categories/providers are rendered as a truthful discovery state, not populated with dummy providers.
+
+### Backend Files
+- `backend/src/dashboard/dashboard.service.ts`
+  - Dashboard now selects and returns the current customer's safe `shieldCard` projection (id, number, QR payload, status, issued timestamp) alongside membership.
+  - This provides one membership/card input for dashboard entitlement messaging instead of deriving card issuance from membership data.
+- `backend/src/service-provider/service-provider.service.ts`
+  - Customer provider category contract now returns the supported backend-owned taxonomy even with zero active directory records. Counts remain derived from ACTIVE provider rows.
+- `backend/src/service-provider/service-provider.service.spec.ts`
+  - Added zero-active-directory taxonomy regression coverage while retaining safe customer provider projection coverage.
+
+### Frontend Files
+- `frontend/lib/features/customer/shared/domain/customer_access_state.dart`
+  - Care access now requires customer ACTIVE, membership ACTIVE, and card status ISSUED or ACTIVE.
+  - Active membership with no card is explicitly `CARD PENDING`, `Membership active`, and explains card issuance before care access; membership number is no longer misused as a card-issued signal.
+- `frontend/lib/features/customer/dashboard/data/models/dashboard_model.dart`
+  - Retains dashboard shield-card state in its membership model/cache mapping.
+- `frontend/lib/features/customer/wallet/presentation/screens/reward_points_screen.dart`
+  - Displays production `REWARD_POINTS` history and accepts legacy cached `POINTS` only for backward compatibility.
+- `frontend/lib/features/customer/account/presentation/screens/customer_account_screen.dart`
+  - Account addresses, dependents, contacts, pharmacies, and preferred provider now load independently. One optional contract failure no longer makes the whole Profile & Family workspace unavailable; the affected tab states the scoped failure without fabricating an empty result.
+- `frontend/test/customer_access_state_test.dart`
+  - New regression coverage for active membership/card-pending and issued/active-card care eligibility.
+- `frontend/test/customer_dashboard_card_context_test.dart`
+  - New regression coverage proving the dashboard preserves NOT_ISSUED card state and remains care-locked while membership remains active.
+
+### Verification performed
+- Passed: `npx prisma validate`.
+- Passed: `npm run build` in `backend` (`prisma generate` and Nest build).
+- Passed: `npx jest src/service-provider/service-provider.service.spec.ts --runInBand` — 2 tests.
+- Passed: `flutter test test\\customer_account_responsive_test.dart test\\customer_access_state_test.dart test\\customer_dashboard_card_context_test.dart` — 5 tests.
+- Passed: targeted `flutter analyze` on all changed customer sources/tests with no issues.
+- Passed: `dart format` for changed Dart sources/tests and `git diff --check`.
+
+### Git and release state
+- Working tree intentionally remains uncommitted with the files listed above plus this append-only `log.md` update; the two new Flutter regression tests are untracked until staged/committed.
+- No Git commit, Git push, Vercel deployment, Prisma migration, seed, SQL command, direct database write, financial transaction, or customer-data mutation was performed.
+- SHIELD production release remains Git-push driven. Do not use a production Vercel CLI deployment from this machine without explicit direction.
+
+### Remaining acceptance evidence
+- The source-level fixes do not prove the already deployed build changed. After reviewed changes are committed and released through the approved Git workflow, an authorised customer QA account must verify Dashboard, Membership/Card, Wallet/Rewards, Services, Visits, Profile & Family, and Settings/Preferences in a real authenticated browser.
+- This UAT must capture the actual API response/error for any remaining Preferences or Profile & Family failure; current source already provides customer-safe contracts, so no mock fallback should be added merely to hide a deployment/runtime mismatch.
+## 39. Consolidated handoff Git-state correction — 2026-08-11 17:22:00 IST
+
+### Git correction
+- Entry 38 was appended while the customer-consistency source changes appeared as local worktree changes. A subsequent Git-state check confirms they were committed as `72d610e` (`Enhance customer dashboard and account handling with shield card integration and error resilience`) by `frpboy` at 2026-08-11 16:38:23 IST.
+- The commit includes the dashboard/card projection, customer access-state correction, reward-ledger history correction, account partial-data resilience, service taxonomy contract, both backend/Flutter regression additions, and the earlier entries 32–37 in `log.md`.
+- At this correction point, the only remaining worktree change is this append-only `log.md` consolidation/correction. No Git push or deployment is claimed.
+
+### Release handoff
+- The approved SHIELD path remains: review the current commit plus this log entry, commit the append-only log update if desired, then release through Git push.
+- Authenticated browser/API UAT remains pending after release; it must verify the real deployed customer session and retain evidence for Services, Profile & Family, Preferences, membership/card, wallet/rewards, and visit gating.
