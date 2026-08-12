@@ -11450,3 +11450,32 @@ px prisma validate, Nest build, 17 focused Documents/Pharmacy controller tests, 
 ### Release handoff
 - The approved SHIELD path remains: review the current commit plus this log entry, commit the append-only log update if desired, then release through Git push.
 - Authenticated browser/API UAT remains pending after release; it must verify the real deployed customer session and retain evidence for Services, Profile & Family, Preferences, membership/card, wallet/rewards, and visit gating.
+## 40. Customer Services nested-scroll layout failure — 2026-08-12 20:55:00 IST
+
+### Root cause
+- Diagnosed from the supplied Flutter runtime log, not through live-browser testing.
+- The error was `Vertical viewport was given unbounded height` at `CustomerServicesScreen` line 87. `CustomerServicesScreen` owns a vertical `ListView`, while `PortalShell` treated Services as non-scroll-owning and wrapped it in a vertical `SingleChildScrollView`. This created a nested vertical viewport with infinite height and prevented the Services body from laying out.
+
+### Frontend Files
+- `frontend/lib/features/portal/presentation/screens/portal_shell.dart`
+  - Added `isCustomerServices` to the customer content that owns its own scroll extent.
+  - Why: Services now follows the same bounded `AppPageFrame` path as other list-based customer surfaces; the shell no longer wraps its `ListView` in a second vertical scroll view.
+
+### Verification
+- Passed `flutter analyze lib\\features\\portal\\presentation\\screens\\portal_shell.dart lib\\features\\customer\\services\\presentation\\screens\\customer_services_screen.dart` with no issues.
+- Passed `flutter test test\\customer_services_screen_test.dart test\\customer_services_controller_test.dart` — 3 tests.
+- Dart formatting and `git diff --check` passed.
+- Per request, no live browser, authenticated API, deployment, database, migration, or customer-data action was performed.
+## 41. Customer Services provider modal route-context and push-token log safety — 2026-08-12 21:21:03 IST
+
+- **Issue evidence:** The supplied post-restart log contained a GoError while building _ProviderDetailsSheet at customer_services_screen.dart:444: GoRouterState.of(context) was invoked from a showModalBottomSheet builder context, which is outside the route-builder subtree. The subsequent RenderBox was not laid out messages were cascading layout failures from the earlier Services viewport exception.
+- **Frontend Files:**
+  - rontend/lib/features/customer/services/presentation/screens/customer_services_screen.dart
+    - Capture the selected provider ID before opening the bottom sheet and pass it directly to _ProviderDetailsSheet; the sheet now loads details from that explicit ID and no longer resolves router state from its modal context.
+  - rontend/lib/features/portal/presentation/screens/portal_shell.dart
+    - Retain the prior Services scroll-owner fix so the route's ListView is not wrapped by the shell's SingleChildScrollView.
+  - rontend/lib/shared/services/firebase_bootstrap_service.dart
+    - Replace raw push-token and token-refresh logging with status-only messages. Device tokens are credentials and must not be emitted to application logs.
+- **Backend Files:** None.
+- **Verification:** lutter analyze on the three changed files completed with no issues; lutter test test/customer_services_screen_test.dart test/customer_services_controller_test.dart passed (3 tests); git diff --check passed.
+- **Runtime interpretation:** Flutter Web startup, permission authorization, unauthenticated registration skip, and opening customer_dashboard_cache are expected startup events. No live-browser check, authenticated push registration, backend/DB call, or deployment was performed.

@@ -693,6 +693,8 @@ class _RoleContent extends StatelessWidget {
         isCustomerWallet ||
         isCustomerWalletHistory ||
         isCustomerRewards ||
+        isCustomerServices ||
+        isCustomerBooking ||
         isCustomerOrders ||
         isCustomerReferrals ||
         isCustomerActivity;

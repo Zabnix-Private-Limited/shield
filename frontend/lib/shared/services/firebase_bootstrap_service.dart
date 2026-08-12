@@ -91,7 +91,11 @@ class FirebaseBootstrapService {
           ? await messaging.getToken(vapidKey: AppConfig.firebaseWebVapidKey)
           : await messaging.getToken();
 
-      debugPrint('SHIELD device push token: $token');
+      debugPrint(
+        token == null || token.trim().isEmpty
+            ? 'SHIELD device push token unavailable.'
+            : 'SHIELD device push token acquired.',
+      );
 
       if (token != null && token.trim().isNotEmpty) {
         await _registerPushTokenSafely(token);
@@ -125,7 +129,7 @@ class FirebaseBootstrapService {
       }
 
       messaging.onTokenRefresh.listen((token) async {
-        debugPrint('SHIELD push token refreshed: $token');
+        debugPrint('SHIELD push token refreshed.');
         await _registerPushTokenSafely(token);
       });
 

@@ -264,12 +264,13 @@ class _CustomerServicesScreenState extends State<CustomerServicesScreen> {
         useSafeArea: true,
         isScrollControlled: true,
         builder: (sheetContext) => _ProviderDetailsSheet(
+          providerId: id,
           provider: provider,
           loadDetails: _controller.provider,
           actionLabel: _providerActionLabel(provider?.type ?? ''),
-          onAction: () => _openProviderAction(
-            type: provider?.type ?? '',
-            providerId: provider?.id,
+          onAction: (resolvedProvider) => _openProviderAction(
+            type: resolvedProvider.type,
+            providerId: resolvedProvider.id,
           ),
         ),
       );
@@ -426,24 +427,23 @@ class _ProviderCard extends StatelessWidget {
 
 class _ProviderDetailsSheet extends StatelessWidget {
   const _ProviderDetailsSheet({
+    required this.providerId,
     required this.provider,
     required this.loadDetails,
     required this.actionLabel,
     required this.onAction,
   });
 
+  final String providerId;
   final CustomerProvider? provider;
   final Future<CustomerProvider> Function(String id) loadDetails;
   final String actionLabel;
-  final VoidCallback onAction;
+  final ValueChanged<CustomerProvider> onAction;
 
   @override
   Widget build(BuildContext context) {
-    final id =
-        provider?.id ??
-        GoRouterState.of(context).uri.queryParameters['provider'];
     return FutureBuilder<CustomerProvider>(
-      future: id == null ? null : loadDetails(id),
+      future: loadDetails(providerId),
       builder: (context, snapshot) {
         final details = snapshot.data ?? provider;
         return Padding(
@@ -480,7 +480,10 @@ class _ProviderDetailsSheet extends StatelessWidget {
                 style: AppTypography.small.copyWith(color: AppColors.gray),
               ),
               const SizedBox(height: 12),
-              TextButton(onPressed: onAction, child: Text(actionLabel)),
+              TextButton(
+                onPressed: details == null ? null : () => onAction(details),
+                child: Text(actionLabel),
+              ),
             ],
           ),
         );

@@ -139,17 +139,10 @@ class CustomerAuthSession extends ChangeNotifier {
       _isAuthenticated = true;
       return true;
     } catch (_) {
-      final refreshed = await _refreshAccessToken();
-      if (refreshed == null || refreshed.isEmpty) {
-        return false;
-      }
-      try {
-        await ApiService.getAuthenticatedProfile();
-        _isAuthenticated = true;
-        return true;
-      } catch (_) {
-        return false;
-      }
+      // ApiService owns the single-flight refresh and one authenticated retry.
+      // A second manual refresh/profile cycle here previously duplicated /auth/me
+      // traffic after an expired or rejected access token.
+      return false;
     }
   }
 

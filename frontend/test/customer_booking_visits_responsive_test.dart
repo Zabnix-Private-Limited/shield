@@ -7,7 +7,9 @@ import 'package:shield/features/customer/services/data/models/customer_provider.
 import 'package:shield/features/customer/visits/data/customer_visits_repository.dart';
 import 'package:shield/features/customer/visits/presentation/customer_visits_controller.dart';
 import 'package:shield/features/customer/visits/presentation/customer_visits_screen.dart';
+import 'package:shield/features/portal/presentation/screens/portal_shell.dart';
 import 'package:shield/shared/models/appointment.dart';
+import 'package:shield/shared/models/shield_role.dart';
 
 void main() {
   testWidgets('booking and visits fit every required width', (tester) async {
@@ -53,6 +55,31 @@ void main() {
     }
     addTearDown(() => tester.binding.setSurfaceSize(null));
   });
+
+  testWidgets(
+    'booking owns vertical scrolling within the customer portal shell',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(390, 800));
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: PortalShell(
+            role: SHIELDRole.customer,
+            sectionKey: 'book-appointment',
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Book a visit'), findsOneWidget);
+      expect(find.byType(ListView), findsOneWidget);
+      expect(tester.takeException(), isNull);
+
+      await tester.drag(find.byType(ListView), const Offset(0, -180));
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+    },
+  );
 }
 
 class _BookingRepository extends CustomerBookingRepository {}
