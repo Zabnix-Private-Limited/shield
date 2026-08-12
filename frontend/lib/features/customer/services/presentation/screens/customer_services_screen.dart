@@ -239,18 +239,8 @@ class _CustomerServicesScreenState extends State<CustomerServicesScreen> {
   }
 
   void _openProvider(CustomerProvider provider) {
-    try {
-      context.push(
-        _servicesRoute(
-          query: _controller.query,
-          type: _controller.selectedType,
-          page: _controller.page.page,
-          provider: provider.id,
-        ),
-      );
-    } catch (_) {
-      _showProvider(provider.id);
-    }
+    if (provider.id.trim().isEmpty) return;
+    _showProvider(provider.id);
   }
 
   Future<void> _showProvider(String id) async {

@@ -11479,3 +11479,21 @@ px prisma validate, Nest build, 17 focused Documents/Pharmacy controller tests, 
 - **Backend Files:** None.
 - **Verification:** lutter analyze on the three changed files completed with no issues; lutter test test/customer_services_screen_test.dart test/customer_services_controller_test.dart passed (3 tests); git diff --check passed.
 - **Runtime interpretation:** Flutter Web startup, permission authorization, unauthenticated registration skip, and opening customer_dashboard_cache are expected startup events. No live-browser check, authenticated push registration, backend/DB call, or deployment was performed.
+## 42. Customer Services to Booking constraint and session-bootstrap repair — 2026-08-12 21:54:09 IST
+
+- **Issue evidence:** Customer Booking owns a vertical ListView, but _RoleContent in the Customer portal shell omitted ook-appointment from its scroll-owning sections. The shell therefore wrapped Booking in a vertical SingleChildScrollView, giving its viewport unbounded height and causing the reported RenderBox was not laid out cascade.
+- **Frontend Files:**
+  - rontend/lib/features/portal/presentation/screens/portal_shell.dart
+    - Classify ook-appointment as a customer content scroll owner. The shell now supplies bounded body constraints while CustomerBookingScreen retains the one primary vertical ListView; no fixed-height or blanket shrinkWrap workaround was added.
+  - rontend/lib/features/customer/services/presentation/screens/customer_services_screen.dart
+    - Open provider details directly from the selected authoritative provider ID instead of pushing a second Services route. Resolve the action label and Booking navigation ID/type from the provider details returned by the customer-visible provider contract; disabled action is retained if details cannot resolve.
+  - rontend/lib/shared/services/customer_auth_session.dart
+    - Remove the duplicate manual refresh/profile cycle during customer-session validation. ApiService already owns a single-flight refresh and one retry for a 401; a failed retry now clears the protected customer session through the existing expiry handler instead of generating repeated /auth/me traffic.
+- **Test Files:**
+  - rontend/test/customer_booking_visits_responsive_test.dart
+    - Add mobile portal-shell regression coverage that renders Booking in the actual Customer shell, confirms one ListView, scrolls it, and asserts no Flutter exception.
+  - rontend/test/customer_services_screen_test.dart
+    - Add Services provider-sheet to Booking route regression coverage confirming the resolved provider ID reaches Booking.
+- **Backend Files:** None. The existing appointment endpoint continues to validate an active provider and accepts the authoritative provider ID; no database/schema action was taken.
+- **Verification:** lutter analyze over portal shell, Customer Booking, Customer Services, customer auth session, API service, and new regression tests completed with no issues. Focused Services, Booking, Visits, and portal-route tests passed (8 tests). git diff --check passed.
+- **Runtime boundary:** No live-browser/manual authenticated UAT, backend request, Sentry configuration change, database action, or deployment was performed. Sentry 429 remains unrelated rate-limit noise; no error reporting was suppressed.
