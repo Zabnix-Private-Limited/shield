@@ -267,7 +267,7 @@ class _CustomerServicesScreenState extends State<CustomerServicesScreen> {
           providerId: id,
           provider: provider,
           loadDetails: _controller.provider,
-          actionLabel: _providerActionLabel(provider?.type ?? ''),
+          actionLabelForType: _providerActionLabel,
           onAction: (resolvedProvider) => _openProviderAction(
             type: resolvedProvider.type,
             providerId: resolvedProvider.id,
@@ -430,14 +430,14 @@ class _ProviderDetailsSheet extends StatelessWidget {
     required this.providerId,
     required this.provider,
     required this.loadDetails,
-    required this.actionLabel,
+    required this.actionLabelForType,
     required this.onAction,
   });
 
   final String providerId;
   final CustomerProvider? provider;
   final Future<CustomerProvider> Function(String id) loadDetails;
-  final String actionLabel;
+  final String Function(String type) actionLabelForType;
   final ValueChanged<CustomerProvider> onAction;
 
   @override
@@ -482,7 +482,7 @@ class _ProviderDetailsSheet extends StatelessWidget {
               const SizedBox(height: 12),
               TextButton(
                 onPressed: details == null ? null : () => onAction(details),
-                child: Text(actionLabel),
+                child: Text(actionLabelForType(details?.type ?? '')),
               ),
             ],
           ),
