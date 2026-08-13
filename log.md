@@ -11541,3 +11541,78 @@ px prisma validate, Nest build, 17 focused Documents/Pharmacy controller tests, 
     - Verify Visits renders a progress indicator while loading, an explicit empty state after an empty response, and a retryable Visits unavailable state after a malformed/failing repository response; none can degrade to a blank surface.
 - **Backend Files:** None.
 - **Verification:** Focused Customer Services, Booking, Visits, appointment model, and portal-route suite passed (19 tests). lutter analyze on changed test and Visits presentation targets reported no issues. No authenticated production/browser UAT was run.
+## 46. Customer Visits response safety and production-log triage (2026-08-13 13:24:58 IST)
+
+- Frontend Files
+  - `frontend/lib/features/customer/visits/presentation/customer_visits_controller.dart`
+    - Added generation-based request ordering to prevent a slower, stale visits refresh from overwriting the latest successful appointment result. The customer list now retains the newer response while keeping the existing loading/error behavior.
+  - `frontend/test/customer_visits_controller_test.dart`
+    - Added a deferred-response regression that completes the newer `PENDING` appointment result before an older empty response, asserting Reference-style appointment `13` remains visible.
+- Response-contract findings
+  - Verified `ApiService.getAppointments` requires the documented `{ data: List }` API envelope and throws `FormatException` for any malformed successful body; it does not silently convert a parser failure into an empty list.
+  - Verified the backend customer appointment projection includes `id`, `customerId`, `providerId`, `appointmentType`, `appointmentDate`, `status`, and nested provider data, and backend creation defaults to `PENDING` without filtering it from the list query.
+  - The supplied production note confirms POST `/appointments` returned 201 and GET `/appointments?customer_id=7` returned 200, but it did not contain the captured response body. Therefore Reference `13` being present in that specific deployed response cannot be asserted from the supplied logs alone.
+- Runtime triage
+  - Searched frontend and backend source for `feedback.html`, `chrome.runtime`, and `sendMessage`; no SHIELD source match was found. The reported runtime-lastError/message-channel signature is classified as browser extension or injected feedback tooling unless a clean-profile reproduction proves otherwise.
+  - No live browser, clean/incognito profile, database write, migration, deployment, or production-token inspection was performed.
+  - Firebase web reCAPTCHA Enterprise configuration failure followed by successful v2 fallback is non-blocking when OTP completion succeeds; this is configuration/SDK fallback evidence, not an appointment rendering exception.
+- Verification
+  - `flutter test test\\customer_visits_controller_test.dart test\\customer_visits_screen_test.dart test\\customer_appointment_model_test.dart test\\customer_booking_visits_responsive_test.dart` passed: 11 tests.
+  - `flutter analyze lib/features/customer/visits/presentation/customer_visits_controller.dart test/customer_visits_controller_test.dart test/customer_visits_screen_test.dart` passed with no issues.
+  - Re-ran `flutter test test\\customer_visits_controller_test.dart` after analyzer remediation: 3 tests passed.
+- Remaining risk
+  - The deployed blank Visits surface and its HTTP 200 payload still require non-live evidence capture (response body and deployed revision/build identity) to prove whether it is stale deployment, route/access state, or a contract difference. Post-auth push registration is wired in source but not runtime-verified here.
+## 47. Deployed Customer Visits P0 contract hardening and token lifecycle audit (2026-08-13 13:33:14 IST)
+
+- Frontend Files
+  - `frontend/lib/shared/services/api_service.dart`
+    - Added a named strict parser for the customer `GET /appointments` contract. Both customer appointment readers now require `{ success, message, data: List }`, convert each item to `Appointment`, and sort by appointment date. A malformed success response throws instead of being represented as an empty Visits list.
+  - `frontend/lib/shared/models/appointment.dart`
+    - Made appointment ID, appointment date, provider-object shape, and status parsing explicit. Unknown/missing status or invalid/missing date now raises `FormatException`, allowing `CustomerVisitsController` to show its recoverable error UI rather than manufacturing a current-time appointment or treating an unknown lifecycle state as scheduled.
+  - `frontend/lib/features/customer/visits/presentation/customer_visits_controller.dart`
+    - Retained generation ordering around asynchronous loads so a slow prior empty response cannot overwrite the newer booking result.
+  - `frontend/lib/shared/services/customer_auth_session.dart`
+    - On intentional sign-out, best-effort deactivate the current FCM token before revoking the authenticated session and clearing local state. Registration remains post-auth only; this does not weaken OTP or change unauthorized handling.
+- Backend Files
+  - `backend/src/notification/notification.controller.spec.ts`
+    - Added coverage that a customer-supplied device-token request is pinned to the authenticated customer and session, ignoring a different body `customer_id`.
+  - `backend/src/notification/notification.service.spec.ts`
+    - Added coverage that device-token registration resolves the session auth device and uses a unique-token upsert, reactivating and re-associating refreshed tokens without duplicate records.
+- Contract trace
+  - `POST /appointments` uses the authenticated customer ID, creates with `status: data.status || 'PENDING'`, and returns the customer-safe appointment projection.
+  - `GET /appointments?customer_id=<id>` selects appointments by the authenticated customer target, has no status exclusion, and serializes `{ success: true, message: 'Appointments list retrieved', data: [{ id, uuid, customerId, providerId, appointmentType, appointmentDate, status, remarks, provider }] }`.
+  - Flutter maps `PENDING`, `REQUESTED`, and `WAITING` to customer-visible `Request pending`; the Upcoming filter includes all statuses except completed and cancelled.
+  - Provider modal navigation remains await-and-pop before route navigation, and provider ID is passed into Booking preselection. Existing focused Services/Booking/Visits tests cover modal destruction, browser back behavior, preselection, and success-to-Visits handoff.
+- Verification
+  - `flutter test test\\customer_appointment_model_test.dart test\\customer_visits_controller_test.dart test\\customer_visits_screen_test.dart test\\customer_services_screen_test.dart test\\customer_booking_controller_test.dart test\\customer_booking_visits_responsive_test.dart` passed: 20 tests.
+  - `flutter analyze lib/shared/models/appointment.dart lib/shared/services/api_service.dart lib/shared/services/customer_auth_session.dart lib/features/customer/visits/presentation/customer_visits_controller.dart test/customer_appointment_model_test.dart test/customer_visits_controller_test.dart` passed with no issues.
+  - `npm test -- --runInBand appointment/appointment.controller.spec.ts notification/notification.controller.spec.ts notification/notification.service.spec.ts` passed: 3 suites, 8 tests.
+  - `git diff --check` passed.
+- Evidence boundary and remaining release blocker
+  - The supplied deployed log reports GET 200 and Reference 13 but does not include the actual GET response body or deployed build revision. This repository trace proves the current contract would return and render a valid `PENDING` Reference 13 for customer 7; it cannot prove the deployed artifact served that payload.
+  - No live browser, incognito/clean-profile check, production database access, token inspection, deployment, or migration was performed. The deployed blank page is not release-verified until the actual response body/build identity is captured and a newly submitted visit is visibly shown in that deployed artifact.
+## 48. Customer Visits explicit recoverable failure states (2026-08-13 13:36:24 IST)
+
+- Frontend Files
+  - `frontend/lib/features/customer/visits/presentation/customer_visits_controller.dart`
+    - Added explicit error classification for offline network failures, unauthorized/expired sessions, malformed appointment payloads, and other unavailable responses. This preserves the underlying error for retry while making the state visible to the renderer.
+  - `frontend/lib/features/customer/visits/presentation/customer_visits_screen.dart`
+    - Replaced the single generic error copy with distinct customer-safe offline, session-expired, malformed-data, and unavailable surfaces. Cached/previous records remain visible when an update fails; a first-load failure remains recoverable with Retry.
+  - `frontend/test/customer_visits_controller_test.dart`
+    - Added classification coverage for Dio connection failure, HTTP 401, and `FormatException` payload failure.
+  - `frontend/test/customer_visits_screen_test.dart`
+    - Added widget coverage that malformed HTTP 200 appointment data displays `Visits data could not be read` and Retry, never a blank or empty Visits state.
+- Verification
+  - `flutter analyze lib/features/customer/visits/presentation/customer_visits_controller.dart lib/features/customer/visits/presentation/customer_visits_screen.dart test/customer_visits_controller_test.dart test/customer_visits_screen_test.dart` passed with no issues.
+  - `flutter test test\\customer_visits_controller_test.dart test\\customer_visits_screen_test.dart` passed: 7 tests.
+  - `git diff --check` passed.
+- Evidence boundary
+  - This closes the explicit client-state behavior gap in source. The deployed P0 proof remains the missing non-live capture of the successful GET body and deployed build identity; no live browser or production access was used.
+## 49. Non-browser appointment evidence search (2026-08-13 13:37:39 IST)
+
+- Verification evidence
+  - Searched repository logs and retained QA artifacts for the deployed customer-7/Reference-13 response without opening a browser or querying production.
+  - `provider-qa-snapshot.json` contains a historical successful appointments envelope with `success`, `message`, and a `data` list of appointment objects. Its appointment entries include the fields consumed by the strict customer parser plus unrelated nested customer/provider fields, which the client safely ignores.
+  - This artifact is not the reported deployed `customer_id=7` request, does not contain Reference 13, and has no deployed build identity. It cannot be substituted for the required P0 proof.
+- Remaining release blocker
+  - No retained non-live artifact contains both the exact successful deployed GET response body and its build/revision identity. Those two pieces of externally captured evidence are still required to establish whether Reference 13 was returned and visibly rendered in the deployed application.

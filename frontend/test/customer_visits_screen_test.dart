@@ -50,6 +50,29 @@ void main() {
     expect(find.text('Retry'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('renders malformed appointment data as a recoverable error', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: CustomerVisitsScreen(
+            controller: CustomerVisitsController(
+              repository: _FailingRepository(
+                const FormatException('Unexpected API response envelope'),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Visits data could not be read'), findsOneWidget);
+    expect(find.text('Retry'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
 }
 
 class _DeferredRepository extends CustomerVisitsRepository {
@@ -62,7 +85,10 @@ class _DeferredRepository extends CustomerVisitsRepository {
 }
 
 class _FailingRepository extends CustomerVisitsRepository {
+  _FailingRepository([this.failure]);
+  final Object? failure;
+
   @override
   Future<List<Appointment>> list() =>
-      Future.error(StateError('Unexpected appointment payload'));
+      Future.error(failure ?? StateError('Unexpected appointment payload'));
 }

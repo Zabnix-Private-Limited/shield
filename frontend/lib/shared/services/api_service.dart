@@ -266,6 +266,28 @@ class ApiService {
     throw const FormatException('Unexpected API list response envelope');
   }
 
+  /// Parses the customer appointment-list contract returned by `GET /appointments`.
+  ///
+  /// This remains deliberately strict: a successful but malformed response must
+  /// reach the Visits error state, rather than being presented as no visits.
+  static List<Appointment> parseCustomerAppointmentListPayload(Object? body) {
+    if (body is! Map) {
+      throw const FormatException('Unexpected customer appointments response.');
+    }
+    final data = body['data'];
+    if (data is! List) {
+      throw const FormatException('Customer appointments data must be a list.');
+    }
+    return data.map((item) {
+      if (item is! Map) {
+        throw const FormatException(
+          'Customer appointment item must be an object.',
+        );
+      }
+      return Appointment.fromJson(Map<String, dynamic>.from(item));
+    }).toList()..sort((a, b) => a.appointmentDate.compareTo(b.appointmentDate));
+  }
+
   static Future<Map<String, dynamic>> _getCustomerPayload(
     String customerId,
   ) async {
@@ -318,10 +340,7 @@ class ApiService {
       '/appointments',
       queryParameters: {'customer_id': customerId},
     );
-    return _readEnvelopeList(response)
-        .map((item) => Appointment.fromJson(item as Map<String, dynamic>))
-        .toList()
-      ..sort((a, b) => a.appointmentDate.compareTo(b.appointmentDate));
+    return parseCustomerAppointmentListPayload(response.data);
   }
 
   static Future<List<Map<String, dynamic>>> getCustomerTimeline() async {
@@ -338,10 +357,7 @@ class ApiService {
       '/appointments',
       queryParameters: {'customer_id': customerId},
     );
-    return _readEnvelopeList(response)
-        .map((item) => Appointment.fromJson(item as Map<String, dynamic>))
-        .toList()
-      ..sort((a, b) => a.appointmentDate.compareTo(b.appointmentDate));
+    return parseCustomerAppointmentListPayload(response.data);
   }
 
   static Future<Map<String, dynamic>> getAppointmentConsultationWorkspace(

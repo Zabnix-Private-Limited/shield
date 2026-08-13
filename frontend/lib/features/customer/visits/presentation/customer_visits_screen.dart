@@ -43,8 +43,8 @@ class _CustomerVisitsScreenState extends State<CustomerVisitsScreen> {
       }
       if (_controller.error != null && _controller.appointments.isEmpty) {
         return ErrorCard(
-          title: 'Visits unavailable',
-          message: 'Your appointment list could not be loaded.',
+          title: _errorTitle(_controller.errorKind),
+          message: _errorMessage(_controller.errorKind),
           onRetry: _controller.load,
         );
       }
@@ -75,8 +75,9 @@ class _CustomerVisitsScreenState extends State<CustomerVisitsScreen> {
             if (_controller.error != null) ...[
               const SizedBox(height: 12),
               ErrorCard(
-                title: 'Could not update visits',
-                message: 'Showing your last available visit list.',
+                title: _errorTitle(_controller.errorKind),
+                message:
+                    '${_errorMessage(_controller.errorKind)} Showing your last available visit list.',
                 onRetry: _controller.load,
               ),
             ],
@@ -283,6 +284,24 @@ String _labelFor(CustomerVisitsFilter filter) => switch (filter) {
   CustomerVisitsFilter.completed => 'Completed',
   CustomerVisitsFilter.cancelled => 'Cancelled',
   CustomerVisitsFilter.all => 'All',
+};
+
+String _errorTitle(CustomerVisitsErrorKind? kind) => switch (kind) {
+  CustomerVisitsErrorKind.offline => 'You appear to be offline',
+  CustomerVisitsErrorKind.unauthorized => 'Your session has expired',
+  CustomerVisitsErrorKind.malformed => 'Visits data could not be read',
+  CustomerVisitsErrorKind.unavailable || null => 'Visits unavailable',
+};
+
+String _errorMessage(CustomerVisitsErrorKind? kind) => switch (kind) {
+  CustomerVisitsErrorKind.offline =>
+    'Reconnect to the internet and try again. Your saved visits remain available when present.',
+  CustomerVisitsErrorKind.unauthorized =>
+    'Sign in again to securely load your appointments.',
+  CustomerVisitsErrorKind.malformed =>
+    'SHIELD could not read the appointment response. Please try again shortly.',
+  CustomerVisitsErrorKind.unavailable ||
+  null => 'Your appointment list could not be loaded.',
 };
 bool _actionable(AppointmentStatus status) =>
     status != AppointmentStatus.cancelled &&

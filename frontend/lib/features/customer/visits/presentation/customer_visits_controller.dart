@@ -1,9 +1,12 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 
 import '../../../../shared/models/appointment.dart';
 import '../data/customer_visits_repository.dart';
 
 enum CustomerVisitsFilter { upcoming, completed, cancelled, all }
+
+enum CustomerVisitsErrorKind { unavailable, offline, unauthorized, malformed }
 
 class CustomerVisitsController extends ChangeNotifier {
   CustomerVisitsController({CustomerVisitsRepository? repository})
@@ -15,19 +18,44 @@ class CustomerVisitsController extends ChangeNotifier {
   bool isLoading = false;
   bool isMutating = false;
   Object? error;
+  CustomerVisitsErrorKind? errorKind;
+  int _loadGeneration = 0;
 
   Future<void> load() async {
+    final generation = ++_loadGeneration;
     isLoading = true;
     error = null;
+    errorKind = null;
     notifyListeners();
     try {
-      appointments = await _repository.list();
+      final loadedAppointments = await _repository.list();
+      if (generation != _loadGeneration) return;
+      appointments = loadedAppointments;
     } catch (value) {
+      if (generation != _loadGeneration) return;
       error = value;
-    } finally {
-      isLoading = false;
-      notifyListeners();
+      errorKind = _classifyError(value);
     }
+    if (generation != _loadGeneration) return;
+    isLoading = false;
+    notifyListeners();
+  }
+
+  CustomerVisitsErrorKind _classifyError(Object value) {
+    if (value is FormatException) return CustomerVisitsErrorKind.malformed;
+    if (value is DioException) {
+      final status = value.response?.statusCode;
+      if (status == 401 || status == 403) {
+        return CustomerVisitsErrorKind.unauthorized;
+      }
+      if (value.type == DioExceptionType.connectionError ||
+          value.type == DioExceptionType.connectionTimeout ||
+          value.type == DioExceptionType.receiveTimeout ||
+          value.type == DioExceptionType.sendTimeout) {
+        return CustomerVisitsErrorKind.offline;
+      }
+    }
+    return CustomerVisitsErrorKind.unavailable;
   }
 
   void setFilter(CustomerVisitsFilter value) {

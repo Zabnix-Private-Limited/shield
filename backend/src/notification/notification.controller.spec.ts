@@ -6,6 +6,7 @@ describe('NotificationController customer scope', () => {
     markAsRead: jest.fn(),
     markAllAsRead: jest.fn(),
     deactivateDeviceToken: jest.fn(),
+    registerDeviceToken: jest.fn(),
   };
   const agentScope = {
     assertAgentCanAccessNotification: jest.fn(),
@@ -54,5 +55,32 @@ describe('NotificationController customer scope', () => {
       'device-token',
       11n,
     );
+  });
+
+  it('pins a push token registration to the authenticated customer session', async () => {
+    notificationService.registerDeviceToken.mockResolvedValue({ id: 1n });
+    const authenticatedCustomer = {
+      principalType: 'CUSTOMER',
+      customerId: '11',
+      sessionId: 'customer-session',
+    } as any;
+
+    await controller.registerDeviceToken(
+      {
+        customer_id: '99',
+        token: 'fcm-token',
+        platform: 'WEB',
+        device_label: 'Chrome',
+      },
+      authenticatedCustomer,
+    );
+
+    expect(notificationService.registerDeviceToken).toHaveBeenCalledWith({
+      customerId: 11n,
+      token: 'fcm-token',
+      platform: 'WEB',
+      deviceLabel: 'Chrome',
+      sessionId: 'customer-session',
+    });
   });
 });

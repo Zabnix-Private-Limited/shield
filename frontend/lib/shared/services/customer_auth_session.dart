@@ -1,8 +1,10 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import 'active_auth_session.dart';
+import '../config/app_config.dart';
 import 'api_service.dart';
 import 'auth_redirect_notice.dart';
 import 'customer_cache_service.dart';
@@ -114,6 +116,7 @@ class CustomerAuthSession extends ChangeNotifier {
   }
 
   Future<void> signOut() async {
+    await _deactivateCurrentPushToken();
     final refreshToken = _refreshToken;
     if (refreshToken != null && refreshToken.isNotEmpty) {
       try {
@@ -131,6 +134,24 @@ class CustomerAuthSession extends ChangeNotifier {
     } catch (_) {}
 
     await _clearSessionStorage();
+  }
+
+  Future<void> _deactivateCurrentPushToken() async {
+    if (!AppConfig.enableNotifications) return;
+    try {
+      final token = kIsWeb
+          ? await FirebaseMessaging.instance.getToken(
+              vapidKey: AppConfig.firebaseWebVapidKey,
+            )
+          : await FirebaseMessaging.instance.getToken();
+      if (token != null && token.trim().isNotEmpty) {
+        await ApiService.deactivatePushToken(token.trim());
+      }
+    } catch (error) {
+      debugPrint(
+        'SHIELD push token deactivation skipped during sign-out: $error',
+      );
+    }
   }
 
   Future<bool> _validateOrRefreshSession() async {
