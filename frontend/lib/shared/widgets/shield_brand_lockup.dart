@@ -44,6 +44,11 @@ class ShieldBrandLockup extends StatelessWidget {
           child: Image.asset(
             'assets/logos/shield_mark.png',
             fit: BoxFit.contain,
+            errorBuilder: (context, error, stackTrace) => Icon(
+              Icons.shield_outlined,
+              color: AppColors.shieldBlue,
+              size: markSize * 0.72,
+            ),
           ),
         ),
         if (showWordmark) ...[
@@ -56,6 +61,14 @@ class ShieldBrandLockup extends StatelessWidget {
                 'assets/logos/shield_wordmark.png',
                 width: wordmarkWidth,
                 fit: BoxFit.contain,
+                errorBuilder: (context, error, stackTrace) => Text(
+                  'SHIELD',
+                  style: AppTypography.h5.copyWith(
+                    color: AppColors.shieldNavy,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 1.6,
+                  ),
+                ),
               ),
               if (showTagline) ...[
                 const SizedBox(height: 4),

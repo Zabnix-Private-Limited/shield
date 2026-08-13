@@ -9,6 +9,7 @@ import '../../../../../shared/config/app_config.dart';
 import '../../../../../shared/services/customer_auth_session.dart';
 import '../../../../../shared/services/device_identity_service.dart';
 import '../../../../../shared/services/firebase_bootstrap_service.dart';
+import 'customer_phone_verification_state.dart';
 
 enum CustomerAuthOutcome { authenticated, registrationRequired }
 
@@ -30,36 +31,79 @@ class CustomerAuthRepository {
   int? _forceResendingToken;
   String? _pendingPhoneNumber;
   DateTime? _resendAllowedAt;
+  Future<CustomerPhoneVerificationStartResult>? _sendInFlight;
+  final _stateMachine = CustomerPhoneVerificationStateMachine<Object>();
 
   String? get pendingPhoneNumber => _pendingPhoneNumber;
   DateTime? get resendAllowedAt => _resendAllowedAt;
+  CustomerPhoneVerificationState get verificationState => _stateMachine.state;
 
   Future<CustomerPhoneVerificationStartResult> startPhoneVerification(
     String rawPhoneNumber,
   ) async {
     final phoneNumber = _normalizeIndianPhone(rawPhoneNumber);
-    _pendingPhoneNumber = phoneNumber;
-    _resendAllowedAt = DateTime.now().add(const Duration(seconds: 30));
-    _verificationId = null;
-    _webConfirmationResult = null;
-
-    if (kIsWeb) {
-      if (_isUnsupportedLocalWebHost(Uri.base.host) &&
-          !(kDebugMode && AppConfig.allowLocalWebPhoneAuth)) {
-        throw FirebaseAuthException(
-          code: 'web-phone-auth-domain',
-          message:
-              'Firebase web OTP is disabled on localhost. Add localhost to Firebase authorized domains, then start SHIELD with ALLOW_LOCAL_WEB_PHONE_AUTH=true.',
-        );
-      }
-
-      _webConfirmationResult = await _firebaseAuth.signInWithPhoneNumber(
-        phoneNumber,
-      );
-      return CustomerPhoneVerificationStartResult.codeSent;
+    final existingRequest = _sendInFlight;
+    if (existingRequest != null) {
+      return existingRequest;
     }
 
+    final isResend = _hasUsableConfirmation &&
+        _pendingPhoneNumber == phoneNumber;
+    final request = _requestPhoneVerification(phoneNumber, isResend: isResend);
+    _sendInFlight = request;
+    try {
+      return await request;
+    } finally {
+      if (identical(_sendInFlight, request)) {
+        _sendInFlight = null;
+      }
+    }
+  }
+
+  Future<CustomerPhoneVerificationStartResult> _requestPhoneVerification(
+    String phoneNumber, {
+    required bool isResend,
+  }) async {
+    _stateMachine.beginSend(resend: isResend);
+
+    try {
+      // Keep an existing valid confirmation available while a resend is in
+      // flight. A failed resend must not strand the customer on the OTP page.
+      if (kIsWeb) {
+        if (_isUnsupportedLocalWebHost(Uri.base.host) &&
+            !(kDebugMode && AppConfig.allowLocalWebPhoneAuth)) {
+          throw FirebaseAuthException(
+            code: 'web-phone-auth-domain',
+            message:
+                'Firebase web OTP is disabled on localhost. Add localhost to Firebase authorized domains, then start SHIELD with ALLOW_LOCAL_WEB_PHONE_AUTH=true.',
+          );
+        }
+
+        final confirmation = await _firebaseAuth.signInWithPhoneNumber(
+          phoneNumber,
+        );
+        _pendingPhoneNumber = phoneNumber;
+        _webConfirmationResult = confirmation;
+        _verificationId = null;
+        _resendAllowedAt = DateTime.now().add(const Duration(seconds: 30));
+        _stateMachine.sendSucceeded(confirmation);
+        return CustomerPhoneVerificationStartResult.codeSent;
+      }
+
+      return await _startNativePhoneVerification(
+        phoneNumber,
+      );
+    } catch (error) {
+      _stateMachine.sendFailed(error);
+      rethrow;
+    }
+  }
+
+  Future<CustomerPhoneVerificationStartResult> _startNativePhoneVerification(
+    String phoneNumber,
+  ) async {
     final completer = Completer<CustomerPhoneVerificationStartResult>();
+    _pendingPhoneNumber = phoneNumber;
     await _firebaseAuth.verifyPhoneNumber(
       phoneNumber: phoneNumber,
       forceResendingToken: _forceResendingToken,
@@ -86,8 +130,11 @@ class CustomerAuthRepository {
         }
       },
       codeSent: (verificationId, forceResendingToken) {
+        _pendingPhoneNumber = phoneNumber;
         _verificationId = verificationId;
         _forceResendingToken = forceResendingToken;
+        _resendAllowedAt = DateTime.now().add(const Duration(seconds: 30));
+        _stateMachine.sendSucceeded(verificationId);
         if (!completer.isCompleted) {
           completer.complete(CustomerPhoneVerificationStartResult.codeSent);
         }
@@ -104,6 +151,10 @@ class CustomerAuthRepository {
     if (phoneNumber == null || phoneNumber.isEmpty) {
       throw StateError('Phone verification has not been started.');
     }
+    final allowedAt = _resendAllowedAt;
+    if (allowedAt != null && DateTime.now().isBefore(allowedAt)) {
+      throw StateError('Please wait before requesting another OTP.');
+    }
     await startPhoneVerification(phoneNumber);
   }
 
@@ -116,14 +167,16 @@ class CustomerAuthRepository {
       );
     }
 
-    UserCredential userCredential;
-    if (kIsWeb) {
+    _stateMachine.beginVerification();
+    try {
+      UserCredential userCredential;
+      if (kIsWeb) {
       final confirmation = _webConfirmationResult;
       if (confirmation == null) {
         throw StateError('OTP session expired. Start again.');
       }
-      userCredential = await confirmation.confirm(normalizedOtp);
-    } else {
+        userCredential = await confirmation.confirm(normalizedOtp);
+      } else {
       final verificationId = _verificationId;
       if (verificationId == null || verificationId.isEmpty) {
         throw StateError('OTP session expired. Start again.');
@@ -132,15 +185,21 @@ class CustomerAuthRepository {
         verificationId: verificationId,
         smsCode: normalizedOtp,
       );
-      userCredential = await _firebaseAuth.signInWithCredential(credential);
-    }
+        userCredential = await _firebaseAuth.signInWithCredential(credential);
+      }
 
-    final firebaseUser = userCredential.user ?? _firebaseAuth.currentUser;
-    if (firebaseUser == null) {
-      throw StateError('Phone verification completed without a Firebase user.');
-    }
+      final firebaseUser = userCredential.user ?? _firebaseAuth.currentUser;
+      if (firebaseUser == null) {
+        throw StateError('Phone verification completed without a Firebase user.');
+      }
 
-    return _completeVerifiedCustomerSession(firebaseUser: firebaseUser);
+      final outcome = await _completeVerifiedCustomerSession(firebaseUser: firebaseUser);
+      _stateMachine.verified();
+      return outcome;
+    } catch (error) {
+      _stateMachine.sendFailed(error);
+      rethrow;
+    }
   }
 
   Future<CustomerAuthOutcome?> tryCompleteAutoVerifiedSession() async {
@@ -245,7 +304,12 @@ class CustomerAuthRepository {
     _verificationId = null;
     _pendingPhoneNumber = null;
     _resendAllowedAt = null;
+    _stateMachine.reset();
   }
+
+  bool get _hasUsableConfirmation =>
+      (kIsWeb && _webConfirmationResult != null) ||
+      (!kIsWeb && _verificationId != null && _verificationId!.isNotEmpty);
 
   bool _isUnsupportedLocalWebHost(String host) {
     final normalized = host.trim().toLowerCase();

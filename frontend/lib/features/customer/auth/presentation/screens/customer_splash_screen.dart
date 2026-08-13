@@ -65,6 +65,11 @@ class _CustomerSplashScreenState extends State<CustomerSplashScreen> {
                   child: Image.asset(
                     'assets/logos/shield_mark.png',
                     fit: BoxFit.contain,
+                    errorBuilder: (context, error, stackTrace) => const Icon(
+                      Icons.shield_outlined,
+                      color: AppColors.shieldBlue,
+                      size: 58,
+                    ),
                   ),
                 ),
                 const SizedBox(height: 22),

@@ -69,5 +69,30 @@ void main() {
         'Your SHIELD session expired. Sign in again to continue securely.',
       );
     });
+
+    test('maps Firebase security errors without falsely diagnosing a network failure', () {
+      final message = AuthErrorMessages.resolve(
+        FirebaseAuthException(
+          code: 'captcha-check-failed',
+          message: 'enterprise check failed',
+        ),
+        flow: AuthFlow.customerLogin,
+      );
+
+      expect(message, contains('security check'));
+      expect(message, isNot(contains('Network connection lost')));
+    });
+
+    test('maps an actual Firebase connectivity error to the network message', () {
+      final message = AuthErrorMessages.resolve(
+        FirebaseAuthException(
+          code: 'network-request-failed',
+          message: 'network failure',
+        ),
+        flow: AuthFlow.customerLogin,
+      );
+
+      expect(message, 'Network connection lost. Check your internet connection and try again.');
+    });
   });
 }

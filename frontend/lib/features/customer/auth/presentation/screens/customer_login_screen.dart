@@ -113,6 +113,12 @@ class _CustomerLoginScreenState extends State<CustomerLoginScreen> {
                       child: Image.asset(
                         'assets/logos/shield_mark.png',
                         fit: BoxFit.contain,
+                        errorBuilder: (context, error, stackTrace) =>
+                            const Icon(
+                              Icons.shield_outlined,
+                              color: AppColors.shieldBlue,
+                              size: 46,
+                            ),
                       ),
                     ),
                     const SizedBox(height: 18),

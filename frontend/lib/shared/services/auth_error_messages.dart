@@ -24,6 +24,14 @@ class AuthErrorMessages {
           return 'Enter a valid mobile number to continue.';
         case 'too-many-requests':
           return 'Too many attempts were made just now. Please wait a moment and try again.';
+        case 'quota-exceeded':
+          return 'SMS verification is temporarily unavailable due to request limits. Please try again later.';
+        case 'captcha-check-failed':
+        case 'invalid-app-credential':
+        case 'missing-app-credential':
+          return 'SHIELD could not complete the security check. Refresh the page and try again.';
+        case 'web-phone-auth-domain':
+          return 'This SHIELD web address is not configured for phone verification. Please use the official SHIELD site.';
         case 'network-request-failed':
           return 'Network connection lost. Check your internet connection and try again.';
         case 'popup-closed-by-user':
@@ -38,10 +46,8 @@ class AuthErrorMessages {
           return 'This Google account is linked differently in Firebase. Use the approved sign-in method for this account.';
         case 'web-context-cancelled':
           return 'The browser interrupted the sign-in flow. Re-open SHIELD and try again.';
-      }
-
-      if ((error.message ?? '').trim().isNotEmpty) {
-        return _clean(error.message!);
+        default:
+          return 'SHIELD could not complete Firebase verification right now. Please try again.';
       }
     }
 

@@ -11616,3 +11616,19 @@ px prisma validate, Nest build, 17 focused Documents/Pharmacy controller tests, 
   - This artifact is not the reported deployed `customer_id=7` request, does not contain Reference 13, and has no deployed build identity. It cannot be substituted for the required P0 proof.
 - Remaining release blocker
   - No retained non-live artifact contains both the exact successful deployed GET response body and its build/revision identity. Those two pieces of externally captured evidence are still required to establish whether Reference 13 was returned and visibly rendered in the deployed application.
+## 50. Customer Firebase Phone OTP state race and web asset audit (2026-08-13 20:49:00 IST)
+
+- Production evidence showed Firebase `accounts:sendVerificationCode` returning HTTP 200 with a non-empty sessionInfo while SHIELD showed a false network error. The source trace found a separate OTP-screen auto-session probe: on web, it could run after a successful confirmation/navigation and surface an unrelated backend/session failure as the OTP error.
+- Frontend Files:
+  - `customer_otp_screen.dart`: skips the native-only auto-verification probe on web; clears error on resend and rejects duplicate/cooldown-active resend taps.
+  - `customer_auth_repository.dart`, `customer_phone_verification_state.dart`: records explicit idle/sending/code-sent/verifying/verified/resending/Firebase-failure/connectivity-failure states, serializes sends, preserves an existing confirmation on a failed resend, and only replaces it after a successful Firebase response.
+  - `auth_error_messages.dart`: distinguishes known Firebase security/configuration/quota failures from actual connectivity failures; it no longer exposes raw Firebase diagnostics to customers.
+  - brand/login/splash widgets: logo failures now have a local design-consistent shield fallback. The source PNGs are tracked and `pubspec.yaml` declares `assets/logos/`.
+- Verification: focused `flutter analyze` passed; focused auth/state/logo tests passed (11). `flutter build web --release` exceeded the 120-second local bound and produced no inspectable output asset, so web build/deployment proof remains pending.
+- External verification required: confirm whether +917034479800 is configured as a Firebase Phone Auth test number; test numbers intentionally do not receive physical SMS. No OTP, sessionInfo, reCAPTCHA token, Firebase ID token, or refresh token was logged.
+## 51. OTP state-machine coverage completion (2026-08-13 20:55:00 IST)
+
+- Frontend Files:
+  - `customer_phone_verification_state.dart` now owns the repository-used send/verification state machine, including retained confirmation replacement only on success and request-in-flight gating.
+  - `customer_phone_verification_state_test.dart` verifies successful send/resend clear prior errors, successful resend replaces confirmation, failed resend retains the previous confirmation, concurrent sends are rejected, and Firebase versus connectivity failure states remain distinct.
+- Verification: focused analyzer passed. Focused auth/error/state/logo suite passed: 14 tests. `git diff --check` passed. No live browser, Firebase Console, OTP, or production API call was used.

@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -37,9 +38,14 @@ class _CustomerOtpScreenState extends State<CustomerOtpScreen> {
       return;
     }
     _startTimer();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _completeAutoVerifiedSessionIfNeeded();
-    });
+    // Web phone auth has no native automatic-verification callback. Running
+    // the session-completion probe here could surface an unrelated backend
+    // error after Firebase has already returned a successful confirmation.
+    if (!kIsWeb) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _completeAutoVerifiedSessionIfNeeded();
+      });
+    }
   }
 
   @override
@@ -119,6 +125,9 @@ class _CustomerOtpScreenState extends State<CustomerOtpScreen> {
   }
 
   Future<void> _resend() async {
+    if (_isResending || _remainingSeconds > 0) {
+      return;
+    }
     setState(() {
       _isResending = true;
       _errorText = null;
