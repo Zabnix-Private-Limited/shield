@@ -7,6 +7,10 @@ import 'package:shield/features/customer/booking/presentation/customer_booking_s
 import 'package:shield/features/customer/services/data/models/customer_provider.dart';
 import 'package:shield/features/customer/services/presentation/controllers/customer_services_controller.dart';
 import 'package:shield/features/customer/services/presentation/screens/customer_services_screen.dart';
+import 'package:shield/features/customer/visits/data/customer_visits_repository.dart';
+import 'package:shield/features/customer/visits/presentation/customer_visits_controller.dart';
+import 'package:shield/features/customer/visits/presentation/customer_visits_screen.dart';
+import 'package:shield/shared/models/appointment.dart';
 
 void main() {
   testWidgets(
@@ -90,8 +94,104 @@ void main() {
 
     expect(find.text('Book a visit'), findsOneWidget);
     expect(booking.provider?.id, 'clinic-1');
+    expect(find.text('Continue to booking'), findsNothing);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets(
+    'Booking back returns to Services without reopening the provider sheet',
+    (tester) async {
+      final booking = CustomerBookingController(
+        repository: _BookingRepository(),
+      );
+      final router = GoRouter(
+        initialLocation: '/services',
+        routes: [
+          GoRoute(
+            path: '/services',
+            builder: (_, __) => Scaffold(
+              body: CustomerServicesScreen(controller: _ClinicController()),
+            ),
+          ),
+          GoRoute(
+            path: '/portal/customer/book-appointment',
+            builder: (_, __) =>
+                Scaffold(body: CustomerBookingScreen(controller: booking)),
+          ),
+        ],
+      );
+      await tester.pumpWidget(MaterialApp.router(routerConfig: router));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Active Clinic'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Continue to booking'));
+      await tester.pumpAndSettle();
+
+      router.pop();
+      await tester.pumpAndSettle();
+      expect(find.text('Services'), findsOneWidget);
+      expect(find.text('Active Clinic'), findsOneWidget);
+      expect(find.text('Continue to booking'), findsNothing);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'completes Services to Booking success to Visits without a stale sheet',
+    (tester) async {
+      final booking = CustomerBookingController(
+        repository: _FlowBookingRepository(),
+      );
+      final visits = CustomerVisitsController(
+        repository: _FlowVisitsRepository(),
+      );
+      final router = GoRouter(
+        initialLocation: '/services',
+        routes: [
+          GoRoute(
+            path: '/services',
+            builder: (_, __) => Scaffold(
+              body: CustomerServicesScreen(controller: _ClinicController()),
+            ),
+          ),
+          GoRoute(
+            path: '/portal/customer/book-appointment',
+            builder: (_, __) =>
+                Scaffold(body: CustomerBookingScreen(controller: booking)),
+          ),
+          GoRoute(
+            path: '/portal/customer/appointments',
+            builder: (_, __) =>
+                Scaffold(body: CustomerVisitsScreen(controller: visits)),
+          ),
+        ],
+      );
+      await tester.pumpWidget(MaterialApp.router(routerConfig: router));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Active Clinic'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Continue to booking'));
+      await tester.pumpAndSettle();
+      expect(find.text('Book a visit'), findsOneWidget);
+      await tester.scrollUntilVisible(
+        find.text('Send visit request'),
+        180,
+        scrollable: find.byType(Scrollable).last,
+      );
+      await tester.tap(find.text('Send visit request'));
+      await tester.pumpAndSettle();
+      expect(find.text('Visit request sent'), findsOneWidget);
+
+      await tester.tap(find.text('View visits'));
+      await tester.pumpAndSettle();
+      expect(find.text('My Visits'), findsOneWidget);
+      expect(find.text('Active Clinic'), findsOneWidget);
+      expect(find.text('Request pending'), findsOneWidget);
+      expect(find.text('Continue to booking'), findsNothing);
+      expect(tester.takeException(), isNull);
+    },
+  );
 }
 
 class _Controller extends CustomerServicesController {
@@ -165,4 +265,42 @@ class _BookingRepository extends CustomerBookingRepository {
     typeLabel: 'Consultation',
     availabilityLabel: 'Available',
   );
+}
+
+class _FlowBookingRepository extends _BookingRepository {
+  @override
+  Future<Appointment> submit({
+    required CustomerProvider provider,
+    required DateTime preferredDateTime,
+    String? notes,
+  }) async => Appointment(
+    id: '13',
+    uuid: 'appointment-13',
+    customerId: '7',
+    providerId: provider.id,
+    type: AppointmentType.clinic,
+    appointmentDate: preferredDateTime,
+    status: AppointmentStatus.pending,
+    doctorName: provider.name,
+    createdAt: preferredDateTime,
+    updatedAt: preferredDateTime,
+  );
+}
+
+class _FlowVisitsRepository extends CustomerVisitsRepository {
+  @override
+  Future<List<Appointment>> list() async => [
+    Appointment(
+      id: '13',
+      uuid: 'appointment-13',
+      customerId: '7',
+      providerId: 'clinic-1',
+      type: AppointmentType.clinic,
+      appointmentDate: DateTime(2026, 8, 13, 11),
+      status: AppointmentStatus.pending,
+      doctorName: 'Active Clinic',
+      createdAt: DateTime(2026, 8, 13, 10),
+      updatedAt: DateTime(2026, 8, 13, 10),
+    ),
+  ];
 }

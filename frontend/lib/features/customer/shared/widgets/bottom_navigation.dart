@@ -39,8 +39,11 @@ class CustomerBottomNavigation extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final effectiveSectionKey = activeSectionKey == 'book-appointment'
+        ? 'services'
+        : activeSectionKey;
     final selectedIndex = _items.indexWhere(
-      (item) => item.sectionKey == activeSectionKey,
+      (item) => item.sectionKey == effectiveSectionKey,
     );
     final effectiveIndex = selectedIndex >= 0 ? selectedIndex : 0;
 
@@ -51,7 +54,7 @@ class CustomerBottomNavigation extends StatelessWidget {
       selectedIndex: effectiveIndex,
       onDestinationSelected: (index) {
         final item = _items[index];
-        if (item.sectionKey == activeSectionKey) {
+        if (item.sectionKey == effectiveSectionKey) {
           return;
         }
         context.go(

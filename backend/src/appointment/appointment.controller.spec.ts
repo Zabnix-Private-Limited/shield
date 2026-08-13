@@ -36,8 +36,8 @@ describe('AppointmentController customer scope', () => {
   it('projects customer appointments without private provider or customer fields', async () => {
     appointmentService.list.mockResolvedValue([
       {
-        id: 9n,
-        uuid: '00000000-0000-0000-0000-000000000009',
+        id: 13n,
+        uuid: '00000000-0000-0000-0000-000000000013',
         customerId: 11n,
         providerId: 7n,
         appointmentType: 'CLINIC',
@@ -59,7 +59,7 @@ describe('AppointmentController customer scope', () => {
     const appointment = result.data[0];
 
     expect(appointment).toMatchObject({
-      id: '9',
+      id: '13',
       customerId: '11',
       provider: { id: '7', providerName: 'Active Clinic', providerType: 'CLINIC' },
     });

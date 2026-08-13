@@ -14,6 +14,17 @@ void main() {
     controller.setFilter(CustomerVisitsFilter.cancelled);
     expect(controller.visible.map((item) => item.id), ['3']);
   });
+
+  test('keeps pending customer requests in the upcoming visit list', () async {
+    final controller = CustomerVisitsController(
+      repository: _PendingRepository(),
+    );
+    await controller.load();
+
+    expect(controller.visible.single.id, '13');
+    expect(controller.visible.single.status, AppointmentStatus.pending);
+    expect(controller.visible.single.statusLabel, 'Request pending');
+  });
 }
 
 class _Repository extends CustomerVisitsRepository {
@@ -35,3 +46,10 @@ Appointment _appointment(String id, AppointmentStatus status) => Appointment(
   createdAt: DateTime(2026, 8, 8),
   updatedAt: DateTime(2026, 8, 8),
 );
+
+class _PendingRepository extends CustomerVisitsRepository {
+  @override
+  Future<List<Appointment>> list() async => [
+    _appointment('13', AppointmentStatus.pending),
+  ];
+}

@@ -7,7 +7,10 @@ import 'package:shield/features/customer/services/data/models/customer_provider.
 import 'package:shield/features/customer/visits/data/customer_visits_repository.dart';
 import 'package:shield/features/customer/visits/presentation/customer_visits_controller.dart';
 import 'package:shield/features/customer/visits/presentation/customer_visits_screen.dart';
+import 'package:shield/features/customer/shared/widgets/bottom_navigation.dart';
+import 'package:shield/features/customer/shared/widgets/customer_scaffold.dart';
 import 'package:shield/features/portal/presentation/screens/portal_shell.dart';
+import 'package:shield/features/portal/presentation/portal_role_data.dart';
 import 'package:shield/shared/models/appointment.dart';
 import 'package:shield/shared/models/shield_role.dart';
 
@@ -80,6 +83,66 @@ void main() {
       addTearDown(() => tester.binding.setSurfaceSize(null));
     },
   );
+
+  testWidgets(
+    'booking retains Services and visits retain Visits in bottom navigation',
+    (tester) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            bottomNavigationBar: CustomerBottomNavigation(
+              activeSectionKey: 'book-appointment',
+            ),
+          ),
+        ),
+      );
+      expect(
+        tester.widget<NavigationBar>(find.byType(NavigationBar)).selectedIndex,
+        2,
+      );
+
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            bottomNavigationBar: CustomerBottomNavigation(
+              activeSectionKey: 'appointments',
+            ),
+          ),
+        ),
+      );
+      expect(
+        tester.widget<NavigationBar>(find.byType(NavigationBar)).selectedIndex,
+        3,
+      );
+    },
+  );
+
+  testWidgets('visits owns vertical scrolling in the customer scaffold', (
+    tester,
+  ) async {
+    final portal = portalDataForRole(SHIELDRole.customer);
+    await tester.binding.setSurfaceSize(const Size(390, 800));
+    await tester.pumpWidget(
+      MaterialApp(
+        home: CustomerScaffold(
+          portal: portal,
+          section: portal.sectionFor('appointments'),
+          activeSectionKey: 'appointments',
+          body: CustomerVisitsScreen(
+            controller: CustomerVisitsController(
+              repository: _VisitsRepository(),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('My Visits'), findsOneWidget);
+    expect(find.byType(ListView), findsOneWidget);
+    expect(tester.takeException(), isNull);
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+  });
 }
 
 class _BookingRepository extends CustomerBookingRepository {}

@@ -42,8 +42,12 @@ class _CustomerAppBarState extends State<CustomerAppBar> {
   @override
   void initState() {
     super.initState();
-    _dashboardController = DashboardController()..load();
-    _unreadNotificationsFuture = _loadUnreadNotifications();
+    _dashboardController = DashboardController();
+    _unreadNotificationsFuture = Future<int?>.value(null);
+    if (_isMainPage) {
+      _dashboardController.load();
+      _unreadNotificationsFuture = _loadUnreadNotifications();
+    }
   }
 
   @override

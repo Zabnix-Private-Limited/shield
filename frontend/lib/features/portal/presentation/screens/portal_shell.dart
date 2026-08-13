@@ -695,6 +695,7 @@ class _RoleContent extends StatelessWidget {
         isCustomerRewards ||
         isCustomerServices ||
         isCustomerBooking ||
+        isCustomerAppointments ||
         isCustomerOrders ||
         isCustomerReferrals ||
         isCustomerActivity;
@@ -6346,6 +6347,8 @@ class _CustomerNotificationsViewState
 
 Color _appointmentAccent(AppointmentStatus status) {
   switch (status) {
+    case AppointmentStatus.pending:
+      return AppColors.warning;
     case AppointmentStatus.completed:
       return AppColors.shieldGreen;
     case AppointmentStatus.cancelled:
@@ -6363,6 +6366,8 @@ Color _appointmentAccent(AppointmentStatus status) {
 
 IconData _appointmentIcon(AppointmentStatus status) {
   switch (status) {
+    case AppointmentStatus.pending:
+      return Icons.hourglass_top_rounded;
     case AppointmentStatus.completed:
       return Icons.task_alt_rounded;
     case AppointmentStatus.cancelled:

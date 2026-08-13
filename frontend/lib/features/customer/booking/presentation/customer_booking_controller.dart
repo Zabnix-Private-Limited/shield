@@ -76,6 +76,11 @@ class CustomerBookingController extends ChangeNotifier {
     if (isSubmitting || completedAppointment != null || provider == null) {
       return;
     }
+    if (!preferredDateTime.isAfter(DateTime.now())) {
+      error = StateError('Choose a preferred date and time in the future.');
+      notifyListeners();
+      return;
+    }
     isSubmitting = true;
     error = null;
     completedAppointment = null;

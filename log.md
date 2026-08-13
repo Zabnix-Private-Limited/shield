@@ -11497,3 +11497,47 @@ px prisma validate, Nest build, 17 focused Documents/Pharmacy controller tests, 
 - **Backend Files:** None. The existing appointment endpoint continues to validate an active provider and accepts the authoritative provider ID; no database/schema action was taken.
 - **Verification:** lutter analyze over portal shell, Customer Booking, Customer Services, customer auth session, API service, and new regression tests completed with no issues. Focused Services, Booking, Visits, and portal-route tests passed (8 tests). git diff --check passed.
 - **Runtime boundary:** No live-browser/manual authenticated UAT, backend request, Sentry configuration change, database action, or deployment was performed. Sentry 429 remains unrelated rate-limit noise; no error reporting was suppressed.
+## 43. Customer Services → Booking → Visits production-flow repair — 2026-08-13 13:09:31 IST
+
+- **Issue evidence and root causes:**
+  - Provider-specific Booking was launched from inside the provider ModalBottomSheetRoute; the sheet was neither completed nor removed before router navigation, leaving a stale modal in the navigator stack.
+  - CustomerVisitsScreen owns a vertical ListView, but ppointments was absent from _RoleContent.customerContentOwnsScroll. The shell wrapped it in a vertical SingleChildScrollView, recreating the unbounded-viewport cascade that had already affected Services and Booking.
+  - The backend returns newly created customer requests with PENDING; the frontend previously collapsed unrecognised values to Scheduled. It did not filter them out, but it failed to communicate their requested state accurately.
+- **Frontend Files:**
+  - rontend/lib/features/customer/services/presentation/screens/customer_services_screen.dart
+    - Make the sheet return the resolved authoritative CustomerProvider, then navigate only after showModalBottomSheet completes. This closes the modal before routing, preserves the canonical provider ID/type, and prevents a stale provider sheet from resurfacing above Visits.
+  - rontend/lib/features/portal/presentation/screens/portal_shell.dart
+    - Mark ppointments as a scroll-owning customer section so CustomerVisitsScreen receives a bounded portal body rather than nested vertical scrolling.
+  - rontend/lib/features/customer/shared/widgets/bottom_navigation.dart
+    - Treat transactional ook-appointment as a Services child for active bottom-navigation state. ppointments continues to select Visits.
+  - rontend/lib/shared/models/appointment.dart
+    - Parse PENDING, REQUESTED, and WAITING customer requests explicitly and render them as Request pending; provider ID/name/type from the customer-safe appointment projection remain intact.
+  - rontend/lib/features/customer/booking/presentation/customer_booking_controller.dart
+    - Reject a preferred datetime that is no longer in the future, without inventing a lead-time policy; existing double-submit protection remains.
+  - rontend/lib/features/customer/shared/widgets/customer_app_bar.dart and rontend/lib/features/customer/dashboard/data/repositories/dashboard_repository.dart
+    - Stop transactional subpage headers from loading dashboard/notification data they do not render. Add a one-minute per-customer in-memory dashboard cache with single-flight request sharing for main-header instances; explicit refresh/invalidation still bypasses/clears it.
+- **Backend Files:**
+  - ackend/src/appointment/appointment.controller.spec.ts
+    - Assert customer appointment projection preserves a new pending request reference (13) and its customer-safe provider data. No controller/service/schema mutation was needed: AppointmentService.list has no status exclusion, and GET /appointments returns all customer-owned statuses.
+- **Test Files:**
+  - rontend/test/customer_services_screen_test.dart, customer_booking_controller_test.dart, customer_booking_visits_responsive_test.dart, customer_visits_controller_test.dart, customer_appointment_model_test.dart
+    - Cover provider ID handoff, modal disappearance on route change, Booking/Visits bounded scroll ownership, navigation selection, pending request visibility, parser projection, valid/double submission, and past preferred-time rejection.
+- **Performance findings:** Source inspection confirms Services categories/providers are fetched concurrently. Current DB truth already has ppointments indexes for customer/date/provider/status, so no speculative schema migration was created. The deployed multi-second /me, directory, and dashboard timings cannot be attributed to a Prisma stage from client timings alone; no production tracing/DB query plan was available. The redundant header dashboard request on Booking and other subpages was removed, and duplicate simultaneous main-header dashboard loads are coalesced.
+- **Verification:** Focused frontend test suite passed (13 tests). lutter analyze on 11 changed Customer/portal/shared/test files passed with no issues. Backend focused Jest appointment + provider directory tests passed (5 tests). git diff --check passed.
+- **Runtime boundary:** No production browser/authenticated UAT, production trace, DB mutation, migration, or deployment was run. The extension/feedback runtime noise and Sentry ingestion 429 were not modified.
+## 44. Customer flow end-to-end widget regression — 2026-08-13 13:15:15 IST
+
+- **Frontend Test Files:**
+  - rontend/test/customer_services_screen_test.dart
+    - Add an end-to-end routed widget regression: Services provider → provider bottom sheet → Continue to booking → preselected provider → submit request → success → View visits. The test scrolls to the Booking submit action, asserts the PENDING reference appears in Visits, asserts the provider modal action is absent, and checks for no Flutter exception.
+- **Backend Files:** None.
+- **Verification:** lutter analyze on 13 Customer/portal/shared/model/test targets completed with no issues. Focused Customer Services, Booking, Visits, appointment-model, and portal-route suite passed (16 tests). No live browser, production API, database, or deployment test was run.
+## 45. Customer back-stack and Visits state regression coverage — 2026-08-13 13:18:20 IST
+
+- **Frontend Test Files:**
+  - rontend/test/customer_services_screen_test.dart
+    - Verify router back from provider-specific Booking returns to Services without reopening the bottom sheet.
+  - rontend/test/customer_visits_screen_test.dart
+    - Verify Visits renders a progress indicator while loading, an explicit empty state after an empty response, and a retryable Visits unavailable state after a malformed/failing repository response; none can degrade to a blank surface.
+- **Backend Files:** None.
+- **Verification:** Focused Customer Services, Booking, Visits, appointment model, and portal-route suite passed (19 tests). lutter analyze on changed test and Visits presentation targets reported no issues. No authenticated production/browser UAT was run.

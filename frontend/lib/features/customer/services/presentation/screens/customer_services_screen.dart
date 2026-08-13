@@ -249,7 +249,7 @@ class _CustomerServicesScreenState extends State<CustomerServicesScreen> {
       final provider = _controller.page.items
           .where((item) => item.id == id)
           .firstOrNull;
-      await showModalBottomSheet<void>(
+      final selectedProvider = await showModalBottomSheet<CustomerProvider>(
         context: context,
         useSafeArea: true,
         isScrollControlled: true,
@@ -258,15 +258,15 @@ class _CustomerServicesScreenState extends State<CustomerServicesScreen> {
           provider: provider,
           loadDetails: _controller.provider,
           actionLabelForType: _providerActionLabel,
-          onAction: (resolvedProvider) => _openProviderAction(
-            type: resolvedProvider.type,
-            providerId: resolvedProvider.id,
-          ),
+          onAction: (resolvedProvider) =>
+              Navigator.of(sheetContext).pop(resolvedProvider),
         ),
       );
-      if (mounted &&
-          _routeUri(context).queryParameters.containsKey('provider')) {
-        context.pop();
+      if (mounted && selectedProvider != null) {
+        _openProviderAction(
+          type: selectedProvider.type,
+          providerId: selectedProvider.id,
+        );
       }
     } finally {
       _openingProvider = false;

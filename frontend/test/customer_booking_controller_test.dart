@@ -20,6 +20,21 @@ void main() {
       expect(repository.submissions, 1);
     },
   );
+
+  test('rejects a preferred time that is already in the past', () async {
+    final repository = _Repository();
+    final controller = CustomerBookingController(repository: repository);
+    controller.selectProvider(await repository.provider('7'));
+    controller.setPreferredDateTime(
+      DateTime.now().subtract(const Duration(minutes: 1)),
+    );
+
+    await controller.submit();
+
+    expect(controller.completedAppointment, isNull);
+    expect(repository.submissions, 0);
+    expect(controller.error, isA<StateError>());
+  });
 }
 
 class _Repository extends CustomerBookingRepository {

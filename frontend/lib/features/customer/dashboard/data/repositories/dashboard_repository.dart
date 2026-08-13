@@ -11,11 +11,37 @@ class DashboardRepository {
 
   final DashboardRemoteDataSource _remote;
   final DashboardLocalDataSource _local;
+  static const _memoryCacheTtl = Duration(minutes: 1);
+  static final Map<String, _DashboardMemoryEntry> _memoryCache = {};
+  static final Map<String, Future<DashboardModel>> _inFlight = {};
 
   Future<DashboardModel> loadDashboard(String customerId) async {
+    final cached = _memoryCache[customerId];
+    if (cached != null &&
+        DateTime.now().difference(cached.fetchedAt) < _memoryCacheTtl) {
+      return cached.model;
+    }
+    final existing = _inFlight[customerId];
+    if (existing != null) return existing;
+    final request = _loadAndCache(customerId);
+    _inFlight[customerId] = request;
+    try {
+      return await request;
+    } finally {
+      if (identical(_inFlight[customerId], request)) {
+        _inFlight.remove(customerId);
+      }
+    }
+  }
+
+  Future<DashboardModel> _loadAndCache(String customerId) async {
     try {
       final dashboard = await _remote.fetch(customerId);
       await _local.save(customerId, dashboard);
+      _memoryCache[customerId] = _DashboardMemoryEntry(
+        model: dashboard,
+        fetchedAt: DateTime.now(),
+      );
       return dashboard;
     } catch (_) {
       final cached = await _local.load(customerId);
@@ -29,10 +55,23 @@ class DashboardRepository {
   Future<DashboardModel> refreshDashboard(String customerId) async {
     final dashboard = await _remote.fetch(customerId);
     await _local.save(customerId, dashboard);
+    _memoryCache[customerId] = _DashboardMemoryEntry(
+      model: dashboard,
+      fetchedAt: DateTime.now(),
+    );
     return dashboard;
   }
 
-  Future<void> invalidateCache(String customerId) {
-    return _local.clear(customerId);
+  Future<void> invalidateCache(String customerId) async {
+    _memoryCache.remove(customerId);
+    _inFlight.remove(customerId);
+    await _local.clear(customerId);
   }
+}
+
+class _DashboardMemoryEntry {
+  const _DashboardMemoryEntry({required this.model, required this.fetchedAt});
+
+  final DashboardModel model;
+  final DateTime fetchedAt;
 }
