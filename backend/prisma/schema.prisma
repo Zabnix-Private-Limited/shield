@@ -118,6 +118,7 @@ model User {
   createdCustomers                 Customer[]                 @relation("CustomerCreatedBy")
   approvedCustomers                Customer[]                 @relation("CustomerApprovedBy")
   customerStatusHistory            CustomerStatusHistory[]
+  reviewedMembershipApplications   MembershipApplication[]
   walletTransactions               WalletTransaction[]
   cashWalletTransactions           CashWalletTransaction[]
   rewardPointTransactionsCreated   RewardPointTransaction[]   @relation("RewardPointTransactionCreatedBy")
@@ -237,6 +238,7 @@ model Customer {
   customerPreferences            CustomerPreference?
   customerStatusHistory          CustomerStatusHistory[]
   membership                     Membership?
+  membershipApplications         MembershipApplication[]
   shieldCard                     ShieldCard?
   wallet                         Wallet?
   creditAccount                  CreditAccount?
@@ -256,8 +258,8 @@ model Customer {
   authDevices                    AuthDevice[]
   authSessions                   AuthSession[]
   loginHistory                   LoginHistory[]
-  referralRewardEventsAsReferrer ReferralRewardEvent[]   @relation("ReferralRewardReferrer")
-  referralRewardEventsAsReferred ReferralRewardEvent[]   @relation("ReferralRewardReferred")
+  referralRewardEventsAsReferrer ReferralRewardEvent[]         @relation("ReferralRewardReferrer")
+  referralRewardEventsAsReferred ReferralRewardEvent[]         @relation("ReferralRewardReferred")
   pricingRuleAudits              PricingRuleAudit[]
 
   @@index([mobile], map: "idx_customer_mobile")
@@ -389,6 +391,27 @@ model Membership {
   membershipType MembershipType? @relation(fields: [membershipTypeId], references: [id])
 
   @@map("memberships")
+}
+
+model MembershipApplication {
+  id           BigInt    @id @default(autoincrement())
+  uuid         String    @unique @db.Uuid
+  customerId   BigInt    @map("customer_id")
+  status       String    @default("PENDING") @db.VarChar(50)
+  reference    String    @unique @db.VarChar(100)
+  reviewReason String?   @map("review_reason") @db.Text
+  reviewedBy   BigInt?   @map("reviewed_by")
+  submittedAt  DateTime  @default(now()) @map("submitted_at") @db.Timestamptz(6)
+  reviewedAt   DateTime? @map("reviewed_at") @db.Timestamptz(6)
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  reviewer User?    @relation(fields: [reviewedBy], references: [id])
+
+  @@index([customerId, status], map: "idx_membership_applications_customer_status")
+  @@index([submittedAt], map: "idx_membership_applications_submitted_at")
+  @@map("membership_applications")
 }
 
 model ShieldCard {
@@ -687,9 +710,9 @@ model ServiceProvider {
   providerType String? @map("provider_type") @db.VarChar(100)
   status       String? @db.VarChar(50)
 
-  business     Business?     @relation(fields: [businessId], references: [id])
-  purchases    Purchase[]
-  appointments Appointment[]
+  business                     Business?                     @relation(fields: [businessId], references: [id])
+  purchases                    Purchase[]
+  appointments                 Appointment[]
   prescriptionPharmacyRequests PrescriptionPharmacyRequest[]
 
   @@map("service_providers")
@@ -876,14 +899,14 @@ model Document {
   status       String?  @db.VarChar(50)
   createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
 
-  customer                Customer?                @relation(fields: [customerId], references: [id])
-  uploadedByUser          User?                    @relation(fields: [uploadedBy], references: [id])
-  documentClassifications DocumentClassification[]
-  documentExtractions     DocumentExtraction[]
-  documentProcessingLogs  DocumentProcessingLog[]
-  prescriptions           Prescription[]
+  customer                     Customer?                     @relation(fields: [customerId], references: [id])
+  uploadedByUser               User?                         @relation(fields: [uploadedBy], references: [id])
+  documentClassifications      DocumentClassification[]
+  documentExtractions          DocumentExtraction[]
+  documentProcessingLogs       DocumentProcessingLog[]
+  prescriptions                Prescription[]
   prescriptionPharmacyRequests PrescriptionPharmacyRequest[]
-  labReports              LabReport[]
+  labReports                   LabReport[]
 
   @@map("documents")
 }
