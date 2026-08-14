@@ -5,6 +5,9 @@ describe('CustomerMembershipController card routes', () => {
     getCardProfile: jest.fn(),
     listPhysicalCardRequests: jest.fn(),
     requestPhysicalCard: jest.fn(),
+    submitMembershipApplication: jest.fn(),
+    getCustomerMembershipApplication: jest.fn(),
+    reviewMembershipApplication: jest.fn(),
   };
   const agentScope = { assertAgentCanAccessCustomer: jest.fn() };
   const controller = new CustomerMembershipController(
@@ -31,5 +34,39 @@ describe('CustomerMembershipController card routes', () => {
     await controller.requestCard(customer);
     expect(service.listPhysicalCardRequests).toHaveBeenCalledWith(11n);
     expect(service.requestPhysicalCard).toHaveBeenCalledWith(11n);
+  });
+
+  it('derives membership applications only from the authenticated customer', async () => {
+    service.submitMembershipApplication.mockResolvedValue({
+      status: 'PENDING',
+    });
+    service.getCustomerMembershipApplication.mockResolvedValue({
+      status: 'PENDING',
+    });
+    await controller.submitApplication(customer);
+    await controller.getApplication(customer);
+    expect(service.submitMembershipApplication).toHaveBeenCalledWith(11n);
+    expect(service.getCustomerMembershipApplication).toHaveBeenCalledWith(11n);
+  });
+
+  it('does not let a customer review an application', async () => {
+    await expect(
+      controller.reviewApplication('9', { status: 'APPROVED' }, customer),
+    ).rejects.toThrow('Authorized staff context is required');
+    expect(service.reviewMembershipApplication).not.toHaveBeenCalled();
+  });
+
+  it('passes an authorized staff review to the service', async () => {
+    service.reviewMembershipApplication.mockResolvedValue({
+      status: 'APPROVED',
+    });
+    const staff = { principalType: 'USER', userId: '7' } as any;
+    await controller.reviewApplication('9', { status: 'APPROVED' }, staff);
+    expect(service.reviewMembershipApplication).toHaveBeenCalledWith(
+      9n,
+      7n,
+      'APPROVED',
+      undefined,
+    );
   });
 });

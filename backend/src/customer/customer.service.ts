@@ -39,6 +39,127 @@ export class CustomerService {
     });
   }
 
+  private membershipApplicationView(application: any) {
+    if (!application) return null;
+    return {
+      id: application.id.toString(),
+      uuid: application.uuid,
+      reference: application.reference,
+      status: application.status,
+      submittedAt: application.submittedAt,
+      reviewedAt: application.reviewedAt,
+      reason: application.reviewReason,
+    };
+  }
+
+  async getCustomerMembershipApplication(customerId: bigint) {
+    const application = await this.prisma.membershipApplication.findFirst({
+      where: { customerId },
+      orderBy: [{ submittedAt: 'desc' }, { id: 'desc' }],
+    });
+    return this.membershipApplicationView(application);
+  }
+
+  async submitMembershipApplication(customerId: bigint) {
+    return this.prisma.$transaction(async (tx) => {
+      const customer = await tx.customer.findFirst({
+        where: { id: customerId, deletedAt: null },
+        include: { membership: true },
+      });
+      if (!customer) {
+        throw new NotFoundException(`Customer with ID ${customerId} not found`);
+      }
+      if (customer.membership?.status?.trim().toUpperCase() === 'ACTIVE') {
+        throw new ConflictException(
+          'An active membership already exists for this customer.',
+        );
+      }
+      const activeApplication = await tx.membershipApplication.findFirst({
+        where: { customerId, status: { in: ['PENDING', 'APPROVED'] } },
+        orderBy: [{ submittedAt: 'desc' }, { id: 'desc' }],
+      });
+      if (activeApplication) {
+        throw new ConflictException(
+          'A membership application is already being processed.',
+        );
+      }
+      const application = await tx.membershipApplication.create({
+        data: {
+          uuid: randomUUID(),
+          customerId,
+          reference: `MAP-${new Date().getFullYear()}-${randomUUID().replace(/-/g, '').slice(0, 10).toUpperCase()}`,
+          status: 'PENDING',
+        },
+      });
+      await tx.activityEvent.create({
+        data: {
+          uuid: randomUUID(),
+          customerId,
+          activityType: 'MEMBERSHIP_APPLICATION_SUBMITTED',
+          relatedEntityType: 'membership_application',
+          relatedEntityId: application.id,
+          status: 'PENDING',
+          description: 'Customer submitted a membership application.',
+        },
+      });
+      return this.membershipApplicationView(application);
+    });
+  }
+
+  async reviewMembershipApplication(
+    applicationId: bigint,
+    staffUserId: bigint,
+    requestedStatus?: string,
+    reason?: string,
+  ) {
+    const status = requestedStatus?.trim().toUpperCase();
+    if (status !== 'APPROVED' && status !== 'REJECTED') {
+      throw new BadRequestException(
+        'Review status must be APPROVED or REJECTED.',
+      );
+    }
+    if (status === 'REJECTED' && !reason?.trim()) {
+      throw new BadRequestException(
+        'A customer-visible rejection reason is required.',
+      );
+    }
+    return this.prisma.$transaction(async (tx) => {
+      const application = await tx.membershipApplication.findUnique({
+        where: { id: applicationId },
+      });
+      if (!application)
+        throw new NotFoundException('Membership application not found.');
+      if (application.status !== 'PENDING') {
+        throw new ConflictException(
+          'Only pending membership applications can be reviewed.',
+        );
+      }
+      const reviewed = await tx.membershipApplication.update({
+        where: { id: applicationId },
+        data: {
+          status,
+          reviewReason: reason?.trim() || null,
+          reviewedAt: new Date(),
+          reviewedBy: staffUserId,
+        },
+      });
+      await tx.activityEvent.create({
+        data: {
+          uuid: randomUUID(),
+          customerId: application.customerId,
+          activityType: `MEMBERSHIP_APPLICATION_${status}`,
+          relatedEntityType: 'membership_application',
+          relatedEntityId: applicationId,
+          agentUserId: staffUserId,
+          createdBy: staffUserId,
+          status,
+          description: `Membership application ${status.toLowerCase()} by staff.`,
+        },
+      });
+      return this.membershipApplicationView(reviewed);
+    });
+  }
+
   async create(data: any, staffUserId?: bigint) {
     const result = await this.createCustomerAggregate(data, staffUserId);
     const preloadConfig = await this.getSafePreloadConfig();
@@ -105,6 +226,10 @@ export class CustomerService {
         membership: { include: { membershipType: true } },
         shieldCard: true,
         wallet: true,
+        membershipApplications: {
+          orderBy: [{ submittedAt: 'desc' }, { id: 'desc' }],
+          take: 1,
+        },
         creditAccount: true,
       },
     });
@@ -129,6 +254,10 @@ export class CustomerService {
           },
         },
         wallet: true,
+        membershipApplications: {
+          orderBy: [{ submittedAt: 'desc' }, { id: 'desc' }],
+          take: 1,
+        },
       },
     });
 
@@ -147,7 +276,11 @@ export class CustomerService {
           where: {
             subscriptionId: subscription.id,
             monthStart: {
-              lte: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0),
+              lte: new Date(
+                new Date().getFullYear(),
+                new Date().getMonth() + 1,
+                0,
+              ),
             },
           },
           orderBy: { monthStart: 'desc' },
@@ -156,6 +289,9 @@ export class CustomerService {
 
     return {
       customerId: customer.id.toString(),
+      membershipApplication: this.membershipApplicationView(
+        customer.membershipApplications[0],
+      ),
       membership: customer.membership
         ? {
             id: customer.membership.id.toString(),

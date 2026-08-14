@@ -7,7 +7,8 @@ import '../../../../../shared/models/wallet.dart';
 
 class DashboardEntity {
   final Customer customer;
-  final Membership membership;
+  final Membership? membership;
+  final MembershipApplicationEntity? membershipApplication;
   final DashboardWalletSummary wallet;
   final List<Appointment> appointments;
   final List<WalletTransaction> recentActivity;
@@ -20,6 +21,7 @@ class DashboardEntity {
   const DashboardEntity({
     required this.customer,
     required this.membership,
+    required this.membershipApplication,
     required this.wallet,
     required this.appointments,
     required this.recentActivity,
@@ -29,6 +31,24 @@ class DashboardEntity {
     required this.quickActions,
     required this.services,
   });
+}
+
+class MembershipApplicationEntity {
+  const MembershipApplicationEntity({
+    required this.id,
+    required this.reference,
+    required this.status,
+    required this.submittedAt,
+    this.reviewedAt,
+    this.reason,
+  });
+
+  final String id;
+  final String reference;
+  final String status;
+  final DateTime submittedAt;
+  final DateTime? reviewedAt;
+  final String? reason;
 }
 
 class DashboardBannerEntity {

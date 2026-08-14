@@ -3,7 +3,6 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../../app/theme/app_colors.dart';
 import '../../../../../app/theme/app_typography.dart';
-import '../../../shared/domain/customer_access_state.dart';
 import '../../../../customer/shared/widgets/error_card.dart';
 import '../../../../customer/shared/widgets/empty_state.dart';
 import '../controllers/dashboard_controller.dart';
@@ -68,11 +67,6 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> {
         final unreadNotificationCount = dashboard.notifications
             .where((notification) => !notification.isRead)
             .length;
-        final accessState = CustomerAccessState(
-          customer: dashboard.customer,
-          customerStatus: dashboard.customer.status,
-          membership: dashboard.membership,
-        );
 
         return RefreshIndicator(
           onRefresh: _controller.refresh,
@@ -88,8 +82,8 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> {
               GreetingHeader(
                 customer: dashboard.customer,
                 membership: dashboard.membership,
-                accessState: accessState,
-                quickActions: dashboard.quickActions,
+                application: dashboard.membershipApplication,
+                controller: _controller,
               ),
               const SizedBox(height: 20),
               LayoutBuilder(

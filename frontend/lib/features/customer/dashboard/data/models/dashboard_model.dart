@@ -14,6 +14,7 @@ class DashboardModel extends DashboardEntity with EquatableMixin {
   const DashboardModel({
     required super.customer,
     required super.membership,
+    required super.membershipApplication,
     required super.wallet,
     required super.appointments,
     required super.recentActivity,
@@ -28,9 +29,9 @@ class DashboardModel extends DashboardEntity with EquatableMixin {
     final customer = Customer.fromJson(
       Map<String, dynamic>.from(json['customer'] as Map? ?? const {}),
     );
-    final membershipPayload = Map<String, dynamic>.from(
-      json['membership'] as Map? ?? const {},
-    );
+    final membershipPayload = json['membership'] is Map
+        ? Map<String, dynamic>.from(json['membership'] as Map)
+        : null;
     final transactions = (json['recentActivity'] as List? ?? const [])
         .map(
           (item) => WalletTransaction.fromJson(
@@ -38,14 +39,19 @@ class DashboardModel extends DashboardEntity with EquatableMixin {
           ),
         )
         .toList();
-    final membership = Membership.fromApi(
-      customer: customer,
-      customerPayload: {
-        'membership': membershipPayload,
-        'shieldCard': json['shieldCard'],
-      },
-      transactions: transactions,
-    );
+    final membership = membershipPayload == null
+        ? null
+        : Membership.fromApi(
+            customer: customer,
+            customerPayload: {
+              'membership': membershipPayload,
+              'shieldCard': json['shieldCard'],
+            },
+            transactions: transactions,
+          );
+    final applicationPayload = json['membershipApplication'] is Map
+        ? Map<String, dynamic>.from(json['membershipApplication'] as Map)
+        : null;
     final walletPayload = Map<String, dynamic>.from(
       json['wallet'] as Map? ?? const {},
     );
@@ -53,6 +59,22 @@ class DashboardModel extends DashboardEntity with EquatableMixin {
     return DashboardModel(
       customer: customer,
       membership: membership,
+      membershipApplication: applicationPayload == null
+          ? null
+          : MembershipApplicationEntity(
+              id: (applicationPayload['id'] ?? '').toString(),
+              reference: (applicationPayload['reference'] ?? '').toString(),
+              status: (applicationPayload['status'] ?? 'PENDING').toString(),
+              submittedAt:
+                  DateTime.tryParse(
+                    (applicationPayload['submittedAt'] ?? '').toString(),
+                  ) ??
+                  DateTime.fromMillisecondsSinceEpoch(0),
+              reviewedAt: DateTime.tryParse(
+                (applicationPayload['reviewedAt'] ?? '').toString(),
+              ),
+              reason: applicationPayload['reason']?.toString(),
+            ),
       wallet: DashboardWalletSummary(
         walletId: (walletPayload['walletId'] ?? '').toString(),
         customerId: (walletPayload['customerId'] ?? customer.id).toString(),
@@ -122,6 +144,8 @@ class DashboardModel extends DashboardEntity with EquatableMixin {
   }
 
   Map<String, dynamic> toJson() {
+    final cachedMembership = membership;
+    final cachedApplication = membershipApplication;
     return {
       'customer': {
         'id': customer.id,
@@ -148,25 +172,38 @@ class DashboardModel extends DashboardEntity with EquatableMixin {
         'blood_group': customer.bloodGroup,
         'agent_code': customer.agentCode,
       },
-      'membership': {
-        'id': membership.id,
-        'uuid': membership.uuid,
-        'membershipNumber': membership.customerCode,
-        'status': membership.isActive ? 'ACTIVE' : 'INACTIVE',
-        'activationDate': membership.startDate.toIso8601String(),
-        'expiryDate': membership.endDate.toIso8601String(),
-        'createdAt': membership.createdAt.toIso8601String(),
-        'updatedAt': membership.updatedAt.toIso8601String(),
-        'membershipType': {'name': membership.tierLabel},
-      },
-      if (membership.cardNumber != null ||
-          membership.cardQrPayload != null ||
-          membership.cardStatus != null)
+      'membership': cachedMembership == null
+          ? null
+          : {
+              'id': cachedMembership.id,
+              'uuid': cachedMembership.uuid,
+              'membershipNumber': cachedMembership.customerCode,
+              'status': cachedMembership.isActive ? 'ACTIVE' : 'INACTIVE',
+              'activationDate': cachedMembership.startDate.toIso8601String(),
+              'expiryDate': cachedMembership.endDate.toIso8601String(),
+              'createdAt': cachedMembership.createdAt.toIso8601String(),
+              'updatedAt': cachedMembership.updatedAt.toIso8601String(),
+              'membershipType': {'name': cachedMembership.tierLabel},
+            },
+      'membershipApplication': cachedApplication == null
+          ? null
+          : {
+              'id': cachedApplication.id,
+              'reference': cachedApplication.reference,
+              'status': cachedApplication.status,
+              'submittedAt': cachedApplication.submittedAt.toIso8601String(),
+              'reviewedAt': cachedApplication.reviewedAt?.toIso8601String(),
+              'reason': cachedApplication.reason,
+            },
+      if (cachedMembership != null &&
+          (cachedMembership.cardNumber != null ||
+              cachedMembership.cardQrPayload != null ||
+              cachedMembership.cardStatus != null))
         'shieldCard': {
-          'cardNumber': membership.cardNumber,
-          'qrCode': membership.cardQrPayload,
-          'status': membership.cardStatus,
-          'issuedAt': membership.cardIssuedAt?.toIso8601String(),
+          'cardNumber': cachedMembership.cardNumber,
+          'qrCode': cachedMembership.cardQrPayload,
+          'status': cachedMembership.cardStatus,
+          'issuedAt': cachedMembership.cardIssuedAt?.toIso8601String(),
         },
       'wallet': {
         'walletId': wallet.walletId,
@@ -284,6 +321,8 @@ class DashboardModel extends DashboardEntity with EquatableMixin {
   List<Object?> get props => [
     customer,
     membership,
+    membershipApplication?.id,
+    membershipApplication?.status,
     wallet.walletId,
     wallet.balance,
     wallet.cashBalance,

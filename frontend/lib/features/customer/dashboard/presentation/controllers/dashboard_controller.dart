@@ -54,4 +54,10 @@ class DashboardController extends ChangeNotifier {
   Future<void> invalidateCache() async {
     await _repository.invalidateCache(_resolvedCustomerId);
   }
+
+  Future<void> submitMembershipApplication() async {
+    await ApiService.submitCustomerMembershipApplication();
+    await invalidateCache();
+    await refresh();
+  }
 }

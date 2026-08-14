@@ -79,7 +79,9 @@ export class DashboardService {
       wallet: {
         cashBalance: walletSummary?.cashWallet.available ?? 0,
         rewardPoints: walletSummary?.rewardPoints.available ?? 0,
-        availableCredit: customer.creditAccount ? Number(customer.creditAccount.availableCredit) : 0,
+        availableCredit: customer.creditAccount
+          ? Number(customer.creditAccount.availableCredit)
+          : 0,
       },
       counts: {
         totalAppointments,
@@ -103,6 +105,10 @@ export class DashboardService {
         shieldCard: true,
         wallet: true,
         creditAccount: true,
+        membershipApplications: {
+          orderBy: [{ submittedAt: 'desc' }, { id: 'desc' }],
+          take: 1,
+        },
       },
     });
     if (!customer) {
@@ -116,33 +122,35 @@ export class DashboardService {
       ? await this.walletService.getTransactions(customer.wallet.id, {})
       : [];
 
-    const [appointments, notifications, documents, banners] = await Promise.all([
-      this.prisma.appointment.findMany({
-        where: { customerId },
-        include: { provider: true },
-        orderBy: { appointmentDate: 'desc' },
-        take: 6,
-      }),
-      this.prisma.notification.findMany({
-        where: { customerId },
-        orderBy: [{ sentAt: 'desc' }, { id: 'desc' }],
-        take: 6,
-      }),
-      this.prisma.document.findMany({
-        where: { customerId },
-        include: {
-          documentExtractions: {
-            orderBy: { createdAt: 'asc' },
+    const [appointments, notifications, documents, banners] = await Promise.all(
+      [
+        this.prisma.appointment.findMany({
+          where: { customerId },
+          include: { provider: true },
+          orderBy: { appointmentDate: 'desc' },
+          take: 6,
+        }),
+        this.prisma.notification.findMany({
+          where: { customerId },
+          orderBy: [{ sentAt: 'desc' }, { id: 'desc' }],
+          take: 6,
+        }),
+        this.prisma.document.findMany({
+          where: { customerId },
+          include: {
+            documentExtractions: {
+              orderBy: { createdAt: 'asc' },
+            },
+            documentProcessingLogs: {
+              orderBy: { processedAt: 'asc' },
+            },
           },
-          documentProcessingLogs: {
-            orderBy: { processedAt: 'asc' },
-          },
-        },
-        orderBy: { createdAt: 'desc' },
-        take: 6,
-      }),
-      this.getCustomerBanners(),
-    ]);
+          orderBy: { createdAt: 'desc' },
+          take: 6,
+        }),
+        this.getCustomerBanners(),
+      ],
+    );
 
     return {
       customer: {
@@ -205,6 +213,17 @@ export class DashboardService {
                   status: customer.membership.membershipType.status,
                 }
               : null,
+          }
+        : null,
+      membershipApplication: customer.membershipApplications[0]
+        ? {
+            id: customer.membershipApplications[0].id.toString(),
+            uuid: customer.membershipApplications[0].uuid,
+            reference: customer.membershipApplications[0].reference,
+            status: customer.membershipApplications[0].status,
+            submittedAt: customer.membershipApplications[0].submittedAt,
+            reviewedAt: customer.membershipApplications[0].reviewedAt,
+            reason: customer.membershipApplications[0].reviewReason,
           }
         : null,
       shieldCard: customer.shieldCard
@@ -274,7 +293,9 @@ export class DashboardService {
       return records
         .map((record) => record as Partial<CustomerBanner>)
         .filter((record) => {
-          const audience = Array.isArray(record.audience) ? record.audience : [];
+          const audience = Array.isArray(record.audience)
+            ? record.audience
+            : [];
           const startsAt = record.startAt ? new Date(record.startAt) : null;
           const endsAt = record.endAt ? new Date(record.endAt) : null;
           return (
@@ -287,7 +308,8 @@ export class DashboardService {
             record.ctaRoute?.startsWith('/portal/customer/') &&
             record.placement === 'DASHBOARD' &&
             record.status === 'PUBLISHED' &&
-            (audience.includes('ALL_CUSTOMERS') || audience.includes('CUSTOMER')) &&
+            (audience.includes('ALL_CUSTOMERS') ||
+              audience.includes('CUSTOMER')) &&
             (!startsAt || startsAt <= now) &&
             (!endsAt || endsAt >= now)
           );
@@ -409,8 +431,10 @@ export class DashboardService {
     const toDateLabel = (value?: Date | null) =>
       value ? value.toLocaleDateString() : '';
     const toCurrency = (value: number) => `₹${Number(value || 0).toFixed(2)}`;
-    const mapCustomerTitle = (firstName?: string | null, lastName?: string | null) =>
-      [firstName, lastName].filter(Boolean).join(' ').trim() || 'Customer';
+    const mapCustomerTitle = (
+      firstName?: string | null,
+      lastName?: string | null,
+    ) => [firstName, lastName].filter(Boolean).join(' ').trim() || 'Customer';
 
     const data: any = {
       key: sectionKey,
@@ -644,15 +668,16 @@ export class DashboardService {
         status: complaint.status || 'PENDING',
       }));
     } else if (sectionKey === 'campaigns') {
-      const [activeCustomers, inactiveCustomers, activities] = await Promise.all([
-        this.prisma.customer.count({ where: { status: 'ACTIVE' } }),
-        this.prisma.customer.count({ where: { status: 'INACTIVE' } }),
-        this.prisma.crmActivity.findMany({
-          include: { customer: true },
-          orderBy: { createdAt: 'desc' },
-          take: 8,
-        }),
-      ]);
+      const [activeCustomers, inactiveCustomers, activities] =
+        await Promise.all([
+          this.prisma.customer.count({ where: { status: 'ACTIVE' } }),
+          this.prisma.customer.count({ where: { status: 'INACTIVE' } }),
+          this.prisma.crmActivity.findMany({
+            include: { customer: true },
+            orderBy: { createdAt: 'desc' },
+            take: 8,
+          }),
+        ]);
       data.metrics = [
         {
           label: 'Active Customers',
@@ -714,9 +739,7 @@ export class DashboardService {
         title: mapCustomerTitle(customer.firstName, customer.lastName),
         subtitle: customer.mobile || customer.email || 'No contact details',
         meta:
-          customer.membership?.membershipNumber ||
-          customer.customerCode ||
-          '',
+          customer.membership?.membershipNumber || customer.customerCode || '',
         status: customer.status || 'PENDING',
       }));
     } else if (
@@ -813,10 +836,7 @@ export class DashboardService {
         meta: document.documentType || 'UNSPECIFIED',
         status: document.status || 'UPLOADED',
       }));
-    } else if (
-      sectionKey === 'verification' ||
-      sectionKey === 'qr-scan'
-    ) {
+    } else if (sectionKey === 'verification' || sectionKey === 'qr-scan') {
       const cards = await this.prisma.shieldCard.findMany({
         include: { customer: true, issuedBusiness: true },
         orderBy: { issuedAt: 'desc' },
@@ -885,7 +905,9 @@ export class DashboardService {
         title: setting.code || 'Pricing setting',
         subtitle: setting.valueType || 'VALUE',
         meta: setting.status || '',
-        status: setting.valueText || `${setting.valueNumber ?? setting.valueBoolean ?? ''}`,
+        status:
+          setting.valueText ||
+          `${setting.valueNumber ?? setting.valueBoolean ?? ''}`,
       }));
     } else if (sectionKey === 'businesses') {
       const businesses = await this.prisma.business.findMany({

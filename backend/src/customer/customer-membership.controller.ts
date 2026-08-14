@@ -1,4 +1,12 @@
-import { BadRequestException, Controller, Get, Post, Query } from '@nestjs/common';
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  Get,
+  Param,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { AgentScopeService } from '../auth/agent-scope.service';
 import { CurrentPrincipal } from '../auth/current-principal.decorator';
 import { RequirePermissions } from '../auth/permissions.decorator';
@@ -22,7 +30,18 @@ export class CustomerMembershipController {
     if (customerId?.trim()) {
       return BigInt(customerId);
     }
-    throw new BadRequestException('Authenticated customer context is required.');
+    throw new BadRequestException(
+      'Authenticated customer context is required.',
+    );
+  }
+
+  private resolveAuthenticatedCustomer(principal?: ShieldPrincipal): bigint {
+    if (principal?.principalType === 'CUSTOMER' && principal.customerId) {
+      return BigInt(principal.customerId);
+    }
+    throw new BadRequestException(
+      'Authenticated customer context is required.',
+    );
   }
 
   @RequirePermissions('customers.view')
@@ -62,6 +81,50 @@ export class CustomerMembershipController {
     return {
       success: true,
       data: await this.customerService.listPhysicalCardRequests(customerId),
+    };
+  }
+
+  @RequirePermissions('customers.update')
+  @Post('membership/application')
+  async submitApplication(@CurrentPrincipal() principal?: ShieldPrincipal) {
+    const customerId = this.resolveAuthenticatedCustomer(principal);
+    return {
+      success: true,
+      message: 'Membership application submitted successfully.',
+      data: await this.customerService.submitMembershipApplication(customerId),
+    };
+  }
+
+  @RequirePermissions('customers.view')
+  @Get('membership/application')
+  async getApplication(@CurrentPrincipal() principal?: ShieldPrincipal) {
+    const customerId = this.resolveAuthenticatedCustomer(principal);
+    return {
+      success: true,
+      data: await this.customerService.getCustomerMembershipApplication(
+        customerId,
+      ),
+    };
+  }
+
+  @RequirePermissions('customers.approve')
+  @Post('membership/application/:applicationId/review')
+  async reviewApplication(
+    @Param('applicationId') applicationId: string,
+    @Body() body: { status?: string; reason?: string },
+    @CurrentPrincipal() principal?: ShieldPrincipal,
+  ) {
+    if (principal?.principalType !== 'USER' || !principal.userId) {
+      throw new BadRequestException('Authorized staff context is required.');
+    }
+    return {
+      success: true,
+      data: await this.customerService.reviewMembershipApplication(
+        BigInt(applicationId),
+        BigInt(principal.userId),
+        body.status,
+        body.reason,
+      ),
     };
   }
 

@@ -1438,6 +1438,12 @@ class ApiService {
     return _readEnvelope(response);
   }
 
+  static Future<Map<String, dynamic>>
+  submitCustomerMembershipApplication() async {
+    final response = await _dio.post('/customer/membership/application');
+    return _readEnvelope(response);
+  }
+
   static Future<Membership> getCustomerMembership(String customerId) async {
     final resolvedCustomerId = _requireCustomerId(customerId);
     final customerPayload = await _getCustomerPayload(resolvedCustomerId);

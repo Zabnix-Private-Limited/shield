@@ -407,7 +407,7 @@ model MembershipApplication {
   updatedAt    DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
-  reviewer User?    @relation(fields: [reviewedBy], references: [id])
+  reviewer User?    @relation(fields: [reviewedBy], references: [id], onDelete: SetNull)
 
   @@index([customerId, status], map: "idx_membership_applications_customer_status")
   @@index([submittedAt], map: "idx_membership_applications_submitted_at")

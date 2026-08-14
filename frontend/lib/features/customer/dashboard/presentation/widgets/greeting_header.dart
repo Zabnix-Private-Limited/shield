@@ -5,275 +5,307 @@ import '../../../../../app/theme/app_colors.dart';
 import '../../../../../app/theme/app_typography.dart';
 import '../../../../../shared/models/customer.dart';
 import '../../../../../shared/models/membership.dart';
-import '../../../shared/domain/customer_access_state.dart';
-import '../../../shared/theme/customer_design_tokens.dart';
 import '../../domain/entities/dashboard_entity.dart';
-import 'membership_card.dart';
-import 'quick_actions.dart';
+import '../controllers/dashboard_controller.dart';
+
+enum MembershipDashboardState {
+  noApplication,
+  applicationPending,
+  approvedAwaitingActivation,
+  activeMember,
+  applicationRejected,
+  membershipInactive,
+}
+
+MembershipDashboardState resolveMembershipDashboardState({
+  required Membership? membership,
+  required MembershipApplicationEntity? application,
+}) {
+  final membershipStatus = membership?.membershipStatus.trim().toUpperCase();
+  if (membershipStatus == 'ACTIVE') {
+    return MembershipDashboardState.activeMember;
+  }
+  if (membership != null) return MembershipDashboardState.membershipInactive;
+  switch (application?.status.trim().toUpperCase()) {
+    case 'PENDING':
+      return MembershipDashboardState.applicationPending;
+    case 'APPROVED':
+      return MembershipDashboardState.approvedAwaitingActivation;
+    case 'REJECTED':
+      return MembershipDashboardState.applicationRejected;
+    default:
+      return MembershipDashboardState.noApplication;
+  }
+}
 
 class GreetingHeader extends StatelessWidget {
   const GreetingHeader({
     super.key,
     required this.customer,
     required this.membership,
-    required this.accessState,
-    required this.quickActions,
+    required this.application,
+    required this.controller,
   });
 
   final Customer customer;
-  final Membership membership;
-  final CustomerAccessState accessState;
-  final List<DashboardQuickActionEntity> quickActions;
+  final Membership? membership;
+  final MembershipApplicationEntity? application;
+  final DashboardController controller;
 
   @override
   Widget build(BuildContext context) {
+    final state = resolveMembershipDashboardState(
+      membership: membership,
+      application: application,
+    );
+    final status = switch (state) {
+      MembershipDashboardState.noApplication => 'MEMBERSHIP',
+      MembershipDashboardState.applicationPending => 'PENDING',
+      MembershipDashboardState.approvedAwaitingActivation => 'APPROVED',
+      MembershipDashboardState.activeMember => 'ACTIVE',
+      MembershipDashboardState.applicationRejected => 'REJECTED',
+      MembershipDashboardState.membershipInactive =>
+        membership?.membershipStatus.toUpperCase() ?? 'INACTIVE',
+    };
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF1458D4), Color(0xFF073483)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+        color: AppColors.shieldNavy,
         borderRadius: BorderRadius.circular(20),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      customer.fullName.toUpperCase(),
-                      style: AppTypography.body.copyWith(
-                        color: AppColors.white,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 0.8,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      accessState.serviceAccessEnabled
-                          ? membership.tierLabel
-                          : 'Membership pending approval',
-                      style: AppTypography.small.copyWith(
-                        color: AppColors.white.withValues(alpha: 0.8),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              MembershipCard(status: accessState.heroStatusLabel),
-            ],
-          ),
-          if (!accessState.serviceAccessEnabled) ...[
-            const SizedBox(height: 10),
-            Text(
-              'You can complete your profile and browse loaded products now. Care services unlock only after SHIELD issues your membership card.',
-              style: AppTypography.small.copyWith(
-                color: AppColors.white.withValues(alpha: 0.84),
-              ),
-            ),
-          ],
-          const SizedBox(height: 16),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: AppColors.white.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(
-                CustomerDesignTokens.controlRadius,
-              ),
-              border: Border.all(
-                color: AppColors.white.withValues(alpha: 0.16),
-              ),
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: _MembershipDetail(
-                    label: 'Membership no.',
-                    value: membership.customerCode.isEmpty
-                        ? 'Pending issue'
-                        : membership.customerCode,
+                child: Text(
+                  state == MembershipDashboardState.activeMember
+                      ? customer.fullName.toUpperCase()
+                      : 'Membership',
+                  style: AppTypography.body.copyWith(
+                    color: AppColors.white,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
-                Container(
-                  width: 1,
-                  height: 38,
-                  color: AppColors.white.withValues(alpha: 0.22),
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: InkWell(
-                    onTap: () => context.go('/portal/customer/membership'),
-                    borderRadius: BorderRadius.circular(10),
-                    child: const _MembershipDetail(
-                      label: 'Digital card',
-                      value: 'Tap to view',
-                      icon: Icons.qr_code_rounded,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                child: _MembershipDetail(
-                  label: 'Privilege plan',
-                  value: membership.tierLabel,
-                  icon: Icons.workspace_premium_outlined,
-                ),
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _MembershipDetail(
-                  label: 'Valid until',
-                  value:
-                      '${membership.endDate.day.toString().padLeft(2, '0')} ${_monthLabel(membership.endDate.month)} ${membership.endDate.year}',
-                  icon: Icons.calendar_today_outlined,
-                ),
-              ),
+              _StatusChip(label: status),
             ],
           ),
-          const SizedBox(height: 10),
-          if (accessState.serviceAccessEnabled)
-            QuickActions(actions: quickActions)
-          else
-            const _PendingQuickActions(),
+          const SizedBox(height: 12),
+          _content(context, state),
         ],
       ),
     );
   }
+
+  Widget _content(BuildContext context, MembershipDashboardState state) {
+    final copy = AppTypography.small.copyWith(
+      color: AppColors.white.withValues(alpha: .85),
+    );
+    if (state == MembershipDashboardState.noApplication) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'No membership card yet',
+            style: AppTypography.h4.copyWith(color: AppColors.white),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Apply for a SHIELD membership card to access eligible member benefits.',
+            style: copy,
+          ),
+          const SizedBox(height: 14),
+          _Action(
+            label: 'Apply for membership card',
+            onTap: () => _submit(context),
+          ),
+        ],
+      );
+    }
+    if (state == MembershipDashboardState.applicationPending) {
+      return _ApplicationDetails(
+        title: 'Membership application',
+        message: 'Your membership application is being reviewed.',
+        application: application!,
+      );
+    }
+    if (state == MembershipDashboardState.approvedAwaitingActivation) {
+      return _ApplicationDetails(
+        title: 'Membership approved',
+        message:
+            'Your membership has been approved and is awaiting activation/card issuance.',
+        application: application!,
+      );
+    }
+    if (state == MembershipDashboardState.applicationRejected) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Membership application',
+            style: AppTypography.h4.copyWith(color: AppColors.white),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            application?.reason?.trim().isNotEmpty == true
+                ? application!.reason!
+                : 'Your application was not approved.',
+            style: copy,
+          ),
+          const SizedBox(height: 14),
+          _Action(label: 'Apply again', onTap: () => _submit(context)),
+        ],
+      );
+    }
+    if (state == MembershipDashboardState.activeMember) {
+      final item = membership!;
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _Detail(label: 'Membership no.', value: item.customerCode),
+          _Detail(label: 'Plan', value: item.tierLabel),
+          _Detail(
+            label: 'Valid until',
+            value:
+                '${item.endDate.day.toString().padLeft(2, '0')}/${item.endDate.month.toString().padLeft(2, '0')}/${item.endDate.year}',
+          ),
+          if (item.cardStatus?.trim().toUpperCase() == 'ACTIVE' ||
+              item.cardStatus?.trim().toUpperCase() == 'ISSUED') ...[
+            const SizedBox(height: 10),
+            _Action(
+              label: 'View membership card',
+              onTap: () => context.go('/portal/customer/membership'),
+            ),
+          ],
+        ],
+      );
+    }
+    return Text(
+      'Your membership is ${membership?.membershipStatus.toLowerCase() ?? 'inactive'}.',
+      style: copy,
+    );
+  }
+
+  Future<void> _submit(BuildContext context) async {
+    try {
+      await controller.submitMembershipApplication();
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Membership application submitted.')),
+        );
+      }
+    } catch (_) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Unable to submit membership application.'),
+          ),
+        );
+      }
+    }
+  }
 }
 
-String _monthLabel(int month) => const [
-  'Jan',
-  'Feb',
-  'Mar',
-  'Apr',
-  'May',
-  'Jun',
-  'Jul',
-  'Aug',
-  'Sep',
-  'Oct',
-  'Nov',
-  'Dec',
-][month - 1];
-
-class _MembershipDetail extends StatelessWidget {
-  const _MembershipDetail({
-    required this.label,
-    required this.value,
-    this.icon,
+class _ApplicationDetails extends StatelessWidget {
+  const _ApplicationDetails({
+    required this.title,
+    required this.message,
+    required this.application,
   });
+  final String title;
+  final String message;
+  final MembershipApplicationEntity application;
+  @override
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Text(title, style: AppTypography.h4.copyWith(color: AppColors.white)),
+      const SizedBox(height: 4),
+      Text(
+        message,
+        style: AppTypography.small.copyWith(
+          color: AppColors.white.withValues(alpha: .85),
+        ),
+      ),
+      const SizedBox(height: 12),
+      _Detail(label: 'Application reference', value: application.reference),
+      _Detail(
+        label: 'Applied',
+        value:
+            '${application.submittedAt.day.toString().padLeft(2, '0')}/${application.submittedAt.month.toString().padLeft(2, '0')}/${application.submittedAt.year}',
+      ),
+    ],
+  );
+}
 
+class _Detail extends StatelessWidget {
+  const _Detail({required this.label, required this.value});
   final String label;
   final String value;
-  final IconData? icon;
-
   @override
-  Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.start,
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(bottom: 7),
+    child: Row(
       children: [
-        Text(
-          label,
-          style: AppTypography.tiny.copyWith(
-            color: AppColors.white.withValues(alpha: 0.72),
+        SizedBox(
+          width: 132,
+          child: Text(
+            label,
+            style: AppTypography.tiny.copyWith(
+              color: AppColors.white.withValues(alpha: .7),
+            ),
           ),
         ),
-        const SizedBox(height: 5),
-        Row(
-          children: [
-            if (icon != null) ...[
-              Icon(icon, size: 17, color: AppColors.white),
-              const SizedBox(width: 6),
-            ],
-            Expanded(
-              child: Text(
-                value,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: AppTypography.small.copyWith(
-                  color: AppColors.white,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
+        Expanded(
+          child: Text(
+            value,
+            style: AppTypography.small.copyWith(
+              color: AppColors.white,
+              fontWeight: FontWeight.w700,
             ),
-          ],
+          ),
         ),
       ],
-    );
-  }
+    ),
+  );
 }
 
-class _PendingQuickActions extends StatelessWidget {
-  const _PendingQuickActions();
-
+class _StatusChip extends StatelessWidget {
+  const _StatusChip({required this.label});
+  final String label;
   @override
-  Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final singleWidth = constraints.maxWidth;
-        final twoColumnWidth = constraints.maxWidth >= 280
-            ? (constraints.maxWidth - 12) / 2
-            : singleWidth;
+  Widget build(BuildContext context) => DecoratedBox(
+    decoration: BoxDecoration(
+      color: AppColors.white.withValues(alpha: .15),
+      borderRadius: BorderRadius.circular(99),
+    ),
+    child: Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+      child: Text(
+        label,
+        style: AppTypography.tiny.copyWith(
+          color: AppColors.white,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+    ),
+  );
+}
 
-        Widget action(String label, String route, {bool full = false}) {
-          return SizedBox(
-            width: full ? singleWidth : twoColumnWidth,
-            child: Material(
-              color: AppColors.white.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(14),
-              child: InkWell(
-                onTap: () => context.go(route),
-                borderRadius: BorderRadius.circular(14),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 12,
-                  ),
-                  child: Text(
-                    label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    textAlign: TextAlign.center,
-                    style: AppTypography.small.copyWith(
-                      color: AppColors.white,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          );
-        }
-
-        return Wrap(
-          spacing: 12,
-          runSpacing: 10,
-          children: [
-            action('Complete profile', '/portal/customer/profile'),
-            action('Browse products', '/portal/customer/services'),
-            action(
-              'Check membership',
-              '/portal/customer/membership',
-              full: true,
-            ),
-          ],
-        );
-      },
-    );
-  }
+class _Action extends StatelessWidget {
+  const _Action({required this.label, required this.onTap});
+  final String label;
+  final VoidCallback onTap;
+  @override
+  Widget build(BuildContext context) => FilledButton(
+    onPressed: onTap,
+    style: FilledButton.styleFrom(
+      backgroundColor: AppColors.white,
+      foregroundColor: AppColors.shieldNavy,
+    ),
+    child: Text(label),
+  );
 }

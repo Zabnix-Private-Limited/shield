@@ -16,6 +16,9 @@ CREATE INDEX "idx_membership_applications_customer_status"
   ON "membership_applications" ("customer_id", "status");
 CREATE INDEX "idx_membership_applications_submitted_at"
   ON "membership_applications" ("submitted_at");
+CREATE UNIQUE INDEX "uq_membership_applications_one_open_per_customer"
+  ON "membership_applications" ("customer_id")
+  WHERE "status" IN ('PENDING', 'APPROVED');
 
 ALTER TABLE "membership_applications"
   ADD CONSTRAINT "membership_applications_customer_id_fkey"
