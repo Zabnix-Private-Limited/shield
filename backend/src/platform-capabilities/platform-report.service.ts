@@ -40,10 +40,28 @@ export class PlatformReportService {
       filters: ['dateRange', 'status', 'search'],
     },
     {
+      id: 'AGENT_MEMBERSHIP_STATUS',
+      title: 'Membership Status',
+      workspace: 'agent',
+      description: 'Membership and card status for customers in the active agent scope.',
+      supportedPortals: ['agent', 'manager', 'executive', 'super-admin'],
+      availableFormats: ['PDF', 'EXCEL', 'CSV'],
+      filters: ['dateRange', 'status', 'search'],
+    },
+    {
       id: 'AGENT_FOLLOW_UP_STATUS',
       title: 'Follow-Up Status',
       workspace: 'agent',
       description: 'Open, completed, and cancelled follow-ups for the active agent scope.',
+      supportedPortals: ['agent', 'manager', 'executive', 'super-admin'],
+      availableFormats: ['PDF', 'EXCEL', 'CSV'],
+      filters: ['dateRange', 'status', 'search'],
+    },
+    {
+      id: 'AGENT_SUPPORT_COMPLAINT_STATUS',
+      title: 'Support & Complaint Status',
+      workspace: 'agent',
+      description: 'Support requests and complaints for the active agent customer graph.',
       supportedPortals: ['agent', 'manager', 'executive', 'super-admin'],
       availableFormats: ['PDF', 'EXCEL', 'CSV'],
       filters: ['dateRange', 'status', 'search'],
@@ -80,6 +98,24 @@ export class PlatformReportService {
       title: 'Performance Summary',
       workspace: 'agent',
       description: 'Top-level acquisition, retention, follow-up, and appointment performance.',
+      supportedPortals: ['agent', 'manager', 'executive', 'super-admin'],
+      availableFormats: ['PDF', 'EXCEL', 'CSV'],
+      filters: ['dateRange', 'status', 'search'],
+    },
+    {
+      id: 'AGENT_CUSTOMER_RETENTION',
+      title: 'Customer Retention',
+      workspace: 'agent',
+      description: 'Current active-status retention proxy for the active agent customer graph.',
+      supportedPortals: ['agent', 'manager', 'executive', 'super-admin'],
+      availableFormats: ['PDF', 'EXCEL', 'CSV'],
+      filters: ['dateRange', 'status', 'search'],
+    },
+    {
+      id: 'AGENT_CRM_PERFORMANCE',
+      title: 'CRM Performance',
+      workspace: 'agent',
+      description: 'CRM activity, follow-up and complaint workload for the active agent customer graph.',
       supportedPortals: ['agent', 'manager', 'executive', 'super-admin'],
       availableFormats: ['PDF', 'EXCEL', 'CSV'],
       filters: ['dateRange', 'status', 'search'],
@@ -247,6 +283,27 @@ export class PlatformReportService {
     };
   }
 
+  async recordReportExport(
+    userId: bigint | undefined,
+    reportId: string,
+    format: string,
+    filters: Record<string, unknown>,
+  ) {
+    await this.prisma.auditLog.create({
+      data: {
+        userId,
+        action: 'REPORT_EXPORTED',
+        entityType: 'platform_report',
+        newData: {
+          reportId,
+          format,
+          workspace: filters.workspace ?? null,
+          customerId: filters.customerId?.toString() ?? null,
+        },
+      },
+    });
+  }
+
   private async buildAgentReport(metadata: ReportMetadata, filters: ReportFilters) {
     const customerWhere = this.buildAgentCustomerWhere(filters);
     const dateRange = this.buildDateRange(filters.dateFrom, filters.dateTo);
@@ -341,6 +398,79 @@ export class PlatformReportService {
             pendingFollowUps: rows.filter((task) =>
               ['PENDING', 'SCHEDULED'].includes(
                 (task.status ?? '').toUpperCase(),
+              ),
+            ).length,
+          },
+        };
+      }
+      case 'AGENT_MEMBERSHIP_STATUS': {
+        const rows = await this.prisma.membership.findMany({
+          where: {
+            customer: customerWhere,
+            ...(dateRange ? { createdAt: dateRange } : {}),
+            ...(filters.status?.trim()
+              ? { status: filters.status.trim().toUpperCase() }
+              : {}),
+          },
+          include: { customer: true, membershipType: true },
+          orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+        });
+        return {
+          columns: ['Customer', 'Membership Number', 'Plan', 'Status', 'Valid Until'],
+          rows: rows.map((membership) => ({
+            Customer: this.toPersonLabel(
+              membership.customer?.firstName,
+              membership.customer?.lastName,
+            ),
+            'Membership Number': membership.membershipNumber ?? '',
+            Plan:
+              membership.membershipType?.name ??
+              membership.membershipType?.code ??
+              'Unspecified',
+            Status: membership.status ?? 'PENDING',
+            'Valid Until': membership.expiryDate?.toISOString() ?? '',
+          })),
+          summary: {
+            totalMemberships: rows.length,
+            activeMemberships: rows.filter(
+              (membership) => membership.status?.toUpperCase() === 'ACTIVE',
+            ).length,
+          },
+        };
+      }
+      case 'AGENT_SUPPORT_COMPLAINT_STATUS': {
+        const rows = await this.prisma.complaint.findMany({
+          where: {
+            customer: customerWhere,
+            ...(dateRange ? { createdAt: dateRange } : {}),
+            ...(filters.status?.trim()
+              ? { status: filters.status.trim().toUpperCase() }
+              : {}),
+          },
+          include: { customer: true },
+          orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+        });
+        return {
+          columns: ['Customer', 'Type', 'Status', 'Submitted At'],
+          rows: rows.map((complaint) => ({
+            Customer: this.toPersonLabel(
+              complaint.customer?.firstName,
+              complaint.customer?.lastName,
+            ),
+            Type: complaint.complaintType ?? 'SUPPORT_REQUEST',
+            Status: complaint.status ?? 'SUBMITTED',
+            'Submitted At': complaint.createdAt.toISOString(),
+          })),
+          summary: {
+            totalRequests: rows.length,
+            openRequests: rows.filter(
+              (complaint) => !['RESOLVED', 'CLOSED'].includes(
+                (complaint.status ?? '').toUpperCase(),
+              ),
+            ).length,
+            resolvedRequests: rows.filter((complaint) =>
+              ['RESOLVED', 'CLOSED'].includes(
+                (complaint.status ?? '').toUpperCase(),
               ),
             ).length,
           },
@@ -545,6 +675,85 @@ export class PlatformReportService {
                 : Number(
                     ((completedFollowUps / followUps.length) * 100).toFixed(1),
                   ),
+          },
+        };
+      }
+      case 'AGENT_CUSTOMER_RETENTION': {
+        const rows = await this.prisma.customer.findMany({
+          where: {
+            ...customerWhere,
+            ...(dateRange ? { createdAt: dateRange } : {}),
+          },
+          orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+        });
+        const activeCustomers = rows.filter(
+          (customer) => (customer.status ?? '').toUpperCase() === 'ACTIVE',
+        ).length;
+        return {
+          columns: ['Customer', 'Customer Code', 'Current Status', 'Registered At'],
+          rows: rows.map((customer) => ({
+            Customer: this.toPersonLabel(customer.firstName, customer.lastName),
+            'Customer Code': customer.customerCode ?? '',
+            'Current Status': customer.status ?? 'PENDING',
+            'Registered At': customer.createdAt.toISOString(),
+          })),
+          summary: {
+            totalCustomers: rows.length,
+            activeCustomers,
+            retentionProxyPercent:
+              rows.length === 0
+                ? 0
+                : Number(((activeCustomers / rows.length) * 100).toFixed(1)),
+            note: 'Retention proxy = currently ACTIVE customers divided by customers in this report scope; cohort/churn rules are not modeled.',
+          },
+        };
+      }
+      case 'AGENT_CRM_PERFORMANCE': {
+        const [activities, tasks, complaints] = await Promise.all([
+          this.prisma.crmActivity.findMany({
+            where: {
+              customer: customerWhere,
+              ...(dateRange ? { createdAt: dateRange } : {}),
+            },
+          }),
+          this.prisma.crmTask.findMany({
+            where: {
+              customer: customerWhere,
+              ...(dateRange ? { dueDate: dateRange } : {}),
+            },
+          }),
+          this.prisma.complaint.findMany({
+            where: {
+              customer: customerWhere,
+              ...(dateRange ? { createdAt: dateRange } : {}),
+            },
+          }),
+        ]);
+        const completedTasks = tasks.filter(
+          (task) => (task.status ?? '').toUpperCase() === 'COMPLETED',
+        ).length;
+        const openComplaints = complaints.filter(
+          (complaint) => !['RESOLVED', 'CLOSED'].includes(
+            (complaint.status ?? '').toUpperCase(),
+          ),
+        ).length;
+        return {
+          columns: ['Metric', 'Value'],
+          rows: [
+            { Metric: 'CRM Activities', Value: activities.length },
+            { Metric: 'Follow-Ups', Value: tasks.length },
+            { Metric: 'Completed Follow-Ups', Value: completedTasks },
+            { Metric: 'Support & Complaints', Value: complaints.length },
+            { Metric: 'Open Support & Complaints', Value: openComplaints },
+          ],
+          summary: {
+            totalActivities: activities.length,
+            totalFollowUps: tasks.length,
+            followUpCompletionRate:
+              tasks.length === 0
+                ? 0
+                : Number(((completedTasks / tasks.length) * 100).toFixed(1)),
+            openComplaints,
           },
         };
       }

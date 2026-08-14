@@ -14,6 +14,7 @@ import { AuthService } from '../auth/auth.service';
 import type { ShieldPrincipal } from '../auth/auth.types';
 import { AgentScopeService } from '../auth/agent-scope.service';
 import { CurrentPrincipal } from '../auth/current-principal.decorator';
+import { RequirePermissions } from '../auth/permissions.decorator';
 import { ProviderScopeService } from '../auth/provider-scope.service';
 import { Public } from '../auth/public.decorator';
 import { PlatformPrintService } from './platform-print.service';
@@ -58,6 +59,7 @@ export class PlatformCapabilitiesController {
   }
 
   @Get('reports')
+  @RequirePermissions('reports.view')
   getReports(@Query('workspace') workspace?: string) {
     return {
       success: true,
@@ -67,6 +69,7 @@ export class PlatformCapabilitiesController {
   }
 
   @Post('reports/run')
+  @RequirePermissions('reports.export')
   async runReport(
     @Body() body: any,
     @CurrentPrincipal() principal?: ShieldPrincipal,
@@ -113,6 +116,12 @@ export class PlatformCapabilitiesController {
       `${body.reportId ?? ''}`,
       filters,
       `${body.format ?? 'PDF'}`.trim().toUpperCase() as 'PDF' | 'EXCEL' | 'CSV',
+    );
+    await this.platformReportService.recordReportExport(
+      principal?.userId ? BigInt(principal.userId) : undefined,
+      data.metadata.id,
+      data.exportFile.format,
+      filters,
     );
     return {
       success: true,
