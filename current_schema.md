@@ -476,6 +476,19 @@ CREATE TABLE "login_history" (
 	"user_agent" text,
 	"created_at" timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
+CREATE TABLE "membership_applications" (
+	"id" bigserial PRIMARY KEY,
+	"uuid" uuid NOT NULL CONSTRAINT "membership_applications_uuid_key" UNIQUE,
+	"customer_id" bigint NOT NULL,
+	"status" varchar(50) DEFAULT 'PENDING' NOT NULL,
+	"reference" varchar(100) NOT NULL CONSTRAINT "membership_applications_reference_key" UNIQUE,
+	"review_reason" text,
+	"reviewed_by" bigint,
+	"submitted_at" timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+	"reviewed_at" timestamp with time zone,
+	"created_at" timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+	"updated_at" timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
 CREATE TABLE "membership_subscriptions" (
 	"id" bigserial PRIMARY KEY,
 	"uuid" uuid NOT NULL CONSTRAINT "membership_subscriptions_uuid_key" UNIQUE,
@@ -940,6 +953,11 @@ CREATE INDEX "idx_login_history_owner" ON "login_history" ("owner_type","owner_i
 CREATE INDEX "idx_login_history_user" ON "login_history" ("user_id");
 CREATE UNIQUE INDEX "login_history_pkey" ON "login_history" ("id");
 CREATE UNIQUE INDEX "login_history_uuid_key" ON "login_history" ("uuid");
+CREATE INDEX "idx_membership_applications_customer_status" ON "membership_applications" ("customer_id","status");
+CREATE INDEX "idx_membership_applications_submitted_at" ON "membership_applications" ("submitted_at");
+CREATE UNIQUE INDEX "membership_applications_pkey" ON "membership_applications" ("id");
+CREATE UNIQUE INDEX "membership_applications_reference_key" ON "membership_applications" ("reference");
+CREATE UNIQUE INDEX "membership_applications_uuid_key" ON "membership_applications" ("uuid");
 CREATE UNIQUE INDEX "membership_subscriptions_customer_id_key" ON "membership_subscriptions" ("customer_id");
 CREATE UNIQUE INDEX "membership_subscriptions_pkey" ON "membership_subscriptions" ("id");
 CREATE UNIQUE INDEX "membership_subscriptions_uuid_key" ON "membership_subscriptions" ("uuid");
@@ -1090,6 +1108,8 @@ ALTER TABLE "documents" ADD CONSTRAINT "documents_uploaded_by_fkey" FOREIGN KEY 
 ALTER TABLE "lab_reports" ADD CONSTRAINT "lab_reports_appointment_id_fkey" FOREIGN KEY ("appointment_id") REFERENCES "appointments"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 ALTER TABLE "lab_reports" ADD CONSTRAINT "lab_reports_customer_id_fkey" FOREIGN KEY ("customer_id") REFERENCES "customers"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 ALTER TABLE "lab_reports" ADD CONSTRAINT "lab_reports_document_id_fkey" FOREIGN KEY ("document_id") REFERENCES "documents"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "membership_applications" ADD CONSTRAINT "membership_applications_customer_id_fkey" FOREIGN KEY ("customer_id") REFERENCES "customers"("id") ON DELETE CASCADE;
+ALTER TABLE "membership_applications" ADD CONSTRAINT "membership_applications_reviewed_by_fkey" FOREIGN KEY ("reviewed_by") REFERENCES "users"("id") ON DELETE SET NULL;
 ALTER TABLE "membership_subscriptions" ADD CONSTRAINT "membership_subscriptions_customer_id_fkey" FOREIGN KEY ("customer_id") REFERENCES "customers"("id");
 ALTER TABLE "membership_subscriptions" ADD CONSTRAINT "membership_subscriptions_membership_id_fkey" FOREIGN KEY ("membership_id") REFERENCES "memberships"("id");
 ALTER TABLE "memberships" ADD CONSTRAINT "memberships_customer_id_fkey" FOREIGN KEY ("customer_id") REFERENCES "customers"("id") ON DELETE SET NULL ON UPDATE CASCADE;
