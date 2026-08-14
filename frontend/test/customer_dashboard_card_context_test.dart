@@ -118,4 +118,44 @@ void main() {
       );
     },
   );
+
+  test('retains an actual inactive membership status in dashboard cache', () {
+    final dashboard = DashboardModel.fromJson({
+      'customer': {
+        'id': '1',
+        'uuid': 'customer-uuid',
+        'customerCode': 'CUST-1',
+        'firstName': 'Kannan',
+        'mobile': '+917034479800',
+        'status': 'ACTIVE',
+        'createdAt': '2026-08-11T00:00:00.000Z',
+        'updatedAt': '2026-08-11T00:00:00.000Z',
+      },
+      'membership': {
+        'id': '1',
+        'uuid': 'membership-uuid',
+        'membershipNumber': 'SHLD-1',
+        'status': 'SUSPENDED',
+        'activationDate': '2026-08-11T00:00:00.000Z',
+        'expiryDate': '2027-08-11T00:00:00.000Z',
+        'createdAt': '2026-08-11T00:00:00.000Z',
+        'updatedAt': '2026-08-11T00:00:00.000Z',
+      },
+      'wallet': {},
+      'appointments': [],
+      'notifications': [],
+      'recentActivity': [],
+      'documents': [],
+      'banners': [],
+      'quickActions': [],
+      'services': [],
+    });
+
+    expect(
+      DashboardModel.fromCache(
+        dashboard.toCache(),
+      ).membership?.membershipStatus,
+      'SUSPENDED',
+    );
+  });
 }

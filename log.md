@@ -11653,3 +11653,55 @@ px prisma validate, Nest build, 17 focused Documents/Pharmacy controller tests, 
 - The original +917034479800 remains a number-specific delivery investigation. Repeated sends can trigger Firebase per-number abuse/throttling protections; carrier delivery is an alternative external possibility. Do not repeatedly press Resend. Retry after a cooling period or use Firebase test numbers for repeated development testing.
 - Historic DevTools `accounts:signInWithPhoneNumber` 400 INVALID_CODE rows are confirmation failures from incorrect manual code entry, not send failures; preserved Network logs can retain them after a later successful sign-in.
 - No source or Firebase security setting changed. Customer OTP implementation is release-functional; the prior diagnostic-console correlation gap is no longer a release blocker for application functionality.
+## 42. Customer Membership Application Lifecycle and Dashboard Truth — 2026-08-14 21:15:00 IST
+
+- Added the customer-owned MembershipApplication lifecycle as a separate concept from Membership and ShieldCard. Rejected applications remain historical; the migration artifact contains a partial unique index that permits historical REJECTED rows while preventing more than one PENDING/APPROVED application per customer.
+- No Prisma migration, schema push, seed, or direct database write was run.
+
+### Backend Files
+- `backend/prisma/schema.prisma`, `backend/prisma/migrations/20260814_membership_applications/migration.sql`: reviewer delete behavior now matches the migration (`SET NULL`), with the open-application partial unique index.
+- `backend/src/customer/customer.service.ts`: customer application submit/read/review lifecycle, transactional duplicate prevention, audit activity events, and the membership application response projection. Staff approval only changes application state; the existing staff-only conversion remains authoritative for Membership creation.
+- `backend/src/customer/customer-membership.controller.ts`: self-scoped GET/POST application endpoints; ownership is derived only from the authenticated CUSTOMER principal. Internal review requires `customers.approve` and a USER principal.
+- `backend/src/dashboard/dashboard.service.ts`: dashboard now exposes `membershipApplication`, `membership`, and `shieldCard` as distinct fields.
+- `backend/src/customer/customer-membership.controller.spec.ts`: focused self-ownership and staff-review tests.
+
+### Frontend Files
+- `frontend/lib/features/customer/dashboard/data/models/dashboard_model.dart`: a backend `membership: null` stays null; cache serialization preserves it instead of inventing membership/card details.
+- `frontend/lib/features/customer/dashboard/domain/services/dashboard_cache_policy.dart`: cache contract key versioned to discard old fabricated dashboard cache entries.
+- `frontend/lib/features/customer/dashboard/presentation/widgets/greeting_header.dart`: one deterministic resolver renders no-application, pending, approved-awaiting-activation, active, rejected, and actual inactive membership states. The old generic paragraph, profile/product/check-membership actions, fabricated values, and unreal card action were removed from this block.
+- `frontend/lib/shared/services/api_service.dart` and dashboard controller: apply action calls the authenticated endpoint, clears dashboard cache, and refetches authoritative state.
+
+### Verification
+- PASS: repository-local `prisma format --schema .\\prisma\\schema.prisma` and `prisma validate --schema .\\prisma\\schema.prisma`.
+- PASS: local `prisma generate` only (generated client; no DB action).
+- PASS: `npx jest customer/customer-membership.controller.spec.ts --runInBand` (5 tests).
+- PASS: `flutter test test/customer_dashboard_card_context_test.dart` (3 tests).
+- PASS: `flutter analyze lib/features/customer/dashboard lib/shared/services/api_service.dart`.
+- PASS: `git diff --check`.
+- NOTE: backend `npx tsc --noEmit` reaches two pre-existing `agent-scope.service.spec.ts` ShieldPrincipal fixture errors; no MembershipApplication source errors remained. `npm run build` exceeded the 60-second bounded command window without diagnostic output.
+
+### Deployment / DB Follow-up
+- The exact unapplied database artifact is `backend/prisma/migrations/20260814_membership_applications/migration.sql`. Apply it only through the approved deployment/database process.
+
+## 43. Membership Application Rule Coverage — 2026-08-14 21:28:00 IST
+
+- Backend: Added focused service-level lifecycle coverage for rejected-history reapplication, active-member rejection, open-application duplicate prevention, and staff review attribution in backend/src/customer/customer.service.spec.ts.
+- Verification PASS: npx jest customer/customer.service.spec.ts customer/customer-membership.controller.spec.ts --runInBand — 17 tests across 2 suites.
+- No database action or browser interaction performed.
+
+
+## 44. Membership Status Cache Fidelity — 2026-08-14 21:35:00 IST
+
+- Frontend: dashboard cache now serializes the authoritative membership status rather than collapsing every non-active state to INACTIVE; suspended/expired state presentation remains truthful after cache restore.
+- Verification PASS: flutter test test/customer_dashboard_card_context_test.dart (4 tests); flutter analyze lib/features/customer/dashboard lib/shared/services/api_service.dart; git diff --check.
+- No database action or browser interaction performed.
+
+
+- Verification update: after adding conversion retry safety coverage, the focused backend command now passes 18 tests across 2 suites.
+
+
+## 45. Membership Dashboard Layout Evidence — 2026-08-14 21:42:00 IST
+
+- Frontend: added non-browser widget coverage for the shortened no-application card at 320px and pending state at 720px, including assertions that pending has no digital-card or plan affordance.
+- Verification PASS: flutter test test/customer_dashboard_membership_header_test.dart test/customer_dashboard_card_context_test.dart (6 tests); flutter analyze lib/features/customer/dashboard lib/shared/services/api_service.dart test/customer_dashboard_membership_header_test.dart; git diff --check.
+- No live browser or database interaction was used.

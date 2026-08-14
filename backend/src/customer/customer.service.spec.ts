@@ -2,7 +2,18 @@ import { CustomerService } from './customer.service';
 
 describe('CustomerService alternative contacts', () => {
   const prisma = {
-    customer: { findUnique: jest.fn(), findFirst: jest.fn(), update: jest.fn() },
+    customer: {
+      findUnique: jest.fn(),
+      findFirst: jest.fn(),
+      update: jest.fn(),
+    },
+    membershipApplication: {
+      findFirst: jest.fn(),
+      findUnique: jest.fn(),
+      create: jest.fn(),
+      update: jest.fn(),
+    },
+    activityEvent: { create: jest.fn() },
     customerContact: {
       findMany: jest.fn(),
       update: jest.fn(),
@@ -10,6 +21,7 @@ describe('CustomerService alternative contacts', () => {
       deleteMany: jest.fn(),
     },
     auditLog: { create: jest.fn() },
+    $transaction: jest.fn(),
   };
   const service = new CustomerService(
     prisma as any,
@@ -18,7 +30,10 @@ describe('CustomerService alternative contacts', () => {
     {} as any,
   );
 
-  beforeEach(() => jest.clearAllMocks());
+  beforeEach(() => {
+    jest.clearAllMocks();
+    prisma.$transaction.mockImplementation((callback: any) => callback(prisma));
+  });
 
   it('rejects the primary mobile even when it includes +91', async () => {
     prisma.customer.findUnique.mockResolvedValue({ mobile: '+919876543210' });
@@ -108,7 +123,10 @@ describe('CustomerService alternative contacts', () => {
   });
 
   it('projects only customer-safe fields for the signed-in profile', async () => {
-    prisma.customer.findFirst.mockResolvedValue({ id: 11n, mobile: '9876543210' });
+    prisma.customer.findFirst.mockResolvedValue({
+      id: 11n,
+      mobile: '9876543210',
+    });
 
     await service.getCustomerSelfProfile(11n);
 
@@ -125,7 +143,10 @@ describe('CustomerService alternative contacts', () => {
 
   it('does not permit the customer profile contract to update phone or status', async () => {
     prisma.customer.update.mockResolvedValue({ id: 11n });
-    prisma.customer.findFirst.mockResolvedValue({ id: 11n, mobile: '9876543210' });
+    prisma.customer.findFirst.mockResolvedValue({
+      id: 11n,
+      mobile: '9876543210',
+    });
     prisma.auditLog.create.mockResolvedValue({});
 
     await service.updateCustomerSelfProfile(11n, {
@@ -136,7 +157,10 @@ describe('CustomerService alternative contacts', () => {
 
     expect(prisma.customer.update).toHaveBeenCalledWith({
       where: { id: 11n },
-      data: expect.not.objectContaining({ mobile: expect.anything(), status: expect.anything() }),
+      data: expect.not.objectContaining({
+        mobile: expect.anything(),
+        status: expect.anything(),
+      }),
     });
     expect(prisma.auditLog.create).toHaveBeenCalled();
   });
@@ -149,5 +173,98 @@ describe('CustomerService alternative contacts', () => {
         dob: '2999-01-01',
       }),
     ).rejects.toThrow('Date of birth must be a valid past date.');
+  });
+
+  it('creates a new pending application after a historical rejection', async () => {
+    prisma.customer.findFirst.mockResolvedValue({ id: 11n, membership: null });
+    prisma.membershipApplication.findFirst.mockResolvedValue(null);
+    prisma.membershipApplication.create.mockResolvedValue({
+      id: 2n,
+      uuid: 'application-uuid',
+      reference: 'MAP-2026-TEST',
+      status: 'PENDING',
+      submittedAt: new Date('2026-08-14T00:00:00Z'),
+      reviewedAt: null,
+      reviewReason: null,
+    });
+
+    const application = await service.submitMembershipApplication(11n);
+
+    expect(application.status).toBe('PENDING');
+    expect(prisma.membershipApplication.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ customerId: 11n, status: 'PENDING' }),
+      }),
+    );
+    expect(prisma.activityEvent.create).toHaveBeenCalled();
+  });
+
+  it('prevents a duplicate pending or approved application', async () => {
+    prisma.customer.findFirst.mockResolvedValue({ id: 11n, membership: null });
+    prisma.membershipApplication.findFirst.mockResolvedValue({
+      id: 1n,
+      status: 'PENDING',
+    });
+
+    await expect(service.submitMembershipApplication(11n)).rejects.toThrow(
+      'already being processed',
+    );
+    expect(prisma.membershipApplication.create).not.toHaveBeenCalled();
+  });
+
+  it('prevents an active member from submitting an application', async () => {
+    prisma.customer.findFirst.mockResolvedValue({
+      id: 11n,
+      membership: { status: 'ACTIVE' },
+    });
+
+    await expect(service.submitMembershipApplication(11n)).rejects.toThrow(
+      'active membership already exists',
+    );
+    expect(prisma.membershipApplication.findFirst).not.toHaveBeenCalled();
+  });
+
+  it('keeps staff conversion retry-safe when a membership already exists', async () => {
+    prisma.customer.findFirst.mockResolvedValue({
+      id: 11n,
+      membership: { id: 3n, status: 'INACTIVE' },
+      wallet: null,
+      creditAccount: null,
+    });
+
+    await expect(
+      service.convertExistingCustomerToMembership(11n, {}),
+    ).rejects.toThrow('Membership already exists');
+  });
+
+  it('reviews only pending applications and records the staff reviewer', async () => {
+    prisma.membershipApplication.findUnique.mockResolvedValue({
+      id: 4n,
+      customerId: 11n,
+      status: 'PENDING',
+    });
+    prisma.membershipApplication.update.mockResolvedValue({
+      id: 4n,
+      uuid: 'application-uuid',
+      reference: 'MAP-2026-TEST',
+      status: 'REJECTED',
+      submittedAt: new Date('2026-08-14T00:00:00Z'),
+      reviewedAt: new Date(),
+      reviewReason: 'Profile incomplete',
+    });
+
+    await service.reviewMembershipApplication(
+      4n,
+      7n,
+      'REJECTED',
+      'Profile incomplete',
+    );
+
+    expect(prisma.membershipApplication.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 4n },
+        data: expect.objectContaining({ status: 'REJECTED', reviewedBy: 7n }),
+      }),
+    );
   });
 });

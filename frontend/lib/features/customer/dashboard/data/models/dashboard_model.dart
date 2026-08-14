@@ -178,7 +178,7 @@ class DashboardModel extends DashboardEntity with EquatableMixin {
               'id': cachedMembership.id,
               'uuid': cachedMembership.uuid,
               'membershipNumber': cachedMembership.customerCode,
-              'status': cachedMembership.isActive ? 'ACTIVE' : 'INACTIVE',
+              'status': cachedMembership.membershipStatus,
               'activationDate': cachedMembership.startDate.toIso8601String(),
               'expiryDate': cachedMembership.endDate.toIso8601String(),
               'createdAt': cachedMembership.createdAt.toIso8601String(),
