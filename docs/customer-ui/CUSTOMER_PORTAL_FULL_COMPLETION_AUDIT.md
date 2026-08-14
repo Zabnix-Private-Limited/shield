@@ -10,10 +10,10 @@ Audited: 2026-08-14. Scope: source, contracts, schema, focused tests and static 
 |---|---|---|---|---|
 | `/customer/login`, `/customer/otp` | phone auth | Firebase + SHIELD session | guarded recovery | VERIFIED_COMPLETE / device OTP UAT |
 | `/portal/customer/dashboard` | dashboard, `/customer/dashboard` | dashboard cache v2 | loading/error/retry; membership tests | VERIFIED_COMPLETE |
-| `/portal/customer/membership` | application/card, membership APIs | MembershipApplication, Membership, ShieldCard | state resolver tests | VERIFIED_COMPLETE / migration apply + UAT |
+| `/portal/customer/membership` | application/card, membership APIs | MembershipApplication, Membership, ShieldCard; deployed schema verified by owner | state resolver tests | VERIFIED_COMPLETE / owner UAT |
 | `/portal/customer/wallet` | wallet balance | ledger projections | loading/error | VERIFIED_COMPLETE |
 | `/portal/customer/wallet-history` | transactions | cash/reward ledger | filter/empty/error | VERIFIED_COMPLETE |
-| `/portal/customer/wallet` recharge status | recharge intent APIs | WalletRechargeIntent pending migration | read-only intent status and explicit payment-setup-unavailable state; no client credit | VERIFIED_COMPLETE / provider checkout remains BUSINESS_DECISION_REQUIRED |
+| `/portal/customer/wallet` recharge status | recharge intent APIs | WalletRechargeIntent deployed schema verified by owner | read-only intent status and explicit payment-setup-unavailable state; no client credit | VERIFIED_COMPLETE / provider checkout remains BUSINESS_DECISION_REQUIRED |
 | `/portal/customer/rewards` | reward balance/redemption | reward ledger | balance UI | PARTIAL / customer redemption contract |
 | `/portal/customer/services` | discovery/detail | service providers | loading/empty/error | VERIFIED_COMPLETE |
 | `/portal/customer/book-appointment` | booking | appointments | loading/empty/error | VERIFIED_COMPLETE |
@@ -25,17 +25,17 @@ Audited: 2026-08-14. Scope: source, contracts, schema, focused tests and static 
 | `/portal/customer/activity` | timeline | activity events | loading/empty/error | VERIFIED_COMPLETE |
 | `/portal/customer/notifications` | inbox/detail/read | notifications/device tokens | pagination, retry, deep-link tests | VERIFIED_COMPLETE / TEST_VERIFICATION_PENDING inbox widget; device UAT pending |
 | `/portal/customer/account` | profile/preferred pharmacy | customer preferences | loading/empty/error | VERIFIED_COMPLETE |
-| `/portal/customer/store-change` | request/history | StoreChangeRequest pending migration | focused customer widget test | VERIFIED_COMPLETE / migration apply + UAT |
-| `/portal/customer/support` | submit/history/detail/status | Complaint plus append-only lifecycle events | loading/empty/error/retry; customer-visible replies and resolution detail | VERIFIED_COMPLETE / TEST_VERIFICATION_PENDING focused Support widget; migration/UAT pending |
+| `/portal/customer/store-change` | request/history | StoreChangeRequest deployed schema verified by owner | focused customer widget test | VERIFIED_COMPLETE / owner UAT |
+| `/portal/customer/support` | submit/history/detail/status | Complaint plus append-only lifecycle events; deployed schema verified by owner | loading/empty/error/retry; customer-visible replies and resolution detail | VERIFIED_COMPLETE / TEST_VERIFICATION_PENDING focused Support widget; owner UAT pending |
 
 | Route / feature | Contract and ownership | Static state evidence | Classification | Remaining issue |
 |---|---|---|---|---|
 | Auth, OTP, session, logout | Firebase phone auth plus SHIELD session; customer principal/session owned | diagnostics redact secrets; route guards and recovery route present | VERIFIED_COMPLETE | Firebase/device/runtime UAT external |
 | Dashboard | `GET /customer/dashboard`, dashboard cache v2 | loading/error/retry; nullable membership application/card/member resolver | VERIFIED_COMPLETE | manual render/UAT |
-| Membership application/card | `GET/POST /customer/membership/application`, card profile/request | no fabricated membership/cache; pending/approved/rejected/active/inactive states tested; source migration includes the exact partial unique index | VERIFIED_COMPLETE | manual UAT and approved deployed-DB migration verification |
+| Membership application/card | `GET/POST /customer/membership/application`, card profile/request | no fabricated membership/cache; pending/approved/rejected/active/inactive states tested; owner verified deployed partial unique index `uq_membership_applications_one_open_per_customer` | VERIFIED_COMPLETE | manual UAT |
 | Wallet balance | `GET /customer/wallet`, ledger projections | loading/empty/error widgets; CASH/REWARD separation | VERIFIED_COMPLETE | manual UAT |
 | Wallet transactions | customer wallet bundle/history projections | filter, cached read/error fallback | VERIFIED_COMPLETE | manual UAT |
-| Wallet recharge intent | `GET/POST /customer/wallet/recharge-intents`; pending `wallet_recharge_intents` migration | customer ownership, positive amount and idempotency key are enforced; read-only wallet UI reports intent status/payment setup unavailable; an intent cannot create a ledger credit | VERIFIED_COMPLETE | deployed migration/manual UAT pending; settlement is separately classified below |
+| Wallet recharge intent | `GET/POST /customer/wallet/recharge-intents`; deployed schema verified by owner | customer ownership, positive amount and idempotency key are enforced; read-only wallet UI reports intent status/payment setup unavailable; an intent cannot create a ledger credit | VERIFIED_COMPLETE | manual UAT pending; settlement is separately classified below |
 | Recharge payment initiation | no payment-provider adapter/configuration found | safe intent boundary exists but returns no checkout action | BUSINESS_DECISION_REQUIRED | approved payment provider, merchant configuration and checkout contract |
 | Payment callback / duplicate callback | no provider webhook/verifier found | no client success endpoint exists; no credit occurs from an intent | BUSINESS_DECISION_REQUIRED | provider signature and event contract; verified idempotent settlement implementation |
 | Failed payment / refund-reversal | intent schema reserves failure state; no transition service exists | no customer-facing status/retry/reversal flow | PARTIAL | approved provider semantics and finance/reversal policy |
@@ -48,8 +48,8 @@ Audited: 2026-08-14. Scope: source, contracts, schema, focused tests and static 
 | Notifications | self inbox/read routes and post-auth push registration | offset pagination, unread/retry states, push route allowlist, cold-start navigation queue, and invalid/missing-target recovery to notification center are source-tested | VERIFIED_COMPLETE | TEST_VERIFICATION_PENDING focused inbox widget; device delivery/tap UAT is external |
 | Profile/account/security | customer-self profile/account/session APIs | route guard, loading/error and session controls | VERIFIED_COMPLETE | phone migration/deletion/export require separate policy |
 | Preferred Hyper Pharmacy | `GET /customer/pharmacies`, `GET/PUT/DELETE /customer/preferred-provider` | Account Pharmacy tab loads eligible active pharmacies, renders empty/error, and updates only authenticated customer preference | VERIFIED_COMPLETE | manual UAT |
-| Store change request | `GET/POST /customer/store-change-requests`; pending migration persists current/requested pharmacy, reason, status, reviewer and history | dedicated customer route loads request history, eligible pharmacies and authoritative review result; authenticated customer identity is derived server-side; focused widget regression covers populated history | VERIFIED_COMPLETE | manual UAT and approved migration application pending |
-| Support/complaints | authenticated `GET/POST /customer/support/:id` plus public web contact/feedback | customer submission/list/detail are principal-owned; detail filters append-only history to customer-visible replies/resolution only; CRM lifecycle is scope-enforced | VERIFIED_COMPLETE | TEST_VERIFICATION_PENDING focused customer Support widget; deployed migration/UAT pending |
+| Store change request | `GET/POST /customer/store-change-requests`; deployed schema verified by owner | dedicated customer route loads request history, eligible pharmacies and authoritative review result; authenticated customer identity is derived server-side; focused widget regression covers populated history | VERIFIED_COMPLETE | manual UAT pending |
+| Support/complaints | authenticated `GET/POST /customer/support/:id` plus public web contact/feedback | customer submission/list/detail are principal-owned; detail filters append-only history to customer-visible replies/resolution only; CRM lifecycle schema is deployed and scope-enforced | VERIFIED_COMPLETE | TEST_VERIFICATION_PENDING focused customer Support widget; owner UAT pending |
 
 ## Security and cache findings
 
@@ -76,5 +76,5 @@ The generic engine is not accepted as complete evidence for a provider type unti
 ## Source verification
 
 - Flutter membership/dashboard tests: 6 passed; targeted support/portal analyzer passed.
-- The repository migration `20260814_membership_applications` contains `uq_membership_applications_one_open_per_customer` over `customer_id` where status is `PENDING`/`APPROVED`; no database execution was performed in this audit.
+- Owner reports the deployed schema contains all four Customer/Agent migration artifacts. The membership partial unique guard `uq_membership_applications_one_open_per_customer` was directly verified with predicate status IN (PENDING, APPROVED). Prisma migration-history bookkeeping was not asserted.
 - Browser/device/deployed authenticated UAT: pending owner verification.

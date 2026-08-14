@@ -12095,3 +12095,11 @@ est build compilation.
 - Business decisions outside source completion: payment provider and settlement webhook/refund rules; customer reward redemption eligibility/policy; unresolved Shield Card commercial and physical lifecycle rules.
 - Final static verification: focused backend lifecycle tests passed 3 suites/16 tests; TypeScript check passed; backend production build passed; Flutter analyze passed 11 touched items. Git diff check reports trailing whitespace only in prior append-only log entries; no source code whitespace errors reported.
 - Database for manual UAT: MIGRATIONS_PENDING. Manual deployed UAT: PENDING OWNER. Production release approval: NOT YET GRANTED.
+
+
+## 91. Deployed database handoff correction (2026-08-14 21:25:00 IST)
+- Owner confirmed manual application and direct deployed-schema verification for membership applications, Store Change requests, Wallet recharge intents, and Complaint lifecycle migrations.
+- Documentation Files: docs/customer-ui/CUSTOMER_PORTAL_FULL_COMPLETION_AUDIT.md, docs/agent/AGENT_CUSTOMER_MANAGEMENT_FULL_COMPLETION_AUDIT.md, docs/agent/CUSTOMER_CROSS_PORTAL_LIFECYCLE_AUDIT.md.
+- Verified deployed guards: uq_membership_applications_one_open_per_customer with PENDING or APPROVED predicate; uq_store_change_requests_one_pending_per_customer with PENDING predicate; Wallet intent uniqueness/indexes/positive amount constraint; Complaint lifecycle fields, indexes, and foreign keys.
+- Status: CUSTOMER PORTAL SOURCE HANDOFF READY_FOR_MANUAL_UAT; AGENT CRM SOURCE HANDOFF READY_FOR_MANUAL_UAT; DATABASE FOR MANUAL UAT READY; MANUAL DEPLOYED UAT PENDING OWNER; DEVICE FCM UAT PENDING; PRODUCTION RELEASE APPROVAL NOT YET GRANTED.
+- No schema write or Prisma migration-history assertion was made by this documentation-only correction.
