@@ -11,6 +11,6 @@ All outcome fields are intentionally blank pending owner testing.
 | AG-016–018 | Wallet/visits | inspect and update supported workflows | ledger and appointment scope enforced | | | |
 | AG-016A | Wallet recharge | recharge assigned customer and retry request | customer scope, ledger audit and duplicate safety enforced | | | |
 | AG-019–024 | Documents/prescriptions/orders/referrals/timeline/support | exercise supported modules | safe customer isolation and no CRM leakage | | | |
-| AG-024A | Support/complaint/store change | queue, detail, assignment, resolution and customer update | only assigned customer actions allowed; history/audit and customer refresh verified | | | |
+| AG-024A | Support/complaint/store change | scoped queue/detail; assign/reassign; internal note; reply; escalate; resolve; customer refresh | unassigned complaint mutation is denied; history/audit retained; internal events are hidden from customer | | | |
 | AG-022A | CRM follow-up and reports | create/follow-up, filter customer reports | assignment scope, audit and no cross-customer data leak | | | |
 | AG-025–029 | Entity/branch/security/responsive/audit | test out-of-scope customer and widths | denied access, responsive workspace, auditable actions | | | |

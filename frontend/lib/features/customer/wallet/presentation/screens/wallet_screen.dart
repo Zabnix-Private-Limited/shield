@@ -138,6 +138,8 @@ class _CustomerWalletScreenState extends State<CustomerWalletScreen> {
                     rewardCredits: wallet.statistics.rewardCredits,
                   ),
                   const SizedBox(height: 20),
+                  const _RechargeIntentStatus(),
+                  const SizedBox(height: 20),
                   Text(
                     widget.showFullHistory
                         ? 'Wallet history'
@@ -219,6 +221,52 @@ class _CustomerWalletScreenState extends State<CustomerWalletScreen> {
     };
     _controller.loadHistory(from: from, to: from == null ? null : now);
   }
+}
+
+class _RechargeIntentStatus extends StatelessWidget {
+  const _RechargeIntentStatus();
+
+  @override
+  Widget build(
+    BuildContext context,
+  ) => FutureBuilder<List<Map<String, dynamic>>>(
+    future: ApiService.getCustomerRechargeIntents(),
+    builder: (context, snapshot) {
+      if (snapshot.connectionState == ConnectionState.waiting) {
+        return const AppCard(child: Text('Checking recharge status…'));
+      }
+      if (snapshot.hasError) {
+        return const AppCard(
+          child: Text(
+            'Recharge setup status is unavailable. Your wallet balance has not changed.',
+          ),
+        );
+      }
+      final intents = snapshot.data ?? const <Map<String, dynamic>>[];
+      final latest = intents.isEmpty ? null : intents.first;
+      return AppCard(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Wallet recharge', style: AppTypography.h4),
+            const SizedBox(height: 6),
+            const Text(
+              'Online recharge is not available yet. SHIELD will not create a wallet credit until an approved payment provider verifies settlement.',
+            ),
+            if (latest != null) ...[
+              const SizedBox(height: 10),
+              Text(
+                'Latest safe intent: ${(latest['status'] ?? 'INITIATED').toString().replaceAll('_', ' ')}',
+                style: AppTypography.small.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ],
+        ),
+      );
+    },
+  );
 }
 
 class _LockedWalletView extends StatelessWidget {

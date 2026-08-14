@@ -77,8 +77,25 @@ export class SupportService {
         description: true,
         status: true,
         createdAt: true,
+        resolvedAt: true,
+        resolutionNote: true,
       },
       orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  async getForCustomer(customerId: bigint, complaintId: bigint) {
+    return this.prisma.complaint.findFirst({
+      where: { id: complaintId, customerId },
+      select: {
+        id: true, complaintType: true, description: true, status: true, createdAt: true,
+        resolvedAt: true, resolutionNote: true,
+        lifecycleEvents: {
+          where: { customerVisible: true },
+          select: { id: true, eventType: true, note: true, createdAt: true },
+          orderBy: { createdAt: 'asc' },
+        },
+      },
     });
   }
 }

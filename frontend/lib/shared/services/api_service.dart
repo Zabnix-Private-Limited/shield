@@ -655,10 +655,12 @@ class ApiService {
     int limit = 25,
   }) async {
     _requireCustomerId();
-    return _readEnvelope(await _dio.get(
-      '/notifications/me',
-      queryParameters: {'offset': offset, 'limit': limit},
-    ));
+    return _readEnvelope(
+      await _dio.get(
+        '/notifications/me',
+        queryParameters: {'offset': offset, 'limit': limit},
+      ),
+    );
   }
 
   static Future<Customer> getCustomerProfile(String customerId) async {
@@ -1704,11 +1706,78 @@ class ApiService {
     ).map((item) => Map<String, dynamic>.from(item)).toList();
   }
 
+  static Future<Map<String, dynamic>> getCustomerSupportDetail(
+    String complaintId,
+  ) async {
+    final response = await _dio.get('/customer/support/$complaintId');
+    return _readEnvelope(response);
+  }
+
+  static Future<List<Map<String, dynamic>>> getCrmComplaints() async {
+    final response = await _dio.get('/crm/complaints');
+    return _readEnvelopeList(
+      response,
+    ).map((item) => Map<String, dynamic>.from(item as Map)).toList();
+  }
+
+  static Future<Map<String, dynamic>> getCrmComplaint(String id) async {
+    return _readEnvelope(await _dio.get('/crm/complaints/$id'));
+  }
+
+  static Future<void> replyToCrmComplaint(String id, String note) async {
+    await _dio.post('/complaints/$id/reply', data: {'note': note.trim()});
+  }
+
+  static Future<void> assignCrmComplaint(
+    String id,
+    String assigneeUserId, {
+    String? note,
+  }) async {
+    await _dio.post(
+      '/complaints/$id/assign',
+      data: {
+        'assigned_to_user_id': assigneeUserId.trim(),
+        if (note != null && note.trim().isNotEmpty) 'note': note.trim(),
+      },
+    );
+  }
+
+  static Future<void> addCrmComplaintInternalNote(
+    String id,
+    String note,
+  ) async {
+    await _dio.post(
+      '/complaints/$id/internal-notes',
+      data: {'note': note.trim()},
+    );
+  }
+
+  static Future<void> escalateCrmComplaint(String id, String reason) async {
+    await _dio.post(
+      '/complaints/$id/escalate',
+      data: {'reason': reason.trim()},
+    );
+  }
+
+  static Future<void> resolveCrmComplaint(String id, String note) async {
+    await _dio.post(
+      '/complaints/$id/resolve',
+      data: {'resolution_note': note.trim()},
+    );
+  }
+
+  static Future<List<Map<String, dynamic>>> getCustomerRechargeIntents() async {
+    final response = await _dio.get('/customer/wallet/recharge-intents');
+    return _readEnvelopeList(
+      response,
+    ).map((item) => Map<String, dynamic>.from(item as Map)).toList();
+  }
+
   static Future<List<Map<String, dynamic>>> getStoreChangeRequests() async {
     final response = await _dio.get('/customer/store-change-requests');
-    return _readEnvelopeList(response)
-        .map((item) => Map<String, dynamic>.from(item as Map))
-        .toList();
+    return _readEnvelopeList(
+      response,
+    ).map((item) => Map<String, dynamic>.from(item as Map)).toList();
   }
 
   static Future<void> submitStoreChangeRequest({
@@ -1721,11 +1790,12 @@ class ApiService {
     );
   }
 
-  static Future<List<Map<String, dynamic>>> getStaffStoreChangeRequests() async {
+  static Future<List<Map<String, dynamic>>>
+  getStaffStoreChangeRequests() async {
     final response = await _dio.get('/store-change-requests');
-    return _readEnvelopeList(response)
-        .map((item) => Map<String, dynamic>.from(item as Map))
-        .toList();
+    return _readEnvelopeList(
+      response,
+    ).map((item) => Map<String, dynamic>.from(item as Map)).toList();
   }
 
   static Future<void> reviewStoreChangeRequest(
@@ -1735,7 +1805,10 @@ class ApiService {
   }) async {
     await _dio.post(
       '/store-change-requests/$requestId/review',
-      data: {'status': status, if (reason?.trim().isNotEmpty == true) 'reason': reason!.trim()},
+      data: {
+        'status': status,
+        if (reason?.trim().isNotEmpty == true) 'reason': reason!.trim(),
+      },
     );
   }
 

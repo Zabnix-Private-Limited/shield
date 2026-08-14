@@ -134,7 +134,10 @@ model User {
   agentPreference                  AgentPreference?
   agentBranchAssignments           AgentBranchAssignment[]
   providerProfile                  ProviderProfile?
-  reviewedStoreChangeRequests      StoreChangeRequest[] @relation("StoreChangeReviewer")
+  reviewedStoreChangeRequests      StoreChangeRequest[]       @relation("StoreChangeReviewer")
+  assignedComplaints               Complaint[]                @relation("ComplaintAssignee")
+  resolvedComplaints               Complaint[]                @relation("ComplaintResolver")
+  complaintLifecycleEvents         ComplaintLifecycleEvent[]  @relation("ComplaintLifecycleActor")
 
   @@index([mobile], map: "idx_user_mobile")
   @@index([email], map: "idx_user_email")
@@ -345,21 +348,21 @@ model CustomerPreference {
 }
 
 model StoreChangeRequest {
-  id                 BigInt   @id @default(autoincrement())
-  uuid               String   @unique @db.Uuid
-  customerId         BigInt   @map("customer_id")
-  previousProviderId BigInt?  @map("previous_provider_id")
-  requestedProviderId BigInt  @map("requested_provider_id")
-  reason             String   @db.Text
-  status             String   @default("PENDING") @db.VarChar(50)
-  reviewReason       String?  @map("review_reason") @db.Text
-  reviewedBy         BigInt?  @map("reviewed_by")
-  submittedAt        DateTime @default(now()) @map("submitted_at") @db.Timestamptz(6)
-  reviewedAt         DateTime? @map("reviewed_at") @db.Timestamptz(6)
-  createdAt          DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt          DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  id                  BigInt    @id @default(autoincrement())
+  uuid                String    @unique @db.Uuid
+  customerId          BigInt    @map("customer_id")
+  previousProviderId  BigInt?   @map("previous_provider_id")
+  requestedProviderId BigInt    @map("requested_provider_id")
+  reason              String    @db.Text
+  status              String    @default("PENDING") @db.VarChar(50)
+  reviewReason        String?   @map("review_reason") @db.Text
+  reviewedBy          BigInt?   @map("reviewed_by")
+  submittedAt         DateTime  @default(now()) @map("submitted_at") @db.Timestamptz(6)
+  reviewedAt          DateTime? @map("reviewed_at") @db.Timestamptz(6)
+  createdAt           DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt           DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  customer          Customer        @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  customer          Customer         @relation(fields: [customerId], references: [id], onDelete: Cascade)
   previousProvider  ServiceProvider? @relation("StoreChangePreviousProvider", fields: [previousProviderId], references: [id], onDelete: SetNull)
   requestedProvider ServiceProvider  @relation("StoreChangeRequestedProvider", fields: [requestedProviderId], references: [id], onDelete: Restrict)
   reviewer          User?            @relation("StoreChangeReviewer", fields: [reviewedBy], references: [id], onDelete: SetNull)
@@ -480,21 +483,21 @@ model Wallet {
 }
 
 model WalletRechargeIntent {
-  id                BigInt   @id @default(autoincrement())
-  uuid              String   @unique @db.Uuid
-  customerId        BigInt   @map("customer_id")
-  walletId          BigInt   @map("wallet_id")
-  amount            Decimal  @db.Decimal(15, 2)
-  idempotencyKey    String   @unique @map("idempotency_key") @db.VarChar(120)
-  providerCode      String?  @map("provider_code") @db.VarChar(80)
-  providerReference String?  @unique @map("provider_reference") @db.VarChar(160)
-  status            String   @default("INITIATED") @db.VarChar(40)
-  failureCode       String?  @map("failure_code") @db.VarChar(100)
-  failureReason     String?  @map("failure_reason") @db.Text
+  id                BigInt    @id @default(autoincrement())
+  uuid              String    @unique @db.Uuid
+  customerId        BigInt    @map("customer_id")
+  walletId          BigInt    @map("wallet_id")
+  amount            Decimal   @db.Decimal(15, 2)
+  idempotencyKey    String    @unique @map("idempotency_key") @db.VarChar(120)
+  providerCode      String?   @map("provider_code") @db.VarChar(80)
+  providerReference String?   @unique @map("provider_reference") @db.VarChar(160)
+  status            String    @default("INITIATED") @db.VarChar(40)
+  failureCode       String?   @map("failure_code") @db.VarChar(100)
+  failureReason     String?   @map("failure_reason") @db.Text
   creditedAt        DateTime? @map("credited_at") @db.Timestamptz(6)
   failedAt          DateTime? @map("failed_at") @db.Timestamptz(6)
-  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt         DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
   wallet   Wallet   @relation(fields: [walletId], references: [id], onDelete: Restrict)
@@ -768,8 +771,8 @@ model ServiceProvider {
   purchases                    Purchase[]
   appointments                 Appointment[]
   prescriptionPharmacyRequests PrescriptionPharmacyRequest[]
-  previousStoreChangeRequests   StoreChangeRequest[] @relation("StoreChangePreviousProvider")
-  requestedStoreChangeRequests  StoreChangeRequest[] @relation("StoreChangeRequestedProvider")
+  previousStoreChangeRequests  StoreChangeRequest[]          @relation("StoreChangePreviousProvider")
+  requestedStoreChangeRequests StoreChangeRequest[]          @relation("StoreChangeRequestedProvider")
 
   @@map("service_providers")
 }
@@ -1098,16 +1101,47 @@ model CrmTask {
 }
 
 model Complaint {
-  id            BigInt   @id @default(autoincrement())
-  customerId    BigInt?  @map("customer_id")
-  complaintType String?  @map("complaint_type") @db.VarChar(100)
-  description   String?  @db.Text
-  status        String?  @db.VarChar(50)
-  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  id               BigInt    @id @default(autoincrement())
+  customerId       BigInt?   @map("customer_id")
+  complaintType    String?   @map("complaint_type") @db.VarChar(100)
+  description      String?   @db.Text
+  status           String?   @db.VarChar(50)
+  assignedToUserId BigInt?   @map("assigned_to_user_id")
+  assignedAt       DateTime? @map("assigned_at") @db.Timestamptz(6)
+  resolvedByUserId BigInt?   @map("resolved_by_user_id")
+  resolvedAt       DateTime? @map("resolved_at") @db.Timestamptz(6)
+  resolutionNote   String?   @map("resolution_note") @db.Text
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  customer Customer? @relation(fields: [customerId], references: [id])
+  customer        Customer?                 @relation(fields: [customerId], references: [id])
+  assignedToUser  User?                     @relation("ComplaintAssignee", fields: [assignedToUserId], references: [id], onDelete: SetNull)
+  resolvedByUser  User?                     @relation("ComplaintResolver", fields: [resolvedByUserId], references: [id], onDelete: SetNull)
+  lifecycleEvents ComplaintLifecycleEvent[]
 
+  @@index([customerId, status], map: "idx_complaints_customer_status")
+  @@index([assignedToUserId, status], map: "idx_complaints_assignee_status")
   @@map("complaints")
+}
+
+model ComplaintLifecycleEvent {
+  id                 BigInt   @id @default(autoincrement())
+  uuid               String   @unique @db.Uuid
+  complaintId        BigInt   @map("complaint_id")
+  eventType          String   @map("event_type") @db.VarChar(50)
+  actorUserId        BigInt?  @map("actor_user_id")
+  fromAssigneeUserId BigInt?  @map("from_assignee_user_id")
+  toAssigneeUserId   BigInt?  @map("to_assignee_user_id")
+  note               String?  @db.Text
+  customerVisible    Boolean  @default(false) @map("customer_visible")
+  createdAt          DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  complaint Complaint @relation(fields: [complaintId], references: [id], onDelete: Cascade)
+  actorUser User?     @relation("ComplaintLifecycleActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  @@index([complaintId, createdAt], map: "idx_complaint_lifecycle_events_complaint_created")
+  @@index([customerVisible, createdAt], map: "idx_complaint_lifecycle_events_visible_created")
+  @@map("complaint_lifecycle_events")
 }
 
 // ------------------------------

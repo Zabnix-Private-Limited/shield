@@ -6,7 +6,7 @@ Audited: 2026-08-14. This is a source-level audit; it is not authenticated produ
 
 | Route / section | Contract and scope | UI/test evidence | Classification / blocker |
 |---|---|---|---|
-| `/portal/agent/dashboard` | Agent workspace contract | dashboard screen | PARTIAL / customer-operation summary tests pending |
+| `/portal/agent/dashboard` | Agent workspace contract | dashboard customer-operation metrics have focused widget coverage in the portal scroll shell | VERIFIED_COMPLETE / authenticated owner UAT pending |
 | `/portal/agent/customers` | assigned customer list/search/360 | AgentScope customer assignment | VERIFIED_COMPLETE |
 | `/portal/agent/registration` | customer creation/agent code | agent-owned registration | VERIFIED_COMPLETE |
 | customer status/detail | customer APIs | AgentScope explicit customer | PARTIAL / business transition policy |
@@ -16,12 +16,12 @@ Audited: 2026-08-14. This is a source-level audit; it is not authenticated produ
 | appointments | appointment APIs | assignment/provider scope | VERIFIED_COMPLETE |
 | documents/prescriptions | document safe projection APIs | customer/provider/agent scope | VERIFIED_COMPLETE |
 | orders/referrals | order/referral APIs | provider/branch and agent graph | PARTIAL / fulfilment and reversal lifecycle |
-| `/portal/agent/followups` | CRM activities/tasks | explicit and unfiltered AgentScope | PARTIAL / internal notes/escalation/UI evidence |
-| CRM customer timeline | activity events | customer scope | PARTIAL / dedicated Agent timeline route |
-| support/complaint queue | complaint APIs | update/resolve scope | PARTIAL / assignment, replies, escalation, resolution notes UI |
+| `/portal/agent/followups` | CRM activities/tasks | explicit and unfiltered AgentScope | VERIFIED_COMPLETE / TEST_VERIFICATION_PENDING populated widget local-runner timeout; escalation belongs to Complaint lifecycle |
+| CRM customer timeline | Customer 360 selected-customer activity timeline | customer scope via selected-customer workspace | VERIFIED_COMPLETE / canonical Customer 360 timeline controller test; no duplicate route required |
+| support/complaint queue | Complaint plus append-only lifecycle event APIs | read/mutation AgentScope; staff actor audit | VERIFIED_COMPLETE / TEST_VERIFICATION_PENDING CRM widget; deployed migration/UAT pending |
 | `/portal/agent/store-changes` | staff Store Change queue/review | AgentScope queue/review plus widgets | VERIFIED_COMPLETE / migration apply + UAT |
-| notifications | notification read/send/device-token APIs | AgentScope provider/target scope tests | PARTIAL / Agent notification route workflow test |
-| `/portal/agent/reports` | backend-owned report registry/run contract; `reports.view` for metadata and `reports.export` for generation; AgentScope overwrites agent code; every export is audited | report chooser/filter/export screen; focused permission/scope/report-contract backend tests | PARTIAL / all named customer-management report contracts exist; focused Flutter report-screen test and authenticated export UAT remain |
+| notifications | notification read/send/device-token APIs | AgentScope provider/target scope tests | VERIFIED_COMPLETE / TEST_VERIFICATION_PENDING Agent route widget; device UAT pending |
+| `/portal/agent/reports` | backend-owned report registry/run contract; `reports.view` for metadata and `reports.export` for generation; AgentScope overwrites agent code; every export is audited | report chooser/filter/export screen; focused registry-selection and permission-safe empty-state Flutter test; backend permission/scope/report-contract tests | VERIFIED_COMPLETE / authenticated export UAT pending |
 | settings/profile | Agent settings contracts | screen exists | VERIFIED_COMPLETE |
 
 | Page / workflow | API / permission | Scope | Classification | Remaining issue |
@@ -37,10 +37,10 @@ Audited: 2026-08-14. This is a source-level audit; it is not authenticated produ
 | Appointment management | appointment controller/service | provider/agent customer scope | VERIFIED_COMPLETE | real scheduling/notification UAT |
 | Documents/prescriptions | document safe projections | customer/provider/agent scope | VERIFIED_COMPLETE | signed-storage UAT |
 | Orders/pharmacy context | purchase/order contracts | provider/branch scope | PARTIAL | fulfilment/refund deferred |
-| Follow-ups/CRM activity | CRM task/activity APIs | AgentScope for explicit customer/task/activity paths and unfiltered agent lists, which receive assigned customer IDs only | PARTIAL | route-level Agent/CRM UI, internal notes, escalation and report contracts remain incomplete |
-| Support/complaint queue | Complaint persistence and CRM complaint APIs | CRM complaint updates/resolution enforce AgentScope; customer-owned support requests are visible through the customer history contract | PARTIAL | assignment/escalation/replies/resolution notes and route-level CRM UI are incomplete |
+| Follow-ups/CRM activity | CRM task/activity APIs | AgentScope for explicit customer/task/activity paths and unfiltered agent lists, which receive assigned customer IDs only | VERIFIED_COMPLETE | TEST_VERIFICATION_PENDING populated widget local-runner timeout; escalation is covered by Complaint lifecycle, not duplicated here |
+| Support/complaint queue | Complaint persistence plus append-only lifecycle events and CRM complaint APIs | every list/detail/mutation is AgentScope-gated; assignment/reassignment, notes, replies, escalation, resolution and audit history are source-covered; customer API filters internal events | VERIFIED_COMPLETE | TEST_VERIFICATION_PENDING focused CRM widget; deployed migration/UAT pending |
 | Store-change queue | protected `GET /store-change-requests` and `POST /store-change-requests/:id/review`; pending migration stores request history | unfiltered agent queue is reduced to assigned customer IDs; review resolves request customer and applies AgentScope; dedicated Agent queue renders load/empty/error/status and approve/reject actions; focused widgets cover empty and pending actions | VERIFIED_COMPLETE | manual UAT and approved migration application pending |
-| Customer reports | ten agent-scoped registry reports: registrations, membership, follow-up, support/complaints, appointments, documents, referrals, performance, retention proxy and CRM performance | report generation is permission-gated, agent scope is principal-derived, and exports write an audit log | PARTIAL | focused Flutter report-screen test and authenticated export UAT remain |
+| Customer reports | ten agent-scoped registry reports: registrations, membership, follow-up, support/complaints, appointments, documents, referrals, performance, retention proxy and CRM performance | report generation is permission-gated, agent scope is principal-derived, and exports write an audit log; registry and permission-safe empty state have focused widget coverage | VERIFIED_COMPLETE | authenticated export UAT pending |
 
 ## Fix from this audit
 

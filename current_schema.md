@@ -220,13 +220,31 @@ CREATE TABLE "commission_events" (
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	CONSTRAINT "commission_events_pool_paise_check" CHECK ((pool_paise >= 0))
 );
+CREATE TABLE "complaint_lifecycle_events" (
+	"id" bigserial PRIMARY KEY,
+	"uuid" uuid NOT NULL CONSTRAINT "complaint_lifecycle_events_uuid_key" UNIQUE,
+	"complaint_id" bigint NOT NULL,
+	"event_type" varchar(50) NOT NULL,
+	"actor_user_id" bigint,
+	"from_assignee_user_id" bigint,
+	"to_assignee_user_id" bigint,
+	"note" text,
+	"customer_visible" boolean DEFAULT false NOT NULL,
+	"created_at" timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
 CREATE TABLE "complaints" (
 	"id" bigserial PRIMARY KEY,
 	"customer_id" bigint,
 	"complaint_type" varchar(100),
 	"description" text,
 	"status" varchar(50),
-	"created_at" timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+	"created_at" timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+	"assigned_to_user_id" bigint,
+	"assigned_at" timestamp with time zone,
+	"resolved_by_user_id" bigint,
+	"resolved_at" timestamp with time zone,
+	"resolution_note" text,
+	"updated_at" timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
 CREATE TABLE "consultations" (
 	"id" bigserial PRIMARY KEY,
@@ -927,7 +945,13 @@ CREATE UNIQUE INDEX "commission_allocations_pkey" ON "commission_allocations" ("
 CREATE UNIQUE INDEX "commission_events_pkey" ON "commission_events" ("id");
 CREATE UNIQUE INDEX "commission_events_uuid_key" ON "commission_events" ("uuid");
 CREATE INDEX "idx_commission_events_status" ON "commission_events" ("status","created_at");
+CREATE UNIQUE INDEX "complaint_lifecycle_events_pkey" ON "complaint_lifecycle_events" ("id");
+CREATE UNIQUE INDEX "complaint_lifecycle_events_uuid_key" ON "complaint_lifecycle_events" ("uuid");
+CREATE INDEX "idx_complaint_lifecycle_events_complaint_created" ON "complaint_lifecycle_events" ("complaint_id","created_at");
+CREATE INDEX "idx_complaint_lifecycle_events_visible_created" ON "complaint_lifecycle_events" ("customer_visible","created_at");
 CREATE UNIQUE INDEX "complaints_pkey" ON "complaints" ("id");
+CREATE INDEX "idx_complaints_assignee_status" ON "complaints" ("assigned_to_user_id","status");
+CREATE INDEX "idx_complaints_customer_status" ON "complaints" ("customer_id","status");
 CREATE UNIQUE INDEX "consultations_pkey" ON "consultations" ("id");
 CREATE UNIQUE INDEX "credit_accounts_customer_id_key" ON "credit_accounts" ("customer_id");
 CREATE UNIQUE INDEX "credit_accounts_pkey" ON "credit_accounts" ("id");
@@ -1118,7 +1142,11 @@ ALTER TABLE "commission_allocations" ADD CONSTRAINT "commission_allocations_comm
 ALTER TABLE "commission_allocations" ADD CONSTRAINT "commission_allocations_recipient_user_id_fkey" FOREIGN KEY ("recipient_user_id") REFERENCES "users"("id");
 ALTER TABLE "commission_events" ADD CONSTRAINT "commission_events_created_by_fkey" FOREIGN KEY ("created_by") REFERENCES "users"("id");
 ALTER TABLE "commission_events" ADD CONSTRAINT "commission_events_customer_id_fkey" FOREIGN KEY ("customer_id") REFERENCES "customers"("id");
+ALTER TABLE "complaint_lifecycle_events" ADD CONSTRAINT "complaint_lifecycle_events_actor_user_id_fkey" FOREIGN KEY ("actor_user_id") REFERENCES "users"("id") ON DELETE SET NULL;
+ALTER TABLE "complaint_lifecycle_events" ADD CONSTRAINT "complaint_lifecycle_events_complaint_id_fkey" FOREIGN KEY ("complaint_id") REFERENCES "complaints"("id") ON DELETE CASCADE;
+ALTER TABLE "complaints" ADD CONSTRAINT "complaints_assigned_to_user_id_fkey" FOREIGN KEY ("assigned_to_user_id") REFERENCES "users"("id") ON DELETE SET NULL;
 ALTER TABLE "complaints" ADD CONSTRAINT "complaints_customer_id_fkey" FOREIGN KEY ("customer_id") REFERENCES "customers"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "complaints" ADD CONSTRAINT "complaints_resolved_by_user_id_fkey" FOREIGN KEY ("resolved_by_user_id") REFERENCES "users"("id") ON DELETE SET NULL;
 ALTER TABLE "consultations" ADD CONSTRAINT "consultations_appointment_id_fkey" FOREIGN KEY ("appointment_id") REFERENCES "appointments"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 ALTER TABLE "consultations" ADD CONSTRAINT "consultations_customer_id_fkey" FOREIGN KEY ("customer_id") REFERENCES "customers"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 ALTER TABLE "credit_accounts" ADD CONSTRAINT "credit_accounts_customer_id_fkey" FOREIGN KEY ("customer_id") REFERENCES "customers"("id") ON DELETE SET NULL ON UPDATE CASCADE;

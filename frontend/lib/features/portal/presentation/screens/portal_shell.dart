@@ -30,6 +30,7 @@ import '../../../customer/prescriptions/presentation/screens/customer_prescripti
 import '../../../customer/shared/domain/customer_access_state.dart';
 import '../../../customer/wallet/presentation/screens/wallet_screen.dart';
 import '../../../customer/wallet/presentation/screens/reward_points_screen.dart';
+import '../../../crm/complaints/presentation/screens/crm_complaints_screen.dart';
 import '../../../provider/customers/presentation/screens/provider_customers_screen.dart';
 import '../../../provider/dashboard/presentation/screens/provider_dashboard_screen.dart';
 import '../../../provider/profile/presentation/screens/provider_profile_screen.dart';
@@ -689,6 +690,9 @@ class _RoleContent extends StatelessWidget {
       content = const _AdminMasterDataView();
     } else if (isAdminAudit) {
       content = _EnterpriseWorkspaceView(portal: portal, section: section);
+    } else if (portal.role == SHIELDRole.crmExecutive &&
+        section.key == 'complaints') {
+      content = const CrmComplaintsScreen();
     } else if (isCrmSection) {
       content = _CrmWorkspaceView(section: section);
     } else if (isReportsSection) {
@@ -6076,19 +6080,20 @@ class _CustomerNotificationsViewState
 
   void _loadNotifications({bool append = false}) {
     final offset = append ? _nextNotificationOffset ?? 0 : 0;
-    _notificationsFuture = ApiService.getCustomerNotificationCenter(offset: offset).then(
-      (payload) {
-        final page = ((payload['items'] as List?) ?? const <dynamic>[])
-          .whereType<Map>()
-          .map(
-            (item) =>
-                NotificationModel.fromJson(Map<String, dynamic>.from(item)),
-          )
-          .toList();
-        _notifications = append ? [..._notifications, ...page] : page;
-        _nextNotificationOffset = payload['nextOffset'] as int?;
-      },
-    );
+    _notificationsFuture =
+        ApiService.getCustomerNotificationCenter(offset: offset).then((
+          payload,
+        ) {
+          final page = ((payload['items'] as List?) ?? const <dynamic>[])
+              .whereType<Map>()
+              .map(
+                (item) =>
+                    NotificationModel.fromJson(Map<String, dynamic>.from(item)),
+              )
+              .toList();
+          _notifications = append ? [..._notifications, ...page] : page;
+          _nextNotificationOffset = payload['nextOffset'] as int?;
+        });
   }
 
   Future<void> _markAllRead(List<NotificationModel> notifications) async {
@@ -6363,9 +6368,8 @@ class _CustomerNotificationsViewState
               Center(
                 child: AppButton(
                   text: 'Load earlier updates',
-                  onPressed: () => setState(
-                    () => _loadNotifications(append: true),
-                  ),
+                  onPressed: () =>
+                      setState(() => _loadNotifications(append: true)),
                 ),
               ),
             ],

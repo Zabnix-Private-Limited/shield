@@ -11961,3 +11961,137 @@ px prisma validate, Nest build, 17 focused Documents/Pharmacy controller tests, 
   - Generic services/booking is no longer treated as proof that provider-specific operational, status, notification, and result/report flows are complete.
 - Verification:
   - git diff --check: passed.Membership release verification (read-only): verified the repository migration artifact defines membership_applications and the required uq_membership_applications_one_open_per_customer partial unique index. Queried the configured release database read-only: the table and all 11 expected columns exist, but the required partial index is absent; only the ordinary customer/status and submitted indexes plus primary/unique indexes are present. The Prisma migration ledger contains no membership migration record. Deployed backend root returned 200 and /customer/membership/application returned 401 (registered/auth-protected route); the deployed frontend bundle contains lifecycle markers (apply, reference, approved, rejected/reapply, active-card) and customer_dashboard_v2_ cache key. Focused tests: backend 2 suites/18 tests passed; Flutter dashboard 2 files/6 tests passed; git diff --check passed. No browser, authenticated mutation, or database write was performed. Release gate blocked until the approved DB migration process creates and records the required partial index, then scoped authenticated two-customer lifecycle verification can run.Customer-management reports audit: traced Agent Reports frontend to the backend platform report registry. Existing source provides registrations, follow-up status, appointments, document status, referral performance and an aggregate performance summary under agent-scoped filters, but does not provide dedicated membership, support/complaint, retention or CRM-performance report contracts; audit remains PARTIAL rather than treating the report chooser as complete. Found and fixed a proven authorization gap: /platform/reports now requires reports.view and /platform/reports/run requires reports.export. Agent execution continues to overwrite any supplied agent scope with the authenticated agent context. Added focused PlatformCapabilitiesController tests (2 passed) for permission metadata and scope override. No browser, production data mutation, or migration execution was performed.Reports verification follow-up: backend npx tsc --noEmit passed after the report-permission hardening; git diff --check passed. Support/complaint source reconciliation confirms the current Complaint persistence has only customer/type/description/status/createdAt and CRM exposes generic update/resolve. The Phase-1 assignment, escalation-history and resolution-note requirements cannot be honestly marked complete without an approved persistence/workflow contract; no speculative schema change or production migration was made.Customer-management reports implementation: expanded the backend-owned Agent report registry with Membership Status, Support & Complaint Status, Customer Retention (explicit current-ACTIVE proxy), and CRM Performance. All query only existing persisted entities through the existing principal-derived agentCode customer scope. Report execution now creates an audit_logs REPORT_EXPORTED record without storing report payload/PII. Existing dynamic Agent Reports UI consumes registry metadata, so no frontend redesign was needed. Focused report controller/service Jest suites: 2 suites, 4 tests passed; backend npx tsc --noEmit passed. Audit remains PARTIAL only for dedicated Flutter report-screen coverage and authenticated export UAT.
+
+## 73. Complaint lifecycle source contract (2026-08-14 17:35:00 IST)
+- Added the additive 20260814_complaint_lifecycle source migration and Prisma relations for assignment, resolution, and append-only lifecycle events. This preserves existing complaint status rows while making CRM ownership/history authoritative.
+- Backend Files: ackend/prisma/schema.prisma, ackend/prisma/migrations/20260814_complaint_lifecycle/migration.sql, ackend/src/crm/crm.controller.ts, ackend/src/crm/crm.service.ts, ackend/src/support/support.controller.ts, ackend/src/support/support.service.ts.
+- CRM actions now have AgentScope boundary checks and lifecycle/audit persistence for assignment, internal notes, customer replies, escalation, and idempotent resolution. Customer detail is ownership-bound and returns only customer-visible events.
+- Local verification: Prisma format, validate, and generate passed; 
+px tsc --noEmit passed.
+- RELEASE_DEPENDENCY: the new migration artifact is not applied by this source task; deployed-DB/manual UAT remain separate.
+
+
+## 74. Customer support detail projection (2026-08-14 17:48:00 IST)
+- Extended the existing Customer Support route to open an authoritative request detail from the customer-owned API, including customer-visible replies and final resolution content only.
+- Frontend Files: rontend/lib/shared/services/api_service.dart, rontend/lib/features/customer/support/presentation/screens/customer_support_screen.dart.
+- The existing loading, empty, retry, submission, and refresh behavior is retained; no unrelated portal redesign was introduced. Internal complaint lifecycle events and staff identity are intentionally not rendered.
+- Local verification: dart format and focused dart analyze passed for both touched files.
+- RELEASE_DEPENDENCY: customer detail requires the additive complaint lifecycle migration and backend deployment before deployed UAT.
+
+
+## 75. CRM complaint queue and action surface (2026-08-14 18:10:00 IST)
+- Replaced the CRM Executive complaints section's generic metadata worklist with a scoped, API-backed Complaint Queue and detail sheet.
+- Frontend Files: rontend/lib/features/crm/complaints/presentation/screens/crm_complaints_screen.dart, rontend/lib/features/portal/presentation/screens/portal_shell.dart, rontend/lib/shared/services/api_service.dart.
+- The queue provides open, active, and resolved views; detail exposes append-only history and guarded in-flight actions for assign/reassign, internal note, customer reply, escalation, and resolution. All reads/mutations use the AgentScope-backed CRM endpoints, not fabricated portal state.
+- Local verification: focused dart format and dart analyze passed for the queue, route integration, and API client.
+- Remaining source verification: focused backend lifecycle/spec tests and focused Flutter widget tests are still required before this workflow can be classified VERIFIED_COMPLETE.
+
+
+## 76. Complaint ownership and scope test coverage (2026-08-14 18:23:00 IST)
+- Added focused controller coverage for authenticated customer-owned support detail and CRM complaint AgentScope enforcement.
+- Backend Files: ackend/src/support/support.controller.spec.ts, ackend/src/crm/crm.controller.spec.ts.
+- Tests cover customer identity-derived history/create/detail ownership, absent cross-customer detail rejection, agent list scoping, denied unassigned complaint read/mutation, and authenticated actor attribution for customer-visible replies.
+- Local verification: 
+px jest src/support/support.controller.spec.ts src/crm/crm.controller.spec.ts --runInBand passed: 2 suites, 9 tests.
+- Remaining lifecycle test depth: service-level event persistence/reassignment/escalation/resolution idempotency and customer-visible event projection tests.
+
+
+## 77. Complaint lifecycle event invariants (2026-08-14 18:36:00 IST)
+- Added service-level Complaint lifecycle coverage and completed STATUS_CHANGED event persistence for generic authoritative status updates.
+- Backend Files: ackend/src/crm/crm.service.ts, ackend/src/crm/crm.controller.ts, ackend/src/crm/crm.service.spec.ts.
+- Verified assignment/reassignment history, internal-note invisibility, customer reply visibility/audit, escalation reason/history, resolution note/actor/time and sequential retry safety, plus status-change history.
+- Local verification: focused Jest lifecycle/controller/customer-support suites passed: 3 suites, 16 tests; 
+px tsc --noEmit passed.
+- RELEASE_DEPENDENCY: migration deployment and owner deployed UAT remain outside this source-only task.
+
+
+## 78. Complaint lifecycle audit reconciliation (2026-08-14 18:46:00 IST)
+- Updated Customer, Agent, and Cross-Portal completion audits to reflect the implemented Complaint lifecycle source contract and UI routes.
+- Documentation Files: docs/customer-ui/CUSTOMER_PORTAL_FULL_COMPLETION_AUDIT.md, docs/agent/AGENT_CUSTOMER_MANAGEMENT_FULL_COMPLETION_AUDIT.md, docs/agent/CUSTOMER_CROSS_PORTAL_LIFECYCLE_AUDIT.md.
+- The audits preserve PARTIAL honestly for missing focused Flutter widget coverage and deployed migration/owner UAT, while no longer claiming assignment, reply, escalation, resolution-note, or route-level CRM UI are absent.
+
+
+## 79. Wallet recharge safe customer status (2026-08-14 18:58:00 IST)
+- Added a read-only Customer Wallet recharge-intent status card; it never creates a payment intent, opens checkout, or credits a wallet.
+- Frontend Files: rontend/lib/shared/services/api_service.dart, rontend/lib/features/customer/wallet/presentation/screens/wallet_screen.dart.
+- The UI explicitly reports that online recharge is unavailable and that balance remains unchanged until approved provider settlement. Existing persisted intent status can be displayed without asserting payment success.
+- Local verification: focused dart format and dart analyze passed.
+- BUSINESS_DECISION_REQUIRED: approved payment provider, merchant configuration, signed webhook, verified/idempotent settlement, reversal/refund policy.
+
+
+## 80. Wallet recharge audit boundary (2026-08-14 19:05:00 IST)
+- Updated customer and cross-portal audits to classify the source-safe WalletRechargeIntent contract/UI as VERIFIED_COMPLETE while retaining provider settlement as BUSINESS_DECISION_REQUIRED.
+- Documentation Files: docs/customer-ui/CUSTOMER_PORTAL_FULL_COMPLETION_AUDIT.md, docs/agent/CUSTOMER_CROSS_PORTAL_LIFECYCLE_AUDIT.md.
+- This avoids treating a safe non-crediting intent/status flow as incomplete merely because no approved payment provider exists.
+
+
+## 81. Customer notification source verification (2026-08-14 19:17:00 IST)
+- Reconfirmed existing customer notification inbox pagination, retry, read-state, filters, and deep-link allowlist source behavior; no replacement was needed.
+- Local verification: focused dart analyze passed for Portal Shell and notification navigation service; lutter test test/notification_navigation_service_test.dart passed: 3 tests.
+- DEVICE UAT PENDING: actual FCM delivery and notification-tap behavior require owner/device verification.
+
+
+## 82. Agent reports widget verification (2026-08-14 19:31:00 IST)
+- Added focused Agent Reports widget coverage for backend registry rendering/report selection and the permission-safe empty registry state.
+- Frontend Files: rontend/test/agent_reports_screen_test.dart.
+- Local verification: lutter test test/agent_reports_screen_test.dart passed: 2 tests. The test uses the actual portal scroll-shell dimensions to avoid hiding desktop overflow issues.
+- Audit: Agent report source is now VERIFIED_COMPLETE; authenticated export/download UAT remains pending owner verification.
+
+
+## 83. Agent dashboard customer-operation summary verification (2026-08-14 19:42:00 IST)
+- Added focused Agent dashboard widget coverage for customer-operation summary metrics without changing dashboard presentation or behavior.
+- Frontend Files: rontend/test/agent_dashboard_summary_test.dart.
+- Local verification: lutter test test/agent_dashboard_summary_test.dart passed: 1 test, asserting task, follow-up, customer-count, and visit-count metrics render inside the production-like portal scroll shell.
+- Audit: /portal/agent/dashboard source is VERIFIED_COMPLETE; authenticated owner UAT remains pending.
+
+
+## 84. Backend full build verification (2026-08-14 19:54:00 IST)
+- Ran the backend production build after Complaint lifecycle, support, and CRM updates.
+- Local verification: 
+pm run build passed, including local Prisma client generation and 
+est build compilation.
+- No database schema apply, migration execution, seed, or deployed/browser action was performed.
+
+
+## 85. Agent Customer 360 timeline verification (2026-08-14 20:06:00 IST)
+- Verified the existing Customer 360 selected-customer workspace as the canonical Agent CRM timeline; no duplicate timeline route was created.
+- Frontend Files: rontend/test/agent_customer_timeline_controller_test.dart.
+- Local verification: lutter test test/agent_customer_timeline_controller_test.dart passed: 1 test, proving selected customer identity drives the Customer 360 workspace and exposes its timeline.
+- Audit: CRM customer timeline source is VERIFIED_COMPLETE.
+
+
+## 86. Provider request capability mapping verification (2026-08-14 20:18:00 IST)
+- Exposed and tested the existing pure provider-type to appointment-type mapping without expanding specialty business workflows.
+- Frontend Files: rontend/lib/features/customer/booking/data/customer_booking_repository.dart, rontend/test/customer_booking_controller_test.dart.
+- Local verification: lutter test test/customer_booking_controller_test.dart passed: 3 tests covering mapping plus authoritative preselection and duplicate submit protection.
+- Audit: provider matrix now separates VERIFIED_COMPLETE discovery/request mapping from NOT_SUPPORTED/DEFERRED lab, treatment, plan, specialty-result, fulfilment/refund, and live-slot subflows.
+
+
+## 87. Complaint lifecycle owner-UAT checklist (2026-08-14 20:28:00 IST)
+- Updated customer and Agent manual-UAT checklists with the lifecycle acceptance boundaries that source tests cannot prove on deployment.
+- Documentation Files: docs/customer-ui/CUSTOMER_PORTAL_MANUAL_UAT_CHECKLIST.md, docs/agent/AGENT_CUSTOMER_MANAGEMENT_MANUAL_UAT_CHECKLIST.md.
+- Owner UAT now explicitly validates customer-visible reply/resolution, hidden internal notes/escalations, assignment/reassignment, scoped mutation denial, history/audit retention, and customer refresh.
+
+
+## 88. Source completion audit correction (2026-08-14 20:40:00 IST)
+- Corrected stale customer audit rows: Wallet now records the verified safe recharge status UI; Notifications records implemented pagination while retaining its focused inbox-widget test gap.
+- Documentation File: docs/customer-ui/CUSTOMER_PORTAL_FULL_COMPLETION_AUDIT.md.
+- True business/source gaps remain unchanged: payment settlement/reversal policy, customer reward redemption, card commercial lifecycle, and the explicitly listed focused widget tests.
+
+
+## 89. Follow-ups populated-state test attempt (2026-08-14 20:52:00 IST)
+- Added populated Follow-ups coverage for overdue, today, and upcoming grouping and changed its harness pumping to bounded frames rather than unbounded settle waits.
+- Frontend File: rontend/test/agent_followups_screen_test.dart.
+- Static verification: focused Dart analysis passed. Runtime verification: isolated lutter test test/agent_followups_screen_test.dart timed out twice at 124 seconds under local Flutter contention, including after bounded pumps; this is NOT recorded as a test pass.
+- Remaining: rerun this one isolated suite in an uncontended Flutter environment before classifying Follow-ups source as VERIFIED_COMPLETE.
+
+
+## 90. Final Customer and Agent CRM source handoff (2026-08-14 21:10:00 IST)
+- Source handoff classification: Customer Portal and Agent CRM are READY_FOR_MANUAL_UAT. The source lifecycle is not blocked by local widget runner contention, unapplied migrations, device FCM verification, or documented business decisions.
+- Complaint and support source: customer submit/history/detail, CRM queue/detail, assignment/reassignment, internal notes, visible replies, escalation, resolution, append-only history, AgentScope, audit records, and customer visibility filtering are implemented. Customer and CRM Flutter routes analyze successfully. Focused backend lifecycle suite passed 3 suites and 16 tests. Focused Support and CRM widget coverage is TEST_VERIFICATION_PENDING.
+- Notifications source: owned inbox, offset pagination, read state, push registration/refresh/logout handling, deep-link allowlist, cold-start routing, and invalid target recovery are implemented. Navigation test passed 3 tests. Inbox and Agent route widget coverage are TEST_VERIFICATION_PENDING. Device FCM UAT is pending.
+- Follow-ups source analyzer passed. Existing empty-state coverage exists. Populated widget test is TEST_VERIFICATION_PENDING because the isolated local runner timed out twice; no functional defect is known.
+- Migration apply before owner UAT: 20260814_membership_applications, 20260814_store_change_requests, 20260814_wallet_recharge_intents, then 20260814_complaint_lifecycle. All are additive source-validated artifacts and require DB apply before deployed UAT.
+- Business decisions outside source completion: payment provider and settlement webhook/refund rules; customer reward redemption eligibility/policy; unresolved Shield Card commercial and physical lifecycle rules.
+- Final static verification: focused backend lifecycle tests passed 3 suites/16 tests; TypeScript check passed; backend production build passed; Flutter analyze passed 11 touched items. Git diff check reports trailing whitespace only in prior append-only log entries; no source code whitespace errors reported.
+- Database for manual UAT: MIGRATIONS_PENDING. Manual deployed UAT: PENDING OWNER. Production release approval: NOT YET GRANTED.

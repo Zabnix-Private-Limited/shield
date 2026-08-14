@@ -5,6 +5,15 @@ import 'package:shield/features/customer/services/data/models/customer_provider.
 import 'package:shield/shared/models/appointment.dart';
 
 void main() {
+  test('maps supported provider request types without fabricating specialty results', () {
+    expect(CustomerBookingRepository.appointmentTypeForProviderType('DENTAL'), 'DENTAL');
+    expect(CustomerBookingRepository.appointmentTypeForProviderType('HOMECARE'), 'HOME_VISIT');
+    expect(CustomerBookingRepository.appointmentTypeForProviderType('LABORATORY'), 'LAB');
+    expect(CustomerBookingRepository.appointmentTypeForProviderType('CLINIC'), 'CLINIC');
+    expect(CustomerBookingRepository.appointmentTypeForProviderType('DIETITIAN'), 'CLINIC');
+    expect(CustomerBookingRepository.appointmentTypeForProviderType('COSMETIC'), 'CLINIC');
+  });
+
   test(
     'restores an authoritative preselected provider and submits once',
     () async {

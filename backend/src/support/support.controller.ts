@@ -3,6 +3,7 @@ import {
   Body,
   Controller,
   Get,
+  Param,
   Post,
   Req,
 } from '@nestjs/common';
@@ -169,5 +170,13 @@ export class CustomerSupportController {
         },
       ),
     };
+  }
+
+  @RequirePermissions('customers.view')
+  @Get(':id')
+  async detail(@Param('id') id: string, @CurrentPrincipal() principal?: ShieldPrincipal) {
+    const data = await this.supportService.getForCustomer(this.customerId(principal), BigInt(id));
+    if (!data) throw new BadRequestException('Support request not found.');
+    return { success: true, data };
   }
 }

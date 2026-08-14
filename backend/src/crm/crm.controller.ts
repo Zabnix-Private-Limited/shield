@@ -210,6 +210,45 @@ export class CrmController {
     };
   }
 
+  @RequirePermissions('crm.view')
+  @Get('crm/complaints/:id')
+  async getComplaint(@Param('id') id: string, @CurrentPrincipal() principal?: ShieldPrincipal) {
+    await this.agentScopeService.assertAgentCanAccessComplaint(BigInt(id), principal);
+    return { success: true, data: await this.crmService.getComplaint(BigInt(id)) };
+  }
+
+  @RequirePermissions('crm.update')
+  @Post('complaints/:id/assign')
+  async assignComplaint(@Param('id') id: string, @Body() body: any, @CurrentPrincipal() principal?: ShieldPrincipal) {
+    await this.agentScopeService.assertAgentCanAccessComplaint(BigInt(id), principal);
+    if (!principal?.userId || !body.assigned_to_user_id) throw new UnauthorizedException('Authenticated staff and assignment target are required');
+    return { success: true, data: await this.crmService.assignComplaint(BigInt(id), BigInt(body.assigned_to_user_id), BigInt(principal.userId), body.note) };
+  }
+
+  @RequirePermissions('crm.update')
+  @Post('complaints/:id/internal-notes')
+  async addInternalNote(@Param('id') id: string, @Body() body: any, @CurrentPrincipal() principal?: ShieldPrincipal) {
+    await this.agentScopeService.assertAgentCanAccessComplaint(BigInt(id), principal);
+    if (!principal?.userId) throw new UnauthorizedException('Authentication required');
+    return { success: true, data: await this.crmService.addInternalNote(BigInt(id), BigInt(principal.userId), body.note || '') };
+  }
+
+  @RequirePermissions('crm.update')
+  @Post('complaints/:id/reply')
+  async replyToCustomer(@Param('id') id: string, @Body() body: any, @CurrentPrincipal() principal?: ShieldPrincipal) {
+    await this.agentScopeService.assertAgentCanAccessComplaint(BigInt(id), principal);
+    if (!principal?.userId) throw new UnauthorizedException('Authentication required');
+    return { success: true, data: await this.crmService.replyToCustomer(BigInt(id), BigInt(principal.userId), body.note || '') };
+  }
+
+  @RequirePermissions('crm.update')
+  @Post('complaints/:id/escalate')
+  async escalateComplaint(@Param('id') id: string, @Body() body: any, @CurrentPrincipal() principal?: ShieldPrincipal) {
+    await this.agentScopeService.assertAgentCanAccessComplaint(BigInt(id), principal);
+    if (!principal?.userId) throw new UnauthorizedException('Authentication required');
+    return { success: true, data: await this.crmService.escalateComplaint(BigInt(id), BigInt(principal.userId), body.reason || '', body.assigned_to_user_id ? BigInt(body.assigned_to_user_id) : undefined) };
+  }
+
   @RequirePermissions('crm.update')
   @Put('complaints/:id')
   async updateComplaint(
@@ -221,7 +260,11 @@ export class CrmController {
       BigInt(id),
       principal,
     );
-    const comp = await this.crmService.updateComplaint(BigInt(id), body);
+    const comp = await this.crmService.updateComplaint(
+      BigInt(id),
+      body,
+      principal?.userId ? BigInt(principal.userId) : undefined,
+    );
     return {
       success: true,
       message: 'Complaint updated successfully',
@@ -233,13 +276,15 @@ export class CrmController {
   @Post('complaints/:id/resolve')
   async resolveComplaint(
     @Param('id') id: string,
+    @Body() body: any,
     @CurrentPrincipal() principal?: ShieldPrincipal,
   ) {
     await this.agentScopeService.assertAgentCanAccessComplaint(
       BigInt(id),
       principal,
     );
-    const comp = await this.crmService.resolveComplaint(BigInt(id));
+    if (!principal?.userId) throw new UnauthorizedException('Authentication required');
+    const comp = await this.crmService.resolveComplaint(BigInt(id), BigInt(principal.userId), body.resolution_note || '');
     return {
       success: true,
       message: 'Complaint resolved successfully',

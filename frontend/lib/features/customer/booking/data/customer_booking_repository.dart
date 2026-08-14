@@ -22,12 +22,12 @@ class CustomerBookingRepository {
     String? notes,
   }) => ApiService.createCustomerAppointment(
     providerId: provider.id,
-    appointmentType: _appointmentType(provider.type),
+    appointmentType: appointmentTypeForProviderType(provider.type),
     appointmentDate: preferredDateTime,
     remarks: notes?.trim().isEmpty ?? true ? null : notes?.trim(),
   );
 
-  String _appointmentType(String providerType) {
+  static String appointmentTypeForProviderType(String providerType) {
     switch (providerType.trim().toUpperCase()) {
       case 'DENTAL':
         return 'DENTAL';
