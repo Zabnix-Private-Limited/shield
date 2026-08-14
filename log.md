@@ -12103,3 +12103,26 @@ est build compilation.
 - Verified deployed guards: uq_membership_applications_one_open_per_customer with PENDING or APPROVED predicate; uq_store_change_requests_one_pending_per_customer with PENDING predicate; Wallet intent uniqueness/indexes/positive amount constraint; Complaint lifecycle fields, indexes, and foreign keys.
 - Status: CUSTOMER PORTAL SOURCE HANDOFF READY_FOR_MANUAL_UAT; AGENT CRM SOURCE HANDOFF READY_FOR_MANUAL_UAT; DATABASE FOR MANUAL UAT READY; MANUAL DEPLOYED UAT PENDING OWNER; DEVICE FCM UAT PENDING; PRODUCTION RELEASE APPROVAL NOT YET GRANTED.
 - No schema write or Prisma migration-history assertion was made by this documentation-only correction.
+
+
+## 92. Android Play release 0.0.4 preparation (2026-08-14 20:55:00 IST)
+- Prepared the Android release identity as version 0.0.4 (version code 2026081401), preserving the configured signed release build path.
+- Added docs/releases/ANDROID_PLAYSTORE_RELEASE_NOTES_0.0.4.md with customer-facing Play Store notes and explicit scope limits so unverified operational behavior is not advertised.
+- Frontend Files:
+  - frontend/pubspec.yaml
+  - docs/releases/ANDROID_PLAYSTORE_RELEASE_NOTES_0.0.4.md
+- Backend Files: none.
+- Verification pending: signed release APK and Android App Bundle build outputs.
+
+## 93. Android Play release 0.0.4 artifacts built (2026-08-14 20:59:00 IST)
+- Generated a signed Android release APK and signed Play Store Android App Bundle from the current frontend source.
+- Verified the APK package identity: com.zabnix.shield, version 0.0.4, version code 2026081401, min SDK 24, target SDK 36, and supported native ABIs arm64-v8a, armeabi-v7a, and x86_64.
+- APK signing verification found one configured SHIELD RSA-2048 signer. The AAB was produced by the same configured release signing path; standard Java verification reports the expected self-signed-certificate trust warning, which does not invalidate a Play upload artifact.
+- Artifacts:
+  - frontend/build/app/outputs/flutter-apk/app-release.apk (81,149,275 bytes, SHA-256 D2DE79B986FD63683C28936205AA42867AAA3FCFB038BB5DA5F705907E656334)
+  - frontend/build/app/outputs/bundle/release/app-release.aab (60,026,244 bytes, SHA-256 03D9CE8D6331FAA80E7AE585A8538B4564E34C4A31E09915E9ECD5A92515DC95)
+- Frontend Files:
+  - frontend/pubspec.yaml
+  - docs/releases/ANDROID_PLAYSTORE_RELEASE_NOTES_0.0.4.md
+- Backend Files: none.
+- Verification: flutter pub get, flutter build apk --release, flutter build appbundle --release, APK package metadata inspection, and APK signing inspection passed. No live browser/device UAT or Play Console upload was performed.

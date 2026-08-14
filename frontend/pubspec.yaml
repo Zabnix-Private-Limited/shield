@@ -1,7 +1,7 @@
 name: shield
 description: "SHIELD Healthcare Platform"
 publish_to: 'none'
-version: 0.0.3+2026070802
+version: 0.0.4+2026081401
 
 environment:
   sdk: ^3.10.4
