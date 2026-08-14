@@ -11705,3 +11705,259 @@ px prisma validate, Nest build, 17 focused Documents/Pharmacy controller tests, 
 - Frontend: added non-browser widget coverage for the shortened no-application card at 320px and pending state at 720px, including assertions that pending has no digital-card or plan affordance.
 - Verification PASS: flutter test test/customer_dashboard_membership_header_test.dart test/customer_dashboard_card_context_test.dart (6 tests); flutter analyze lib/features/customer/dashboard lib/shared/services/api_service.dart test/customer_dashboard_membership_header_test.dart; git diff --check.
 - No live browser or database interaction was used.
+
+## 46. Membership Release Verification — 2026-08-14 22:05:00 IST
+
+### Deployment Evidence
+- Production endpoints responded: frontend 200 and backend health 200. Origin HEAD is 91a115c4c05fa94b298ce954920655c60fd11f00.
+- Production backend distinguishes the protected customer application route (401 without auth) from an unknown route (404), confirming the route is deployed behind authentication.
+- Production Flutter main.dart.js contains the new application copy, MembershipDashboardState, and customer_dashboard_v2_ cache key. The old Complete profile string also remains elsewhere in the application; it is not evidence of the removed membership-block action.
+
+### Database Read-only Verification
+- PASS: public.membership_applications exists with the expected 11 columns, primary/UUID/reference constraints, customer cascade FK, and reviewer SET NULL FK.
+- BLOCKER: the required partial unique index uq_membership_applications_one_open_per_customer is absent. Only the two non-unique query indexes and ordinary PK/UUID/reference unique indexes are present. This makes PENDING/APPROVED duplicate prevention not database-enforced.
+
+### Gate Decision
+- No authenticated mutation test was executed: no release-test customer credential was supplied, and creating applications while the required database uniqueness index is absent would be unsafe.
+- No database write, migration apply, browser interaction, or speculative source change was performed. Release gate is BLOCKED pending application of the missing partial-index statement from 20260814_membership_applications/migration.sql and a designated authenticated release-test customer.
+## 47. Customer Journey and Agent Customer Management Source Completion Audit — 2026-08-14 22:35:00 IST
+
+### Audit scope
+- Performed source-level route, contract, ownership, cache, state, and lifecycle audit of Customer portal and Agent/Staff customer management. No live browser automation, production database write, migration, seed, or deployment action occurred.
+
+### Proven fix
+- `backend/src/customer/customer-membership.controller.ts`: membership-application review now resolves the application customer and enforces AgentScopeService before review. `customers.approve` alone was insufficient for scoped SHIELD_AGENT users.
+- `backend/src/customer/customer.service.ts`: provides the minimal application-to-customer lookup used solely for the scope assertion.
+- `backend/src/customer/customer-membership.controller.spec.ts`: regression proves staff review passes the resolved customer through AgentScopeService.
+
+### Documentation
+- Added Customer portal full completion audit and manual UAT checklist.
+- Added Agent customer-management full completion audit, cross-portal lifecycle audit, and manual UAT checklist.
+- Documents explicitly distinguish verified source contracts, approved deferred scope, the missing membership partial-index release blocker, and owner-only manual UAT.
+
+### Verification
+- PASS: `npx jest customer/customer-membership.controller.spec.ts --runInBand` (5 tests).
+- PASS: `git diff --check`.
+- Earlier focused membership/service suites and Flutter dashboard/widget checks remain recorded in entries 43–45.
+- NOTE: bounded backend typecheck exceeded 60 seconds after focused tests with no diagnostic; it is not claimed as passed.
+
+### External follow-up
+- Apply/verify the missing `uq_membership_applications_one_open_per_customer` partial unique index through the approved database release process before release-safe duplicate prevention can be claimed.
+- Owner must perform the supplied manual Customer and Agent UAT checklists. Production release approval is not claimed.
+
+## 48. Corrective Phase-1 Customer and CRM Completion Pass — 2026-08-14 22:55:00 IST
+
+- Scope correction: Wallet Recharge, Preferred Hyper Pharmacy, Store Change Request, and Customer Support/Complaints are Phase-1 requirements and are not classified as deferred merely because source support is absent.
+- Security: wallet recharge/adjust/redeem now enforce AgentScope; CRM complaint update/resolve now enforce complaint Customer scope.
+- Source classification: customer wallet balance/transactions and reward balance are supported; customer Wallet Recharge is MISSING because only a staff ledger recharge endpoint exists, without a customer payment initiation/callback/idempotency/failure/reversal flow. Preferred pharmacy is PARTIAL; Store Change Request is MISSING. Support Complaint persistence exists but authenticated customer history/status and complete CRM lifecycle are PARTIAL.
+- Migration artifact 20260814_membership_applications contains the required open-application partial unique index; no migration was executed.
+- Documentation: corrected completion/lifecycle/UAT documents with dedicated recharge, pharmacy/store-change, support/complaint, notification deep-link, provider-specific and CRM cases.
+- Verification PASS: 32 focused Jest tests across wallet, customer membership, Agent scope, appointment, document, notification, referral and customer provider discovery. git diff --check passed.
+- No browser automation, production database write, migration, seed, or deployment action occurred.
+
+
+## 49. Corrective Preferred Pharmacy Evidence — 2026-08-14 23:05:00 IST
+
+- Corrected the Customer audit: Preferred Hyper Pharmacy is VERIFIED_COMPLETE at source level. CustomerAccountController provides authenticated eligible pharmacy list plus customer-owned get/set/remove preferred-provider endpoints, and CustomerAccountScreen has a Pharmacy tab with loading, empty, per-section error, selection and removal behavior.
+- Store Change Request remains MISSING: no dedicated persistence/API/customer route/CRM review workflow was found.
+- Attempted focused Flutter account/wallet tests plus analyzer with a 90-second bound. The runner made no progress/output before timeout, so no result is claimed.
+- No browser, production database write, migration, seed or deployment action occurred.
+
+
+## 50. Customer-owned Support Contract — 2026-08-14 23:20:00 IST
+
+- Added authenticated GET/POST /customer/support. Customer identity is derived solely from the authenticated principal; support history is safely scoped to that customer. The existing public /support/contact and /support/feedback endpoints remain for unauthenticated web contact use.
+- Customer support sheet now submits through the authenticated Customer support endpoint instead of attaching a client-selected customer_id to the public contract.
+- Added support controller ownership tests. PASS: support and wallet focused Jest suites (6 tests).
+- Flutter analyzer for only API service/support sheet exceeded the 60-second bounded runner window without output; no analyzer pass is claimed. git diff --check passed.
+- Customer audit/lifecycle audit updated: support is PARTIAL because a dedicated customer history/status screen and full CRM assignment/escalation/reply lifecycle remain absent.
+- No browser, production database write, migration, seed, or deployment action occurred.
+
+
+## 51. Authenticated Customer Support Form Repair — 2026-08-14 23:35:00 IST
+
+- Removed obsolete public-form Turnstile, name/phone/email and rating requirements from the authenticated customer support sheet. Those values were no longer sent after the customer-owned support contract was introduced and would otherwise prevent a signed-in customer from submitting support on web.
+- The public contact/feedback endpoints retain their independent Turnstile protection; this change applies only to the authenticated Customer portal sheet.
+- PASS: dart analyze lib/shared/widgets/customer_support_sheet.dart lib/shared/services/api_service.dart; git diff --check.
+- No browser, production DB write, migration, seed or deployment action occurred.
+## 52. Customer support history and agent-scope completion slice
+- Timestamp: 2026-08-14  IST
+- Frontend Files:
+  - Added customer support history section and wired it into the customer portal navigation. It reads only the authenticated customer support history, renders authoritative status, and refreshes after a support submission.
+  - The existing authenticated support sheet now has a visible history destination instead of a submit-only dead end.
+- Backend Files:
+  - Closed agent-scope gaps in wallet reads: agent wallet profile and wallet transaction requests now resolve through assigned-customer scope before data is returned.
+  - Closed unfiltered CRM-list exposure: agent activity, task, and complaint lists now receive the assigned customer ID set, including an empty scope that returns no records.
+  - Added AgentScopeService wallet-ID resolution so wallet transaction access is checked against the wallet owner.
+- Verification:
+  - dart analyze on the support screen, portal shell, and portal role data: passed with no issues.
+  - Focused backend Jest suites for wallet scope and customer support: 7 tests passed.
+  - git diff --check: passed.
+- Remaining Risks:
+  - No browser, authenticated UAT, production database writes, or deployment actions were performed. Wallet payment/recharge and store-change workflows still require their separately specified backend contracts and release validation.## 53. Corrective audit evidence and backend typecheck recovery
+- Timestamp: 2026-08-14 IST
+- Backend Files:
+  - Corrected test fixture typings in AgentScopeService and CustomerService tests so the repository-wide TypeScript compiler can validate all backend sources and tests.
+  - Confirmed the membership-application migration source includes uq_membership_applications_one_open_per_customer for PENDING and APPROVED rows; no migration execution occurred.
+- Documentation:
+  - Corrected the customer, Agent/CRM, and cross-portal audits for the implemented customer Support history route, agent-scoped unfiltered CRM lists, and complete migration artifact.
+  - Retained Wallet Recharge and Store Change as Phase-1 source gaps, not deferred capabilities.
+- Verification:
+  - npx tsc --noEmit: passed.
+  - npm run build: passed; Prisma client generation and Nest compilation only, no schema apply.
+  - Focused AgentScope, customer membership/service, wallet, and support Jest suites: 5 suites / 27 tests passed.
+  - git diff --check: passed.
+- Remaining Risks:
+  - Source completion is still partial because customer recharge/payment, Store Change lifecycle, CRM support lifecycle, notification deep-link source evidence, provider-journey proof, and route-level report contracts remain incomplete. No browser, production database, or deployment action was performed.## 54. Notification ownership hardening
+- Timestamp: 2026-08-14 IST
+- Backend Files:
+  - Notification device-token registration now derives the customer for a customer principal and applies AgentScope/ProviderScope before an internal caller may register a target customer token.
+  - Internal device-token deactivation now resolves the token owner and applies customer scope before deactivation; customer logout remains restricted to the authenticated customer.
+  - Notification send now applies AgentScope/ProviderScope to the target customer before persistence and FCM dispatch.
+  - Added a focused negative-scope regression test for staff notification send.
+- Verification:
+  - Notification controller/service Jest suites: 2 suites / 6 tests passed.
+  - npx tsc --noEmit: passed.
+  - git diff --check: passed.
+- Remaining Risks:
+  - Notification pagination and complete static deep-link/invalid-target mapping remain audit items. Device push delivery itself remains owner/device UAT, not source-test evidence.## 55. Phase-1 preferred pharmacy Store Change lifecycle
+- Timestamp: 2026-08-14 IST
+- Backend Files:
+  - Added StoreChangeRequest Prisma model and pending migration. It records customer, previous/requested pharmacy, required reason, pending/approved/rejected state, reviewer and review reason.
+  - Added customer-owned submit/history endpoints plus staff review endpoint. Customer identity is principal-derived; staff review resolves request ownership and applies AgentScope.
+  - Enforced one pending request per customer in both source validation and a partial unique database index. Approval updates the preferred pharmacy transactionally; review creates activity history and an in-app notification.
+- Frontend Files:
+  - Added Customer Store Change route with eligible pharmacy selection, required reason, request history, authoritative status, review note, loading, empty, error, retry, and refresh states.
+- Verification:
+  - prisma validate: passed.
+  - Prisma client generation and backend npx tsc --noEmit: passed.
+  - StoreChangeController Jest suite: 3 tests passed.
+  - Dart analyze for the new customer screen/API/portal routing: passed with no issues.
+  - git diff --check: passed.
+- Remaining Risks:
+  - The pending migration is not applied. Agent/CRM Store Change queue/review UI is still required for full Phase-1 source completion. No browser or production database interaction occurred.## 56. Agent-scoped Store Change queue contract
+- Timestamp: 2026-08-14 IST
+- Backend Files:
+  - Added protected GET /store-change-requests for staff queue retrieval. Explicit customer filters are scope-checked; unfiltered SHIELD_AGENT queues are constrained to assigned customer IDs before persistence query.
+  - Added staff queue projection with customer and pharmacy context while preserving the customer-owned history projection.
+- Verification:
+  - StoreChangeController focused Jest suite: 4 tests passed.
+  - npx tsc --noEmit: passed.
+  - git diff --check: passed.
+- Remaining Risks:
+  - Dedicated Agent/CRM queue/review rendering is still not wired into the portal shell. The Store Change migration has not been applied; no production database or browser action occurred.## 57. Agent Store Change queue and review surface
+- Timestamp: 2026-08-14 IST
+- Frontend Files:
+  - Added Agent Store Changes portal section and queue screen backed by the protected staff endpoint.
+  - The screen includes loading, empty, error/retry, refresh, assigned-customer context, status/review reason, approval, and rejection with required reason.
+  - Added API client methods for queue retrieval and review mutation.
+- Documentation:
+  - Corrected Store Change audit rows: the Agent queue/review UI now exists; pending migration and focused Flutter widget coverage remain the source-evidence limits.
+- Verification:
+  - dart analyze on Agent Store Change screen, API service, portal shell, and role data: passed with no issues.
+  - git diff --check: passed.
+- Remaining Risks:
+  - No browser UAT or database migration execution. The new migration must be applied through the approved process; widget tests should be added before a VERIFIED_COMPLETE source classification.## 58. Store Change widget regression proof and source completion
+- Timestamp: 2026-08-14 IST
+- Frontend Files:
+  - Added injectable loaders to Store Change screens solely for isolated widget verification; production continues to default to authenticated API methods.
+  - Fixed a real ListView indexing defect discovered by the new test: populated customer and Agent queues previously allocated an extra row and attempted request index minus one.
+  - Added focused customer history and Agent queue widget tests covering customer populated history, Agent empty queue, and Agent pending approve/reject actions.
+- Documentation:
+  - Reclassified Store Change Customer, Agent/CRM, and cross-portal source status as VERIFIED_COMPLETE. Manual UAT and approved migration application remain explicitly separate.
+- Verification:
+  - flutter test Store Change suites: 3 tests passed.
+  - dart analyze Store Change screens and tests: passed with no issues.
+  - git diff --check: passed.
+- Remaining Risks:
+  - Store Change migration remains intentionally unapplied. No browser, device, production database, or deployment verification was performed.## 59. Customer push notification route recovery
+- Timestamp: 2026-08-14 IST
+- Frontend Files:
+  - Added NotificationNavigationService with a strict customer-section allowlist for push route/section metadata.
+  - Unsupported, arbitrary, missing, or malformed targets recover to the customer notification center rather than navigating outside the customer portal.
+  - Firebase onMessageOpenedApp and cold-start getInitialMessage now use the resolver. Cold-start navigation is queued until the root navigator exists so authentication and router guards remain authoritative.
+  - Added focused resolver tests for accepted, rejected, and fallback targets.
+- Verification:
+  - flutter test notification navigation suite: 3 tests passed.
+  - dart analyze notification navigation/bootstrap/main/test: passed with no issues.
+  - git diff --check: passed.
+- Remaining Risks:
+  - Actual FCM delivery and device tap behavior remain manual device UAT. Notification pagination remains a separate source-level audit item.## 60. Customer notification pagination contract
+- Timestamp: 2026-08-14 IST
+- Backend Files:
+  - GET /notifications/me now accepts bounded offset and limit values, caps requests at 50, and returns total, nextOffset, and customer-principal-owned items.
+  - Added focused controller coverage proving pagination remains pinned to the authenticated customer.
+- Frontend Files:
+  - Customer notification center now requests pages, retains earlier loaded items, and provides a Load earlier updates action while preserving loading/error/retry and unread/read grouping.
+- Verification:
+  - Notification controller/service Jest suites: 2 suites / 7 tests passed.
+  - backend npx tsc --noEmit: passed.
+  - dart analyze portal notification/API scope: passed with no issues.
+  - git diff --check: passed.
+- Remaining Risks:
+  - Notification center pagination needs focused Flutter widget coverage before its full source classification can be raised. FCM device delivery/tap behavior remains owner UAT.## 61. Provider-neutral Wallet Recharge intent schema
+- Timestamp: 2026-08-14 IST
+- Backend Files:
+  - Added WalletRechargeIntent Prisma model and pending migration for customer-owned recharge amount, wallet, idempotency key, optional provider/reference, lifecycle state, failure data, and terminal timestamps.
+  - The migration enforces a positive amount, immutable unique idempotency key, unique provider reference, ownership FKs, and queue indexes.
+  - This artifact intentionally does not create a customer wallet credit. A future approved provider adapter must verify settlement before a separate idempotent ledger credit is permitted.
+- Verification:
+  - prisma validate: passed.
+  - Prisma client generation: passed.
+  - backend npx tsc --noEmit: passed.
+  - git diff --check: passed.
+- Remaining Risks:
+  - Customer intent API/UI, provider checkout initiation, signed callback verification, duplicate callback handling, failure transitions, refund/reversal rules, and approved provider credentials remain unimplemented. Migration was not applied.## 62. Customer-owned Wallet Recharge intent API
+- Timestamp: 2026-08-14 IST
+- Backend Files:
+  - Added authenticated GET/POST customer wallet recharge-intent endpoints.
+  - POST derives customer ownership from the customer principal, validates a positive amount through WalletService, and requires a unique idempotency key.
+  - Same key/amount/customer retry returns the existing intent; cross-customer or changed-amount reuse is rejected. No endpoint accepts client payment success or creates a cash-wallet ledger credit.
+- Verification:
+  - CustomerWalletController recharge-intent Jest suite: 1 test passed.
+  - backend npx tsc --noEmit: passed.
+  - git diff --check: passed.
+- Remaining Risks:
+  - Customer recharge UI, approved checkout adapter, provider signature verification, settlement credit, failure/retry/reversal behavior, and migration application remain incomplete.## 63. Corrected Wallet Recharge source classifications
+- Timestamp: 2026-08-14 IST
+- Documentation:
+  - Split Wallet Recharge evidence into intent, payment initiation, callback/duplicate callback, and failure/refund-reversal rows.
+  - Classified the secure intent contract as PARTIAL, provider initiation/webhook as BUSINESS_DECISION_REQUIRED, and failure/reversal handling as PARTIAL. Wallet Recharge remains Phase 1 and is not deferred.
+- Verification:
+  - git diff --check: passed.
+- Remaining Risks:
+  - No customer recharge UI or payment settlement integration is claimed; both require the remaining source and approved-provider work.## 64. Customer route-level audit matrix
+- Timestamp: 2026-08-14 IST
+- Documentation:
+  - Added an explicit customer route matrix separating wallet, transaction, recharge, rewards, documents, prescriptions, orders, referrals, activity, notifications, preferred pharmacy, Store Change and support rather than grouping unrelated surfaces.
+  - Each row identifies route/API, persistence/state, source UI/test evidence, classification, and blocker.
+- Verification:
+  - git diff --check: passed.## 65. Cross-module source verification batch
+- Timestamp: 2026-08-14 IST
+- Verification:
+  - Backend focused customer, membership, account, Store Change, wallet, notification, support, and AgentScope batch: 10 suites / 45 tests passed.
+  - backend npx tsc --noEmit: passed.
+  - A combined Flutter batch including Agent documents/follow-ups/accessibility/responsive plus Store Change and notification navigation exceeded the 180-second bound without test output. This is inconclusive, not a pass or product failure.
+  - Previously isolated Store Change Flutter tests (3) and notification navigation Flutter tests (3) passed.
+  - git diff --check: passed.
+- Remaining Risks:
+  - Complete Flutter module coverage remains outstanding because the bounded combined command timed out. No browser or live environment action was performed.## 66. Flutter verification isolation follow-up
+- Timestamp: 2026-08-14 IST
+- Verification:
+  - Isolated agent_documents_screen_test also exceeded a 90-second bound without producing Flutter test output, matching the prior combined-suite contention behavior.
+  - Read-only process inspection found several long-lived Dart processes predating this verification window; none were terminated because ownership was not established.
+  - This is a tooling contention observation, not a Flutter test pass or product failure.
+- Remaining Risks:
+  - Rerun Flutter modules after the active Dart/Flutter contention is cleared by the process owner. Previously isolated Store Change and notification-navigation Flutter tests remain the only current passing Flutter evidence for this corrective slice.## 67. Agent and CRM route-level audit matrix
+- Timestamp: 2026-08-14 IST
+- Documentation:
+  - Added an explicit Agent/CRM customer-management matrix covering dashboard, customer 360, registration, status, membership/card, wallet, appointments, documents, prescriptions, orders, referrals, follow-ups, timeline, support/complaints, Store Change, notifications, reports, and settings.
+  - Rows distinguish scoped verified contracts from genuine missing/partial CRM lifecycle and report requirements.
+- Verification:
+  - git diff --check: passed.## 68. Provider-specific customer journey matrix
+- Timestamp: 2026-08-14 IST
+- Documentation:
+  - Added separate source classifications for Hyper Pharmacy, Smart Lab, Clinic, Doctor, Home Care, Dietitian, Dental, and Skin Care journeys.
+  - Generic services/booking is no longer treated as proof that provider-specific operational, status, notification, and result/report flows are complete.
+- Verification:
+  - git diff --check: passed.

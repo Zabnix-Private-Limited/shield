@@ -190,7 +190,7 @@ describe('CustomerService alternative contacts', () => {
 
     const application = await service.submitMembershipApplication(11n);
 
-    expect(application.status).toBe('PENDING');
+    expect(application).toMatchObject({ status: 'PENDING' });
     expect(prisma.membershipApplication.create).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({ customerId: 11n, status: 'PENDING' }),

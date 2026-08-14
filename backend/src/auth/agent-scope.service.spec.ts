@@ -1,12 +1,13 @@
 import { ForbiddenException } from '@nestjs/common';
 import { AgentScopeService } from './agent-scope.service';
+import type { ShieldPrincipal } from './auth.types';
 
 describe('AgentScopeService', () => {
   const principal = {
     principalType: 'USER' as const,
     userId: '42',
     roleCode: 'SHIELD_AGENT',
-  };
+  } as ShieldPrincipal;
 
   it('permits an assigned customer for the authenticated SHIELD agent', async () => {
     const prisma = {

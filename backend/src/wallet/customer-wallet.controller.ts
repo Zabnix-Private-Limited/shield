@@ -1,4 +1,4 @@
-import { BadRequestException, Controller, Get, Query } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Get, Post, Query } from '@nestjs/common';
 import { AgentScopeService } from '../auth/agent-scope.service';
 import { CurrentPrincipal } from '../auth/current-principal.decorator';
 import { RequirePermissions } from '../auth/permissions.decorator';
@@ -43,5 +43,24 @@ export class CustomerWalletController {
         resolvedCustomerId,
       ),
     };
+  }
+
+  @RequirePermissions('wallet.view')
+  @Get('wallet/recharge-intents')
+  async rechargeIntents(@CurrentPrincipal() principal?: ShieldPrincipal) {
+    const customerId = this.resolveCustomerId(undefined, principal);
+    if (principal?.principalType !== 'CUSTOMER') throw new BadRequestException('Authenticated customer context is required.');
+    return { success: true, data: await this.walletService.listRechargeIntents(customerId) };
+  }
+
+  @RequirePermissions('wallet.update')
+  @Post('wallet/recharge-intents')
+  async createRechargeIntent(
+    @Body() body: { amount?: number; idempotencyKey?: string },
+    @CurrentPrincipal() principal?: ShieldPrincipal,
+  ) {
+    const customerId = this.resolveCustomerId(undefined, principal);
+    if (principal?.principalType !== 'CUSTOMER') throw new BadRequestException('Authenticated customer context is required.');
+    return { success: true, data: await this.walletService.createRechargeIntent(customerId, Number(body.amount), body.idempotencyKey ?? '') };
   }
 }

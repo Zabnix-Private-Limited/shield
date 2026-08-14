@@ -6,10 +6,12 @@ import { randomUUID } from 'crypto';
 export class CrmService {
   constructor(private prisma: PrismaService) {}
 
-  async listActivities(customerId?: bigint) {
+  async listActivities(customerId?: bigint, customerIds?: bigint[]) {
     const whereClause: any = {};
     if (customerId) {
       whereClause.customerId = customerId;
+    } else if (customerIds !== undefined) {
+      whereClause.customerId = { in: customerIds };
     }
     return this.prisma.crmActivity.findMany({
       where: whereClause,
@@ -32,10 +34,16 @@ export class CrmService {
     });
   }
 
-  async listTasks(customerId?: bigint, assignedTo?: bigint) {
+  async listTasks(
+    customerId?: bigint,
+    assignedTo?: bigint,
+    customerIds?: bigint[],
+  ) {
     const whereClause: any = {};
     if (customerId) {
       whereClause.customerId = customerId;
+    } else if (customerIds !== undefined) {
+      whereClause.customerId = { in: customerIds };
     }
     if (assignedTo) {
       whereClause.assignedTo = assignedTo;
@@ -72,10 +80,12 @@ export class CrmService {
     });
   }
 
-  async listComplaints(customerId?: bigint) {
+  async listComplaints(customerId?: bigint, customerIds?: bigint[]) {
     const whereClause: any = {};
     if (customerId) {
       whereClause.customerId = customerId;
+    } else if (customerIds !== undefined) {
+      whereClause.customerId = { in: customerIds };
     }
     return this.prisma.complaint.findMany({
       where: whereClause,

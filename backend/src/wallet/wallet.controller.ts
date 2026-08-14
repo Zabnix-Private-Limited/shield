@@ -12,6 +12,7 @@ import { CurrentPrincipal } from '../auth/current-principal.decorator';
 import { RequirePermissions } from '../auth/permissions.decorator';
 import type { ShieldPrincipal } from '../auth/auth.types';
 import { ProviderScopeService } from '../auth/provider-scope.service';
+import { AgentScopeService } from '../auth/agent-scope.service';
 import { WalletService } from './wallet.service';
 import { WALLET_LEDGER_TYPES } from '../pricing/pricing.types';
 
@@ -20,6 +21,7 @@ export class WalletController {
   constructor(
     private walletService: WalletService,
     private readonly providerScopeService: ProviderScopeService,
+    private readonly agentScopeService: AgentScopeService,
   ) {}
 
   @RequirePermissions('wallet.view')
@@ -36,6 +38,10 @@ export class WalletController {
     }
 
     await this.providerScopeService.assertProviderCanAccessWalletByCustomer(
+      BigInt(customerId),
+      principal,
+    );
+    await this.agentScopeService.assertAgentCanAccessWalletByCustomer(
       BigInt(customerId),
       principal,
     );
@@ -62,6 +68,10 @@ export class WalletController {
       throw new UnauthorizedException('Authentication required');
     }
     const staffId = BigInt(principal.userId);
+    await this.agentScopeService.assertAgentCanAccessWalletByCustomer(
+      BigInt(body.customer_id),
+      principal,
+    );
     if (
       (body.ledger_type || WALLET_LEDGER_TYPES.CASH) ===
         WALLET_LEDGER_TYPES.SHIELD_BENEFIT &&
@@ -95,6 +105,10 @@ export class WalletController {
       throw new UnauthorizedException('Authentication required');
     }
     const staffId = BigInt(principal.userId);
+    await this.agentScopeService.assertAgentCanAccessWalletByCustomer(
+      BigInt(body.customer_id),
+      principal,
+    );
     if (
       (body.ledger_type || WALLET_LEDGER_TYPES.CASH) ===
         WALLET_LEDGER_TYPES.SHIELD_BENEFIT &&
@@ -148,6 +162,10 @@ export class WalletController {
       BigInt(id),
       principal,
     );
+    await this.agentScopeService.assertAgentCanAccessWallet(
+      BigInt(id),
+      principal,
+    );
     const txns = await this.walletService.getTransactions(BigInt(id), {
       from,
       to,
@@ -170,6 +188,10 @@ export class WalletController {
       throw new UnauthorizedException('Authentication required');
     }
     const staffId = BigInt(principal.userId);
+    await this.agentScopeService.assertAgentCanAccessWalletByCustomer(
+      BigInt(body.customer_id),
+      principal,
+    );
     const result = await this.walletService.redeemRewardPoints(
       BigInt(body.customer_id),
       Number(body.points),

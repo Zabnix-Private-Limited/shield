@@ -55,8 +55,15 @@ export class NotificationService {
     });
   }
 
-  async listCustomerNotifications(customerId: bigint) {
-    const notifications = await this.prisma.notification.findMany({
+  async listCustomerNotifications(
+    customerId: bigint,
+    offset = 0,
+    limit = 25,
+  ) {
+    const safeOffset = Number.isFinite(offset) ? Math.max(0, Math.floor(offset)) : 0;
+    const safeLimit = Number.isFinite(limit) ? Math.min(50, Math.max(1, Math.floor(limit))) : 25;
+    const [notifications, unreadCount, total] = await this.prisma.$transaction([
+      this.prisma.notification.findMany({
       where: { customerId },
       select: {
         id: true,
@@ -67,11 +74,20 @@ export class NotificationService {
         sentAt: true,
       },
       orderBy: [{ sentAt: 'desc' }, { id: 'desc' }],
-    });
+      skip: safeOffset,
+      take: safeLimit,
+    }),
+      this.prisma.notification.count({ where: { customerId, NOT: { status: 'READ' } } }),
+      this.prisma.notification.count({ where: { customerId } }),
+    ]);
     return {
-      unreadCount: notifications.filter(
-        (notification) => notification.status?.toUpperCase() !== 'READ',
-      ).length,
+      unreadCount,
+      total,
+      offset: safeOffset,
+      limit: safeLimit,
+      nextOffset: safeOffset + notifications.length < total
+        ? safeOffset + notifications.length
+        : null,
       items: notifications.map((notification) => ({
         id: notification.id.toString(),
         title: notification.title ?? 'Notification',
@@ -202,6 +218,14 @@ export class NotificationService {
         lastSeenAt: new Date(),
       },
     });
+  }
+
+  async getDeviceTokenCustomerId(token: string) {
+    const deviceToken = await this.prisma.devicePushToken.findUnique({
+      where: { token },
+      select: { customerId: true },
+    });
+    return deviceToken?.customerId;
   }
 
   async send(data: SendNotificationInput) {

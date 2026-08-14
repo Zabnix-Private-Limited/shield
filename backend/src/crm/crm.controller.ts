@@ -33,8 +33,13 @@ export class CrmController {
         principal,
       );
     }
+    const scopedCustomerIds = await this.listScopedCustomerIds(
+      customerId,
+      principal,
+    );
     const list = await this.crmService.listActivities(
       customerId ? BigInt(customerId) : undefined,
+      scopedCustomerIds,
     );
     return {
       success: true,
@@ -95,9 +100,14 @@ export class CrmController {
         principal,
       );
     }
+    const scopedCustomerIds = await this.listScopedCustomerIds(
+      customerId,
+      principal,
+    );
     const list = await this.crmService.listTasks(
       customerId ? BigInt(customerId) : undefined,
       scopedAssignedTo,
+      scopedCustomerIds,
     );
     return {
       success: true,
@@ -163,8 +173,13 @@ export class CrmController {
         principal,
       );
     }
+    const scopedCustomerIds = await this.listScopedCustomerIds(
+      customerId,
+      principal,
+    );
     const list = await this.crmService.listComplaints(
       customerId ? BigInt(customerId) : undefined,
+      scopedCustomerIds,
     );
     return {
       success: true,
@@ -197,7 +212,15 @@ export class CrmController {
 
   @RequirePermissions('crm.update')
   @Put('complaints/:id')
-  async updateComplaint(@Param('id') id: string, @Body() body: any) {
+  async updateComplaint(
+    @Param('id') id: string,
+    @Body() body: any,
+    @CurrentPrincipal() principal?: ShieldPrincipal,
+  ) {
+    await this.agentScopeService.assertAgentCanAccessComplaint(
+      BigInt(id),
+      principal,
+    );
     const comp = await this.crmService.updateComplaint(BigInt(id), body);
     return {
       success: true,
@@ -208,12 +231,29 @@ export class CrmController {
 
   @RequirePermissions('crm.update')
   @Post('complaints/:id/resolve')
-  async resolveComplaint(@Param('id') id: string) {
+  async resolveComplaint(
+    @Param('id') id: string,
+    @CurrentPrincipal() principal?: ShieldPrincipal,
+  ) {
+    await this.agentScopeService.assertAgentCanAccessComplaint(
+      BigInt(id),
+      principal,
+    );
     const comp = await this.crmService.resolveComplaint(BigInt(id));
     return {
       success: true,
       message: 'Complaint resolved successfully',
       data: comp,
     };
+  }
+
+  private async listScopedCustomerIds(
+    customerId: string | undefined,
+    principal?: ShieldPrincipal,
+  ) {
+    if (customerId?.trim() || !this.agentScopeService.isAgentPrincipal(principal)) {
+      return undefined;
+    }
+    return this.agentScopeService.listAccessibleCustomerIds(principal);
   }
 }

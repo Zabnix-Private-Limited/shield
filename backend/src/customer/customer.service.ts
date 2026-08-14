@@ -60,6 +60,17 @@ export class CustomerService {
     return this.membershipApplicationView(application);
   }
 
+  async getMembershipApplicationCustomerId(applicationId: bigint) {
+    const application = await this.prisma.membershipApplication.findUnique({
+      where: { id: applicationId },
+      select: { customerId: true },
+    });
+    if (!application) {
+      throw new NotFoundException('Membership application not found.');
+    }
+    return application.customerId;
+  }
+
   async submitMembershipApplication(customerId: bigint) {
     return this.prisma.$transaction(async (tx) => {
       const customer = await tx.customer.findFirst({
@@ -1042,6 +1053,201 @@ export class CustomerService {
       where: { status: 'ACTIVE', providerType: 'PHARMACY' },
       include: { business: true },
       orderBy: { providerName: 'asc' },
+    });
+  }
+
+  private storeChangeRequestView(request: any) {
+    return {
+      id: request.id.toString(),
+      uuid: request.uuid,
+      status: request.status,
+      reason: request.reason,
+      reviewReason: request.reviewReason,
+      submittedAt: request.submittedAt,
+      reviewedAt: request.reviewedAt,
+      previousProvider: request.previousProvider
+        ? {
+            id: request.previousProvider.id.toString(),
+            name: request.previousProvider.providerName,
+            type: request.previousProvider.providerType,
+          }
+        : null,
+      requestedProvider: request.requestedProvider
+        ? {
+            id: request.requestedProvider.id.toString(),
+            name: request.requestedProvider.providerName,
+            type: request.requestedProvider.providerType,
+          }
+        : null,
+    };
+  }
+
+  async listStoreChangeRequests(customerId: bigint) {
+    const requests = await this.prisma.storeChangeRequest.findMany({
+      where: { customerId },
+      include: { previousProvider: true, requestedProvider: true },
+      orderBy: [{ submittedAt: 'desc' }, { id: 'desc' }],
+    });
+    return requests.map((request) => this.storeChangeRequestView(request));
+  }
+
+  async listStoreChangeRequestsForStaff(customerIds?: bigint[]) {
+    const requests = await this.prisma.storeChangeRequest.findMany({
+      where: customerIds === undefined ? {} : { customerId: { in: customerIds } },
+      include: { customer: true, previousProvider: true, requestedProvider: true },
+      orderBy: [{ submittedAt: 'desc' }, { id: 'desc' }],
+    });
+    return requests.map((request) => ({
+      ...this.storeChangeRequestView(request),
+      customer: request.customer
+        ? {
+            id: request.customer.id.toString(),
+            name: `${request.customer.firstName ?? ''} ${request.customer.lastName ?? ''}`.trim(),
+            mobile: request.customer.mobile,
+          }
+        : null,
+    }));
+  }
+
+  async submitStoreChangeRequest(
+    customerId: bigint,
+    requestedProviderId: bigint,
+    reason: string,
+  ) {
+    const normalizedReason = reason.trim();
+    if (!normalizedReason) {
+      throw new BadRequestException('A store change reason is required.');
+    }
+    return this.prisma.$transaction(async (tx) => {
+      const provider = await tx.serviceProvider.findFirst({
+        where: {
+          id: requestedProviderId,
+          status: 'ACTIVE',
+          providerType: 'PHARMACY',
+        },
+      });
+      if (!provider) {
+        throw new BadRequestException('Select an active pharmacy provider.');
+      }
+      const preference = await tx.customerPreference.findUnique({
+        where: { customerId },
+        select: { preferredProviderId: true },
+      });
+      if (preference?.preferredProviderId === requestedProviderId) {
+        throw new ConflictException('This pharmacy is already preferred.');
+      }
+      const pending = await tx.storeChangeRequest.findFirst({
+        where: { customerId, status: 'PENDING' },
+        select: { id: true },
+      });
+      if (pending) {
+        throw new ConflictException('A store change request is already pending.');
+      }
+      const request = await tx.storeChangeRequest.create({
+        data: {
+          uuid: randomUUID(),
+          customerId,
+          previousProviderId: preference?.preferredProviderId ?? null,
+          requestedProviderId,
+          reason: normalizedReason,
+          status: 'PENDING',
+        },
+        include: { previousProvider: true, requestedProvider: true },
+      });
+      await tx.activityEvent.create({
+        data: {
+          uuid: randomUUID(),
+          customerId,
+          activityType: 'STORE_CHANGE_REQUEST_SUBMITTED',
+          relatedEntityType: 'store_change_request',
+          relatedEntityId: request.id,
+          status: 'PENDING',
+          description: 'Customer submitted a preferred pharmacy change request.',
+        },
+      });
+      return this.storeChangeRequestView(request);
+    });
+  }
+
+  async getStoreChangeRequestCustomerId(requestId: bigint) {
+    const request = await this.prisma.storeChangeRequest.findUnique({
+      where: { id: requestId },
+      select: { customerId: true },
+    });
+    if (!request) throw new NotFoundException('Store change request not found.');
+    return request.customerId;
+  }
+
+  async reviewStoreChangeRequest(
+    requestId: bigint,
+    staffUserId: bigint,
+    status: string | undefined,
+    reason?: string,
+  ) {
+    const normalizedStatus = status?.trim().toUpperCase();
+    if (normalizedStatus !== 'APPROVED' && normalizedStatus !== 'REJECTED') {
+      throw new BadRequestException('Review status must be APPROVED or REJECTED.');
+    }
+    if (normalizedStatus === 'REJECTED' && !reason?.trim()) {
+      throw new BadRequestException('A rejection reason is required.');
+    }
+    return this.prisma.$transaction(async (tx) => {
+      const request = await tx.storeChangeRequest.findUnique({
+        where: { id: requestId },
+        include: { previousProvider: true, requestedProvider: true },
+      });
+      if (!request) throw new NotFoundException('Store change request not found.');
+      if (request.status !== 'PENDING') {
+        throw new ConflictException('Store change request has already been reviewed.');
+      }
+      const reviewed = await tx.storeChangeRequest.update({
+        where: { id: requestId },
+        data: {
+          status: normalizedStatus,
+          reviewReason: reason?.trim() || null,
+          reviewedBy: staffUserId,
+          reviewedAt: new Date(),
+        },
+        include: { previousProvider: true, requestedProvider: true },
+      });
+      if (normalizedStatus === 'APPROVED') {
+        await tx.customerPreference.upsert({
+          where: { customerId: request.customerId },
+          create: {
+            uuid: randomUUID(),
+            customerId: request.customerId,
+            preferredProviderId: request.requestedProviderId,
+          },
+          update: { preferredProviderId: request.requestedProviderId },
+        });
+      }
+      await tx.activityEvent.create({
+        data: {
+          uuid: randomUUID(),
+          customerId: request.customerId,
+          activityType: `STORE_CHANGE_REQUEST_${normalizedStatus}`,
+          relatedEntityType: 'store_change_request',
+          relatedEntityId: requestId,
+          agentUserId: staffUserId,
+          createdBy: staffUserId,
+          status: normalizedStatus,
+          description: `Store change request ${normalizedStatus.toLowerCase()} by staff.`,
+        },
+      });
+      await tx.notification.create({
+        data: {
+          customerId: request.customerId,
+          title: 'Preferred pharmacy request updated',
+          message:
+            normalizedStatus === 'APPROVED'
+              ? 'Your preferred pharmacy change request was approved.'
+              : `Your preferred pharmacy change request was rejected${reason?.trim() ? `: ${reason.trim()}` : '.'}`,
+          channel: 'IN_APP',
+          status: 'UNREAD',
+          sentAt: new Date(),
+        },
+      });
+      return this.storeChangeRequestView(reviewed);
     });
   }
 

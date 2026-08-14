@@ -292,11 +292,13 @@ PortalRoleData portalDataForRole(SHIELDRole role) {
           _PortalSectionFactory.customerDocuments,
           _PortalSectionFactory.customerProfile,
           _PortalSectionFactory.customerAccount,
+          _PortalSectionFactory.customerStoreChange,
           _PortalSectionFactory.customerMembership,
           _PortalSectionFactory.customerPrivilegeCard,
           _PortalSectionFactory.customerPrescriptions,
           _PortalSectionFactory.customerBooking,
           _PortalSectionFactory.customerSettings,
+          _PortalSectionFactory.customerSupport,
           _PortalSectionFactory.customerNotifications,
         ],
       );
@@ -333,6 +335,7 @@ PortalRoleData portalDataForRole(SHIELDRole role) {
           _PortalSectionFactory.agentCustomers,
           _PortalSectionFactory.agentRegistration,
           _PortalSectionFactory.agentFollowUps,
+          _PortalSectionFactory.agentStoreChanges,
           _PortalSectionFactory.agentAppointments,
           _PortalSectionFactory.agentReferrals,
           _PortalSectionFactory.agentDocuments,
@@ -681,6 +684,18 @@ class _PortalSectionFactory {
     summary: 'Account preferences, support, and session controls.',
   );
 
+  static final PortalSectionData customerSupport = _section(
+    'support',
+    title: 'Support',
+    summary: 'Submit and track customer support requests.',
+  );
+
+  static final PortalSectionData customerStoreChange = _section(
+    'store-change',
+    title: 'Store Change',
+    summary: 'Request and track a preferred pharmacy change.',
+  );
+
   static final PortalSectionData customerAccount = _section(
     'account',
     title: 'Profile & Family',
@@ -766,6 +781,11 @@ class _PortalSectionFactory {
     title: 'Visits',
     summary:
         'Customer visit booking, provider selection, preferred slots, and visit status tracking.',
+  );
+  static final PortalSectionData agentStoreChanges = _section(
+    'store-changes',
+    title: 'Store Changes',
+    summary: 'Assigned customer preferred-pharmacy change requests.',
   );
   static final PortalSectionData agentReferrals = _section(
     'referrals',

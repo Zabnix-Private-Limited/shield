@@ -117,10 +117,19 @@ export class CustomerMembershipController {
     if (principal?.principalType !== 'USER' || !principal.userId) {
       throw new BadRequestException('Authorized staff context is required.');
     }
+    const resolvedApplicationId = BigInt(applicationId);
+    const applicationCustomerId =
+      await this.customerService.getMembershipApplicationCustomerId(
+        resolvedApplicationId,
+      );
+    await this.agentScopeService.assertAgentCanAccessCustomer(
+      applicationCustomerId,
+      principal,
+    );
     return {
       success: true,
       data: await this.customerService.reviewMembershipApplication(
-        BigInt(applicationId),
+        resolvedApplicationId,
         BigInt(principal.userId),
         body.status,
         body.reason,

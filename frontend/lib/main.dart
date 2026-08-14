@@ -10,6 +10,7 @@ import 'shared/config/app_config.dart';
 import 'shared/services/customer_auth_session.dart';
 import 'shared/services/firebase_bootstrap_service.dart';
 import 'shared/services/internal_auth_session.dart';
+import 'shared/services/notification_navigation_service.dart';
 import 'shared/services/web_runtime_error_probe.dart';
 
 Future<void> main() async {
@@ -62,6 +63,9 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) => NotificationNavigationService.flushPendingNavigation(),
+    );
     return MaterialApp.router(
       title: 'SHIELD',
       debugShowCheckedModeBanner: false,

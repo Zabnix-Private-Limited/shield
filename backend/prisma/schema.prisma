@@ -134,6 +134,7 @@ model User {
   agentPreference                  AgentPreference?
   agentBranchAssignments           AgentBranchAssignment[]
   providerProfile                  ProviderProfile?
+  reviewedStoreChangeRequests      StoreChangeRequest[] @relation("StoreChangeReviewer")
 
   @@index([mobile], map: "idx_user_mobile")
   @@index([email], map: "idx_user_email")
@@ -236,11 +237,13 @@ model Customer {
   customerAddresses              CustomerAddress[]
   customerDependents             CustomerDependent[]
   customerPreferences            CustomerPreference?
+  storeChangeRequests            StoreChangeRequest[]
   customerStatusHistory          CustomerStatusHistory[]
   membership                     Membership?
   membershipApplications         MembershipApplication[]
   shieldCard                     ShieldCard?
   wallet                         Wallet?
+  walletRechargeIntents          WalletRechargeIntent[]
   creditAccount                  CreditAccount?
   purchases                      Purchase[]
   appointments                   Appointment[]
@@ -339,6 +342,31 @@ model CustomerPreference {
   customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
 
   @@map("customer_preferences")
+}
+
+model StoreChangeRequest {
+  id                 BigInt   @id @default(autoincrement())
+  uuid               String   @unique @db.Uuid
+  customerId         BigInt   @map("customer_id")
+  previousProviderId BigInt?  @map("previous_provider_id")
+  requestedProviderId BigInt  @map("requested_provider_id")
+  reason             String   @db.Text
+  status             String   @default("PENDING") @db.VarChar(50)
+  reviewReason       String?  @map("review_reason") @db.Text
+  reviewedBy         BigInt?  @map("reviewed_by")
+  submittedAt        DateTime @default(now()) @map("submitted_at") @db.Timestamptz(6)
+  reviewedAt         DateTime? @map("reviewed_at") @db.Timestamptz(6)
+  createdAt          DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  customer          Customer        @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  previousProvider  ServiceProvider? @relation("StoreChangePreviousProvider", fields: [previousProviderId], references: [id], onDelete: SetNull)
+  requestedProvider ServiceProvider  @relation("StoreChangeRequestedProvider", fields: [requestedProviderId], references: [id], onDelete: Restrict)
+  reviewer          User?            @relation("StoreChangeReviewer", fields: [reviewedBy], references: [id], onDelete: SetNull)
+
+  @@index([customerId, status], map: "idx_store_change_requests_customer_status")
+  @@index([status, submittedAt], map: "idx_store_change_requests_status_submitted")
+  @@map("store_change_requests")
 }
 
 model CustomerStatusHistory {
@@ -446,8 +474,34 @@ model Wallet {
   rewardPointTransactions RewardPointTransaction[]
   benefitTransactions     BenefitLedgerTransaction[]
   pricingRuleAudits       PricingRuleAudit[]
+  rechargeIntents         WalletRechargeIntent[]
 
   @@map("wallets")
+}
+
+model WalletRechargeIntent {
+  id                BigInt   @id @default(autoincrement())
+  uuid              String   @unique @db.Uuid
+  customerId        BigInt   @map("customer_id")
+  walletId          BigInt   @map("wallet_id")
+  amount            Decimal  @db.Decimal(15, 2)
+  idempotencyKey    String   @unique @map("idempotency_key") @db.VarChar(120)
+  providerCode      String?  @map("provider_code") @db.VarChar(80)
+  providerReference String?  @unique @map("provider_reference") @db.VarChar(160)
+  status            String   @default("INITIATED") @db.VarChar(40)
+  failureCode       String?  @map("failure_code") @db.VarChar(100)
+  failureReason     String?  @map("failure_reason") @db.Text
+  creditedAt        DateTime? @map("credited_at") @db.Timestamptz(6)
+  failedAt          DateTime? @map("failed_at") @db.Timestamptz(6)
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  wallet   Wallet   @relation(fields: [walletId], references: [id], onDelete: Restrict)
+
+  @@index([customerId, status, createdAt], map: "idx_wallet_recharge_intents_customer_status")
+  @@index([walletId, status], map: "idx_wallet_recharge_intents_wallet_status")
+  @@map("wallet_recharge_intents")
 }
 
 model WalletTransaction {
@@ -714,6 +768,8 @@ model ServiceProvider {
   purchases                    Purchase[]
   appointments                 Appointment[]
   prescriptionPharmacyRequests PrescriptionPharmacyRequest[]
+  previousStoreChangeRequests   StoreChangeRequest[] @relation("StoreChangePreviousProvider")
+  requestedStoreChangeRequests  StoreChangeRequest[] @relation("StoreChangeRequestedProvider")
 
   @@map("service_providers")
 }

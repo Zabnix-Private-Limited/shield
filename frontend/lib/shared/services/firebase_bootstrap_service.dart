@@ -9,6 +9,7 @@ import '../config/app_config.dart';
 import 'api_service.dart';
 import 'customer_auth_session.dart';
 import 'device_identity_service.dart';
+import 'notification_navigation_service.dart';
 
 @pragma('vm:entry-point')
 Future<void> shieldFirebaseMessagingBackgroundHandler(
@@ -143,6 +144,7 @@ class FirebaseBootstrapService {
         debugPrint(
           'SHIELD push opened app: ${message.messageId} ${message.notification?.title ?? ''}',
         );
+        NotificationNavigationService.handleCustomerPush(message.data);
       });
 
       final initialMessage = await messaging.getInitialMessage();
@@ -150,6 +152,7 @@ class FirebaseBootstrapService {
         debugPrint(
           'SHIELD app launched from push: ${initialMessage.messageId}',
         );
+        NotificationNavigationService.handleCustomerPush(initialMessage.data);
       }
     } catch (error) {
       debugPrint('SHIELD push bootstrap failed: $error');

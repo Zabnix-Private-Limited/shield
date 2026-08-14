@@ -776,6 +776,21 @@ CREATE TABLE "shield_cards" (
 	"issued_business_id" bigint,
 	"issued_at" timestamp with time zone
 );
+CREATE TABLE "store_change_requests" (
+	"id" bigserial PRIMARY KEY,
+	"uuid" uuid NOT NULL CONSTRAINT "store_change_requests_uuid_key" UNIQUE,
+	"customer_id" bigint NOT NULL,
+	"previous_provider_id" bigint,
+	"requested_provider_id" bigint NOT NULL,
+	"reason" text NOT NULL,
+	"status" varchar(50) DEFAULT 'PENDING' NOT NULL,
+	"review_reason" text,
+	"reviewed_by" bigint,
+	"submitted_at" timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+	"reviewed_at" timestamp with time zone,
+	"created_at" timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+	"updated_at" timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
 CREATE TABLE "subscription_monthly_allocations" (
 	"id" bigserial PRIMARY KEY,
 	"subscription_id" bigint NOT NULL,
@@ -810,6 +825,24 @@ CREATE TABLE "users" (
 	"user_type" varchar(30),
 	"access_scope" varchar(30),
 	"branch_business_id" bigint
+);
+CREATE TABLE "wallet_recharge_intents" (
+	"id" bigserial PRIMARY KEY,
+	"uuid" uuid NOT NULL CONSTRAINT "wallet_recharge_intents_uuid_key" UNIQUE,
+	"customer_id" bigint NOT NULL,
+	"wallet_id" bigint NOT NULL,
+	"amount" numeric(15, 2) NOT NULL,
+	"idempotency_key" varchar(120) NOT NULL CONSTRAINT "wallet_recharge_intents_idempotency_key_key" UNIQUE,
+	"provider_code" varchar(80),
+	"provider_reference" varchar(160) CONSTRAINT "wallet_recharge_intents_provider_reference_key" UNIQUE,
+	"status" varchar(40) DEFAULT 'INITIATED' NOT NULL,
+	"failure_code" varchar(100),
+	"failure_reason" text,
+	"credited_at" timestamp with time zone,
+	"failed_at" timestamp with time zone,
+	"created_at" timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+	"updated_at" timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+	CONSTRAINT "wallet_recharge_intents_amount_positive" CHECK ((amount > (0)::numeric))
 );
 CREATE TABLE "wallet_transactions" (
 	"id" bigserial PRIMARY KEY,
@@ -1029,6 +1062,11 @@ CREATE UNIQUE INDEX "shield_cards_card_number_key" ON "shield_cards" ("card_numb
 CREATE UNIQUE INDEX "shield_cards_customer_id_key" ON "shield_cards" ("customer_id");
 CREATE UNIQUE INDEX "shield_cards_pkey" ON "shield_cards" ("id");
 CREATE UNIQUE INDEX "shield_cards_uuid_key" ON "shield_cards" ("uuid");
+CREATE INDEX "idx_store_change_requests_customer_status" ON "store_change_requests" ("customer_id","status");
+CREATE INDEX "idx_store_change_requests_status_submitted" ON "store_change_requests" ("status","submitted_at");
+CREATE UNIQUE INDEX "store_change_requests_pkey" ON "store_change_requests" ("id");
+CREATE UNIQUE INDEX "store_change_requests_uuid_key" ON "store_change_requests" ("uuid");
+CREATE UNIQUE INDEX "uq_store_change_requests_one_pending_per_customer" ON "store_change_requests" ("customer_id");
 CREATE INDEX "idx_subscription_allocations_month" ON "subscription_monthly_allocations" ("month_start");
 CREATE UNIQUE INDEX "subscription_monthly_allocation_subscription_id_month_start_key" ON "subscription_monthly_allocations" ("subscription_id","month_start");
 CREATE UNIQUE INDEX "subscription_monthly_allocations_pkey" ON "subscription_monthly_allocations" ("id");
@@ -1041,6 +1079,12 @@ CREATE UNIQUE INDEX "users_email_key" ON "users" ("email");
 CREATE UNIQUE INDEX "users_mobile_key" ON "users" ("mobile");
 CREATE UNIQUE INDEX "users_pkey" ON "users" ("id");
 CREATE UNIQUE INDEX "users_uuid_key" ON "users" ("uuid");
+CREATE INDEX "idx_wallet_recharge_intents_customer_status" ON "wallet_recharge_intents" ("customer_id","status","created_at");
+CREATE INDEX "idx_wallet_recharge_intents_wallet_status" ON "wallet_recharge_intents" ("wallet_id","status");
+CREATE UNIQUE INDEX "wallet_recharge_intents_idempotency_key_key" ON "wallet_recharge_intents" ("idempotency_key");
+CREATE UNIQUE INDEX "wallet_recharge_intents_pkey" ON "wallet_recharge_intents" ("id");
+CREATE UNIQUE INDEX "wallet_recharge_intents_provider_reference_key" ON "wallet_recharge_intents" ("provider_reference");
+CREATE UNIQUE INDEX "wallet_recharge_intents_uuid_key" ON "wallet_recharge_intents" ("uuid");
 CREATE INDEX "idx_wallet_transaction_date" ON "wallet_transactions" ("created_at");
 CREATE INDEX "idx_wallet_transaction_type" ON "wallet_transactions" ("transaction_type");
 CREATE INDEX "idx_wallet_transaction_wallet" ON "wallet_transactions" ("wallet_id");
@@ -1140,9 +1184,15 @@ ALTER TABLE "role_permissions" ADD CONSTRAINT "role_permissions_role_id_fkey" FO
 ALTER TABLE "service_providers" ADD CONSTRAINT "service_providers_business_id_fkey" FOREIGN KEY ("business_id") REFERENCES "businesses"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 ALTER TABLE "shield_cards" ADD CONSTRAINT "shield_cards_customer_id_fkey" FOREIGN KEY ("customer_id") REFERENCES "customers"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 ALTER TABLE "shield_cards" ADD CONSTRAINT "shield_cards_issued_business_id_fkey" FOREIGN KEY ("issued_business_id") REFERENCES "businesses"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "store_change_requests" ADD CONSTRAINT "store_change_requests_customer_id_fkey" FOREIGN KEY ("customer_id") REFERENCES "customers"("id") ON DELETE CASCADE;
+ALTER TABLE "store_change_requests" ADD CONSTRAINT "store_change_requests_previous_provider_id_fkey" FOREIGN KEY ("previous_provider_id") REFERENCES "service_providers"("id") ON DELETE SET NULL;
+ALTER TABLE "store_change_requests" ADD CONSTRAINT "store_change_requests_requested_provider_id_fkey" FOREIGN KEY ("requested_provider_id") REFERENCES "service_providers"("id") ON DELETE RESTRICT;
+ALTER TABLE "store_change_requests" ADD CONSTRAINT "store_change_requests_reviewed_by_fkey" FOREIGN KEY ("reviewed_by") REFERENCES "users"("id") ON DELETE SET NULL;
 ALTER TABLE "subscription_monthly_allocations" ADD CONSTRAINT "subscription_monthly_allocations_subscription_id_fkey" FOREIGN KEY ("subscription_id") REFERENCES "membership_subscriptions"("id") ON DELETE CASCADE;
 ALTER TABLE "users" ADD CONSTRAINT "users_department_id_fkey" FOREIGN KEY ("department_id") REFERENCES "departments"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 ALTER TABLE "users" ADD CONSTRAINT "users_role_id_fkey" FOREIGN KEY ("role_id") REFERENCES "roles"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "wallet_recharge_intents" ADD CONSTRAINT "wallet_recharge_intents_customer_id_fkey" FOREIGN KEY ("customer_id") REFERENCES "customers"("id") ON DELETE CASCADE;
+ALTER TABLE "wallet_recharge_intents" ADD CONSTRAINT "wallet_recharge_intents_wallet_id_fkey" FOREIGN KEY ("wallet_id") REFERENCES "wallets"("id") ON DELETE RESTRICT;
 ALTER TABLE "wallet_transactions" ADD CONSTRAINT "wallet_transactions_created_by_fkey" FOREIGN KEY ("created_by") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 ALTER TABLE "wallet_transactions" ADD CONSTRAINT "wallet_transactions_wallet_id_fkey" FOREIGN KEY ("wallet_id") REFERENCES "wallets"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 ALTER TABLE "wallets" ADD CONSTRAINT "wallets_customer_id_fkey" FOREIGN KEY ("customer_id") REFERENCES "customers"("id") ON DELETE SET NULL ON UPDATE CASCADE;

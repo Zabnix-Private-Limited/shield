@@ -171,6 +171,27 @@ export class AgentScopeService {
     await this.assertAgentCanAccessCustomer(customerId, principal);
   }
 
+  async assertAgentCanAccessWallet(
+    walletId: bigint,
+    principal?: ShieldPrincipal,
+  ) {
+    if (!this.isAgentPrincipal(principal)) {
+      return;
+    }
+
+    const wallet = await this.prisma.wallet.findUnique({
+      where: { id: walletId },
+      select: { customerId: true },
+    });
+    if (!wallet?.customerId) {
+      throw new ForbiddenException(
+        'You are not authorized to access this wallet.',
+      );
+    }
+
+    await this.assertAgentCanAccessCustomer(wallet.customerId, principal);
+  }
+
   async assertAgentCanAccessCrmTask(
     taskId: bigint,
     principal?: ShieldPrincipal,
@@ -185,7 +206,9 @@ export class AgentScopeService {
     });
 
     if (!task) {
-      throw new ForbiddenException('You are not authorized to access this task.');
+      throw new ForbiddenException(
+        'You are not authorized to access this task.',
+      );
     }
 
     if (principal?.userId && task.assignedTo === BigInt(principal.userId)) {
@@ -223,5 +246,24 @@ export class AgentScopeService {
     }
 
     await this.assertAgentCanAccessCustomer(activity.customerId, principal);
+  }
+
+  async assertAgentCanAccessComplaint(
+    complaintId: bigint,
+    principal?: ShieldPrincipal,
+  ) {
+    if (!this.isAgentPrincipal(principal)) {
+      return;
+    }
+    const complaint = await this.prisma.complaint.findUnique({
+      where: { id: complaintId },
+      select: { customerId: true },
+    });
+    if (!complaint?.customerId) {
+      throw new ForbiddenException(
+        'You are not authorized to access this complaint.',
+      );
+    }
+    await this.assertAgentCanAccessCustomer(complaint.customerId, principal);
   }
 }

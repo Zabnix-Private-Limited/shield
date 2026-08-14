@@ -2,11 +2,15 @@ import {
   BadRequestException,
   Body,
   Controller,
+  Get,
   Post,
   Req,
 } from '@nestjs/common';
 import type { Request } from 'express';
 import { Public } from '../auth/public.decorator';
+import { CurrentPrincipal } from '../auth/current-principal.decorator';
+import { RequirePermissions } from '../auth/permissions.decorator';
+import type { ShieldPrincipal } from '../auth/auth.types';
 import { SupportService } from './support.service';
 import { TurnstileService } from './turnstile.service';
 
@@ -117,6 +121,53 @@ export class SupportController {
       success: true,
       message: 'Feedback submitted successfully.',
       data: complaint,
+    };
+  }
+}
+
+@Controller('customer/support')
+export class CustomerSupportController {
+  constructor(private readonly supportService: SupportService) {}
+
+  private customerId(principal?: ShieldPrincipal) {
+    if (principal?.principalType !== 'CUSTOMER' || !principal.customerId) {
+      throw new BadRequestException(
+        'Authenticated customer context is required.',
+      );
+    }
+    return BigInt(principal.customerId);
+  }
+
+  @RequirePermissions('customers.view')
+  @Get()
+  async list(@CurrentPrincipal() principal?: ShieldPrincipal) {
+    return {
+      success: true,
+      data: await this.supportService.listForCustomer(
+        this.customerId(principal),
+      ),
+    };
+  }
+
+  @RequirePermissions('customers.update')
+  @Post()
+  async submit(
+    @Body()
+    body: { subject?: string; message?: string; complaint_type?: string },
+    @CurrentPrincipal() principal?: ShieldPrincipal,
+  ) {
+    const message = body.message?.trim() || '';
+    if (!message) throw new BadRequestException('message is required.');
+    return {
+      success: true,
+      data: await this.supportService.submitForCustomer(
+        this.customerId(principal),
+        {
+          subject: body.subject,
+          message,
+          complaintType: body.complaint_type,
+        },
+      ),
     };
   }
 }

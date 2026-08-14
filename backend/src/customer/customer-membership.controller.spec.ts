@@ -7,6 +7,7 @@ describe('CustomerMembershipController card routes', () => {
     requestPhysicalCard: jest.fn(),
     submitMembershipApplication: jest.fn(),
     getCustomerMembershipApplication: jest.fn(),
+    getMembershipApplicationCustomerId: jest.fn(),
     reviewMembershipApplication: jest.fn(),
   };
   const agentScope = { assertAgentCanAccessCustomer: jest.fn() };
@@ -57,6 +58,7 @@ describe('CustomerMembershipController card routes', () => {
   });
 
   it('passes an authorized staff review to the service', async () => {
+    service.getMembershipApplicationCustomerId.mockResolvedValue(11n);
     service.reviewMembershipApplication.mockResolvedValue({
       status: 'APPROVED',
     });
@@ -67,6 +69,10 @@ describe('CustomerMembershipController card routes', () => {
       7n,
       'APPROVED',
       undefined,
+    );
+    expect(agentScope.assertAgentCanAccessCustomer).toHaveBeenCalledWith(
+      11n,
+      staff,
     );
   });
 });

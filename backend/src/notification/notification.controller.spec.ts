@@ -7,6 +7,9 @@ describe('NotificationController customer scope', () => {
     markAllAsRead: jest.fn(),
     deactivateDeviceToken: jest.fn(),
     registerDeviceToken: jest.fn(),
+    getDeviceTokenCustomerId: jest.fn(),
+    send: jest.fn(),
+    listCustomerNotifications: jest.fn(),
   };
   const agentScope = {
     assertAgentCanAccessNotification: jest.fn(),
@@ -34,6 +37,12 @@ describe('NotificationController customer scope', () => {
       'Customers can only update their own notifications.',
     );
     expect(notificationService.markAsRead).not.toHaveBeenCalled();
+  });
+
+  it('uses bounded pagination only for the authenticated customer inbox', async () => {
+    notificationService.listCustomerNotifications.mockResolvedValue({ items: [] });
+    await controller.listCustomerNotifications('10', '25', customer);
+    expect(notificationService.listCustomerNotifications).toHaveBeenCalledWith(11n, 10, 25);
   });
 
   it('pins bulk updates to the authenticated customer', async () => {
@@ -82,5 +91,24 @@ describe('NotificationController customer scope', () => {
       deviceLabel: 'Chrome',
       sessionId: 'customer-session',
     });
+  });
+
+  it('scopes a staff notification send to the target customer', async () => {
+    notificationService.send.mockResolvedValue({ notification: { id: 1n } });
+    const agent = {
+      principalType: 'USER',
+      userId: '42',
+      roleCode: 'SHIELD_AGENT',
+    } as any;
+
+    await controller.send(
+      { customer_id: '11', title: 'Update', message: 'Your request changed.' },
+      agent,
+    );
+
+    expect(agentScope.assertAgentCanAccessCustomer).toHaveBeenCalledWith(11n, agent);
+    expect(notificationService.send).toHaveBeenCalledWith(
+      expect.objectContaining({ customerId: 11n }),
+    );
   });
 });

@@ -47,6 +47,8 @@ export class NotificationController {
   @RequirePermissions('notifications.view')
   @Get('me')
   async listCustomerNotifications(
+    @Query('offset') offset?: string,
+    @Query('limit') limit?: string,
     @CurrentPrincipal() principal?: ShieldPrincipal,
   ) {
     if (principal?.principalType !== 'CUSTOMER' || !principal.customerId) {
@@ -57,6 +59,8 @@ export class NotificationController {
       message: 'Customer notifications retrieved successfully.',
       data: await this.notificationService.listCustomerNotifications(
         BigInt(principal.customerId),
+        Number(offset ?? 0),
+        Number(limit ?? 25),
       ),
     };
   }
@@ -171,6 +175,17 @@ export class NotificationController {
       };
     }
 
+    if (principal?.principalType !== 'CUSTOMER') {
+      await this.agentScopeService.assertAgentCanAccessCustomer(
+        BigInt(customerId),
+        principal,
+      );
+      await this.providerScopeService.assertProviderCanAccessCustomer(
+        BigInt(customerId),
+        principal,
+      );
+    }
+
     const deviceToken = await this.notificationService.registerDeviceToken({
       customerId: BigInt(customerId),
       token,
@@ -203,6 +218,21 @@ export class NotificationController {
     if (principal?.principalType === 'CUSTOMER' && !principal.customerId) {
       throw new ForbiddenException('Authenticated customer context is required.');
     }
+    if (principal?.principalType !== 'CUSTOMER') {
+      const tokenCustomerId =
+        await this.notificationService.getDeviceTokenCustomerId(token);
+      if (!tokenCustomerId) {
+        throw new ForbiddenException('Device push token was not found.');
+      }
+      await this.agentScopeService.assertAgentCanAccessCustomer(
+        tokenCustomerId,
+        principal,
+      );
+      await this.providerScopeService.assertProviderCanAccessCustomer(
+        tokenCustomerId,
+        principal,
+      );
+    }
     const result = await this.notificationService.deactivateDeviceToken(
       token,
       principal?.principalType === 'CUSTOMER'
@@ -218,9 +248,21 @@ export class NotificationController {
 
   @RequirePermissions('notifications.create')
   @Post('send')
-  async send(@Body() body: any) {
+  async send(
+    @Body() body: any,
+    @CurrentPrincipal() principal?: ShieldPrincipal,
+  ) {
+    const customerId = BigInt(body.customer_id);
+    await this.agentScopeService.assertAgentCanAccessCustomer(
+      customerId,
+      principal,
+    );
+    await this.providerScopeService.assertProviderCanAccessCustomer(
+      customerId,
+      principal,
+    );
     const result = await this.notificationService.send({
-      customerId: BigInt(body.customer_id),
+      customerId,
       title: body.title,
       message: body.message,
       data:

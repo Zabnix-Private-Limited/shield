@@ -650,9 +650,15 @@ class ApiService {
       ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
   }
 
-  static Future<Map<String, dynamic>> getCustomerNotificationCenter() async {
+  static Future<Map<String, dynamic>> getCustomerNotificationCenter({
+    int offset = 0,
+    int limit = 25,
+  }) async {
     _requireCustomerId();
-    return _readEnvelope(await _dio.get('/notifications/me'));
+    return _readEnvelope(await _dio.get(
+      '/notifications/me',
+      queryParameters: {'offset': offset, 'limit': limit},
+    ));
   }
 
   static Future<Customer> getCustomerProfile(String customerId) async {
@@ -1671,6 +1677,65 @@ class ApiService {
         if (turnstileToken != null && turnstileToken.trim().isNotEmpty)
           'turnstile_token': turnstileToken.trim(),
       },
+    );
+  }
+
+  static Future<void> submitCustomerSupport({
+    required String message,
+    String? subject,
+    String? complaintType,
+  }) async {
+    await _dio.post(
+      '/customer/support',
+      data: {
+        'message': message.trim(),
+        if (subject != null && subject.trim().isNotEmpty)
+          'subject': subject.trim(),
+        if (complaintType != null && complaintType.trim().isNotEmpty)
+          'complaint_type': complaintType.trim(),
+      },
+    );
+  }
+
+  static Future<List<Map<String, dynamic>>> getCustomerSupportHistory() async {
+    final response = await _dio.get('/customer/support');
+    return _readEnvelopeList(
+      response,
+    ).map((item) => Map<String, dynamic>.from(item)).toList();
+  }
+
+  static Future<List<Map<String, dynamic>>> getStoreChangeRequests() async {
+    final response = await _dio.get('/customer/store-change-requests');
+    return _readEnvelopeList(response)
+        .map((item) => Map<String, dynamic>.from(item as Map))
+        .toList();
+  }
+
+  static Future<void> submitStoreChangeRequest({
+    required String providerId,
+    required String reason,
+  }) async {
+    await _dio.post(
+      '/customer/store-change-requests',
+      data: {'providerId': providerId, 'reason': reason.trim()},
+    );
+  }
+
+  static Future<List<Map<String, dynamic>>> getStaffStoreChangeRequests() async {
+    final response = await _dio.get('/store-change-requests');
+    return _readEnvelopeList(response)
+        .map((item) => Map<String, dynamic>.from(item as Map))
+        .toList();
+  }
+
+  static Future<void> reviewStoreChangeRequest(
+    String requestId, {
+    required String status,
+    String? reason,
+  }) async {
+    await _dio.post(
+      '/store-change-requests/$requestId/review',
+      data: {'status': status, if (reason?.trim().isNotEmpty == true) 'reason': reason!.trim()},
     );
   }
 

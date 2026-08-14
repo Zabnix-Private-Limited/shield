@@ -43,4 +43,42 @@ export class SupportService {
       },
     });
   }
+
+  async submitForCustomer(
+    customerId: bigint,
+    input: { subject?: string; message: string; complaintType?: string },
+  ) {
+    const message = input.message.trim();
+    if (!message) {
+      throw new Error('Support message is required.');
+    }
+    return this.prisma.complaint.create({
+      data: {
+        customerId,
+        complaintType:
+          input.complaintType?.trim().toUpperCase() || 'SUPPORT_REQUEST',
+        description: [
+          input.subject?.trim() ? `Subject: ${input.subject.trim()}` : null,
+          message,
+        ]
+          .filter((value): value is string => Boolean(value))
+          .join('\n'),
+        status: 'SUBMITTED',
+      },
+    });
+  }
+
+  async listForCustomer(customerId: bigint) {
+    return this.prisma.complaint.findMany({
+      where: { customerId },
+      select: {
+        id: true,
+        complaintType: true,
+        description: true,
+        status: true,
+        createdAt: true,
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
 }

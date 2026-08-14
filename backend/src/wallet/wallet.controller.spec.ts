@@ -4,11 +4,17 @@ describe('WalletController transaction scope', () => {
   const walletService = {
     walletBelongsToCustomer: jest.fn(),
     getTransactions: jest.fn(),
+    recharge: jest.fn(),
   };
   const providerScope = { assertProviderCanAccessWallet: jest.fn() };
+  const agentScope = {
+    assertAgentCanAccessWalletByCustomer: jest.fn(),
+    assertAgentCanAccessWallet: jest.fn(),
+  };
   const controller = new WalletController(
     walletService as any,
     providerScope as any,
+    agentScope as any,
   );
   const customer = {
     principalType: 'CUSTOMER',
@@ -41,5 +47,39 @@ describe('WalletController transaction scope', () => {
     ).rejects.toThrow('Authenticated customer context is required.');
 
     expect(walletService.walletBelongsToCustomer).not.toHaveBeenCalled();
+  });
+
+  it('scopes a staff recharge to the target customer before ledger mutation', async () => {
+    walletService.recharge.mockResolvedValue({ id: 1n });
+    const agent = {
+      principalType: 'USER',
+      userId: '42',
+      roleCode: 'SHIELD_AGENT',
+    } as any;
+    await controller.recharge({ customer_id: '11', amount: 100 }, agent);
+    expect(
+      agentScope.assertAgentCanAccessWalletByCustomer,
+    ).toHaveBeenCalledWith(11n, agent);
+    expect(walletService.recharge).toHaveBeenCalledWith(
+      11n,
+      100,
+      42n,
+      undefined,
+      'CASH',
+    );
+  });
+
+  it('scopes an agent transaction feed by the wallet owner', async () => {
+    const agent = {
+      principalType: 'USER',
+      userId: '42',
+      roleCode: 'SHIELD_AGENT',
+    } as any;
+    walletService.getTransactions.mockResolvedValue([]);
+
+    await controller.getTransactions('99', undefined, undefined, undefined, agent);
+
+    expect(agentScope.assertAgentCanAccessWallet).toHaveBeenCalledWith(99n, agent);
+    expect(walletService.getTransactions).toHaveBeenCalled();
   });
 });

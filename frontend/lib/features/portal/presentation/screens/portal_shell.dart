@@ -13,10 +13,12 @@ import '../../../agent/referrals/presentation/screens/agent_referrals_screen.dar
 import '../../../agent/registration/presentation/screens/agent_registration_screen.dart';
 import '../../../agent/reports/presentation/screens/agent_reports_screen.dart';
 import '../../../agent/settings/presentation/screens/agent_settings_screen.dart';
+import '../../../agent/store_change/presentation/screens/agent_store_change_screen.dart';
 import '../../../admin/presentation/screens/admin_portal_workspace.dart';
 import '../../../customer/dashboard/presentation/screens/dashboard_screen.dart';
 import '../../../customer/activity/presentation/screens/customer_activity_screen.dart';
 import '../../../customer/account/presentation/screens/customer_account_screen.dart';
+import '../../../customer/account/presentation/screens/store_change_screen.dart';
 import '../../../customer/account/data/customer_account_repository.dart';
 import '../../../customer/documents/presentation/screens/customer_documents_screen.dart';
 import '../../../customer/membership/data/models/membership_model.dart';
@@ -56,6 +58,7 @@ import '../../../../shared/services/customer_auth_session.dart';
 import '../../../../shared/services/internal_auth_session.dart';
 import '../../../../shared/services/portal_resolver.dart';
 import '../../../customer/services/presentation/screens/customer_services_screen.dart';
+import '../../../customer/support/presentation/screens/customer_support_screen.dart';
 import '../../../customer/booking/presentation/customer_booking_screen.dart';
 import '../../../customer/visits/presentation/customer_visits_screen.dart';
 import '../../../../shared/utils/prescription_file_picker.dart';
@@ -591,6 +594,10 @@ class _RoleContent extends StatelessWidget {
         portal.role == SHIELDRole.customer && section.key == 'settings';
     final isCustomerAccount =
         portal.role == SHIELDRole.customer && section.key == 'account';
+    final isCustomerSupport =
+        portal.role == SHIELDRole.customer && section.key == 'support';
+    final isCustomerStoreChange =
+        portal.role == SHIELDRole.customer && section.key == 'store-change';
     final isAgentRole = portal.role == SHIELDRole.agent;
     final isProviderRole = portal.role == SHIELDRole.provider;
     final isAdminRole = portal.role == SHIELDRole.superAdmin;
@@ -666,6 +673,10 @@ class _RoleContent extends StatelessWidget {
       content = const _CustomerSettingsView();
     } else if (isCustomerAccount) {
       content = const CustomerAccountScreen();
+    } else if (isCustomerSupport) {
+      content = const CustomerSupportScreen();
+    } else if (isCustomerStoreChange) {
+      content = const CustomerStoreChangeScreen();
     } else if (isAgentRole) {
       content = _buildAgentModuleContent(section);
     } else if (isProviderRole) {
@@ -794,6 +805,8 @@ class _RoleContent extends StatelessWidget {
         return const AgentRegistrationScreen();
       case 'followups':
         return const AgentFollowUpsScreen();
+      case 'store-changes':
+        return const AgentStoreChangeScreen();
       case 'appointments':
         return const AgentAppointmentsScreen();
       case 'referrals':
@@ -6050,7 +6063,9 @@ class _CustomerNotificationsView extends StatefulWidget {
 
 class _CustomerNotificationsViewState
     extends State<_CustomerNotificationsView> {
-  late Future<List<NotificationModel>> _notificationsFuture;
+  late Future<void> _notificationsFuture;
+  List<NotificationModel> _notifications = const [];
+  int? _nextNotificationOffset;
   NotificationType? _activeType;
 
   @override
@@ -6059,15 +6074,20 @@ class _CustomerNotificationsViewState
     _loadNotifications();
   }
 
-  void _loadNotifications() {
-    _notificationsFuture = ApiService.getCustomerNotificationCenter().then(
-      (payload) => ((payload['items'] as List?) ?? const <dynamic>[])
+  void _loadNotifications({bool append = false}) {
+    final offset = append ? _nextNotificationOffset ?? 0 : 0;
+    _notificationsFuture = ApiService.getCustomerNotificationCenter(offset: offset).then(
+      (payload) {
+        final page = ((payload['items'] as List?) ?? const <dynamic>[])
           .whereType<Map>()
           .map(
             (item) =>
                 NotificationModel.fromJson(Map<String, dynamic>.from(item)),
           )
-          .toList(),
+          .toList();
+        _notifications = append ? [..._notifications, ...page] : page;
+        _nextNotificationOffset = payload['nextOffset'] as int?;
+      },
     );
   }
 
@@ -6113,7 +6133,7 @@ class _CustomerNotificationsViewState
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<List<NotificationModel>>(
+    return FutureBuilder<void>(
       future: _notificationsFuture,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
@@ -6145,7 +6165,7 @@ class _CustomerNotificationsViewState
           );
         }
 
-        final notifications = snapshot.data!;
+        final notifications = _notifications;
         final visible = _activeType == null
             ? notifications
             : notifications
@@ -6338,6 +6358,17 @@ class _CustomerNotificationsViewState
                 ),
               ),
             ),
+            if (_nextNotificationOffset != null) ...[
+              const SizedBox(height: 8),
+              Center(
+                child: AppButton(
+                  text: 'Load earlier updates',
+                  onPressed: () => setState(
+                    () => _loadNotifications(append: true),
+                  ),
+                ),
+              ),
+            ],
           ],
         );
       },

@@ -207,6 +207,36 @@ export class WalletService {
     });
   }
 
+  async createRechargeIntent(
+    customerId: bigint,
+    amount: number,
+    idempotencyKey: string,
+  ) {
+    const normalizedAmount = this.assertPositiveAmount(amount);
+    const key = idempotencyKey.trim();
+    if (!key) throw new BadRequestException('Idempotency key is required.');
+    const existing = await this.prisma.walletRechargeIntent.findUnique({
+      where: { idempotencyKey: key },
+    });
+    if (existing) {
+      if (existing.customerId !== customerId || Number(existing.amount) !== normalizedAmount) {
+        throw new BadRequestException('Idempotency key cannot be reused for another recharge.');
+      }
+      return existing;
+    }
+    const wallet = await this.requireWallet(customerId);
+    return this.prisma.walletRechargeIntent.create({
+      data: { uuid: randomUUID(), customerId, walletId: wallet.id, amount: normalizedAmount, idempotencyKey: key, status: 'INITIATED' },
+    });
+  }
+
+  async listRechargeIntents(customerId: bigint) {
+    return this.prisma.walletRechargeIntent.findMany({
+      where: { customerId },
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+    });
+  }
+
   async adjust(
     customerId: bigint,
     amount: number,
