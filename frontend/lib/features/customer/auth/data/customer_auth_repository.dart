@@ -32,6 +32,7 @@ class CustomerAuthRepository {
   String? _pendingPhoneNumber;
   DateTime? _resendAllowedAt;
   Future<CustomerPhoneVerificationStartResult>? _sendInFlight;
+  int _sendAttemptSequence = 0;
   final _stateMachine = CustomerPhoneVerificationStateMachine<Object>();
 
   String? get pendingPhoneNumber => _pendingPhoneNumber;
@@ -49,7 +50,13 @@ class CustomerAuthRepository {
 
     final isResend = _hasUsableConfirmation &&
         _pendingPhoneNumber == phoneNumber;
-    final request = _requestPhoneVerification(phoneNumber, isResend: isResend);
+    final attemptId = ++_sendAttemptSequence;
+    _traceSendStart(attemptId, isResend ? 'explicit_resend' : 'initial', phoneNumber);
+    final request = _requestPhoneVerification(
+      phoneNumber,
+      isResend: isResend,
+      attemptId: attemptId,
+    );
     _sendInFlight = request;
     try {
       return await request;
@@ -63,6 +70,7 @@ class CustomerAuthRepository {
   Future<CustomerPhoneVerificationStartResult> _requestPhoneVerification(
     String phoneNumber, {
     required bool isResend,
+    required int attemptId,
   }) async {
     _stateMachine.beginSend(resend: isResend);
 
@@ -87,20 +95,24 @@ class CustomerAuthRepository {
         _verificationId = null;
         _resendAllowedAt = DateTime.now().add(const Duration(seconds: 30));
         _stateMachine.sendSucceeded(confirmation);
+        _traceSendSuccess(attemptId);
         return CustomerPhoneVerificationStartResult.codeSent;
       }
 
       return await _startNativePhoneVerification(
         phoneNumber,
+        attemptId,
       );
     } catch (error) {
       _stateMachine.sendFailed(error);
+      _traceSendFailure(attemptId, error);
       rethrow;
     }
   }
 
   Future<CustomerPhoneVerificationStartResult> _startNativePhoneVerification(
     String phoneNumber,
+    int attemptId,
   ) async {
     final completer = Completer<CustomerPhoneVerificationStartResult>();
     _pendingPhoneNumber = phoneNumber;
@@ -135,6 +147,7 @@ class CustomerAuthRepository {
         _forceResendingToken = forceResendingToken;
         _resendAllowedAt = DateTime.now().add(const Duration(seconds: 30));
         _stateMachine.sendSucceeded(verificationId);
+        _traceSendSuccess(attemptId);
         if (!completer.isCompleted) {
           completer.complete(CustomerPhoneVerificationStartResult.codeSent);
         }
@@ -310,6 +323,32 @@ class CustomerAuthRepository {
   bool get _hasUsableConfirmation =>
       (kIsWeb && _webConfirmationResult != null) ||
       (!kIsWeb && _verificationId != null && _verificationId!.isNotEmpty);
+
+  void _traceSendStart(int attemptId, String trigger, String phoneNumber) {
+    debugPrint(
+      'OTP_SEND_START attemptId=$attemptId trigger=$trigger '
+      'maskedPhone=${_maskedPhone(phoneNumber)}',
+    );
+  }
+
+  void _traceSendSuccess(int attemptId) {
+    debugPrint(
+      'OTP_SEND_SUCCESS attemptId=$attemptId confirmationGeneration=$attemptId',
+    );
+  }
+
+  void _traceSendFailure(int attemptId, Object error) {
+    final firebaseCode = error is FirebaseAuthException ? error.code : 'none';
+    debugPrint(
+      'OTP_SEND_FAILURE attemptId=$attemptId firebaseErrorCode=$firebaseCode',
+    );
+  }
+
+  String _maskedPhone(String phoneNumber) {
+    final digits = phoneNumber.replaceAll(RegExp(r'\D'), '');
+    if (digits.length <= 4) return '****';
+    return '*******${digits.substring(digits.length - 4)}';
+  }
 
   bool _isUnsupportedLocalWebHost(String host) {
     final normalized = host.trim().toLowerCase();
