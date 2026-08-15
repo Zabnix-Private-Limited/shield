@@ -26,7 +26,10 @@ void _traceRouter(String message) {
 
 final GoRouter router = GoRouter(
   navigatorKey: rootNavigatorKey,
-  initialLocation: '/',
+  // Stored-session restoration runs after the first frame. Start on the
+  // splash route so neither customer nor internal users see a login flash
+  // while their locally persisted session is being validated.
+  initialLocation: '/customer/splash',
   observers: [SentryNavigatorObserver()],
   refreshListenable: Listenable.merge([
     CustomerAuthSession.instance,

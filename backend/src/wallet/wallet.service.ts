@@ -219,14 +219,26 @@ export class WalletService {
       where: { idempotencyKey: key },
     });
     if (existing) {
-      if (existing.customerId !== customerId || Number(existing.amount) !== normalizedAmount) {
-        throw new BadRequestException('Idempotency key cannot be reused for another recharge.');
+      if (
+        existing.customerId !== customerId ||
+        Number(existing.amount) !== normalizedAmount
+      ) {
+        throw new BadRequestException(
+          'Idempotency key cannot be reused for another recharge.',
+        );
       }
       return existing;
     }
     const wallet = await this.requireWallet(customerId);
     return this.prisma.walletRechargeIntent.create({
-      data: { uuid: randomUUID(), customerId, walletId: wallet.id, amount: normalizedAmount, idempotencyKey: key, status: 'INITIATED' },
+      data: {
+        uuid: randomUUID(),
+        customerId,
+        walletId: wallet.id,
+        amount: normalizedAmount,
+        idempotencyKey: key,
+        status: 'INITIATED',
+      },
     });
   }
 
@@ -393,9 +405,10 @@ export class WalletService {
 
   async getTransactions(
     walletId: bigint,
-    filters: { from?: string; to?: string; type?: string },
+    filters: { from?: string; to?: string; type?: string; limit?: number },
   ) {
     const dateFilter = this.buildDateFilter(filters);
+    const limit = Math.min(Math.max(filters.limit ?? 100, 1), 100);
 
     const [cashTransactions, rewardTransactions] = await Promise.all([
       this.prisma.cashWalletTransaction.findMany({
@@ -407,6 +420,7 @@ export class WalletService {
           ...(dateFilter ? { createdAt: dateFilter } : {}),
         },
         orderBy: { createdAt: 'desc' },
+        take: limit,
       }),
       this.prisma.rewardPointTransaction.findMany({
         where: {
@@ -417,6 +431,7 @@ export class WalletService {
           ...(dateFilter ? { createdAt: dateFilter } : {}),
         },
         orderBy: { createdAt: 'desc' },
+        take: limit,
       }),
     ]);
 
@@ -446,7 +461,7 @@ export class WalletService {
     ].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
 
     if (splitTransactions.length > 0) {
-      return splitTransactions;
+      return splitTransactions.slice(0, limit);
     }
 
     const legacyTransactions = await this.prisma.walletTransaction.findMany({
@@ -458,6 +473,7 @@ export class WalletService {
         ...(dateFilter ? { createdAt: dateFilter } : {}),
       },
       orderBy: { createdAt: 'desc' },
+      take: limit,
     });
 
     return legacyTransactions.map((txn) => ({

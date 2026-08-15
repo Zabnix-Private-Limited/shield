@@ -12126,3 +12126,151 @@ est build compilation.
   - docs/releases/ANDROID_PLAYSTORE_RELEASE_NOTES_0.0.4.md
 - Backend Files: none.
 - Verification: flutter pub get, flutter build apk --release, flutter build appbundle --release, APK package metadata inspection, and APK signing inspection passed. No live browser/device UAT or Play Console upload was performed.
+
+## 94. Android installation failure triage (2026-08-15 09:15:00 IST)
+- Investigated the reported Android App not installed/update/uninstall failure without browser interaction or device mutation.
+- The current release APK is structurally installable: package com.zabnix.shield, version 0.0.4 (2026081401), v2 signed by the configured SHIELD RSA-2048 certificate, and verified zip-aligned for 16 KB Android compatibility.
+- No ADB device was attached, so Android Package Manager could not provide the device-specific failure code and no uninstall/install command was run.
+- Most likely remaining device-side cause is an existing com.zabnix.shield installation signed by a different certificate, which Android correctly refuses to update. The exact Package Manager code is required before any corrective action.
+- Frontend Files: none.
+- Backend Files: none.
+- Remaining blocker: connect the affected phone through USB debugging or provide the exact Android installer failure text.
+
+## 95. Android Firebase Phone Auth release diagnosis (2026-08-15 09:25:00 IST)
+- Diagnosed the installed app screenshot as Firebase Phone Auth failure, separate from APK installation.
+- The release APK for com.zabnix.shield is signed with SHA-1 9C:C7:69:12:DE:1B:B4:78:8F:BB:DB:9B:C0:9F:51:EF:DB:40:A5:3C and SHA-256 33:74:96:96:DC:A3:54:64:EA:0B:B1:BD:53:E2:4D:46:A1:81:A2:CF:CF:A3:24:C5:12:36:4C:63:B1:91:8D:3D.
+- android/app/google-services.json instead contains the Firebase Android OAuth SHA-1 F9:2E:91:10:4C:03:C4:5D:B9:E2:EA:3B:07:CC:52:63:CD:09:04:19. These certificates differ, so Firebase cannot verify the installed release app for native Phone Auth.
+- Required operational fix: Firebase Console > shield-zabnix > Project settings > Your apps > com.zabnix.shield: add the release SHA-1 and SHA-256 above, download the regenerated google-services.json, replace frontend/android/app/google-services.json, then rebuild the signed release APK/AAB. If this APK will be delivered through Google Play App Signing, also add the Play app-signing SHA-1 and SHA-256 fingerprints.
+- Frontend Files inspected: frontend/android/app/google-services.json; frontend/lib/features/customer/auth/data/customer_auth_repository.dart; frontend/lib/shared/services/auth_error_messages.dart.
+- Backend Files: none.
+- No speculative code change or Firebase Console mutation was made because the corrective action requires authorized Firebase project access.
+
+## 96. Firebase configuration download validation (2026-08-15 09:30:00 IST)
+- Inspected the owner-provided E:\Chrome Downloads\google-services (7).json before replacing any project configuration.
+- It is unchanged for Android OAuth signing: it contains only certificate SHA-1 F9:2E:91:10:4C:03:C4:5D:B9:E2:EA:3B:07:CC:52:63:CD:09:04:19, not the release SHA-1 9C:C7:69:12:DE:1B:B4:78:8F:BB:DB:9B:C0:9F:51:EF:DB:40:A5:3C.
+- Preserved frontend/android/app/google-services.json because replacing it would not resolve Firebase Phone Auth.
+- Frontend Files: none changed.
+- Backend Files: none.
+- Remaining blocker: add the actual release fingerprint in Firebase Console, wait for the Firebase Android app configuration to update, and download a JSON file that includes the release certificate.
+
+## 97. Firebase release certificate configuration applied (2026-08-15 09:35:00 IST)
+- Validated the owner-provided google-services (8).json before use. It includes the release Android OAuth SHA-1 9C:C7:69:12:DE:1B:B4:78:8F:BB:DB:9B:C0:9F:51:EF:DB:40:A5:3C, in addition to the previous development certificate.
+- Updated frontend/android/app/google-services.json with the Firebase-generated release OAuth client configuration. This restores native Firebase Phone Auth eligibility for the signed release APK.
+- Frontend Files:
+  - frontend/android/app/google-services.json
+- Backend Files: none.
+- Verification pending: regenerate signed release APK and AAB from the corrected Firebase configuration, then retry OTP on the physical device.
+
+## 98. Firebase-corrected Android release artifacts regenerated (2026-08-15 09:42:00 IST)
+- Rebuilt the signed Android APK and Play Store AAB after applying the Firebase-generated Android OAuth configuration containing the release certificate.
+- Verified APK identity com.zabnix.shield version 0.0.4 (2026081401) and its v2 signing certificate SHA-1 9C:C7:69:12:DE:1B:B4:78:8F:BB:DB:9B:C0:9F:51:EF:DB:40:A5:3C.
+- Artifacts:
+  - frontend/build/app/outputs/flutter-apk/app-release.apk (81,149,275 bytes, SHA-256 D2DE79B986FD63683C28936205AA42867AAA3FCFB038BB5DA5F705907E656334)
+  - frontend/build/app/outputs/bundle/release/app-release.aab (60,026,244 bytes, SHA-256 03D9CE8D6331FAA80E7AE585A8538B4564E34C4A31E09915E9ECD5A92515DC95)
+- Frontend Files:
+  - frontend/android/app/google-services.json
+- Backend Files: none.
+- Verification: flutter build apk --release, flutter build appbundle --release, APK package identity, APK signing, and git diff --check passed.
+- Remaining validation: retry native Firebase Phone Auth on the physical device. The Firebase console certificate registration is an external operational change and the final live OTP result must be confirmed on-device.
+
+## 99. Customer startup and dashboard performance P0 pass (2026-08-15 10:05:00 IST)
+- Removed the startup dependency on Firebase Messaging permission, FCM token lookup, push-token registration, and analytics. Firebase core still initializes before the app so Phone Auth remains available; non-critical Firebase services now start after the first rendered application frame.
+- Changed Customer Dashboard loading to stale-while-revalidate. A customer-scoped cached dashboard is rendered first when present, then exactly one shared in-flight dashboard refresh replaces it. A cold cache retains the existing skeleton path.
+- Removed the duplicate Customer App Bar notification-center request. The header now derives its unread count from the existing dashboard aggregate, avoiding a separate startup request.
+- Reduced the dashboard wallet-history query from unbounded ledger reads to a four-record projection, and parallelized independent dashboard reads after the authoritative customer lookup.
+- Added a payload-free backend performance log: PERF customer.dashboard durationMs=... . It records request work without customer identifiers or payload content.
+- Frontend Files:
+  - frontend/lib/main.dart
+  - frontend/lib/shared/services/firebase_bootstrap_service.dart
+  - frontend/lib/features/customer/dashboard/data/repositories/dashboard_repository.dart
+  - frontend/lib/features/customer/dashboard/presentation/controllers/dashboard_controller.dart
+  - frontend/lib/features/customer/shared/widgets/customer_app_bar.dart
+- Backend Files:
+  - backend/src/dashboard/dashboard.service.ts
+  - backend/src/wallet/wallet.service.ts
+- Verification: scoped flutter analyze passed; npx tsc --noEmit passed; npx nest build passed; git diff --check passed. npm test -- --runInBand dashboard found no matching dashboard test files and did not constitute a test pass.
+- Remaining release evidence: physical-device startup/cache/OTP UAT, deployed backend timing logs, and SQL-plan/index evidence for real production-like workload remain required before declaring the performance target met.
+
+## 100. Customer first-frame session restoration release build (2026-08-15 10:15:00 IST)
+- Moved stored customer/internal session restoration behind the first application frame. SHIELD now renders its branded splash immediately, keeps protected portal routes guarded during validation, and routes only after both session stores finish restoring.
+- Preserved the established sequential session-validation order and authentication behavior; this is a responsiveness change, not a session-security bypass.
+- Rebuilt the signed Android release artifacts after the startup performance changes.
+- Artifacts:
+  - frontend/build/app/outputs/flutter-apk/app-release.apk (81,149,275 bytes, SHA-256 BE5E316D0C70462C0ADDBA9401AC5BBDD6F2A5B0FA26E2FAF1F4DD41AF35BB9C)
+  - frontend/build/app/outputs/bundle/release/app-release.aab (60,039,814 bytes, SHA-256 C1E2CB4A435EC5B1205972A90D1E138843AA6ABD18178D5EF19CCEAA2600DF7B)
+- Frontend Files:
+  - frontend/lib/main.dart
+  - frontend/lib/app/routes/app_router.dart
+  - frontend/lib/features/customer/auth/presentation/screens/customer_splash_screen.dart
+- Backend Files: none for this slice.
+- Verification: scoped flutter analyze passed; release APK and AAB builds passed; APK package identity remains com.zabnix.shield 0.0.4 (2026081401); git diff --check passed.
+- Remaining evidence: physical-device timings, cached-dashboard perceived load time, actual deployed customer.dashboard PERF timings, and login/dashboard UAT remain required. The build result is not a claim that the stated 0 to 3 second targets have been achieved.
+
+## 101. Customer dashboard summary projection performance pass (2026-08-15 10:25:00 IST)
+- Replaced dashboard document and notification row retrieval with authoritative count projections. The dashboard previously loaded up to six documents with their extraction and processing-log relations solely to render a document count, and loaded notification rows solely to render an unread badge.
+- The Customer Dashboard contract now returns summary.upcomingVisitCount, summary.documentCount, and summary.unreadNotificationCount. It retains only the three appointment records rendered on the dashboard and the four recent wallet entries already bounded by the prior P0 pass.
+- Preserved cache compatibility: the Flutter model falls back to legacy cached lists when a pre-summary cache record is encountered, then refreshes to the new contract.
+- Frontend Files:
+  - frontend/lib/features/customer/dashboard/domain/entities/dashboard_entity.dart
+  - frontend/lib/features/customer/dashboard/data/models/dashboard_model.dart
+  - frontend/lib/features/customer/dashboard/presentation/screens/dashboard_screen.dart
+  - frontend/lib/features/customer/shared/widgets/customer_app_bar.dart
+- Backend Files:
+  - backend/src/dashboard/dashboard.service.ts
+- Verification: targeted flutter analyze passed; npx tsc --noEmit passed; npx nest build passed; git diff --check passed.
+- Remaining evidence: run this endpoint against deployed, production-like data and collect the new payload-free PERF customer.dashboard duration log plus device timing before claiming target latency.
+
+## 102. Customer Services directory navigation cache (2026-08-15 10:35:00 IST)
+- Added a bounded two-minute in-memory cache for customer service categories, provider directory pages, and provider details. Entries are request-de-duplicated so concurrent route/header interactions do not issue duplicate directory calls.
+- Preserved query, type, and page as part of the provider-page cache key. This keeps filtered and paginated results isolated rather than mixing directory views.
+- Pull-to-refresh now explicitly bypasses the cache and refreshes both categories and the visible provider page, so operational changes remain available without waiting for cache expiry.
+- Frontend Files:
+  - frontend/lib/features/customer/services/data/repositories/customer_provider_repository.dart
+  - frontend/lib/features/customer/services/presentation/controllers/customer_services_controller.dart
+  - frontend/lib/features/customer/services/presentation/screens/customer_services_screen.dart
+- Backend Files: none.
+- Verification: targeted flutter analyze passed; git diff --check passed.
+- Remaining evidence: Services to provider to booking to back physical-device UAT is required to confirm perceived navigation speed and correct refresh behavior.
+
+## 103. Customer portal performance-index migration prepared (2026-08-15 10:45:00 IST)
+- Audited current_schema.md against actual dashboard/inbox query shapes. The schema has only separate customer, status, and date indexes for appointments and no customer-facing indexes for documents or notifications.
+- Added an unapplied migration with narrowly scoped composite indexes for appointment list ordering/counts, document customer list/counts, and notification unread-count/inbox ordering.
+- The migration is source preparation only. No Prisma push, migration command, database connection, or schema snapshot rewrite was run.
+- Backend Files:
+  - backend/prisma/migrations/20260815_customer_performance_indexes/migration.sql
+- Frontend Files: none.
+- Verification: migration content reviewed against current_schema.md and current dashboard query patterns; git diff --check passed.
+- Remaining release action: apply through the approved DB release process, then update current_schema.md from the resulting authoritative schema and collect query-plan/timing evidence.
+
+## 104. Customer portal performance measurement UAT protocol (2026-08-15 10:55:00 IST)
+- Added a reproducible Customer portal performance UAT protocol with cold/warm targets, privacy-safe timing fields, dashboard acceptance checks, backend PERF log correlation, and release gates.
+- The protocol keeps source/build proof separate from database migration proof and physical-device/deployment performance evidence.
+- Frontend Files: none.
+- Backend Files: none.
+- Documentation:
+  - docs/customer-ui/CUSTOMER_PORTAL_PERFORMANCE_UAT.md
+- Verification: git diff --check passed.
+- Remaining action: run the documented release APK/AAB and deployed backend through the timing sheet; no target is claimed achieved until those measurements are recorded.
+
+## 105. Customer performance pass final release-build verification (2026-08-15 11:05:00 IST)
+- Rebuilt signed release APK and AAB after the complete customer performance source pass, including immediate splash rendering, deferred non-critical Firebase work, stale-while-revalidate dashboard cache, summary projections, Service directory cache, and the measurement protocol.
+- Artifacts:
+  - frontend/build/app/outputs/flutter-apk/app-release.apk
+  - frontend/build/app/outputs/bundle/release/app-release.aab
+- Verification: both release builds passed and git diff --check passed.
+- Release evidence remains blocked outside the local source workspace: approved application of the customer performance-index migration, schema snapshot refresh, deployed backend PERF timing, and physical-device cold/warm UAT. No latency target is claimed achieved without that evidence.
+
+## 106. Customer product catalogue and prescription-upload route audit (2026-08-15 11:15:00 IST)
+- Audited the customer window after the owner asked where products load and where prescriptions upload.
+- Products: backend has authenticated GET /customer/wellness-products and GET /customer/wellness-products/:id contracts with pagination, category filters, disclosure, and purchasable=false. Flutter ApiService exposes both calls, but no customer catalogue screen/repository/controller consumes them. /portal/customer/shop explicitly redirects to /portal/customer/services, so products are not currently rendered in the customer portal.
+- Prescriptions: upload is implemented at /portal/customer/documents through Upload document then Prescription, and at /portal/customer/prescriptions through Upload prescription. A pharmacy provider selected from Services routes the customer to /portal/customer/prescriptions?provider=...&type=PHARMACY for consented sharing after upload.
+- Frontend Files inspected:
+  - frontend/lib/app/routes/app_router.dart
+  - frontend/lib/shared/services/api_service.dart
+  - frontend/lib/features/customer/documents/presentation/screens/customer_documents_screen.dart
+  - frontend/lib/features/customer/prescriptions/presentation/screens/customer_prescriptions_screen.dart
+  - frontend/lib/features/customer/services/presentation/screens/customer_services_screen.dart
+- Backend Files inspected:
+  - backend/src/pharmacy/pharmacy.controller.ts
+  - backend/src/pharmacy/pharmacy.service.ts
+- No code change was made in this diagnostic slice. Exposing the existing product catalogue requires an explicit customer catalogue UI/route decision; it must remain browse-only until a customer commerce contract exists.

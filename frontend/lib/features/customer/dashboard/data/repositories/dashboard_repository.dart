@@ -15,15 +15,35 @@ class DashboardRepository {
   static final Map<String, _DashboardMemoryEntry> _memoryCache = {};
   static final Map<String, Future<DashboardModel>> _inFlight = {};
 
+  Future<DashboardModel?> loadCachedDashboard(String customerId) async {
+    final cached = _memoryCache[customerId];
+    if (cached != null) {
+      return cached.model;
+    }
+
+    final localDashboard = await _local.load(customerId);
+    if (localDashboard != null) {
+      _memoryCache[customerId] = _DashboardMemoryEntry(
+        model: localDashboard,
+        fetchedAt: DateTime.now(),
+      );
+    }
+    return localDashboard;
+  }
+
   Future<DashboardModel> loadDashboard(String customerId) async {
     final cached = _memoryCache[customerId];
     if (cached != null &&
         DateTime.now().difference(cached.fetchedAt) < _memoryCacheTtl) {
       return cached.model;
     }
+    return refreshDashboard(customerId);
+  }
+
+  Future<DashboardModel> refreshDashboard(String customerId) async {
     final existing = _inFlight[customerId];
     if (existing != null) return existing;
-    final request = _loadAndCache(customerId);
+    final request = _fetchAndCache(customerId);
     _inFlight[customerId] = request;
     try {
       return await request;
@@ -34,25 +54,7 @@ class DashboardRepository {
     }
   }
 
-  Future<DashboardModel> _loadAndCache(String customerId) async {
-    try {
-      final dashboard = await _remote.fetch(customerId);
-      await _local.save(customerId, dashboard);
-      _memoryCache[customerId] = _DashboardMemoryEntry(
-        model: dashboard,
-        fetchedAt: DateTime.now(),
-      );
-      return dashboard;
-    } catch (_) {
-      final cached = await _local.load(customerId);
-      if (cached != null) {
-        return cached;
-      }
-      rethrow;
-    }
-  }
-
-  Future<DashboardModel> refreshDashboard(String customerId) async {
+  Future<DashboardModel> _fetchAndCache(String customerId) async {
     final dashboard = await _remote.fetch(customerId);
     await _local.save(customerId, dashboard);
     _memoryCache[customerId] = _DashboardMemoryEntry(

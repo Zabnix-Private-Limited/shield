@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../../app/theme/app_colors.dart';
 import '../../../../../app/theme/app_typography.dart';
 import '../../../../../shared/services/customer_auth_session.dart';
+import '../../../../../shared/services/internal_auth_session.dart';
 import '../../../../../shared/services/portal_resolver.dart';
 
 class CustomerSplashScreen extends StatefulWidget {
@@ -14,9 +15,20 @@ class CustomerSplashScreen extends StatefulWidget {
 }
 
 class _CustomerSplashScreenState extends State<CustomerSplashScreen> {
+  bool _routeScheduled = false;
+
   @override
   void initState() {
     super.initState();
+  }
+
+  void _routeWhenSessionsAreReady() {
+    if (_routeScheduled ||
+        !CustomerAuthSession.instance.isInitialized ||
+        !InternalAuthSession.instance.isInitialized) {
+      return;
+    }
+    _routeScheduled = true;
     WidgetsBinding.instance.addPostFrameCallback((_) => _routeNext());
   }
 
@@ -38,66 +50,76 @@ class _CustomerSplashScreenState extends State<CustomerSplashScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.white,
-      body: SafeArea(
-        child: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(28),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Container(
-                  width: 112,
-                  height: 112,
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: AppColors.white,
-                    borderRadius: BorderRadius.circular(30),
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppColors.shieldNavy.withValues(alpha: 0.08),
-                        blurRadius: 22,
-                        offset: const Offset(0, 14),
+    return ListenableBuilder(
+      listenable: Listenable.merge([
+        CustomerAuthSession.instance,
+        InternalAuthSession.instance,
+      ]),
+      builder: (context, _) {
+        _routeWhenSessionsAreReady();
+        return Scaffold(
+          backgroundColor: AppColors.white,
+          body: SafeArea(
+            child: Center(
+              child: Padding(
+                padding: const EdgeInsets.all(28),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      width: 112,
+                      height: 112,
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: AppColors.white,
+                        borderRadius: BorderRadius.circular(30),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.shieldNavy.withValues(alpha: 0.08),
+                            blurRadius: 22,
+                            offset: const Offset(0, 14),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
-                  child: Image.asset(
-                    'assets/logos/shield_mark.png',
-                    fit: BoxFit.contain,
-                    errorBuilder: (context, error, stackTrace) => const Icon(
-                      Icons.shield_outlined,
-                      color: AppColors.shieldBlue,
-                      size: 58,
+                      child: Image.asset(
+                        'assets/logos/shield_mark.png',
+                        fit: BoxFit.contain,
+                        errorBuilder: (context, error, stackTrace) =>
+                            const Icon(
+                              Icons.shield_outlined,
+                              color: AppColors.shieldBlue,
+                              size: 58,
+                            ),
+                      ),
                     ),
-                  ),
+                    const SizedBox(height: 22),
+                    Image.asset(
+                      'assets/logos/shield_wordmark.png',
+                      width: 320,
+                      fit: BoxFit.contain,
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Sahakar Healthcare Member Portal',
+                      textAlign: TextAlign.center,
+                      style: AppTypography.body.copyWith(color: AppColors.gray),
+                    ),
+                    const SizedBox(height: 28),
+                    const SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2.4,
+                        color: AppColors.shieldBlue,
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 22),
-                Image.asset(
-                  'assets/logos/shield_wordmark.png',
-                  width: 320,
-                  fit: BoxFit.contain,
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  'Sahakar Healthcare Member Portal',
-                  textAlign: TextAlign.center,
-                  style: AppTypography.body.copyWith(color: AppColors.gray),
-                ),
-                const SizedBox(height: 28),
-                const SizedBox(
-                  width: 24,
-                  height: 24,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2.4,
-                    color: AppColors.shieldBlue,
-                  ),
-                ),
-              ],
+              ),
             ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }

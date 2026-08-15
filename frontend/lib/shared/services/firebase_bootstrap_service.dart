@@ -22,16 +22,33 @@ Future<void> shieldFirebaseMessagingBackgroundHandler(
 class FirebaseBootstrapService {
   FirebaseBootstrapService._();
 
-  static bool _initialized = false;
+  static bool _coreInitialized = false;
+  static bool _backgroundServicesInitialized = false;
 
-  static Future<void> initialize() async {
-    if (_initialized) {
+  /// Initializes only the Firebase core required by authentication.
+  ///
+  /// Messaging permission, token lookup, and analytics are deliberately
+  /// deferred until after SHIELD has rendered its first application frame.
+  static Future<void> initializeCore() async {
+    if (_coreInitialized) {
       return;
     }
 
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
+
+    _coreInitialized = true;
+  }
+
+  /// Starts non-critical Firebase services without holding up app startup.
+  static Future<void> initializeBackgroundServices() async {
+    await initializeCore();
+    if (_backgroundServicesInitialized) {
+      return;
+    }
+
+    _backgroundServicesInitialized = true;
 
     if (AppConfig.enableNotifications) {
       FirebaseMessaging.onBackgroundMessage(
@@ -41,8 +58,6 @@ class FirebaseBootstrapService {
     }
 
     await _initializeAnalytics();
-
-    _initialized = true;
   }
 
   static Future<void> _initializeAnalytics() async {

@@ -51,6 +51,33 @@ class CustomerServicesController extends ChangeNotifier {
     await load();
   }
 
+  Future<void> refresh() async {
+    final requestVersion = ++_requestVersion;
+    isLoading = true;
+    error = null;
+    notifyListeners();
+    try {
+      final values = await Future.wait([
+        _repository.categories(forceRefresh: true),
+        _repository.providers(
+          query: query,
+          type: selectedType,
+          forceRefresh: true,
+        ),
+      ]);
+      if (requestVersion != _requestVersion) return;
+      categories = values[0] as List<CustomerProviderCategory>;
+      page = values[1] as CustomerProviderPage;
+    } catch (value) {
+      if (requestVersion == _requestVersion) error = value;
+    } finally {
+      if (requestVersion == _requestVersion) {
+        isLoading = false;
+        notifyListeners();
+      }
+    }
+  }
+
   /// Rebuilds the visible list for a route that recorded its loaded page.
   /// The directory API is page-based, so pages are read in order to avoid a
   /// direct URL displaying only the final page of an earlier "load more" list.

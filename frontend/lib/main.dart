@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
@@ -30,10 +32,8 @@ Future<void> main() async {
     return false;
   };
   await ensureWebRuntimeErrorProbe();
-  await FirebaseBootstrapService.initialize();
+  await FirebaseBootstrapService.initializeCore();
   await Hive.initFlutter();
-  await CustomerAuthSession.instance.initialize();
-  await InternalAuthSession.instance.initialize();
 
   if (AppConfig.enableSentry &&
       !kIsWeb &&
@@ -58,14 +58,24 @@ Future<void> main() async {
   runApp(const ProviderScope(child: MyApp()));
 }
 
+Future<void> _initializeStoredSessions() async {
+  // Preserve the established validation order while letting SHIELD paint its
+  // branded entry state immediately. The router keeps portal routes guarded
+  // until these sessions finish restoring.
+  await CustomerAuthSession.instance.initialize();
+  await InternalAuthSession.instance.initialize();
+}
+
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
-    WidgetsBinding.instance.addPostFrameCallback(
-      (_) => NotificationNavigationService.flushPendingNavigation(),
-    );
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      NotificationNavigationService.flushPendingNavigation();
+      unawaited(_initializeStoredSessions());
+      unawaited(FirebaseBootstrapService.initializeBackgroundServices());
+    });
     return MaterialApp.router(
       title: 'SHIELD',
       debugShowCheckedModeBanner: false,

@@ -16,6 +16,7 @@ class DashboardModel extends DashboardEntity with EquatableMixin {
     required super.membership,
     required super.membershipApplication,
     required super.wallet,
+    required super.summary,
     required super.appointments,
     required super.recentActivity,
     required super.documents,
@@ -55,6 +56,9 @@ class DashboardModel extends DashboardEntity with EquatableMixin {
     final walletPayload = Map<String, dynamic>.from(
       json['wallet'] as Map? ?? const {},
     );
+    final summaryPayload = Map<String, dynamic>.from(
+      json['summary'] as Map? ?? const {},
+    );
 
     return DashboardModel(
       customer: customer,
@@ -83,6 +87,22 @@ class DashboardModel extends DashboardEntity with EquatableMixin {
         pointsBalance: _asDouble(walletPayload['pointsBalance']),
         creditAvailable: _asDouble(walletPayload['creditAvailable']),
         status: (walletPayload['status'] ?? 'ACTIVE').toString(),
+      ),
+      summary: DashboardSummary(
+        upcomingVisitCount: _asInt(
+          summaryPayload['upcomingVisitCount'],
+          fallback: (json['appointments'] as List? ?? const []).length,
+        ),
+        documentCount: _asInt(
+          summaryPayload['documentCount'],
+          fallback: (json['documents'] as List? ?? const []).length,
+        ),
+        unreadNotificationCount: _asInt(
+          summaryPayload['unreadNotificationCount'],
+          fallback: (json['notifications'] as List? ?? const [])
+              .where((item) => item is Map && item['status'] != 'READ')
+              .length,
+        ),
       ),
       appointments: (json['appointments'] as List? ?? const [])
           .map(
@@ -214,6 +234,11 @@ class DashboardModel extends DashboardEntity with EquatableMixin {
         'creditAvailable': wallet.creditAvailable,
         'status': wallet.status,
       },
+      'summary': {
+        'upcomingVisitCount': summary.upcomingVisitCount,
+        'documentCount': summary.documentCount,
+        'unreadNotificationCount': summary.unreadNotificationCount,
+      },
       'appointments': appointments
           .map(
             (item) => {
@@ -329,6 +354,9 @@ class DashboardModel extends DashboardEntity with EquatableMixin {
     wallet.pointsBalance,
     wallet.creditAvailable,
     wallet.status,
+    summary.upcomingVisitCount,
+    summary.documentCount,
+    summary.unreadNotificationCount,
     appointments,
     recentActivity,
     documents,
@@ -343,5 +371,9 @@ class DashboardModel extends DashboardEntity with EquatableMixin {
       return 0;
     }
     return double.tryParse(value.toString()) ?? 0;
+  }
+
+  static int _asInt(dynamic value, {required int fallback}) {
+    return int.tryParse(value?.toString() ?? '') ?? fallback;
   }
 }

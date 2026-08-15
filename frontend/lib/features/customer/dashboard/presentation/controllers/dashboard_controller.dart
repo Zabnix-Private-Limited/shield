@@ -28,10 +28,18 @@ class DashboardController extends ChangeNotifier {
     _error = null;
     notifyListeners();
 
+    DashboardModel? cached;
     try {
-      _dashboard = await _repository.loadDashboard(_resolvedCustomerId);
+      cached = await _repository.loadCachedDashboard(_resolvedCustomerId);
+      if (cached != null) {
+        _dashboard = cached;
+        notifyListeners();
+      }
+      _dashboard = await _repository.refreshDashboard(_resolvedCustomerId);
     } catch (error) {
-      _error = error;
+      if (cached == null) {
+        _error = error;
+      }
     } finally {
       _isLoading = false;
       notifyListeners();

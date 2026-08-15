@@ -10,6 +10,7 @@ class DashboardEntity {
   final Membership? membership;
   final MembershipApplicationEntity? membershipApplication;
   final DashboardWalletSummary wallet;
+  final DashboardSummary summary;
   final List<Appointment> appointments;
   final List<WalletTransaction> recentActivity;
   final List<Document> documents;
@@ -23,6 +24,7 @@ class DashboardEntity {
     required this.membership,
     required this.membershipApplication,
     required this.wallet,
+    required this.summary,
     required this.appointments,
     required this.recentActivity,
     required this.documents,
@@ -31,6 +33,18 @@ class DashboardEntity {
     required this.quickActions,
     required this.services,
   });
+}
+
+class DashboardSummary {
+  const DashboardSummary({
+    required this.upcomingVisitCount,
+    required this.documentCount,
+    required this.unreadNotificationCount,
+  });
+
+  final int upcomingVisitCount;
+  final int documentCount;
+  final int unreadNotificationCount;
 }
 
 class MembershipApplicationEntity {

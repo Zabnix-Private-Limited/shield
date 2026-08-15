@@ -83,7 +83,7 @@ class _CustomerServicesScreenState extends State<CustomerServicesScreen> {
         );
       }
       return RefreshIndicator(
-        onRefresh: _controller.load,
+        onRefresh: _controller.refresh,
         child: ListView(
           controller: _scroll,
           physics: const AlwaysScrollableScrollPhysics(),

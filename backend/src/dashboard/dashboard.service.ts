@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { WalletService } from '../wallet/wallet.service';
 import { PricingService } from '../pricing/pricing.service';
@@ -21,6 +21,7 @@ type CustomerBanner = {
 
 @Injectable()
 export class DashboardService {
+  private readonly logger = new Logger(DashboardService.name);
   constructor(
     private prisma: PrismaService,
     private walletService: WalletService,
@@ -94,6 +95,7 @@ export class DashboardService {
   }
 
   async getCustomerPortalDashboard(customerId: bigint) {
+    const startedAt = performance.now();
     const customer = await this.prisma.customer.findUnique({
       where: { id: customerId },
       include: {
@@ -115,41 +117,39 @@ export class DashboardService {
       throw new NotFoundException(`Customer with ID ${customerId} not found`);
     }
 
-    const walletSummary = customer.wallet
-      ? await this.walletService.getWalletSummary(customer.wallet.id)
-      : null;
-    const recentTransactions = customer.wallet
-      ? await this.walletService.getTransactions(customer.wallet.id, {})
-      : [];
+    const [
+      walletSummary,
+      recentTransactions,
+      appointments,
+      upcomingVisitCount,
+      documentCount,
+      unreadNotificationCount,
+      banners,
+    ] = await Promise.all([
+      customer.wallet
+        ? this.walletService.getWalletSummary(customer.wallet.id)
+        : Promise.resolve(null),
+      customer.wallet
+        ? this.walletService.getTransactions(customer.wallet.id, { limit: 4 })
+        : Promise.resolve([]),
+      this.prisma.appointment.findMany({
+        where: { customerId },
+        include: { provider: true },
+        orderBy: { appointmentDate: 'desc' },
+        take: 3,
+      }),
+      this.prisma.appointment.count({
+        where: { customerId, status: 'SCHEDULED' },
+      }),
+      this.prisma.document.count({ where: { customerId } }),
+      this.prisma.notification.count({
+        where: { customerId, status: 'UNREAD' },
+      }),
+      this.getCustomerBanners(),
+    ]);
 
-    const [appointments, notifications, documents, banners] = await Promise.all(
-      [
-        this.prisma.appointment.findMany({
-          where: { customerId },
-          include: { provider: true },
-          orderBy: { appointmentDate: 'desc' },
-          take: 6,
-        }),
-        this.prisma.notification.findMany({
-          where: { customerId },
-          orderBy: [{ sentAt: 'desc' }, { id: 'desc' }],
-          take: 6,
-        }),
-        this.prisma.document.findMany({
-          where: { customerId },
-          include: {
-            documentExtractions: {
-              orderBy: { createdAt: 'asc' },
-            },
-            documentProcessingLogs: {
-              orderBy: { processedAt: 'asc' },
-            },
-          },
-          orderBy: { createdAt: 'desc' },
-          take: 6,
-        }),
-        this.getCustomerBanners(),
-      ],
+    this.logger.log(
+      `PERF customer.dashboard durationMs=${Math.round(performance.now() - startedAt)}`,
     );
 
     return {
@@ -236,9 +236,12 @@ export class DashboardService {
           }
         : null,
       appointments,
-      notifications,
       recentActivity: recentTransactions.slice(0, 4),
-      documents,
+      summary: {
+        upcomingVisitCount,
+        documentCount,
+        unreadNotificationCount,
+      },
       banners,
       quickActions: [
         {

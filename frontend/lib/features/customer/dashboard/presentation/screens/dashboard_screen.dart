@@ -62,11 +62,10 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> {
           );
         }
 
-        final upcomingVisits = dashboard.appointments.length;
-        final documentCount = dashboard.documents.length;
-        final unreadNotificationCount = dashboard.notifications
-            .where((notification) => !notification.isRead)
-            .length;
+        final upcomingVisits = dashboard.summary.upcomingVisitCount;
+        final documentCount = dashboard.summary.documentCount;
+        final unreadNotificationCount =
+            dashboard.summary.unreadNotificationCount;
 
         return RefreshIndicator(
           onRefresh: _controller.refresh,
