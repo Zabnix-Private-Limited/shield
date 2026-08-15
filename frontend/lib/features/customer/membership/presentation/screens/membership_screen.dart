@@ -113,7 +113,7 @@ class _CustomerMembershipScreenState extends State<CustomerMembershipScreen> {
                   final ratio = columns == 1
                       ? 3.0
                       : columns == 2
-                      ? 1.45
+                      ? 1.35
                       : 1.6;
                   return GridView.count(
                     crossAxisCount: columns,
@@ -569,7 +569,7 @@ class _MembershipStatCard extends StatelessWidget {
                 const SizedBox(height: 3),
                 Text(
                   note,
-                  maxLines: 2,
+                  maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: AppTypography.small.copyWith(color: AppColors.gray),
                 ),

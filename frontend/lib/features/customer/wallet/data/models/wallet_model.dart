@@ -69,7 +69,11 @@ class WalletModel extends CustomerWalletEntity {
       ),
       membership: Membership.fromApi(
         customer: _syntheticCustomer((json['customerId'] ?? '').toString()),
-        customerPayload: {'membership': membershipPayload},
+        customerPayload: {
+          'membership': membershipPayload,
+          if (membershipPayload['shieldCard'] is Map)
+            'shieldCard': membershipPayload['shieldCard'],
+        },
         transactions: recentTransactions,
       ),
     );

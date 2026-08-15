@@ -193,6 +193,11 @@ WalletModel _wallet() => WalletModel.fromJson(const {
     'createdAt': '2026-01-01T00:00:00.000Z',
     'updatedAt': '2026-01-01T00:00:00.000Z',
     'membershipType': {'name': 'Founding Member'},
+    'shieldCard': {
+      'cardNumber': 'CARD-42',
+      'status': 'ISSUED',
+      'issuedAt': '2026-01-01T00:00:00.000Z',
+    },
   },
 });
 

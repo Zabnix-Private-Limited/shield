@@ -29,7 +29,9 @@ class _Repository extends CustomerProviderRepository {
   final requests = <int>[];
 
   @override
-  Future<List<CustomerProviderCategory>> categories() async => const [
+  Future<List<CustomerProviderCategory>> categories({
+    bool forceRefresh = false,
+  }) async => const [
     CustomerProviderCategory(
       code: 'PHARMACY',
       label: 'Pharmacy',
@@ -42,6 +44,7 @@ class _Repository extends CustomerProviderRepository {
     String? query,
     String? type,
     int page = 1,
+    bool forceRefresh = false,
   }) async {
     requests.add(page);
     return CustomerProviderPage(

@@ -12365,3 +12365,77 @@ est build compilation.
 - Ran the Nest production build after the Customer Activity pagination, Agent bootstrap request parallelization, and Customer 360 bounded initial-list changes.
 - The build passed. Diff whitespace validation also passed.
 - This is static build evidence only; it does not replace deployed request tracing, database query-plan evidence, physical-device startup timing, or authenticated manual UAT.
+## 113. Scope-locked Customer Portal and Agent Membership final pre-UAT audit artifacts (2026-08-15 16:00:00 IST)
+
+- Created final scope-specific source audit artifacts for Customer Portal, Agent Membership Management and the cross-portal membership lifecycle, plus a dedicated Agent Membership manual UAT checklist.
+- The audits distinguish source-complete behavior from payment/reward/physical-card business decisions, the unapplied Customer performance-index migration, and external device/deployment proof. No unrelated Agent CRM/360 scope is claimed.
+- Verified the focused customer membership controller suite, including authenticated customer application ownership and review access behavior.
+
+### Documentation
+- docs/customer-ui/CUSTOMER_PORTAL_FINAL_PRE_UAT_AUDIT_20260815.md
+- docs/agent/AGENT_MEMBERSHIP_MANAGEMENT_FINAL_PRE_UAT_AUDIT_20260815.md
+- docs/agent/CUSTOMER_MEMBERSHIP_CROSS_PORTAL_FINAL_PRE_UAT_AUDIT_20260815.md
+- docs/agent/AGENT_MEMBERSHIP_MANAGEMENT_MANUAL_UAT_CHECKLIST.md
+
+### Verification
+- npx jest src/customer/customer-membership.controller.spec.ts --runInBand passed: 5 tests.
+- npx tsc --noEmit passed.
+- git diff --check passed.
+- No database action, deployment or browser automation was run.
+## 114. Customer membership compact-width overflow fixed (2026-08-15 16:10:00 IST)
+
+- Final pre-UAT membership widget verification found a deterministic RenderFlex overflow at 350 logical pixels in the compact membership statistic card. The card attempted to render two note lines inside an 82.7px content height.
+- Limited the supporting note to one ellipsized line, preserving the factual label and value while ensuring the Customer membership screen remains usable at the tested compact width.
+
+### Frontend Files
+- frontend/lib/features/customer/membership/presentation/screens/membership_screen.dart
+
+### Verification
+- flutter test test/customer_membership_screen_test.dart passed: 7 tests.
+- The prior three-file membership batch was intentionally not counted as passed because this responsive failure was detected and fixed.
+## 115. Customer Services controller test contract repair (2026-08-15 16:20:00 IST)
+
+- Final pre-UAT Customer test batch found the Services controller test double no longer matched the cache-aware repository method signatures after force-refresh support was added.
+- Updated only the test double optional forceRefresh parameters; production behavior was unchanged. This restores compilation and regression coverage for route-restored provider pages.
+
+### Frontend Files
+- frontend/test/customer_services_controller_test.dart
+
+### Verification
+- flutter test customer_services_controller, customer_access_state, customer_booking_controller and customer_visits_controller passed: 10 tests.
+- flutter analyze lib/features/customer/services test/customer_services_controller_test.dart passed.
+## 116. Customer Wallet issued-card access mapping fixed (2026-08-15 16:30:00 IST)
+
+- Final pre-UAT wallet widget tests proved that WalletModel discarded shieldCard when converting a wallet membership payload to the shared Membership model. CustomerAccessState consequently treated an actually issued wallet membership card as absent and rendered the wallet locked.
+- Preserved the card-required access rule and corrected the model boundary: nested membership.shieldCard is now supplied to Membership.fromApi as the card projection. The active issued-card fixture now exercises the real expected path.
+
+### Frontend Files
+- frontend/lib/features/customer/wallet/data/models/wallet_model.dart
+- frontend/test/customer_wallet_screen_test.dart
+
+### Verification
+- flutter test test/customer_wallet_screen_test.dart passed: 3 tests.
+- flutter analyze lib/features/customer/wallet test/customer_wallet_screen_test.dart passed.
+- No backend, database, deployment, or browser operation was run.
+## 117. Customer Portal final-audit focused records/UI test batch (2026-08-15 16:40:00 IST)
+
+- Ran the final pre-UAT focused Customer batch covering dashboard membership/card truth, documents, prescriptions, orders, referrals, store change, account responsiveness and customer header compact widths.
+- All tests passed. This validates source handling of null/actual membership-card states, retryable record errors, duplicate document upload prevention, customer store-change rendering and mobile-width layouts.
+
+### Verification
+- flutter test focused Customer dashboard/documents/prescriptions/orders/referrals/store-change/account/app-bar batch passed: 18 tests.
+- No live browser, database, deployment or device test was run.
+## 118. Final pre-UAT scope-locked verification evidence (2026-08-15 16:50:00 IST)
+
+- Completed focused source verification for the Customer Portal and Agent Customer Membership Management only. No unrelated Agent CRM/360 implementation was included.
+- Customer source audit caught and fixed the compact Membership RenderFlex overflow and the Wallet issued-card mapping defect. Services test-double compatibility was repaired so current controller coverage compiles again.
+- The final audits now record actual passing test counts, source/external boundaries, the owner-verified 20260814 functional migrations, and the separate unapplied Customer performance-index migration.
+
+### Verification
+- Focused backend Customer/membership suite passed: 30 tests.
+- Focused Flutter Customer batches passed: 38 tests.
+- flutter analyze lib/features/customer passed.
+- npx tsc --noEmit passed.
+- npx nest build passed.
+- git diff --check passed.
+- flutter analyze broad Agent Customer 360 reports one existing deprecated form-field API information item; that screen is out of the owner-locked scope and was not changed.
