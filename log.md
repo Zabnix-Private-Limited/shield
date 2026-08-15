@@ -12293,3 +12293,75 @@ est build compilation.
 - flutter analyze lib/features/customer/services passed.
 - git diff --check passed.
 - No live-browser, authenticated API, or production-deployment verification was performed, per the existing constraint. Runtime product data and deployed revision remain to be verified through the approved release process.
+## 108. Customer and Agent CRM performance optimization inventory (2026-08-15 14:40:00 IST)
+
+- Added the required source-level performance inventory across Customer startup, auth/session, dashboard, membership, wallet, Services, catalogue, booking, visits, documents, prescriptions, orders, referrals, notifications, activity, profile and support, plus Agent CRM bootstrap, customer list/360, review, wallet, queues, reports and notifications.
+- The audit records already-implemented performance safeguards separately from unverified runtime claims: deferred non-critical Firebase, customer-keyed stale-while-revalidate dashboard data, dashboard count projections, bounded wallet rows, Services request de-duplication, lazy product loading, and the unapplied composite-index migration.
+- It explicitly preserves scope, financial authority, AgentScope, provider scope and authenticated ownership. No production migration, database write, deployment, browser automation, or business-rule change was performed.
+
+### Documentation
+- docs/customer-ui/CUSTOMER_AGENT_PERFORMANCE_OPTIMIZATION_AUDIT.md
+
+### Verification
+- flutter analyze lib/features/customer/services lib/features/customer/dashboard lib/shared/services passed.
+- backend npx tsc --noEmit passed.
+- backend npx nest build passed.
+- git diff --check passed.
+- Remaining release evidence is documented: approved index-migration application and schema snapshot refresh, deployed safe PERF timing, authenticated request tracing, and owner-run physical-device cold/warm UAT.
+## 109. Customer activity timeline bounded pagination (2026-08-15 15:00:00 IST)
+
+- Replaced the Customer Activity initial all-history timeline load with an authenticated bounded page window. The first page now limits appointment, document, notification, and customer-visible wallet-transaction source reads before the merged timeline is composed.
+- Added page and pageSize query support only to the customer timeline endpoint. It returns items and a hasMore pagination signal; the Flutter screen retains loaded rows, appends later pages, and keeps existing data visible during refresh. Provider and staff patient-timeline contracts remain unchanged.
+- The source window grows only for an explicit later page. This avoids downloading an entire customer history to render the first Activity screen while preserving the existing derived event semantics and customer ownership boundary.
+
+### Frontend Files
+- frontend/lib/shared/services/api_service.dart
+- frontend/lib/features/customer/activity/presentation/screens/customer_activity_screen.dart
+
+### Backend Files
+- backend/src/timeline/timeline.controller.ts
+- backend/src/timeline/timeline.service.ts
+
+### Documentation
+- docs/customer-ui/CUSTOMER_AGENT_PERFORMANCE_OPTIMIZATION_AUDIT.md
+
+### Verification
+- flutter analyze lib/features/customer/activity lib/shared/services/api_service.dart passed.
+- npx jest src/timeline/timeline.controller.spec.ts --runInBand passed: 2 tests.
+- backend npx tsc --noEmit passed.
+- No database operation, deployment, or live-browser/device test was run.
+## 110. Agent portal bootstrap request parallelization (2026-08-15 15:10:00 IST)
+
+- Parallelized independent Agent portal bootstrap reads for the workspace summary, first customer page, and non-sensitive reference data. Customer selection remains subsequent because it depends on the resolved first-page selection.
+- Added same-customer in-flight selection de-duplication and retained the loaded selected workspace instead of refetching it for a repeated selection.
+- No scope, permission, mutation, API payload, or database behavior changed.
+
+### Frontend Files
+- frontend/lib/features/agent/shared/presentation/controllers/agent_portal_controller.dart
+
+### Documentation
+- docs/customer-ui/CUSTOMER_AGENT_PERFORMANCE_OPTIMIZATION_AUDIT.md
+
+### Verification
+- flutter analyze lib/features/agent/shared/presentation/controllers/agent_portal_controller.dart passed.
+- No live browser, deployment, or database operation was run.
+## 111. Agent Customer 360 bounded initial collections (2026-08-15 15:20:00 IST)
+
+- Bounded the Agent Customer 360 initial document, appointment, and notification collections to the 12 most recent records. This prevents an established customer history from being fully loaded just to populate initial workspace summary and visible tab rows.
+- Added optional explicit service limits without changing existing callers or scope filtering. Agent Customer 360 passes the limit after AgentScope validation; direct feature list behavior is unchanged.
+
+### Backend Files
+- backend/src/agent/agent.service.ts
+- backend/src/document/document.service.ts
+- backend/src/appointment/appointment.service.ts
+- backend/src/notification/notification.service.ts
+
+### Verification
+- backend npx tsc --noEmit passed.
+- git diff --check passed.
+- No database, deployment, or browser operation was run.
+## 112. Performance pass cross-layer backend build verification (2026-08-15 15:30:00 IST)
+
+- Ran the Nest production build after the Customer Activity pagination, Agent bootstrap request parallelization, and Customer 360 bounded initial-list changes.
+- The build passed. Diff whitespace validation also passed.
+- This is static build evidence only; it does not replace deployed request tracing, database query-plan evidence, physical-device startup timing, or authenticated manual UAT.

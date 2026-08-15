@@ -15,84 +15,144 @@ class CustomerActivityScreen extends StatefulWidget {
 }
 
 class _CustomerActivityScreenState extends State<CustomerActivityScreen> {
-  late Future<List<Map<String, dynamic>>> _timelineFuture;
+  final _events = <Map<String, dynamic>>[];
   String? _selectedCategory;
+  var _isLoading = true;
+  var _isLoadingMore = false;
+  var _hasMore = false;
+  var _page = 1;
+  Object? _error;
 
   @override
   void initState() {
     super.initState();
-    _loadTimeline();
+    _loadTimeline(reset: true);
   }
 
-  void _loadTimeline() {
-    _timelineFuture = ApiService.getCustomerTimeline();
+  Future<void> _loadTimeline({required bool reset}) async {
+    if (_isLoadingMore || (!reset && !_hasMore)) return;
+    final requestedPage = reset ? 1 : _page + 1;
+    setState(() {
+      if (reset && _events.isEmpty) _isLoading = true;
+      if (!reset) _isLoadingMore = true;
+      _error = null;
+    });
+    try {
+      final response = await ApiService.getCustomerTimeline(
+        page: requestedPage,
+      );
+      final items = (response['items'] as List? ?? const [])
+          .map((item) => Map<String, dynamic>.from(item as Map))
+          .toList();
+      final pagination = Map<String, dynamic>.from(
+        response['pagination'] as Map? ?? const <String, dynamic>{},
+      );
+      if (!mounted) return;
+      setState(() {
+        if (reset) {
+          _events
+            ..clear()
+            ..addAll(items);
+        } else {
+          final unique = <String, Map<String, dynamic>>{
+            for (final event in _events) event['id'].toString(): event,
+            for (final event in items) event['id'].toString(): event,
+          };
+          _events
+            ..clear()
+            ..addAll(unique.values);
+        }
+        _page = (pagination['page'] as num?)?.toInt() ?? requestedPage;
+        _hasMore = pagination['hasMore'] == true;
+      });
+    } catch (error) {
+      if (mounted) setState(() => _error = error);
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _isLoadingMore = false;
+        });
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<List<Map<String, dynamic>>>(
-      future: _timelineFuture,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
-        if (snapshot.hasError || !snapshot.hasData) {
-          return ErrorCard(
-            title: 'Activity unavailable',
-            message: 'Your customer activity timeline could not be loaded.',
-            onRetry: () => setState(_loadTimeline),
-          );
-        }
+    if (_isLoading && _events.isEmpty) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (_error != null && _events.isEmpty) {
+      return ErrorCard(
+        title: 'Activity unavailable',
+        message: 'Your customer activity timeline could not be loaded.',
+        onRetry: () => _loadTimeline(reset: true),
+      );
+    }
 
-        final events = snapshot.data!;
-        final categories =
-            events
-                .map((event) => event['category']?.toString().trim() ?? '')
-                .where((category) => category.isNotEmpty)
-                .toSet()
-                .toList()
-              ..sort();
-        final visibleEvents = _selectedCategory == null
-            ? events
-            : events
-                  .where(
-                    (event) =>
-                        event['category']?.toString().toUpperCase() ==
-                        _selectedCategory,
-                  )
-                  .toList();
-        return RefreshIndicator(
-          onRefresh: () async => setState(_loadTimeline),
-          color: AppColors.shieldBlue,
-          child: events.isEmpty
-              ? ListView(
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  children: const [_ActivityEmptyState()],
-                )
-              : ListView.separated(
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  padding: EdgeInsets.zero,
-                  itemCount:
-                      2 + (visibleEvents.isEmpty ? 1 : visibleEvents.length),
-                  separatorBuilder: (_, __) => const SizedBox(height: 10),
-                  itemBuilder: (context, index) {
-                    if (index == 0) return const _ActivityIntro();
-                    if (index == 1) {
-                      return _ActivityFilters(
-                        categories: categories,
-                        selectedCategory: _selectedCategory,
-                        onSelected: (category) =>
-                            setState(() => _selectedCategory = category),
-                      );
-                    }
-                    if (visibleEvents.isEmpty) {
-                      return const _ActivityFilteredEmptyState();
-                    }
-                    return _ActivityEventCard(event: visibleEvents[index - 2]);
-                  },
-                ),
-        );
-      },
+    final events = _events;
+    final categories =
+        events
+            .map((event) => event['category']?.toString().trim() ?? '')
+            .where((category) => category.isNotEmpty)
+            .toSet()
+            .toList()
+          ..sort();
+    final visibleEvents = _selectedCategory == null
+        ? events
+        : events
+              .where(
+                (event) =>
+                    event['category']?.toString().toUpperCase() ==
+                    _selectedCategory,
+              )
+              .toList();
+    return RefreshIndicator(
+      onRefresh: () => _loadTimeline(reset: true),
+      color: AppColors.shieldBlue,
+      child: events.isEmpty
+          ? ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              children: const [_ActivityEmptyState()],
+            )
+          : ListView.separated(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: EdgeInsets.zero,
+              itemCount:
+                  2 +
+                  (visibleEvents.isEmpty ? 1 : visibleEvents.length) +
+                  ((_hasMore || _isLoadingMore) && visibleEvents.isNotEmpty
+                      ? 1
+                      : 0),
+              separatorBuilder: (_, __) => const SizedBox(height: 10),
+              itemBuilder: (context, index) {
+                if (index == 0) return const _ActivityIntro();
+                if (index == 1) {
+                  return _ActivityFilters(
+                    categories: categories,
+                    selectedCategory: _selectedCategory,
+                    onSelected: (category) =>
+                        setState(() => _selectedCategory = category),
+                  );
+                }
+                if (visibleEvents.isEmpty && index == 2) {
+                  return const _ActivityFilteredEmptyState();
+                }
+                if (index == visibleEvents.length + 2) {
+                  return Center(
+                    child: TextButton(
+                      onPressed: _isLoadingMore
+                          ? null
+                          : () => _loadTimeline(reset: false),
+                      child: Text(
+                        _isLoadingMore ? 'Loading more…' : 'Load more activity',
+                      ),
+                    ),
+                  );
+                }
+                return _ActivityEventCard(event: visibleEvents[index - 2]);
+              },
+            ),
     );
   }
 }

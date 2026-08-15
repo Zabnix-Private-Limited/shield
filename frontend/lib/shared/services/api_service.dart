@@ -343,11 +343,15 @@ class ApiService {
     return parseCustomerAppointmentListPayload(response.data);
   }
 
-  static Future<List<Map<String, dynamic>>> getCustomerTimeline() async {
-    final response = await _dio.get('/timeline/me');
-    return _readEnvelopeList(
-      response,
-    ).map((item) => Map<String, dynamic>.from(item as Map)).toList();
+  static Future<Map<String, dynamic>> getCustomerTimeline({
+    int page = 1,
+    int pageSize = 30,
+  }) async {
+    final response = await _dio.get(
+      '/timeline/me',
+      queryParameters: {'page': page, 'pageSize': pageSize},
+    );
+    return _readEnvelope(response);
   }
 
   static Future<List<Appointment>> getAppointmentsByCustomerId(

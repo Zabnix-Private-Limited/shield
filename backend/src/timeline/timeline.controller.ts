@@ -16,17 +16,30 @@ export class TimelineController {
 
   @RequirePermissions('customers.view')
   @Get('me')
-  async getCustomerTimeline(@CurrentPrincipal() principal?: ShieldPrincipal) {
+  async getCustomerTimeline(
+    @CurrentPrincipal() principal?: ShieldPrincipal,
+    @Query('page') page?: string,
+    @Query('pageSize') pageSize?: string,
+  ) {
     if (principal?.principalType !== 'CUSTOMER' || !principal.customerId) {
       throw new ForbiddenException('Authenticated customer context is required.');
     }
 
+    const hasPaginationQuery = page != null || pageSize != null;
+    const parsedPage = Number.parseInt(page ?? '', 10);
+    const parsedPageSize = Number.parseInt(pageSize ?? '', 10);
     return {
       success: true,
       message: 'Customer activity timeline retrieved successfully.',
-      data: await this.timelineService.getCustomerTimeline(
-        BigInt(principal.customerId),
-      ),
+      data: hasPaginationQuery
+          ? await this.timelineService.getCustomerTimeline(
+              BigInt(principal.customerId),
+              parsedPage,
+              parsedPageSize,
+            )
+          : await this.timelineService.getCustomerTimeline(
+              BigInt(principal.customerId),
+            ),
     };
   }
 

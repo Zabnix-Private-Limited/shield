@@ -34,7 +34,7 @@ export class NotificationService {
     private readonly platformRealtimeService: PlatformRealtimeService,
   ) {}
 
-  async list(customerId?: bigint, principal?: ShieldPrincipal) {
+  async list(customerId?: bigint, principal?: ShieldPrincipal, limit?: number) {
     const whereClause: any = {};
     if (customerId) {
       whereClause.customerId = customerId;
@@ -52,6 +52,7 @@ export class NotificationService {
     return this.prisma.notification.findMany({
       where: whereClause,
       orderBy: { sentAt: 'desc' },
+      ...(limit == null ? {} : { take: Math.max(1, Math.min(50, limit)) }),
     });
   }
 

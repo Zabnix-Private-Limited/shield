@@ -25,6 +25,7 @@ class AgentPortalController extends ChangeNotifier {
   List<Map<String, dynamic>> _sessions = const <Map<String, dynamic>>[];
   List<Map<String, dynamic>> _loginHistory = const <Map<String, dynamic>>[];
   Map<String, dynamic> _customerListPage = const <String, dynamic>{};
+  Future<void>? _selectedCustomerRequest;
 
   bool get isLoading => _loading;
   bool get isCustomerLoading => _customerLoading;
@@ -218,9 +219,13 @@ class AgentPortalController extends ChangeNotifier {
     _error = null;
     notifyListeners();
     try {
-      _workspace = await _repository.getWorkspace();
-      _customerListPage = await _repository.getCustomers();
-      await _ensureReferenceData();
+      final values = await Future.wait<dynamic>([
+        _repository.getWorkspace(),
+        _repository.getCustomers(),
+        _ensureReferenceData(),
+      ]);
+      _workspace = values[0] as Map<String, dynamic>;
+      _customerListPage = values[1] as Map<String, dynamic>;
       _selectedCustomerId ??= customers.isNotEmpty
           ? customers.first['id']?.toString()
           : null;
@@ -296,17 +301,29 @@ class AgentPortalController extends ChangeNotifier {
   }
 
   Future<void> selectCustomer(String customerId) async {
+    if (_customerLoading && _selectedCustomerId == customerId) {
+      return _selectedCustomerRequest!;
+    }
+    if (_selectedCustomerId == customerId &&
+        _selectedCustomerWorkspace.isNotEmpty) {
+      return;
+    }
     _selectedCustomerId = customerId;
     _customerLoading = true;
     _error = null;
     notifyListeners();
+    final request = _repository.getCustomerWorkspace(customerId).then((value) {
+      _selectedCustomerWorkspace = value;
+    });
+    _selectedCustomerRequest = request;
     try {
-      _selectedCustomerWorkspace = await _repository.getCustomerWorkspace(
-        customerId,
-      );
+      await request;
     } catch (error) {
       _error = error.toString();
     } finally {
+      if (identical(_selectedCustomerRequest, request)) {
+        _selectedCustomerRequest = null;
+      }
       _customerLoading = false;
       notifyListeners();
     }

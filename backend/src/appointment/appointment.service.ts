@@ -119,7 +119,7 @@ export class AppointmentService {
     private readonly platformRealtimeService: PlatformRealtimeService,
   ) {}
 
-  async list(customerId?: bigint, principal?: ShieldPrincipal) {
+  async list(customerId?: bigint, principal?: ShieldPrincipal, limit?: number) {
     const whereClause: Record<string, unknown> = {};
     if (customerId) {
       whereClause.customerId = customerId;
@@ -141,6 +141,7 @@ export class AppointmentService {
         provider: true,
       },
       orderBy: { appointmentDate: 'desc' },
+      ...(limit == null ? {} : { take: Math.max(1, Math.min(50, limit)) }),
     });
   }
 

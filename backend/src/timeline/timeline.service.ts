@@ -64,7 +64,11 @@ type TimelineEventRecord = {
 export class TimelineService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async getPatientTimeline(customerId: bigint) {
+  async getPatientTimeline(
+    customerId: bigint,
+    options?: { sourceLimit?: number },
+  ) {
+    const sourceLimit = options?.sourceLimit;
     const [customer, membership, shieldCard, wallet, appointments, documents, notifications] =
       await Promise.all([
         this.prisma.customer.findUnique({
@@ -85,6 +89,7 @@ export class TimelineService {
         }),
         this.prisma.appointment.findMany({
           where: { customerId },
+          ...(sourceLimit == null ? {} : { take: sourceLimit }),
           include: {
             provider: {
               include: {
@@ -116,6 +121,7 @@ export class TimelineService {
         }),
         this.prisma.document.findMany({
           where: { customerId },
+          ...(sourceLimit == null ? {} : { take: sourceLimit }),
           include: {
             uploadedByUser: true,
           },
@@ -123,6 +129,7 @@ export class TimelineService {
         }),
         this.prisma.notification.findMany({
           where: { customerId },
+          ...(sourceLimit == null ? {} : { take: sourceLimit }),
           orderBy: [{ sentAt: 'desc' }, { id: 'desc' }],
         }),
       ]);
@@ -133,6 +140,7 @@ export class TimelineService {
             walletId: wallet.id,
             isCustomerVisible: true,
           },
+          ...(sourceLimit == null ? {} : { take: sourceLimit }),
           include: {
             createdByUser: true,
           },
@@ -319,9 +327,18 @@ export class TimelineService {
     return this.sortEvents(events);
   }
 
-  async getCustomerTimeline(customerId: bigint) {
-    const events = await this.getPatientTimeline(customerId);
-    return events.map((event, index) => ({
+  async getCustomerTimeline(
+    customerId: bigint,
+    page = 1,
+    pageSize = 30,
+  ) {
+    const safePage = Math.max(1, Math.trunc(page) || 1);
+    const safePageSize = Math.min(50, Math.max(1, Math.trunc(pageSize) || 30));
+    const requiredEvents = safePage * safePageSize + 1;
+    const events = await this.getPatientTimeline(customerId, {
+      sourceLimit: requiredEvents,
+    });
+    const customerEvents = events.map((event, index) => ({
       id: `${event.eventType}:${event.timestamp}:${index}`,
       category: event.category,
       displayTitle: event.displayTitle,
@@ -330,6 +347,17 @@ export class TimelineService {
       status: event.status,
       entity: this.customerTimelineEntity(event.clickAction),
     }));
+    const start = (safePage - 1) * safePageSize;
+    const items = customerEvents.slice(start, start + safePageSize);
+    const hasMore = customerEvents.length > start + safePageSize;
+    return {
+      items,
+      pagination: {
+        page: safePage,
+        pageSize: safePageSize,
+        hasMore,
+      },
+    };
   }
 
   private customerTimelineEntity(action: TimelineEventRecord['clickAction']) {

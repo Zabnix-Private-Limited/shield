@@ -470,7 +470,7 @@ export class DocumentService {
     );
   }
 
-  async list(customerId?: bigint, principal?: ShieldPrincipal) {
+  async list(customerId?: bigint, principal?: ShieldPrincipal, limit?: number) {
     const whereClause: any = {
       NOT: { status: 'DELETED' },
     };
@@ -501,6 +501,7 @@ export class DocumentService {
         documentProcessingLogs: true,
       },
       orderBy: { createdAt: 'desc' },
+      ...(limit == null ? {} : { take: Math.max(1, Math.min(50, limit)) }),
     });
   }
 
