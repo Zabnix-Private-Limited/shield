@@ -8,7 +8,9 @@ import '../../../../../app/theme/app_typography.dart';
 import '../../../../../shared/widgets/app_card.dart';
 import '../../../../customer/shared/widgets/error_card.dart';
 import '../../data/models/customer_provider.dart';
+import '../../data/models/customer_wellness_product.dart';
 import '../controllers/customer_services_controller.dart';
+import '../controllers/customer_wellness_products_controller.dart';
 
 class CustomerServicesScreen extends StatefulWidget {
   const CustomerServicesScreen({super.key, this.controller});
@@ -124,6 +126,8 @@ class _CustomerServicesScreenState extends State<CustomerServicesScreen> {
                   _applyRoute(query: _search.text, type: type),
             ),
             const SizedBox(height: 20),
+            const _WellnessProductsPanel(),
+            const SizedBox(height: 24),
             Row(
               children: [
                 Expanded(
@@ -334,6 +338,296 @@ String _servicesRoute({
     path: '/portal/customer/services',
     queryParameters: parameters,
   ).toString();
+}
+
+class _WellnessProductsPanel extends StatefulWidget {
+  const _WellnessProductsPanel();
+
+  @override
+  State<_WellnessProductsPanel> createState() => _WellnessProductsPanelState();
+}
+
+class _WellnessProductsPanelState extends State<_WellnessProductsPanel> {
+  final _controller = CustomerWellnessProductsController();
+  final _search = TextEditingController();
+  Timer? _debounce;
+  var _expanded = false;
+
+  @override
+  void dispose() {
+    _debounce?.cancel();
+    _search.dispose();
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _toggle() {
+    setState(() => _expanded = !_expanded);
+    if (_expanded && _controller.page.items.isEmpty && !_controller.isLoading) {
+      _controller.load();
+    }
+  }
+
+  void _searchProducts(String value) {
+    setState(() {});
+    _debounce?.cancel();
+    _debounce = Timer(const Duration(milliseconds: 300), () {
+      _controller.applyFilters(
+        query: value,
+        categoryId: _controller.selectedCategoryId,
+      );
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) => ListenableBuilder(
+    listenable: _controller,
+    builder: (context, _) => AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          InkWell(
+            onTap: _toggle,
+            borderRadius: BorderRadius.circular(12),
+            child: Row(
+              children: [
+                const Icon(
+                  Icons.inventory_2_outlined,
+                  color: AppColors.shieldBlue,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Wellness products', style: AppTypography.h4),
+                      const SizedBox(height: 3),
+                      Text(
+                        'Browse the available catalogue. Online checkout is not available.',
+                        style: AppTypography.tiny.copyWith(
+                          color: AppColors.gray,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(_expanded ? Icons.expand_less : Icons.expand_more),
+              ],
+            ),
+          ),
+          if (_expanded) ...[
+            const SizedBox(height: 16),
+            TextField(
+              controller: _search,
+              onChanged: _searchProducts,
+              decoration: InputDecoration(
+                hintText: 'Search wellness products',
+                prefixIcon: const Icon(Icons.search),
+                suffixIcon: _search.text.isEmpty
+                    ? null
+                    : IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () {
+                          _search.clear();
+                          _controller.applyFilters(
+                            query: '',
+                            categoryId: _controller.selectedCategoryId,
+                          );
+                          setState(() {});
+                        },
+                      ),
+              ),
+            ),
+            if (_controller.page.categories.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: [
+                    ChoiceChip(
+                      label: const Text('All products'),
+                      selected: _controller.selectedCategoryId == null,
+                      onSelected: (_) => _controller.applyFilters(
+                        query: _search.text,
+                        categoryId: null,
+                      ),
+                    ),
+                    ..._controller.page.categories.map(
+                      (category) => Padding(
+                        padding: const EdgeInsets.only(left: 8),
+                        child: ChoiceChip(
+                          label: Text(category.name),
+                          selected:
+                              _controller.selectedCategoryId == category.id,
+                          onSelected: (_) => _controller.applyFilters(
+                            query: _search.text,
+                            categoryId: category.id,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+            const SizedBox(height: 12),
+            if (_controller.isLoading && _controller.page.items.isEmpty)
+              const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(12),
+                  child: CircularProgressIndicator(),
+                ),
+              )
+            else if (_controller.error != null &&
+                _controller.page.items.isEmpty)
+              ErrorCard(
+                title: 'Products unavailable',
+                message:
+                    'The wellness catalogue could not be loaded right now.',
+                onRetry: _controller.load,
+              )
+            else if (_controller.page.items.isEmpty)
+              Text(
+                _search.text.trim().isEmpty
+                    ? 'No wellness products are currently listed.'
+                    : 'No wellness products match your search.',
+                style: AppTypography.small.copyWith(color: AppColors.gray),
+              )
+            else ...[
+              ..._controller.page.items.map(
+                (product) => Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: _WellnessProductCard(
+                    product: product,
+                    onTap: () => showModalBottomSheet<void>(
+                      context: context,
+                      useSafeArea: true,
+                      builder: (_) =>
+                          _WellnessProductDetailsSheet(product: product),
+                    ),
+                  ),
+                ),
+              ),
+              if (_controller.error != null)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Text(
+                    'Could not load more products. The current results are still available.',
+                    style: AppTypography.tiny.copyWith(color: AppColors.error),
+                  ),
+                ),
+              if (_controller.page.page < _controller.page.totalPages)
+                Center(
+                  child: TextButton(
+                    onPressed: _controller.isLoading
+                        ? null
+                        : _controller.loadNextPage,
+                    child: Text(
+                      _controller.isLoading
+                          ? 'Loading more…'
+                          : 'Load more products',
+                    ),
+                  ),
+                ),
+            ],
+            if (_controller.page.disclosure != null) ...[
+              const SizedBox(height: 8),
+              Text(
+                _controller.page.disclosure!,
+                style: AppTypography.tiny.copyWith(color: AppColors.gray),
+              ),
+            ],
+          ],
+        ],
+      ),
+    ),
+  );
+}
+
+class _WellnessProductCard extends StatelessWidget {
+  const _WellnessProductCard({required this.product, required this.onTap});
+
+  final CustomerWellnessProduct product;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => Material(
+    color: AppColors.lightGray,
+    borderRadius: BorderRadius.circular(12),
+    child: InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Row(
+          children: [
+            const Icon(Icons.medication_outlined, color: AppColors.shieldBlue),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    product.name,
+                    style: AppTypography.small.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    [product.brand, product.categoryName, product.unit]
+                        .whereType<String>()
+                        .where((value) => value.isNotEmpty)
+                        .join(' · '),
+                    style: AppTypography.tiny.copyWith(color: AppColors.gray),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_right, color: AppColors.gray),
+          ],
+        ),
+      ),
+    ),
+  );
+}
+
+class _WellnessProductDetailsSheet extends StatelessWidget {
+  const _WellnessProductDetailsSheet({required this.product});
+
+  final CustomerWellnessProduct product;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.all(24),
+    child: Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(product.name, style: AppTypography.h4),
+        if (product.brand != null || product.unit != null) ...[
+          const SizedBox(height: 8),
+          Text(
+            [product.brand, product.unit]
+                .whereType<String>()
+                .where((value) => value.isNotEmpty)
+                .join(' · '),
+            style: AppTypography.small.copyWith(color: AppColors.gray),
+          ),
+        ],
+        if (product.categoryName != null) ...[
+          const SizedBox(height: 8),
+          Text('Category: ${product.categoryName}', style: AppTypography.small),
+        ],
+        const SizedBox(height: 16),
+        Text(
+          product.purchasabilityReason ??
+              'Online checkout is not available for this catalogue yet.',
+          style: AppTypography.small.copyWith(color: AppColors.gray),
+        ),
+      ],
+    ),
+  );
 }
 
 class _CategoryFilters extends StatelessWidget {

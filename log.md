@@ -12274,3 +12274,22 @@ est build compilation.
   - backend/src/pharmacy/pharmacy.controller.ts
   - backend/src/pharmacy/pharmacy.service.ts
 - No code change was made in this diagnostic slice. Exposing the existing product catalogue requires an explicit customer catalogue UI/route decision; it must remain browse-only until a customer commerce contract exists.
+## 107. Customer Services wellness catalogue panel (2026-08-15 14:26:00 IST)
+
+- Added the existing customer wellness-product contract to the Customer Services screen as a deferred panel. The request is made only after the customer expands the panel, preserving the Services directory initial-load behavior.
+- The panel supports backend-backed search, category filtering, and pagination. Product identity, brand, category, unit, and the backend disclosure are rendered without inventing stock, ratings, availability, cart, or checkout behavior.
+- Product details explicitly retain the returned non-purchasable reason; opening a product cannot create an order or mutation.
+
+### Frontend Files
+- frontend/lib/features/customer/services/data/models/customer_wellness_product.dart
+- frontend/lib/features/customer/services/data/repositories/customer_wellness_product_repository.dart
+- frontend/lib/features/customer/services/presentation/controllers/customer_wellness_products_controller.dart
+- frontend/lib/features/customer/services/presentation/screens/customer_services_screen.dart
+
+### Backend Files
+- None. The implementation consumes the existing authenticated GET /customer/wellness-products contract.
+
+### Verification
+- flutter analyze lib/features/customer/services passed.
+- git diff --check passed.
+- No live-browser, authenticated API, or production-deployment verification was performed, per the existing constraint. Runtime product data and deployed revision remain to be verified through the approved release process.
