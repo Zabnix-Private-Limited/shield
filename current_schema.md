@@ -905,6 +905,8 @@ CREATE INDEX "idx_appointment_customer" ON "appointments" ("customer_id");
 CREATE INDEX "idx_appointment_date" ON "appointments" ("appointment_date");
 CREATE INDEX "idx_appointment_provider" ON "appointments" ("provider_id");
 CREATE INDEX "idx_appointment_status" ON "appointments" ("status");
+CREATE INDEX "idx_appointments_customer_date" ON "appointments" ("customer_id","appointment_date");
+CREATE INDEX "idx_appointments_customer_status" ON "appointments" ("customer_id","status");
 CREATE UNIQUE INDEX "audit_logs_pkey" ON "audit_logs" ("id");
 CREATE UNIQUE INDEX "auth_devices_pkey" ON "auth_devices" ("id");
 CREATE UNIQUE INDEX "auth_devices_uuid_key" ON "auth_devices" ("uuid");
@@ -1002,6 +1004,7 @@ CREATE UNIQUE INDEX "document_extractions_pkey" ON "document_extractions" ("id")
 CREATE UNIQUE INDEX "document_processing_logs_pkey" ON "document_processing_logs" ("id");
 CREATE UNIQUE INDEX "documents_pkey" ON "documents" ("id");
 CREATE UNIQUE INDEX "documents_uuid_key" ON "documents" ("uuid");
+CREATE INDEX "idx_documents_customer_created" ON "documents" ("customer_id","created_at");
 CREATE UNIQUE INDEX "lab_reports_pkey" ON "lab_reports" ("id");
 CREATE INDEX "idx_login_history_auth_device" ON "login_history" ("auth_device_id");
 CREATE INDEX "idx_login_history_created_at" ON "login_history" ("created_at");
@@ -1015,6 +1018,7 @@ CREATE INDEX "idx_membership_applications_submitted_at" ON "membership_applicati
 CREATE UNIQUE INDEX "membership_applications_pkey" ON "membership_applications" ("id");
 CREATE UNIQUE INDEX "membership_applications_reference_key" ON "membership_applications" ("reference");
 CREATE UNIQUE INDEX "membership_applications_uuid_key" ON "membership_applications" ("uuid");
+CREATE UNIQUE INDEX "uq_membership_applications_one_open_per_customer" ON "membership_applications" ("customer_id");
 CREATE UNIQUE INDEX "membership_subscriptions_customer_id_key" ON "membership_subscriptions" ("customer_id");
 CREATE UNIQUE INDEX "membership_subscriptions_pkey" ON "membership_subscriptions" ("id");
 CREATE UNIQUE INDEX "membership_subscriptions_uuid_key" ON "membership_subscriptions" ("uuid");
@@ -1025,6 +1029,8 @@ CREATE UNIQUE INDEX "memberships_customer_id_key" ON "memberships" ("customer_id
 CREATE UNIQUE INDEX "memberships_membership_number_key" ON "memberships" ("membership_number");
 CREATE UNIQUE INDEX "memberships_pkey" ON "memberships" ("id");
 CREATE UNIQUE INDEX "memberships_uuid_key" ON "memberships" ("uuid");
+CREATE INDEX "idx_notifications_customer_sent" ON "notifications" ("customer_id","sent_at");
+CREATE INDEX "idx_notifications_customer_status" ON "notifications" ("customer_id","status");
 CREATE UNIQUE INDEX "notifications_pkey" ON "notifications" ("id");
 CREATE UNIQUE INDEX "permissions_code_key" ON "permissions" ("code");
 CREATE UNIQUE INDEX "permissions_pkey" ON "permissions" ("id");
