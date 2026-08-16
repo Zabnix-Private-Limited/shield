@@ -32,7 +32,7 @@ describe('CustomerMembershipController card routes', () => {
     service.listPhysicalCardRequests.mockResolvedValue([]);
     service.requestPhysicalCard.mockResolvedValue({ status: 'REQUESTED' });
     await controller.getCardRequests(customer);
-    await controller.requestCard(customer);
+    await controller.requestPhysicalCard(customer);
     expect(service.listPhysicalCardRequests).toHaveBeenCalledWith(11n);
     expect(service.requestPhysicalCard).toHaveBeenCalledWith(11n);
   });

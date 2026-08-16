@@ -20,9 +20,8 @@ describe('PharmacyService customer wellness catalogue', () => {
         id: '1', productCode: 'WELLNESS-1', productName: 'Vitamin A', brand: 'Sample',
         unit: '1 pack', mrp: 100, sellingPrice: 90,
         category: { id: '2', name: 'Vitamins' }, catalogueKind: 'STANDARD',
-        purchasable: false,
-        purchasabilityReason:
-          'Online checkout is not available for this catalogue yet.',
+        purchasable: true,
+        purchasabilityReason: null,
       }],
       pagination: { page: 1, pageSize: 24, total: 1, totalPages: 1 },
       categories: [{ id: '2', name: 'Vitamins' }],

@@ -81,6 +81,10 @@ export class PharmacyService {
   }
 
   private customerWellnessProduct(product: any) {
+    const isOrderable =
+      product.status === 'ACTIVE' &&
+      (product.sellingPrice != null || product.mrp != null);
+
     return {
       id: product.id.toString(),
       productCode: product.productCode,
@@ -97,13 +101,10 @@ export class PharmacyService {
           }
         : null,
       catalogueKind: 'STANDARD',
-      // A customer catalogue record is not an orderable offer.  There is no
-      // customer cart/checkout/order-creation contract yet, so exposing this
-      // explicitly prevents Flutter from inferring purchasability from a price
-      // or stock field.
-      purchasable: false,
-      purchasabilityReason:
-        'Online checkout is not available for this catalogue yet.',
+      purchasable: isOrderable,
+      purchasabilityReason: isOrderable
+        ? null
+        : 'Product is currently unavailable for order placement.',
     };
   }
 
@@ -481,6 +482,8 @@ export class PharmacyService {
     return this.customerOrderProjection(purchase);
   }
 
+  private static readonly _orderInFlightPromises = new Map<string, Promise<any>>();
+
   async createCustomerOrder(data: {
     customerId: bigint;
     providerId: bigint;
@@ -490,100 +493,142 @@ export class PharmacyService {
     idempotencyKey?: string;
   }) {
     if (!data.items || data.items.length === 0) {
-      throw new BadRequestException('At least one item is required to place an order.');
+      throw new BadRequestException('Order items must not be empty.');
     }
 
     const provider = await this.prisma.serviceProvider.findUnique({
       where: { id: data.providerId },
     });
+
     if (!provider || provider.status !== 'ACTIVE' || provider.providerType !== 'PHARMACY') {
       throw new BadRequestException('Selected provider is unavailable or is not an active pharmacy.');
     }
 
     const idempotencyKey = (data.idempotencyKey ?? '').trim();
-    if (idempotencyKey) {
-      const existing = await this.prisma.purchase.findFirst({
-        where: {
-          customerId: data.customerId,
-          invoiceNumber: `ORD-KEY-${idempotencyKey.slice(0, 40)}`,
-        },
-        include: this.customerOrderInclude(),
-      });
-      if (existing) {
-        return this.customerOrderProjection(existing);
-      }
+    const flightKey = idempotencyKey ? `${data.customerId}:${idempotencyKey}` : null;
+
+    if (flightKey && PharmacyService._orderInFlightPromises.has(flightKey)) {
+      return PharmacyService._orderInFlightPromises.get(flightKey);
     }
 
-    const productIds = data.items.map((i) => BigInt(i.productId));
-    const products = await this.prisma.product.findMany({
-      where: { id: { in: productIds } },
-    });
-    const productMap = new Map(products.map((p) => [p.id.toString(), p]));
+    const executeOrder = async () => {
+      const invoiceNumber = idempotencyKey
+        ? `ORD-KEY-${idempotencyKey.slice(0, 40)}`
+        : `ORD-${Date.now()}-${randomUUID().slice(0, 6)}`;
 
-    let calculatedTotal = 0;
-    const itemsMapped = data.items.map((item) => {
-      const prod = productMap.get(item.productId.toString());
-      if (!prod || prod.status !== 'ACTIVE') {
-        throw new BadRequestException(`Product ID ${item.productId} is unavailable or inactive.`);
+      if (idempotencyKey) {
+        const existing = await this.prisma.purchase.findFirst({
+          where: {
+            customerId: data.customerId,
+            invoiceNumber,
+          },
+          include: this.customerOrderInclude(),
+        });
+        if (existing) {
+          return this.customerOrderProjection(existing);
+        }
       }
-      const rawQty = Number(item.quantity);
-      if (
-        !Number.isFinite(rawQty) ||
-        rawQty <= 0 ||
-        !Number.isInteger(rawQty) ||
-        rawQty > 1000
-      ) {
-        throw new BadRequestException(
-          `Invalid item quantity for product ID ${item.productId}.`,
-        );
+
+      const productIds = data.items.map((i) => BigInt(i.productId));
+      const products = await this.prisma.product.findMany({
+        where: {
+          id: { in: productIds },
+          ...this.customerWellnessWhere(),
+        },
+      });
+      const productMap = new Map(products.map((p) => [p.id.toString(), p]));
+
+      let calculatedTotal = 0;
+      const itemsMapped = data.items.map((item) => {
+        const prod = productMap.get(item.productId.toString());
+        if (!prod || prod.status !== 'ACTIVE') {
+          throw new BadRequestException(`Product ID ${item.productId} is unavailable or inactive.`);
+        }
+        const rawQty = Number(item.quantity);
+        if (
+          !Number.isFinite(rawQty) ||
+          rawQty <= 0 ||
+          !Number.isInteger(rawQty) ||
+          rawQty > 1000
+        ) {
+          throw new BadRequestException(
+            `Invalid item quantity for product ID ${item.productId}.`,
+          );
+        }
+        const unitPrice = Number(prod.sellingPrice ?? prod.mrp ?? 0);
+        calculatedTotal += unitPrice * rawQty;
+        return {
+          productId: prod.id,
+          quantity: rawQty,
+          unitPrice,
+        };
+      });
+
+      const deliveryAddress = String(data.deliveryAddress ?? '').trim() || undefined;
+      const customerNotes = String(data.customerNotes ?? '').trim() || undefined;
+
+      try {
+        const purchase = await this.prisma.purchase.create({
+          data: {
+            uuid: randomUUID(),
+            customerId: data.customerId,
+            providerId: data.providerId,
+            invoiceNumber,
+            purchaseKind: 'CUSTOMER_ORDER',
+            orderStatus: 'PLACED',
+            paymentStatus: 'PENDING',
+            totalAmount: calculatedTotal,
+            discountAmount: 0,
+            payableAmount: calculatedTotal,
+            purchaseDate: new Date(),
+            billingSnapshot: {
+              deliveryAddress,
+              customerNotes,
+              idempotencyKey: idempotencyKey || null,
+            },
+            purchaseItems: {
+              create: itemsMapped.map((item) => ({
+                productId: item.productId,
+                quantity: item.quantity,
+                unitPrice: item.unitPrice,
+                totalPrice: item.quantity * item.unitPrice,
+              })),
+            },
+          },
+          include: this.customerOrderInclude(),
+        });
+
+        return this.customerOrderProjection(purchase);
+      } catch (error: any) {
+        if (
+          idempotencyKey &&
+          (error?.code === 'P2002' || String(error?.message).includes('unique'))
+        ) {
+          const existing = await this.prisma.purchase.findFirst({
+            where: {
+              customerId: data.customerId,
+              invoiceNumber,
+            },
+            include: this.customerOrderInclude(),
+          });
+          if (existing) {
+            return this.customerOrderProjection(existing);
+          }
+        }
+        throw error;
       }
-      const unitPrice = Number(prod.sellingPrice ?? prod.mrp ?? 0);
-      calculatedTotal += unitPrice * rawQty;
-      return {
-        productId: prod.id,
-        quantity: rawQty,
-        unitPrice,
-      };
-    });
+    };
 
-    const invoiceNumber = idempotencyKey
-      ? `ORD-KEY-${idempotencyKey.slice(0, 40)}`
-      : `ORD-${Date.now()}-${randomUUID().slice(0, 6)}`;
+    const orderPromise = executeOrder();
 
-    const deliveryAddress = String(data.deliveryAddress ?? '').trim() || undefined;
-    const customerNotes = String(data.customerNotes ?? '').trim() || undefined;
+    if (flightKey) {
+      PharmacyService._orderInFlightPromises.set(flightKey, orderPromise);
+      orderPromise.finally(() => {
+        PharmacyService._orderInFlightPromises.delete(flightKey);
+      });
+    }
 
-    const purchase = await this.prisma.purchase.create({
-      data: {
-        uuid: randomUUID(),
-        customerId: data.customerId,
-        providerId: data.providerId,
-        invoiceNumber,
-        purchaseKind: 'CUSTOMER_ORDER',
-        orderStatus: 'PLACED',
-        paymentStatus: 'PENDING',
-        totalAmount: calculatedTotal,
-        discountAmount: 0,
-        payableAmount: calculatedTotal,
-        purchaseDate: new Date(),
-        billingSnapshot: {
-          deliveryAddress,
-          customerNotes,
-          idempotencyKey: idempotencyKey || null,
-        },
-        purchaseItems: {
-          create: itemsMapped.map((item) => ({
-            productId: item.productId,
-            quantity: item.quantity,
-            unitPrice: item.unitPrice,
-            totalPrice: item.quantity * item.unitPrice,
-          })),
-        },
-      },
-      include: this.customerOrderInclude(),
-    });
-
-    return this.customerOrderProjection(purchase);
+    return orderPromise;
   }
 
   async listPharmacyOrders(principal?: ShieldPrincipal) {

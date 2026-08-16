@@ -1261,6 +1261,10 @@ export class CustomerService {
     const existing = await this.prisma.cardRequest.findFirst({
       where: {
         customerId,
+        OR: [
+          { requestKind: 'PHYSICAL' },
+          { remarks: { contains: 'PHYSICAL' } },
+        ],
         status: { in: ['REQUESTED', 'APPROVED', 'PRINTING', 'READY'] },
       },
       orderBy: { requestedAt: 'desc' },
@@ -1271,8 +1275,10 @@ export class CustomerService {
         uuid: randomUUID(),
         customerId,
         membershipId: customer.membership.id,
+        requestKind: 'PHYSICAL',
         status: 'REQUESTED',
         requestedBy,
+        remarks: 'PHYSICAL_CARD_REQUEST',
       },
     });
     await this.recordCustomerAccountAudit(
@@ -1281,6 +1287,34 @@ export class CustomerService {
       request.id,
       customerId,
     );
+    return request;
+  }
+
+  async requestDigitalCard(customerId: bigint, requestedBy?: bigint) {
+    const customer = await this.findOne(customerId);
+    const existing = await this.prisma.cardRequest.findFirst({
+      where: {
+        customerId,
+        OR: [
+          { requestKind: 'DIGITAL' },
+          { remarks: { contains: 'DIGITAL' } },
+        ],
+        status: { in: ['REQUESTED', 'ISSUED'] },
+      },
+      orderBy: { requestedAt: 'desc' },
+    });
+    if (existing) return existing;
+    const request = await this.prisma.cardRequest.create({
+      data: {
+        uuid: randomUUID(),
+        customerId,
+        membershipId: customer.membership?.id ?? null,
+        requestKind: 'DIGITAL',
+        status: 'REQUESTED',
+        requestedBy,
+        remarks: 'DIGITAL_CARD_REQUEST',
+      },
+    });
     return request;
   }
 
@@ -1583,7 +1617,14 @@ export class CustomerService {
       }
 
       await tx.cardRequest.updateMany({
-        where: { customerId: targetCustomerId, status: 'REQUESTED' },
+        where: {
+          customerId: targetCustomerId,
+          status: 'REQUESTED',
+          NOT: [
+            { requestKind: 'PHYSICAL' },
+            { remarks: { contains: 'PHYSICAL' } },
+          ],
+        },
         data: {
           status: 'ISSUED',
           reviewedBy: staffUserId,

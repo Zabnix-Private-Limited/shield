@@ -12613,3 +12613,30 @@ est build compilation.
 - flutter test test/shared/customer_cart_service_test.dart passed (3/3 tests).
 - git diff --check passed cleanly.
 - No production database mutation, deployment, browser automation, or physical device test was run.
+
+## 126. Final 4-Point Release Gate Verification & Fix Pass (2026-08-16 15:03:00 IST)
+
+- Addressed and resolved all four release gate items under strict scope lock.
+- Item 1 (Backend Order Idempotency Concurrency): Hardened createCustomerOrder in pharmacy.service.ts with in-flight execution map (_orderInFlightPromises) to guarantee atomic single-flight resolution for concurrent requests with identical idempotency keys. Added P2002 unique constraint fallback to return existing order row upon database collision. Generated unapplied additive migration 20260816_customer_order_idempotency_key/migration.sql creating unique index purchases_customer_invoice_key. Added concurrent Promise.all Jest regression test in pharmacy-orders.spec.ts.
+- Item 2 (Digital vs Physical Card Request Separation): Added explicit remarks discriminators (DIGITAL_CARD_REQUEST vs PHYSICAL_CARD_REQUEST) and requestDigitalCard / requestPhysicalCard methods in customer.service.ts and customer-membership.controller.ts. Updated issueDigitalMembershipCard to filter out physical requests (NOT: { remarks: { contains: 'PHYSICAL' } }), guaranteeing physical card requests remain untouched in REQUESTED/PRINTING status during digital card issuance.
+- Item 3 (Customer Order Authorization): Verified and tested requireCustomer(principal) in pharmacy.controller.ts on POST /customer/orders. Non-Customer principals (USER agent, USER provider, USER staff) are strictly rejected with ForbiddenException('Authenticated customer context is required.'). Added negative tests in pharmacy-orders.spec.ts.
+- Item 4 (Customer-Orderable Product Eligibility): Enforced canonical customerWellnessWhere() predicate (status === 'ACTIVE') across both wellness catalogue listing and createCustomerOrder product query in pharmacy.service.ts.
+
+### Frontend Files (Modified)
+- None
+
+### Backend Files (Modified)
+- backend/prisma/migrations/20260816_customer_order_idempotency_key/migration.sql [NEW]
+- backend/src/pharmacy/pharmacy.service.ts
+- backend/src/pharmacy/pharmacy.controller.ts
+- backend/src/pharmacy/pharmacy-orders.spec.ts
+- backend/src/customer/customer.service.ts
+- backend/src/customer/customer.service.spec.ts
+- backend/src/customer/customer-membership.controller.ts
+- backend/src/customer/customer-membership.controller.spec.ts
+
+### Verification
+- npx tsc --noEmit and npx nest build passed with exit code 0.
+- 7/7 backend Jest test suites passed (38/38 tests).
+- git diff --check passed cleanly.
+- Additive migration created in backend/prisma/migrations/ and NOT applied.

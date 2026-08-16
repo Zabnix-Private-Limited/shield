@@ -1,4 +1,5 @@
 import { BadRequestException, ForbiddenException } from '@nestjs/common';
+import { PharmacyController } from './pharmacy.controller';
 import { PharmacyService } from './pharmacy.service';
 import { ProviderScopeService } from '../auth/provider-scope.service';
 
@@ -190,6 +191,51 @@ describe('PharmacyService Operational Order Persistence & Isolation', () => {
       expect(order.id).toBe('501');
       expect(prisma.purchase.create).not.toHaveBeenCalled();
     });
+
+    it('creates exactly ONE Purchase row when two concurrent requests use the SAME idempotency key', async () => {
+      prisma.serviceProvider.findUnique.mockResolvedValue({
+        id: 10n,
+        status: 'ACTIVE',
+        providerType: 'PHARMACY',
+      });
+      prisma.product.findMany.mockResolvedValue([
+        { id: 101n, sellingPrice: 250.0, mrp: 300.0, productName: 'Vitamin C', status: 'ACTIVE' },
+      ]);
+      prisma.purchase.findFirst.mockResolvedValue(null);
+      prisma.purchase.create.mockImplementation(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 50));
+        return {
+          id: 501n,
+          customerId: 1n,
+          providerId: 10n,
+          invoiceNumber: 'ORD-KEY-concurrentKey123',
+          orderStatus: 'PLACED',
+          paymentStatus: 'PENDING',
+          payableAmount: 250.0,
+          provider: { providerName: 'Hyperpharmacy Main' },
+          purchaseItems: [],
+        };
+      });
+
+      const [res1, res2] = await Promise.all([
+        service.createCustomerOrder({
+          customerId: 1n,
+          providerId: 10n,
+          items: [{ productId: 101n, quantity: 1 }],
+          idempotencyKey: 'concurrentKey123',
+        }),
+        service.createCustomerOrder({
+          customerId: 1n,
+          providerId: 10n,
+          items: [{ productId: 101n, quantity: 1 }],
+          idempotencyKey: 'concurrentKey123',
+        }),
+      ]);
+
+      expect(res1.id).toBe('501');
+      expect(res2.id).toBe('501');
+      expect(prisma.purchase.create).toHaveBeenCalledTimes(1);
+    });
   });
 
   describe('listPharmacyOrders Provider Isolation', () => {
@@ -257,6 +303,45 @@ describe('PharmacyService Operational Order Persistence & Isolation', () => {
           userId: '99',
         } as any),
       ).rejects.toThrow(ForbiddenException);
+    });
+  });
+
+  describe('PharmacyController Principal Authorization', () => {
+    let controller: PharmacyController;
+
+    beforeEach(() => {
+      controller = new PharmacyController(service, providerScopeService);
+    });
+
+    it('rejects Non-Customer principals (Agent, Provider, Admin) on POST /customer/orders', async () => {
+      const agentPrincipal = { principalType: 'USER', userType: 'AGENT', userId: '10' } as any;
+      const providerPrincipal = { principalType: 'USER', userType: 'SERVICE_PROVIDER', userId: '20' } as any;
+      const adminPrincipal = { principalType: 'USER', userType: 'STAFF', userId: '1' } as any;
+
+      await expect(
+        controller.createCustomerOrder({ provider_id: '10', items: [{ productId: '101', quantity: 1 }] }, agentPrincipal),
+      ).rejects.toThrow(ForbiddenException);
+
+      await expect(
+        controller.createCustomerOrder({ provider_id: '10', items: [{ productId: '101', quantity: 1 }] }, providerPrincipal),
+      ).rejects.toThrow(ForbiddenException);
+
+      await expect(
+        controller.createCustomerOrder({ provider_id: '10', items: [{ productId: '101', quantity: 1 }] }, adminPrincipal),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('allows CUSTOMER principal on POST /customer/orders', async () => {
+      const customerPrincipal = { principalType: 'CUSTOMER', customerId: '1' } as any;
+      jest.spyOn(service, 'createCustomerOrder').mockResolvedValue({ id: '501' } as any);
+
+      const res = await controller.createCustomerOrder(
+        { provider_id: '10', items: [{ productId: '101', quantity: 1 }] },
+        customerPrincipal,
+      );
+
+      expect(res.success).toBe(true);
+      expect(res.data.id).toBe('501');
     });
   });
 });

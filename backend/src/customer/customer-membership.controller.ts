@@ -137,9 +137,19 @@ export class CustomerMembershipController {
     };
   }
 
-  @RequirePermissions('customers.update')
+  @RequirePermissions('customers.view')
   @Post('membership/card/request')
-  async requestCard(@CurrentPrincipal() principal?: ShieldPrincipal) {
+  async requestDigitalCard(@CurrentPrincipal() principal?: ShieldPrincipal) {
+    const customerId = this.resolveCustomerId(undefined, principal);
+    return {
+      success: true,
+      data: await this.customerService.requestDigitalCard(customerId),
+    };
+  }
+
+  @RequirePermissions('customers.view')
+  @Post('membership/physical-card/request')
+  async requestPhysicalCard(@CurrentPrincipal() principal?: ShieldPrincipal) {
     const customerId = this.resolveCustomerId(undefined, principal);
     return {
       success: true,

@@ -1347,6 +1347,7 @@ model CardRequest {
   customerId   BigInt    @map("customer_id")
   membershipId BigInt?   @map("membership_id")
   businessId   BigInt?   @map("business_id")
+  requestKind  String    @default("PHYSICAL") @map("request_kind") @db.VarChar(50)
   status       String    @default("REQUESTED") @db.VarChar(50)
   requestedBy  BigInt?   @map("requested_by")
   reviewedBy   BigInt?   @map("reviewed_by")
@@ -1355,6 +1356,7 @@ model CardRequest {
   remarks      String?   @db.Text
 
   @@index([customerId, status], map: "idx_card_requests_customer")
+  @@index([customerId, requestKind], map: "idx_card_requests_kind")
   @@map("card_requests")
 }
 
