@@ -53,7 +53,8 @@
    - Avoid frontend branching on provider type for business semantics; if a provider workflow needs to differ, add or adjust the backend module contract instead of creating provider-type-specific pages.
 
 ## Database Rules
-- `current_schema.md` at the repository root is the source of truth for the current database situation and schema state.
+- `current_schema.md` at the repository root is the read-only source of truth for the current database situation and schema state.
+- **NEVER edit `current_schema.md` directly**. Only the human project owner updates `current_schema.md` after applying database migrations.
 - Use UUIDs for public identifiers
 - Use BIGSERIAL for internal primary keys
 - **NO STORED BALANCE IN WALLET TABLE**: Always calculate dynamically from transactions.

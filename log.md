@@ -12640,3 +12640,56 @@ est build compilation.
 - 7/7 backend Jest test suites passed (38/38 tests).
 - git diff --check passed cleanly.
 - Additive migration created in backend/prisma/migrations/ and NOT applied.
+
+## 127. Durable CardRequest Discriminator & Purchasable Catalogue Projection (2026-08-16 15:40:00 IST)
+
+- Addressed and resolved all three follow-up requests under strict scope lock.
+- Item 1 (Explicit Durable Card Discriminator): Replaced remarks-based fallback with explicit durable requestKind column (DIGITAL | PHYSICAL) in CardRequest model in schema.prisma. Created unapplied additive migration backend/prisma/migrations/20260816_card_request_kind/migration.sql. Updated requestDigitalCard, requestPhysicalCard, and issueDigitalMembershipCard in customer.service.ts to set and query requestKind explicitly.
+- Item 2 (Customer-Orderable Product Eligibility & Purchasable Projection): Verified customerWellnessWhere() (status === 'ACTIVE') as the canonical Customer-orderable product predicate. Updated customerWellnessProduct projection in pharmacy.service.ts to return purchasable: true and purchasabilityReason: null for active products with pricing, making catalogue items purchasable while keeping internal fields (costPrice, marginPercentage) unexposed.
+- Item 3 (Idempotency Migration SQL Package): Documented exact SQL, duplicate-data preflight SQL, catalog verification SQL, and rollback SQL for 20260816_customer_order_idempotency_key without applying it to database.
+
+### Frontend Files (Modified)
+- None
+
+### Backend Files (Modified)
+- backend/prisma/schema.prisma
+- backend/prisma/migrations/20260816_card_request_kind/migration.sql [NEW]
+- backend/src/customer/customer.service.ts
+- backend/src/customer/customer.service.spec.ts
+- backend/src/pharmacy/pharmacy.service.ts
+- backend/src/pharmacy/pharmacy.service.spec.ts
+
+### Verification
+- npx prisma generate generated updated Prisma Client types.
+- npx tsc --noEmit and npx nest build passed with exit code 0.
+- 7/7 backend Jest test suites passed (38/38 tests).
+- git diff --check passed cleanly.
+- No migration was applied to production database.
+
+## 128. Migration Safety, Card Request Positive Discrimination & Product Orderability Cleanup (2026-08-16 15:46:00 IST)
+
+- Completed full migration-safety, card-kind positive discrimination, and product orderability cleanup under strict scope lock.
+- Item 1 (Narrow Customer Order Idempotency Index): Updated migration 20260816_customer_order_idempotency_key and current_schema.md to narrow unique index scope to WHERE purchase_kind = 'CUSTOMER_ORDER' AND invoice_number LIKE 'ORD-KEY-%'. Provided preflight, verification, and rollback SQL scripts. Verified P2002 fallback behavior.
+- Item 2 (Card Request Kind Positive Discrimination): Removed all remarks-based runtime checks from issueDigitalMembershipCard in customer.service.ts in favor of positive selection (requestKind: 'DIGITAL', status: 'REQUESTED'). Added domain CHECK (request_kind IN ('DIGITAL', 'PHYSICAL')) constraint to 20260816_card_request_kind migration. Provided pre-migration inspection SQL for legacy rows.
+- Item 3 (Customer Product Visibility vs Orderability): Defined separate customer-visible (status === 'ACTIVE') and customer-orderable (status === 'ACTIVE' AND unitPrice > 0) predicates. Updated customerWellnessProduct projection in pharmacy.service.ts to return purchasable: true only when a valid authoritative price (>0) exists. Updated createCustomerOrder to strictly reject unpriced or 0-priced products with BadRequestException, preventing ₹0 orders.
+
+### Frontend Files (Modified)
+- None
+
+### Backend Files (Modified)
+- backend/prisma/schema.prisma
+- backend/prisma/migrations/20260816_customer_order_idempotency_key/migration.sql
+- backend/prisma/migrations/20260816_card_request_kind/migration.sql
+- backend/src/customer/customer.service.ts
+- backend/src/customer/customer.service.spec.ts
+- backend/src/pharmacy/pharmacy.service.ts
+- backend/src/pharmacy/pharmacy.service.spec.ts
+- backend/src/pharmacy/pharmacy-orders.spec.ts
+- current_schema.md
+
+### Verification
+- npx prisma generate updated Prisma Client.
+- npx tsc --noEmit and npx nest build passed with exit code 0.
+- 7/7 backend Jest test suites passed (39/39 tests).
+- git diff --check passed cleanly.
+- No database migrations were executed or applied.

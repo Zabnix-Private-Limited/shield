@@ -1261,10 +1261,7 @@ export class CustomerService {
     const existing = await this.prisma.cardRequest.findFirst({
       where: {
         customerId,
-        OR: [
-          { requestKind: 'PHYSICAL' },
-          { remarks: { contains: 'PHYSICAL' } },
-        ],
+        requestKind: 'PHYSICAL',
         status: { in: ['REQUESTED', 'APPROVED', 'PRINTING', 'READY'] },
       },
       orderBy: { requestedAt: 'desc' },
@@ -1295,10 +1292,7 @@ export class CustomerService {
     const existing = await this.prisma.cardRequest.findFirst({
       where: {
         customerId,
-        OR: [
-          { requestKind: 'DIGITAL' },
-          { remarks: { contains: 'DIGITAL' } },
-        ],
+        requestKind: 'DIGITAL',
         status: { in: ['REQUESTED', 'ISSUED'] },
       },
       orderBy: { requestedAt: 'desc' },
@@ -1619,11 +1613,8 @@ export class CustomerService {
       await tx.cardRequest.updateMany({
         where: {
           customerId: targetCustomerId,
+          requestKind: 'DIGITAL',
           status: 'REQUESTED',
-          NOT: [
-            { requestKind: 'PHYSICAL' },
-            { remarks: { contains: 'PHYSICAL' } },
-          ],
         },
         data: {
           status: 'ISSUED',

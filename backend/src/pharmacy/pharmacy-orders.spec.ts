@@ -163,6 +163,25 @@ describe('PharmacyService Operational Order Persistence & Isolation', () => {
       ).rejects.toThrow(BadRequestException);
     });
 
+    it('rejects product with missing or zero authoritative price', async () => {
+      prisma.serviceProvider.findUnique.mockResolvedValue({
+        id: 10n,
+        status: 'ACTIVE',
+        providerType: 'PHARMACY',
+      });
+      prisma.product.findMany.mockResolvedValue([
+        { id: 102n, sellingPrice: 0, mrp: null, productName: 'Free Product', status: 'ACTIVE' },
+      ]);
+
+      await expect(
+        service.createCustomerOrder({
+          customerId: 1n,
+          providerId: 10n,
+          items: [{ productId: 102n, quantity: 1 }],
+        }),
+      ).rejects.toThrow(BadRequestException);
+    });
+
     it('returns existing order when idempotencyKey matches', async () => {
       prisma.serviceProvider.findUnique.mockResolvedValue({
         id: 10n,

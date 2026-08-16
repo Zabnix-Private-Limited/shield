@@ -80,10 +80,28 @@ export class PharmacyService {
     };
   }
 
+  private getAuthoritativeUnitPrice(product: any): number | null {
+    const price =
+      product?.sellingPrice != null
+        ? Number(product.sellingPrice)
+        : product?.mrp != null
+          ? Number(product.mrp)
+          : null;
+    if (price == null || !Number.isFinite(price) || price <= 0) {
+      return null;
+    }
+    return price;
+  }
+
+  private isCustomerOrderable(product: any): boolean {
+    const status = product?.status ?? 'ACTIVE';
+    if (status !== 'ACTIVE') return false;
+    const unitPrice = this.getAuthoritativeUnitPrice(product);
+    return unitPrice !== null && unitPrice > 0;
+  }
+
   private customerWellnessProduct(product: any) {
-    const isOrderable =
-      product.status === 'ACTIVE' &&
-      (product.sellingPrice != null || product.mrp != null);
+    const isOrderable = this.isCustomerOrderable(product);
 
     return {
       id: product.id.toString(),
@@ -104,7 +122,7 @@ export class PharmacyService {
       purchasable: isOrderable,
       purchasabilityReason: isOrderable
         ? null
-        : 'Product is currently unavailable for order placement.',
+        : 'Product price is unavailable or invalid for online checkout.',
     };
   }
 
@@ -541,8 +559,10 @@ export class PharmacyService {
       let calculatedTotal = 0;
       const itemsMapped = data.items.map((item) => {
         const prod = productMap.get(item.productId.toString());
-        if (!prod || prod.status !== 'ACTIVE') {
-          throw new BadRequestException(`Product ID ${item.productId} is unavailable or inactive.`);
+        if (!prod || !this.isCustomerOrderable(prod)) {
+          throw new BadRequestException(
+            `Product ID ${item.productId} is unavailable, inactive, or missing a valid orderable price.`,
+          );
         }
         const rawQty = Number(item.quantity);
         if (
@@ -555,7 +575,7 @@ export class PharmacyService {
             `Invalid item quantity for product ID ${item.productId}.`,
           );
         }
-        const unitPrice = Number(prod.sellingPrice ?? prod.mrp ?? 0);
+        const unitPrice = this.getAuthoritativeUnitPrice(prod)!;
         calculatedTotal += unitPrice * rawQty;
         return {
           productId: prod.id,

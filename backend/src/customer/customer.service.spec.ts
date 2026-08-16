@@ -309,11 +309,8 @@ describe('CustomerService alternative contacts', () => {
       expect(prisma.cardRequest.updateMany).toHaveBeenCalledWith({
         where: {
           customerId: 11n,
+          requestKind: 'DIGITAL',
           status: 'REQUESTED',
-          NOT: [
-            { requestKind: 'PHYSICAL' },
-            { remarks: { contains: 'PHYSICAL' } },
-          ],
         },
         data: expect.objectContaining({
           status: 'ISSUED',
