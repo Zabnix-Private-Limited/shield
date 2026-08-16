@@ -1541,6 +1541,61 @@ export class CustomerService {
     });
   }
 
+  async issueDigitalMembershipCard(customerId: bigint, staffUserId: bigint) {
+    const customer = await this.findOne(customerId);
+    const targetCustomerId = customer?.id ?? customerId;
+
+    return this.prisma.$transaction(async (tx) => {
+      const existingCard = await tx.shieldCard.findFirst({
+        where: { customerId: targetCustomerId },
+      });
+
+      let card = existingCard;
+      if (!card) {
+        const staffUser = await tx.user.findUnique({
+          where: { id: staffUserId },
+          include: { department: true },
+        });
+        let issuedBusinessId = staffUser?.department?.businessId || null;
+        if (!issuedBusinessId) {
+          const defaultBiz = await tx.business.findFirst({
+            where: { status: 'ACTIVE' },
+            orderBy: { id: 'asc' },
+          });
+          issuedBusinessId = defaultBiz?.id ?? null;
+        }
+
+        const cardCodeToken = customer?.customerCode?.includes('-')
+          ? customer.customerCode.split('-')[1]
+          : targetCustomerId.toString();
+
+        card = await tx.shieldCard.create({
+          data: {
+            uuid: randomUUID(),
+            customerId: targetCustomerId,
+            cardNumber: `SHLD-CARD-${cardCodeToken}`,
+            qrCode: `SHLD-CARD-${cardCodeToken}-TOKEN`,
+            status: 'ACTIVE',
+            issuedBusinessId,
+            issuedAt: new Date(),
+          },
+        });
+      }
+
+      await tx.cardRequest.updateMany({
+        where: { customerId: targetCustomerId, status: 'REQUESTED' },
+        data: {
+          status: 'ISSUED',
+          reviewedBy: staffUserId,
+          reviewedAt: new Date(),
+          remarks: 'Digital membership card issued.',
+        },
+      });
+
+      return card;
+    });
+  }
+
   private async createCustomerAggregate(data: any, staffUserId?: bigint) {
     const customerUuid = randomUUID();
     const customerCode = `CUST-${Math.floor(100000 + Math.random() * 900000)}`;

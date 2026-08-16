@@ -496,8 +496,8 @@ export class PharmacyService {
     const provider = await this.prisma.serviceProvider.findUnique({
       where: { id: data.providerId },
     });
-    if (!provider || provider.status !== 'ACTIVE') {
-      throw new BadRequestException('Selected pharmacy provider is unavailable.');
+    if (!provider || provider.status !== 'ACTIVE' || provider.providerType !== 'PHARMACY') {
+      throw new BadRequestException('Selected provider is unavailable or is not an active pharmacy.');
     }
 
     const idempotencyKey = (data.idempotencyKey ?? '').trim();
@@ -523,15 +523,25 @@ export class PharmacyService {
     let calculatedTotal = 0;
     const itemsMapped = data.items.map((item) => {
       const prod = productMap.get(item.productId.toString());
-      if (!prod) {
-        throw new BadRequestException(`Product ID ${item.productId} not found.`);
+      if (!prod || prod.status !== 'ACTIVE') {
+        throw new BadRequestException(`Product ID ${item.productId} is unavailable or inactive.`);
+      }
+      const rawQty = Number(item.quantity);
+      if (
+        !Number.isFinite(rawQty) ||
+        rawQty <= 0 ||
+        !Number.isInteger(rawQty) ||
+        rawQty > 1000
+      ) {
+        throw new BadRequestException(
+          `Invalid item quantity for product ID ${item.productId}.`,
+        );
       }
       const unitPrice = Number(prod.sellingPrice ?? prod.mrp ?? 0);
-      const qty = Math.max(1, Number(item.quantity || 1));
-      calculatedTotal += unitPrice * qty;
+      calculatedTotal += unitPrice * rawQty;
       return {
         productId: prod.id,
-        quantity: qty,
+        quantity: rawQty,
         unitPrice,
       };
     });
@@ -540,23 +550,49 @@ export class PharmacyService {
       ? `ORD-KEY-${idempotencyKey.slice(0, 40)}`
       : `ORD-${Date.now()}-${randomUUID().slice(0, 6)}`;
 
-    const purchase = await this.createPurchase({
-      customerId: data.customerId,
-      providerId: data.providerId,
-      invoiceNumber,
-      items: itemsMapped,
-    });
+    const deliveryAddress = String(data.deliveryAddress ?? '').trim() || undefined;
+    const customerNotes = String(data.customerNotes ?? '').trim() || undefined;
 
-    const updated = await this.prisma.purchase.findUnique({
-      where: { id: purchase.id },
+    const purchase = await this.prisma.purchase.create({
+      data: {
+        uuid: randomUUID(),
+        customerId: data.customerId,
+        providerId: data.providerId,
+        invoiceNumber,
+        purchaseKind: 'CUSTOMER_ORDER',
+        orderStatus: 'PLACED',
+        paymentStatus: 'PENDING',
+        totalAmount: calculatedTotal,
+        discountAmount: 0,
+        payableAmount: calculatedTotal,
+        purchaseDate: new Date(),
+        billingSnapshot: {
+          deliveryAddress,
+          customerNotes,
+          idempotencyKey: idempotencyKey || null,
+        },
+        purchaseItems: {
+          create: itemsMapped.map((item) => ({
+            productId: item.productId,
+            quantity: item.quantity,
+            unitPrice: item.unitPrice,
+            totalPrice: item.quantity * item.unitPrice,
+          })),
+        },
+      },
       include: this.customerOrderInclude(),
     });
 
-    return this.customerOrderProjection(updated ?? purchase);
+    return this.customerOrderProjection(purchase);
   }
 
   async listPharmacyOrders(principal?: ShieldPrincipal) {
+    const whereClause = this.providerScopeService.scopePurchaseWhere(
+      { purchaseKind: 'CUSTOMER_ORDER' },
+      principal,
+    );
     const purchases = await this.prisma.purchase.findMany({
+      where: whereClause,
       include: this.customerOrderInclude(),
       orderBy: [{ purchaseDate: 'desc' }, { id: 'desc' }],
       take: 50,
@@ -574,14 +610,13 @@ export class PharmacyService {
     });
     if (!purchase) throw new NotFoundException('Order not found.');
 
-    if (purchase.customerId) {
-      await this.providerScopeService.assertProviderCanAccessCustomer(
-        purchase.customerId,
-        principal,
-      );
-    }
+    await this.providerScopeService.assertProviderCanAccessPurchase(
+      orderId,
+      principal,
+    );
 
     const allowedStatuses = [
+      'PLACED',
       'REQUESTED',
       'ACCEPTED',
       'PROCESSING',
@@ -599,7 +634,6 @@ export class PharmacyService {
       where: { id: orderId },
       data: {
         orderStatus: normalizedStatus,
-        paymentStatus: normalizedStatus,
       },
       include: this.customerOrderInclude(),
     });

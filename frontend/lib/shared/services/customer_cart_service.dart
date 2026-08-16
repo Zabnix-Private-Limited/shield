@@ -56,11 +56,19 @@ class CustomerCartService extends ChangeNotifier {
 
   List<CartItem> _items = const [];
   bool _initialized = false;
+  String? _checkoutAttemptKey;
+  bool _isSubmittingOrder = false;
 
   List<CartItem> get items => List.unmodifiable(_items);
   int get itemCount => _items.fold(0, (sum, item) => sum + item.quantity);
   double get subtotal => _items.fold(0.0, (sum, item) => sum + item.lineTotal);
   bool get isEmpty => _items.isEmpty;
+  bool get isSubmittingOrder => _isSubmittingOrder;
+  String? get currentCheckoutAttemptKey => _checkoutAttemptKey;
+
+  void _invalidateAttemptKey() {
+    _checkoutAttemptKey = null;
+  }
 
   String _getStorageKey() {
     final customerId = CustomerAuthSession.instance.customerId;
@@ -78,6 +86,7 @@ class CustomerCartService extends ChangeNotifier {
   }
 
   Future<void> _handleAuthChange() async {
+    _invalidateAttemptKey();
     final customerId = CustomerAuthSession.instance.customerId;
     if (customerId != null && customerId.isNotEmpty) {
       await mergeGuestCartOnLogin(customerId);
@@ -107,6 +116,7 @@ class CustomerCartService extends ChangeNotifier {
   }
 
   Future<void> _persistCart() async {
+    _invalidateAttemptKey();
     try {
       final key = _getStorageKey();
       if (_items.isEmpty) {
@@ -169,6 +179,7 @@ class CustomerCartService extends ChangeNotifier {
   }
 
   Future<void> mergeGuestCartOnLogin(String customerId) async {
+    _invalidateAttemptKey();
     try {
       final guestRaw = await _storage.read(key: _guestCartKey);
       if (guestRaw == null || guestRaw.trim().isEmpty) {
@@ -233,28 +244,40 @@ class CustomerCartService extends ChangeNotifier {
     if (_items.isEmpty) {
       throw StateError('Cart is empty.');
     }
+    if (_isSubmittingOrder) {
+      throw StateError('Order placement is already in progress.');
+    }
 
-    final idempotencyKey =
-        'CART-${DateTime.now().millisecondsSinceEpoch}-${_items.length}';
-    final payload = {
-      'provider_id': providerId,
-      'items': _items
-          .map((i) => {
-                'product_id': i.productId,
-                'quantity': i.quantity,
-              })
-          .toList(),
-      if (deliveryAddress != null && deliveryAddress.trim().isNotEmpty)
-        'delivery_address': deliveryAddress.trim(),
-      if (customerNotes != null && customerNotes.trim().isNotEmpty)
-        'customer_notes': customerNotes.trim(),
-      'idempotency_key': idempotencyKey,
-    };
+    _isSubmittingOrder = true;
+    notifyListeners();
 
-    final order = await ApiService.submitCustomerOrder(payload);
-    // Cart is cleared ONLY after server returns order success
-    await clearCart();
-    return order;
+    try {
+      _checkoutAttemptKey ??=
+          'CHK-${DateTime.now().millisecondsSinceEpoch}-${_items.length}';
+
+      final payload = {
+        'provider_id': providerId,
+        'items': _items
+            .map((i) => {
+                  'product_id': i.productId,
+                  'quantity': i.quantity,
+                })
+            .toList(),
+        if (deliveryAddress != null && deliveryAddress.trim().isNotEmpty)
+          'delivery_address': deliveryAddress.trim(),
+        if (customerNotes != null && customerNotes.trim().isNotEmpty)
+          'customer_notes': customerNotes.trim(),
+        'idempotency_key': _checkoutAttemptKey,
+      };
+
+      final order = await ApiService.submitCustomerOrder(payload);
+      _checkoutAttemptKey = null;
+      await clearCart();
+      return order;
+    } finally {
+      _isSubmittingOrder = false;
+      notifyListeners();
+    }
   }
 }
 

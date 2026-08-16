@@ -12,6 +12,7 @@ describe('AuthService Phone OTP Identity Resolution', () => {
       $transaction: jest.fn().mockImplementation((cb) => cb(prisma)),
       customer: {
         findFirst: jest.fn(),
+        findMany: jest.fn(),
         updateMany: jest.fn(),
       },
       role: {
@@ -40,13 +41,14 @@ describe('AuthService Phone OTP Identity Resolution', () => {
     };
 
     jwtService = {
-      signToken: jest.fn().mockReturnValue('mock-jwt-token'),
+      sign: jest.fn().mockReturnValue('mock-jwt-token'),
       signAsync: jest.fn().mockResolvedValue('mock-jwt-token'),
+      verify: jest.fn(),
     };
 
     service = new AuthService(
-      prisma,
-      jwtService,
+      prisma as any,
+      jwtService as any,
       firebaseAdminService,
       {} as any,
     );
@@ -60,18 +62,15 @@ describe('AuthService Phone OTP Identity Resolution', () => {
         firebase: { sign_in_provider: 'phone' },
       });
 
-      prisma.customer.findFirst.mockImplementation((args: any) => {
-        if (args.where?.mobile?.endsWith) {
-          return Promise.resolve({
-            id: 100n,
-            uuid: 'cust-100-uuid',
-            mobile: '9876543210',
-            status: 'ACTIVE',
-            firebaseUid: 'firebase-uid-old',
-          });
-        }
-        return Promise.resolve(null);
-      });
+      prisma.customer.findMany.mockResolvedValue([
+        {
+          id: 100n,
+          uuid: 'cust-100-uuid',
+          mobile: '9876543210',
+          status: 'ACTIVE',
+          firebaseUid: 'firebase-uid-old',
+        },
+      ]);
 
       prisma.customer.updateMany.mockResolvedValue({ count: 1 });
 
@@ -79,13 +78,30 @@ describe('AuthService Phone OTP Identity Resolution', () => {
 
       expect(session).toBeDefined();
       expect(session.accessToken).toBe('mock-jwt-token');
-      expect(prisma.customer.findFirst).toHaveBeenCalledWith(
+      expect(prisma.customer.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
           where: expect.objectContaining({
             mobile: { endsWith: '9876543210' },
           }),
         }),
       );
+    });
+
+    it('fails closed and rejects sign-in if multiple customer records match normalized phone', async () => {
+      firebaseAdminService.verifyIdToken.mockResolvedValue({
+        uid: 'firebase-uid-1',
+        phone_number: '+919876543210',
+        firebase: { sign_in_provider: 'phone' },
+      });
+
+      prisma.customer.findMany.mockResolvedValue([
+        { id: 100n, mobile: '9876543210', status: 'ACTIVE' },
+        { id: 200n, mobile: '+919876543210', status: 'ACTIVE' },
+      ]);
+
+      await expect(
+        service.loginCustomer('valid-firebase-token'),
+      ).rejects.toThrow(UnauthorizedException);
     });
 
     it('rejects sign-in if customer account is SUSPENDED', async () => {
@@ -95,11 +111,13 @@ describe('AuthService Phone OTP Identity Resolution', () => {
         firebase: { sign_in_provider: 'phone' },
       });
 
-      prisma.customer.findFirst.mockResolvedValue({
-        id: 100n,
-        mobile: '9876543210',
-        status: 'SUSPENDED',
-      });
+      prisma.customer.findMany.mockResolvedValue([
+        {
+          id: 100n,
+          mobile: '9876543210',
+          status: 'SUSPENDED',
+        },
+      ]);
 
       await expect(
         service.loginCustomer('valid-firebase-token'),

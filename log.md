@@ -12576,3 +12576,40 @@ est build compilation.
 - flutter test test/shared/customer_cart_service_test.dart passed (3/3 tests).
 - git diff --check passed cleanly.
 - No production database mutation, deployment, browser automation, or physical device test was run.
+
+## 125. Final Independent Source Correction Pass (2026-08-16 14:30:00 IST)
+
+- Completed full independent source audit and defect remediation pass for SHIELD Customer Portal + Agent Membership/Card scope under strict scope lock.
+- Fixed Customer Order RBAC (P0-1): Updated POST /customer/orders permission requirement in pharmacy.controller.ts from customers.create to customers.view so authenticated customers can place orders without needing broad customer-account creation authority.
+- Enforced Non-Financial Operational Order Creation (P0-2, P0-3): Refactored createCustomerOrder in pharmacy.service.ts to directly persist operational orders with purchaseKind: 'CUSTOMER_ORDER', orderStatus: 'PLACED', paymentStatus: 'PENDING', line items, and delivery/notes snapshot without calling walletService.ensureSufficientCashBalance, debiting cash wallet transactions, or qualifying referral rewards.
+- Enforced Status Separation (P0-3): Operational pharmacy fulfillment status updates (ACCEPTED, PROCESSING, READY, COMPLETED, REJECTED, CANCELLED) mutate orderStatus ONLY and leave paymentStatus unchanged as 'PENDING'.
+- Implemented Pharmacy Queue Provider Isolation & Exact Order Ownership (P0-4, P0-5): Updated listPharmacyOrders to query purchaseKind: 'CUSTOMER_ORDER' filtered strictly by ProviderScopeService, and updated updateOrderStatus to authorize exact order ownership via ProviderScopeService.assertProviderCanAccessPurchase(orderId, principal).
+- Hardened Stable Idempotency & Concurrency Safety (P0-6): Added _checkoutAttemptKey and _isSubmittingOrder single-flight state to CustomerCartService in Flutter, ensuring identical attempt keys on retries, single-flight submission protection, and clearing keys only on confirmed server order success.
+- Decoupled Digital Card Issuance (P0-7): Created CustomerService.issueDigitalMembershipCard which issues a single ShieldCard and completes matching CardRequest records without altering customer status, activation/expiry dates, or onboarding state. Updated AgentService.issueCustomerCard to invoke issueDigitalMembershipCard.
+- Hardened Phone Identity Matching (P0-9): Refactored AuthService.loginCustomer to normalize phone numbers and fail closed if multiple candidate customers match the same 10-digit mobile number, preventing ambiguous identity bindings.
+- Added Orderable Product & Active Pharmacy Validations (P1-10, P1-11, P1-12): Enforced active product status, positive integer quantity limits (max 1000), and providerType: 'PHARMACY' validation.
+- Enabled Public Catalogue Routing (P1-16): Added public product catalogue paths to app_router.dart public location whitelist so unauthenticated guests can browse wellness products without login redirects.
+
+### Frontend Files (Modified)
+- frontend/lib/app/routes/app_router.dart
+- frontend/lib/shared/services/customer_cart_service.dart
+
+### Backend Files (Modified)
+- backend/src/pharmacy/pharmacy.controller.ts
+- backend/src/pharmacy/pharmacy.service.ts
+- backend/src/pharmacy/pharmacy-orders.spec.ts
+- backend/src/agent/agent.service.ts
+- backend/src/agent/agent-card.spec.ts
+- backend/src/customer/customer.service.ts
+- backend/src/customer/customer.service.spec.ts
+- backend/src/auth/auth.service.ts
+- backend/src/auth/auth-phone-identity.spec.ts
+- backend/src/auth/provider-scope.service.ts
+
+### Verification
+- npx tsc --noEmit and npx nest build passed with exit code 0.
+- 7/7 backend Jest test suites passed (35/35 tests).
+- flutter analyze on portal, customer, and shared packages passed with 0 issues.
+- flutter test test/shared/customer_cart_service_test.dart passed (3/3 tests).
+- git diff --check passed cleanly.
+- No production database mutation, deployment, browser automation, or physical device test was run.

@@ -220,6 +220,24 @@ export class ProviderScopeService {
     }
   }
 
+  async assertProviderCanAccessPurchase(
+    purchaseId: bigint,
+    principal?: ShieldPrincipal,
+  ) {
+    if (!this.isProviderPrincipal(principal)) {
+      return;
+    }
+
+    const count = await this.prisma.purchase.count({
+      where: this.scopePurchaseWhere({ id: purchaseId }, principal),
+    });
+    if (count === 0) {
+      throw new ForbiddenException(
+        'You are not authorized to access this purchase or order.',
+      );
+    }
+  }
+
   async assertProviderCanAccessDocument(
     documentId: bigint,
     principal?: ShieldPrincipal,
@@ -258,24 +276,6 @@ export class ProviderScopeService {
       );
     }
     await this.assertProviderCanAccessCustomer(notification.customerId, principal);
-  }
-
-  async assertProviderCanAccessPurchase(
-    purchaseId: bigint,
-    principal?: ShieldPrincipal,
-  ) {
-    if (!this.isProviderPrincipal(principal)) {
-      return;
-    }
-
-    const count = await this.prisma.purchase.count({
-      where: this.scopePurchaseWhere({ id: purchaseId }, principal),
-    });
-    if (count === 0) {
-      throw new ForbiddenException(
-        'You are not authorized to access this invoice.',
-      );
-    }
   }
 
   async assertProviderCanAccessWalletByCustomer(

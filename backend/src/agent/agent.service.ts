@@ -1453,6 +1453,6 @@ export class AgentService {
     if (principal?.principalType !== 'USER' || !principal.userId) {
       throw new UnauthorizedException('Authorized staff user context is required.');
     }
-    return this.customerService.approve(customerId, BigInt(principal.userId));
+    return this.customerService.issueDigitalMembershipCard(customerId, BigInt(principal.userId));
   }
 }

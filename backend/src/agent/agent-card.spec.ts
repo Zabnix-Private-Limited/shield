@@ -94,11 +94,11 @@ describe('AgentService Card Requests & Digital Card Issuance', () => {
   });
 
   describe('issueCustomerCard', () => {
-    it('calls customerService.approve to issue digital card idempotently', async () => {
-      customerService.approve.mockResolvedValue({
-        id: 10n,
-        status: 'APPROVED',
-        shieldCard: { cardNumber: 'CARD-100' },
+    it('calls customerService.issueDigitalMembershipCard to issue digital card without broad approval side effects', async () => {
+      customerService.issueDigitalMembershipCard = jest.fn().mockResolvedValue({
+        id: 100n,
+        cardNumber: 'SHLD-CARD-100',
+        status: 'ACTIVE',
       });
 
       const result = await service.issueCustomerCard(10n, {
@@ -107,7 +107,7 @@ describe('AgentService Card Requests & Digital Card Issuance', () => {
       } as any);
 
       expect(agentScopeService.assertAgentCanAccessCustomer).toHaveBeenCalledWith(10n, expect.anything());
-      expect(customerService.approve).toHaveBeenCalledWith(10n, 5n);
+      expect(customerService.issueDigitalMembershipCard).toHaveBeenCalledWith(10n, 5n);
       expect(result).toBeDefined();
     });
 

@@ -72,8 +72,13 @@ export class AuthService {
     }
 
     const digitsOnly = rawMobile.replace(/\D/g, '').slice(-10);
+    if (!digitsOnly || digitsOnly.length < 10) {
+      throw new UnauthorizedException(
+        'A valid 10-digit mobile number is required.',
+      );
+    }
 
-    let customer = await this.prisma.customer.findFirst({
+    const candidates = await this.prisma.customer.findMany({
       where: {
         deletedAt: null,
         mobile: { endsWith: digitsOnly },
@@ -87,6 +92,14 @@ export class AuthService {
         firebaseUid: true,
       },
     });
+
+    if (candidates.length > 1) {
+      throw new UnauthorizedException(
+        'Multiple customer accounts found matching phone number. Access rejected.',
+      );
+    }
+
+    let customer = candidates.length === 1 ? candidates[0] : null;
 
     if (!customer && decoded.uid) {
       const byUid = await this.prisma.customer.findFirst({
@@ -105,7 +118,7 @@ export class AuthService {
       });
       if (byUid) {
         const uidDigits = (byUid.mobile ?? '').replace(/\D/g, '').slice(-10);
-        if (!uidDigits || uidDigits === digitsOnly) {
+        if (uidDigits === digitsOnly) {
           customer = byUid;
         }
       }

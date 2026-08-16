@@ -51,6 +51,12 @@ final GoRouter router = GoRouter(
         location == '/';
     final customerSessionInitializing =
         !CustomerAuthSession.instance.isInitialized;
+    final isPublicCatalogueRoute =
+        location == '/portal/customer/wellness-products' ||
+        location.startsWith('/portal/customer/wellness-products/') ||
+        location == '/wellness-products' ||
+        location.startsWith('/wellness-products/');
+
     const publicLocations = {
       '/',
       '/customer/splash',
@@ -60,7 +66,8 @@ final GoRouter router = GoRouter(
       '/internal/login',
       '/session-expired',
     };
-    final isPublicLocation = publicLocations.contains(location);
+    final isPublicLocation =
+        publicLocations.contains(location) || isPublicCatalogueRoute;
     if (authNotice.hasNotice && location != '/session-expired') {
       final kind = authNotice.sessionKind == ShieldSessionKind.internal
           ? 'internal'

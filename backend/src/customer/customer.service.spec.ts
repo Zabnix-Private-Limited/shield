@@ -21,6 +21,9 @@ describe('CustomerService alternative contacts', () => {
       deleteMany: jest.fn(),
     },
     auditLog: { create: jest.fn() },
+    shieldCard: { findFirst: jest.fn(), create: jest.fn() },
+    user: { findUnique: jest.fn() },
+    cardRequest: { updateMany: jest.fn() },
     $transaction: jest.fn(),
   };
   const service = new CustomerService(
@@ -266,5 +269,53 @@ describe('CustomerService alternative contacts', () => {
         data: expect.objectContaining({ status: 'REJECTED', reviewedBy: 7n }),
       }),
     );
+  });
+
+  describe('issueDigitalMembershipCard', () => {
+    it('creates ShieldCard and completes CardRequest without updating customer status or dates', async () => {
+      prisma.customer.findUnique.mockImplementation((args: any) => {
+        return Promise.resolve({
+          id: 11n,
+          customerCode: 'CUST-123456',
+          status: 'ACTIVE',
+        });
+      });
+      prisma.shieldCard = {
+        findFirst: jest.fn().mockResolvedValue(null),
+        create: jest.fn().mockResolvedValue({
+          id: 101n,
+          cardNumber: 'SHLD-CARD-123456',
+          status: 'ACTIVE',
+        }),
+      };
+      prisma.user = {
+        findUnique: jest.fn().mockResolvedValue({ id: 7n, department: { businessId: 1n } }),
+      };
+      prisma.cardRequest = {
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+      };
+
+      const card = await service.issueDigitalMembershipCard(11n, 7n);
+
+      expect(card).toBeDefined();
+      expect(prisma.shieldCard.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            customerId: 11n,
+            status: 'ACTIVE',
+          }),
+        }),
+      );
+      expect(prisma.cardRequest.updateMany).toHaveBeenCalledWith({
+        where: { customerId: 11n, status: 'REQUESTED' },
+        data: expect.objectContaining({
+          status: 'ISSUED',
+          reviewedBy: 7n,
+        }),
+      });
+
+      // INVARIANT: Customer status, activationDate, expiryDate, approvedBy must NOT be mutated by card issuance
+      expect(prisma.customer.update).not.toHaveBeenCalled();
+    });
   });
 });
