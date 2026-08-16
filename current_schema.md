@@ -169,7 +169,9 @@ CREATE TABLE "card_requests" (
 	"reviewed_by" bigint,
 	"requested_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"reviewed_at" timestamp with time zone,
-	"remarks" text
+	"remarks" text,
+	"request_kind" varchar(50) DEFAULT 'PHYSICAL' NOT NULL,
+	CONSTRAINT "chk_card_requests_kind" CHECK (((request_kind)::text = ANY ((ARRAY['DIGITAL'::character varying, 'PHYSICAL'::character varying])::text[])))
 );
 CREATE TABLE "cash_wallet_transactions" (
 	"id" bigserial PRIMARY KEY,
@@ -935,6 +937,7 @@ CREATE UNIQUE INDEX "businesses_uuid_key" ON "businesses" ("uuid");
 CREATE UNIQUE INDEX "card_requests_pkey" ON "card_requests" ("id");
 CREATE UNIQUE INDEX "card_requests_uuid_key" ON "card_requests" ("uuid");
 CREATE INDEX "idx_card_requests_customer" ON "card_requests" ("customer_id","status");
+CREATE INDEX "idx_card_requests_kind" ON "card_requests" ("customer_id","request_kind");
 CREATE UNIQUE INDEX "cash_wallet_transactions_pkey" ON "cash_wallet_transactions" ("id");
 CREATE UNIQUE INDEX "cash_wallet_transactions_uuid_key" ON "cash_wallet_transactions" ("uuid");
 CREATE INDEX "idx_cash_wallet_transactions_date" ON "cash_wallet_transactions" ("created_at");
@@ -1060,6 +1063,7 @@ CREATE UNIQUE INDEX "purchase_items_pkey" ON "purchase_items" ("id");
 CREATE INDEX "idx_purchases_appointment" ON "purchases" ("appointment_id");
 CREATE INDEX "idx_purchases_kind" ON "purchases" ("purchase_kind");
 CREATE INDEX "idx_purchases_payment_status" ON "purchases" ("payment_status");
+CREATE UNIQUE INDEX "purchases_customer_invoice_key" ON "purchases" ("customer_id","invoice_number");
 CREATE UNIQUE INDEX "purchases_pkey" ON "purchases" ("id");
 CREATE UNIQUE INDEX "purchases_uuid_key" ON "purchases" ("uuid");
 CREATE INDEX "idx_referral_reward_events_referrer" ON "referral_reward_events" ("referrer_customer_id");
