@@ -49,6 +49,8 @@ final GoRouter router = GoRouter(
         location.startsWith('/customer/') ||
         location.startsWith('/portal/customer') ||
         location == '/';
+    final customerSessionInitializing =
+        !CustomerAuthSession.instance.isInitialized;
     const publicLocations = {
       '/',
       '/customer/splash',
@@ -64,6 +66,15 @@ final GoRouter router = GoRouter(
           ? 'internal'
           : 'customer';
       return '/session-expired?kind=$kind';
+    }
+
+    // A cold-start deep link must wait for secure-storage restoration. Without
+    // this guard GoRouter can treat the temporary INITIALIZING state as an
+    // unauthenticated customer and flash the OTP entry route.
+    if (customerSessionInitializing &&
+        isCustomerPortal &&
+        location != '/customer/splash') {
+      return '/customer/splash';
     }
 
     if (isAuthenticated &&

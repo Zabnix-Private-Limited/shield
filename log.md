@@ -12439,3 +12439,25 @@ est build compilation.
 - npx nest build passed.
 - git diff --check passed.
 - flutter analyze broad Agent Customer 360 reports one existing deprecated form-field API information item; that screen is out of the owner-locked scope and was not changed.
+## 119. Customer persistent session restore hardening (2026-08-16 00:15:00 IST)
+
+- Audited the Customer Portal startup, refresh, router, secure-storage and backend refresh-session contracts after reports that reopening the app forced OTP.
+- The customer session initializer previously cleared durable credentials whenever the profile validation request failed, including temporary network, timeout, rate-limit and 5xx failures. It also could not restore a valid refresh credential when the access token was absent after an interrupted write.
+- Session restoration now accepts access-or-refresh state, restores directly from the refresh credential when necessary, and retains the durable session for temporary failures. Storage is cleared only for an explicit sign-out or a definitive refresh-token 401 response.
+- Added a single encrypted session snapshot as the atomic recovery point for login and refresh-token rotation while preserving the established individual secure-storage keys for compatibility. The snapshot is written before mirrored keys, so an interrupted rotation can still restore the new valid token set.
+- Added safe diagnostics with state/status only; no token, mobile number or customer payload is logged. Customer deep links now remain on the splash gate until secure storage restoration is complete, preventing an OTP-login flash.
+
+### Frontend Files
+- frontend/lib/shared/services/customer_auth_session.dart
+- frontend/lib/app/routes/app_router.dart
+
+### Backend Contract Verified
+- backend/src/auth/auth.service.ts
+- backend/src/auth/auth.session.spec.ts
+
+### Verification
+- flutter analyze lib/shared/services/customer_auth_session.dart lib/app/routes/app_router.dart passed.
+- flutter test test/customer_membership_screen_test.dart test/customer_wallet_screen_test.dart passed: 10 tests.
+- npx jest src/auth/auth.session.spec.ts --runInBand passed: 3 tests.
+- git diff --check passed.
+- No live browser, device, database mutation, deployment or production request was run. Remaining external gate: authenticated customer restart/offline/device UAT after deployment.

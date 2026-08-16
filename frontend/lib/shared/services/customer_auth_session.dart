@@ -1,3 +1,6 @@
+import 'dart:convert';
+
+import 'package:dio/dio.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
@@ -20,6 +23,9 @@ class CustomerAuthSession extends ChangeNotifier {
   static const _refreshTokenKey = 'customer_refresh_token';
   static const _mobileKey = 'customer_mobile';
   static const _customerIdKey = 'customer_id';
+  // A single secure-storage record gives refresh-token rotation an atomic
+  // recovery point while the established individual keys remain compatible.
+  static const _sessionSnapshotKey = 'customer_auth_session_v1';
 
   bool _initialized = false;
   bool _isAuthenticated = false;
@@ -27,6 +33,7 @@ class CustomerAuthSession extends ChangeNotifier {
   String? _refreshToken;
   String? _mobile;
   String? _customerId;
+  bool _lastRefreshWasAuthInvalid = false;
 
   bool get isInitialized => _initialized;
   bool get isAuthenticated => _isAuthenticated;
@@ -34,6 +41,7 @@ class CustomerAuthSession extends ChangeNotifier {
   String? get customerId => _customerId;
 
   Future<void> initialize() async {
+    debugPrint('CUSTOMER_SESSION_RESTORE_STARTED');
     ApiService.configureAuthHandlers(
       onRefreshToken: _refreshAccessToken,
       onSessionExpired: _handleSessionExpired,
@@ -44,27 +52,51 @@ class CustomerAuthSession extends ChangeNotifier {
     }
 
     final values = await _storage.readAll();
-    _accessToken = values[_accessTokenKey]?.trim();
-    _refreshToken = values[_refreshTokenKey]?.trim();
-    _mobile = values[_mobileKey]?.trim();
-    _customerId = values[_customerIdKey]?.trim();
+    final snapshot = _readSessionSnapshot(values[_sessionSnapshotKey]);
+    _accessToken =
+        snapshot[_accessTokenKey]?.trim() ?? values[_accessTokenKey]?.trim();
+    _refreshToken =
+        snapshot[_refreshTokenKey]?.trim() ?? values[_refreshTokenKey]?.trim();
+    _mobile = snapshot[_mobileKey]?.trim() ?? values[_mobileKey]?.trim();
+    _customerId =
+        snapshot[_customerIdKey]?.trim() ?? values[_customerIdKey]?.trim();
+    debugPrint(
+      'CUSTOMER_SESSION_STORAGE_FOUND access=${_accessToken?.isNotEmpty == true} refresh=${_refreshToken?.isNotEmpty == true} customer=${_customerId?.isNotEmpty == true}',
+    );
 
     final activeKind = await ActiveAuthSession.getActiveKind();
     final canRestore =
         activeKind == null || activeKind == ShieldSessionKind.customer;
-    if (canRestore && _accessToken != null && _accessToken!.isNotEmpty) {
-      ApiService.setAccessToken(_accessToken!);
+    final hasAccess = _accessToken?.isNotEmpty == true;
+    final hasRefresh = _refreshToken?.isNotEmpty == true;
+    if (canRestore && (hasAccess || hasRefresh)) {
+      if (hasAccess) {
+        ApiService.setAccessToken(_accessToken!);
+        debugPrint('CUSTOMER_ACCESS_STAGED');
+      }
       ApiService.setActiveCustomerId(_customerId);
 
-      final validated = await _validateOrRefreshSession();
-      if (!validated) {
-        await _clearSessionStorage(notify: false);
-      } else if (activeKind == null) {
+      final validated = hasAccess
+          ? await _validateOrRefreshSession()
+          : await _restoreFromRefreshToken();
+      if (!validated && _lastRefreshWasAuthInvalid) {
+        await _clearSessionStorage(notify: false, reason: 'auth_invalid');
+      } else if (validated || hasRefresh) {
+        // Retain the durable session on temporary backend/network failures. A
+        // subsequent protected request can retry the existing single-flight
+        // refresh instead of forcing an OTP journey.
+        _isAuthenticated = true;
+        debugPrint('CUSTOMER_SESSION_RETAINED');
+      }
+      if (_isAuthenticated && activeKind == null) {
         await ActiveAuthSession.setActiveKind(ShieldSessionKind.customer);
       }
     }
 
     _initialized = true;
+    debugPrint(
+      'CUSTOMER_SESSION_RESTORE_COMPLETE authenticated=$_isAuthenticated',
+    );
     notifyListeners();
   }
 
@@ -99,18 +131,7 @@ class CustomerAuthSession extends ChangeNotifier {
     ApiService.setActiveCustomerId(_customerId);
     await ActiveAuthSession.setActiveKind(ShieldSessionKind.customer);
 
-    if (_accessToken != null) {
-      await _storage.write(key: _accessTokenKey, value: _accessToken);
-    }
-    if (_refreshToken != null) {
-      await _storage.write(key: _refreshTokenKey, value: _refreshToken);
-    }
-    if (_mobile != null && _mobile!.isNotEmpty) {
-      await _storage.write(key: _mobileKey, value: _mobile);
-    }
-    if (_customerId != null && _customerId!.isNotEmpty) {
-      await _storage.write(key: _customerIdKey, value: _customerId);
-    }
+    await _persistSessionValues();
 
     notifyListeners();
   }
@@ -159,12 +180,23 @@ class CustomerAuthSession extends ChangeNotifier {
       await ApiService.getAuthenticatedProfile();
       _isAuthenticated = true;
       return true;
-    } catch (_) {
+    } catch (error) {
       // ApiService owns the single-flight refresh and one authenticated retry.
       // A second manual refresh/profile cycle here previously duplicated /auth/me
       // traffic after an expired or rejected access token.
+      if (_isTransientFailure(error)) {
+        debugPrint(
+          'CUSTOMER_REFRESH_TRANSIENT_FAILURE status=${_statusCode(error)}',
+        );
+        return false;
+      }
       return false;
     }
+  }
+
+  Future<bool> _restoreFromRefreshToken() async {
+    final token = await _refreshAccessToken();
+    return token != null && token.isNotEmpty;
   }
 
   Future<String?> _refreshAccessToken() async {
@@ -174,6 +206,8 @@ class CustomerAuthSession extends ChangeNotifier {
       return null;
     }
 
+    _lastRefreshWasAuthInvalid = false;
+    debugPrint('CUSTOMER_REFRESH_STARTED');
     try {
       final payload = await ApiService.refreshSession(
         refreshToken,
@@ -204,20 +238,30 @@ class CustomerAuthSession extends ChangeNotifier {
         await CustomerCacheService.clearForCustomer(previousCustomerId);
       }
 
-      await _storage.write(key: _accessTokenKey, value: _accessToken);
-      await _storage.write(key: _refreshTokenKey, value: _refreshToken);
-      if (_customerId != null && _customerId!.isNotEmpty) {
-        await _storage.write(key: _customerIdKey, value: _customerId);
-      }
-      if (_mobile != null && _mobile!.isNotEmpty) {
-        await _storage.write(key: _mobileKey, value: _mobile);
-      }
+      // Persist the rotated refresh token with the related session values as
+      // one secure-storage operation, before reporting refresh success.
+      await _persistSessionValues();
       await ActiveAuthSession.setActiveKind(ShieldSessionKind.customer);
 
+      debugPrint('CUSTOMER_REFRESH_SUCCESS');
       notifyListeners();
       return _accessToken;
-    } catch (_) {
-      return null;
+    } catch (error) {
+      _lastRefreshWasAuthInvalid = _isDefinitiveAuthInvalid(error);
+      if (_lastRefreshWasAuthInvalid) {
+        debugPrint(
+          'CUSTOMER_REFRESH_AUTH_INVALID status=${_statusCode(error)}',
+        );
+      } else {
+        debugPrint(
+          'CUSTOMER_REFRESH_TRANSIENT_FAILURE status=${_statusCode(error)}',
+        );
+      }
+      // A failed refresh is not automatically an invalid session. Returning
+      // the staged token prevents the interceptor from clearing durable
+      // credentials on a timeout, rate-limit, or backend outage; the retried
+      // request will still surface its own failure to the caller.
+      return _lastRefreshWasAuthInvalid ? null : _accessToken;
     }
   }
 
@@ -227,13 +271,81 @@ class CustomerAuthSession extends ChangeNotifier {
       message:
           'Your SHIELD member session expired or is no longer valid. Please sign in again to continue securely.',
     );
-    await _clearSessionStorage();
+    await _clearSessionStorage(reason: 'session_expired');
     try {
       await FirebaseAuth.instance.signOut();
     } catch (_) {}
   }
 
-  Future<void> _clearSessionStorage({bool notify = true}) async {
+  bool _isDefinitiveAuthInvalid(Object error) =>
+      error is DioException && error.response?.statusCode == 401;
+
+  bool _isTransientFailure(Object error) {
+    if (error is! DioException) return false;
+    if (error.type == DioExceptionType.connectionTimeout ||
+        error.type == DioExceptionType.sendTimeout ||
+        error.type == DioExceptionType.receiveTimeout ||
+        error.type == DioExceptionType.connectionError) {
+      return true;
+    }
+    return const {
+      408,
+      429,
+      500,
+      502,
+      503,
+      504,
+    }.contains(error.response?.statusCode);
+  }
+
+  int? _statusCode(Object error) =>
+      error is DioException ? error.response?.statusCode : null;
+
+  Future<void> _persistSessionValues() async {
+    final values = <String, String>{};
+    if (_accessToken?.isNotEmpty == true) {
+      values[_accessTokenKey] = _accessToken!;
+    }
+    if (_refreshToken?.isNotEmpty == true) {
+      values[_refreshTokenKey] = _refreshToken!;
+    }
+    if (_mobile?.isNotEmpty == true) {
+      values[_mobileKey] = _mobile!;
+    }
+    if (_customerId?.isNotEmpty == true) {
+      values[_customerIdKey] = _customerId!;
+    }
+    // flutter_secure_storage 9.x does not offer writeAll. Store the complete
+    // session first in one encrypted record, then mirror the established keys
+    // for compatibility with older installs. If the process stops midway, the
+    // snapshot still has the complete, rotated credential set.
+    await _storage.write(key: _sessionSnapshotKey, value: jsonEncode(values));
+    for (final entry in values.entries) {
+      await _storage.write(key: entry.key, value: entry.value);
+    }
+  }
+
+  Map<String, String> _readSessionSnapshot(String? rawValue) {
+    if (rawValue == null || rawValue.trim().isEmpty) {
+      return const <String, String>{};
+    }
+    try {
+      final decoded = jsonDecode(rawValue);
+      if (decoded is! Map) return const <String, String>{};
+      return decoded.map(
+        (key, value) => MapEntry(key.toString(), value.toString().trim()),
+      );
+    } catch (_) {
+      debugPrint('CUSTOMER_SESSION_SNAPSHOT_INVALID');
+      return const <String, String>{};
+    }
+  }
+
+  Future<void> _clearSessionStorage({
+    bool notify = true,
+    String reason = 'explicit_logout',
+  }) async {
+    debugPrint('CUSTOMER_SESSION_CLEARED reason=$reason');
     final previousCustomerId = _customerId;
     _isAuthenticated = false;
     _accessToken = null;
@@ -254,6 +366,7 @@ class CustomerAuthSession extends ChangeNotifier {
     await _storage.delete(key: _refreshTokenKey);
     await _storage.delete(key: _mobileKey);
     await _storage.delete(key: _customerIdKey);
+    await _storage.delete(key: _sessionSnapshotKey);
 
     if (notify) {
       notifyListeners();
