@@ -1394,4 +1394,65 @@ export class AgentService {
       },
     };
   }
+
+  async listCardRequests(principal?: ShieldPrincipal) {
+    const context = await this.requireAgentContext(principal);
+    const customers = await this.prisma.customer.findMany({
+      where: {
+        agentCode: context.agentCode,
+        deletedAt: null,
+      },
+      select: {
+        id: true,
+        uuid: true,
+        customerCode: true,
+        firstName: true,
+        lastName: true,
+        mobile: true,
+        status: true,
+        membership: true,
+        shieldCard: true,
+      },
+    });
+    if (customers.length === 0) return [];
+    const customerMap = new Map(customers.map((c) => [c.id.toString(), c]));
+
+    const requests = await this.prisma.cardRequest.findMany({
+      where: {
+        customerId: { in: Array.from(customerMap.keys()).map((id) => BigInt(id)) },
+      },
+      orderBy: [{ requestedAt: 'desc' }, { id: 'desc' }],
+    });
+
+    return requests.map((req) => {
+      const cust = customerMap.get(req.customerId.toString());
+      return {
+        id: req.id.toString(),
+        uuid: req.uuid,
+        status: req.status,
+        requestedAt: req.requestedAt,
+        reviewedAt: req.reviewedAt,
+        remarks: req.remarks,
+        customer: cust
+          ? {
+              id: cust.id.toString(),
+              uuid: cust.uuid,
+              customerCode: cust.customerCode,
+              name: `${cust.firstName} ${cust.lastName}`.trim(),
+              mobile: cust.mobile,
+              membershipStatus: cust.membership?.status ?? 'NONE',
+              hasDigitalCard: cust.shieldCard != null,
+            }
+          : null,
+      };
+    });
+  }
+
+  async issueCustomerCard(customerId: bigint, principal?: ShieldPrincipal) {
+    await this.agentScopeService.assertAgentCanAccessCustomer(customerId, principal);
+    if (principal?.principalType !== 'USER' || !principal.userId) {
+      throw new UnauthorizedException('Authorized staff user context is required.');
+    }
+    return this.customerService.approve(customerId, BigInt(principal.userId));
+  }
 }

@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Put, Query } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, Put, Query } from '@nestjs/common';
 import type { ShieldPrincipal } from '../auth/auth.types';
 import { CurrentPrincipal } from '../auth/current-principal.decorator';
 import { RequirePermissions } from '../auth/permissions.decorator';
@@ -15,6 +15,32 @@ export class AgentController {
       success: true,
       message: 'Agent workspace retrieved successfully.',
       data: await this.agentService.getWorkspace(principal),
+    };
+  }
+
+  @RequirePermissions('agent.customer.view')
+  @Get('card-requests')
+  async listCardRequests(@CurrentPrincipal() principal?: ShieldPrincipal) {
+    return {
+      success: true,
+      message: 'Agent customer card requests retrieved successfully.',
+      data: await this.agentService.listCardRequests(principal),
+    };
+  }
+
+  @RequirePermissions('customers.approve')
+  @Post('customers/:customerId/issue-card')
+  async issueCustomerCard(
+    @Param('customerId') customerId: string,
+    @CurrentPrincipal() principal?: ShieldPrincipal,
+  ) {
+    return {
+      success: true,
+      message: 'Digital membership card issued successfully.',
+      data: await this.agentService.issueCustomerCard(
+        BigInt(customerId),
+        principal,
+      ),
     };
   }
 

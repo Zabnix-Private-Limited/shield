@@ -5,6 +5,7 @@ import {
   ForbiddenException,
   Get,
   Param,
+  Patch,
   Post,
   Query,
 } from '@nestjs/common';
@@ -284,6 +285,59 @@ export class PharmacyController {
       data: await this.pharmacyService.getCustomerOrder(
         this.requireCustomer(principal),
         this.parseId(id, 'Order ID'),
+      ),
+    };
+  }
+
+  @RequirePermissions('customers.view')
+  @Post('customer/orders')
+  async createCustomerOrder(
+    @Body() body: any,
+    @CurrentPrincipal() principal?: ShieldPrincipal,
+  ) {
+    const customerId = this.requireCustomer(principal);
+    const order = await this.pharmacyService.createCustomerOrder({
+      customerId,
+      providerId: this.parseId(body.provider_id, 'Pharmacy provider ID'),
+      items: body.items,
+      deliveryAddress: body.delivery_address,
+      customerNotes: body.customer_notes,
+      idempotencyKey: body.idempotency_key,
+    });
+    return {
+      success: true,
+      message: 'Order submitted to the selected pharmacy.',
+      data: order,
+    };
+  }
+
+  @RequirePermissions('providers.view')
+  @Get('pharmacy/orders')
+  async listPharmacyOrders(@CurrentPrincipal() principal?: ShieldPrincipal) {
+    return {
+      success: true,
+      message: 'Pharmacy order queue retrieved.',
+      data: await this.pharmacyService.listPharmacyOrders(principal),
+    };
+  }
+
+  @RequirePermissions('providers.update')
+  @Patch('pharmacy/orders/:id/status')
+  async updateOrderStatus(
+    @Param('id') id: string,
+    @Body() body: { status: string },
+    @CurrentPrincipal() principal?: ShieldPrincipal,
+  ) {
+    if (!body.status?.trim()) {
+      throw new BadRequestException('Status is required.');
+    }
+    return {
+      success: true,
+      message: 'Order status updated successfully.',
+      data: await this.pharmacyService.updateOrderStatus(
+        this.parseId(id, 'Order ID'),
+        body.status,
+        principal,
       ),
     };
   }

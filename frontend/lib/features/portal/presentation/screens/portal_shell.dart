@@ -3697,6 +3697,8 @@ class _CustomerProfilePortalViewState
                         children: [
                           Text(
                             customer.fullName.toUpperCase(),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                             style: AppTypography.body.copyWith(
                               color: AppColors.white,
                               fontWeight: FontWeight.w700,
@@ -6139,7 +6141,7 @@ class _CustomerNotificationsViewState
           );
         }
 
-        if (snapshot.hasError || !snapshot.hasData) {
+        if (snapshot.hasError) {
           return AppCard(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,

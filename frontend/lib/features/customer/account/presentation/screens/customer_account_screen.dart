@@ -277,8 +277,7 @@ class _CustomerAccountScreenState extends ConsumerState<CustomerAccountScreen>
                     ),
                     _PharmacyList(
                       pharmacies: data.pharmacies.value ?? const [],
-                      loadError:
-                          data.pharmacies.error ?? data.preferredProvider.error,
+                      loadError: data.pharmacies.error,
                       selectedId: data.preferredProvider.value?['id']
                           ?.toString(),
                       onSelect: _setPreferredProvider,

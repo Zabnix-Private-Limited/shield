@@ -23,9 +23,8 @@ class CustomerAuthSession extends ChangeNotifier {
   static const _refreshTokenKey = 'customer_refresh_token';
   static const _mobileKey = 'customer_mobile';
   static const _customerIdKey = 'customer_id';
-  // A single secure-storage record gives refresh-token rotation an atomic
-  // recovery point while the established individual keys remain compatible.
   static const _sessionSnapshotKey = 'customer_auth_session_v1';
+  static const _pendingReferralCodeKey = 'pending_referral_code';
 
   bool _initialized = false;
   bool _isAuthenticated = false;
@@ -33,12 +32,34 @@ class CustomerAuthSession extends ChangeNotifier {
   String? _refreshToken;
   String? _mobile;
   String? _customerId;
+  String? _pendingReferralCode;
   bool _lastRefreshWasAuthInvalid = false;
 
   bool get isInitialized => _initialized;
   bool get isAuthenticated => _isAuthenticated;
   String? get mobile => _mobile;
   String? get customerId => _customerId;
+  String? get pendingReferralCode => _pendingReferralCode;
+
+  Future<void> setPendingReferralCode(String code) async {
+    final cleaned = code.trim();
+    if (cleaned.isEmpty) return;
+    _pendingReferralCode = cleaned;
+    await _storage.write(key: _pendingReferralCodeKey, value: cleaned);
+    notifyListeners();
+  }
+
+  Future<String?> getPendingReferralCode() async {
+    if (_pendingReferralCode != null) return _pendingReferralCode;
+    _pendingReferralCode = await _storage.read(key: _pendingReferralCodeKey);
+    return _pendingReferralCode;
+  }
+
+  Future<void> clearPendingReferralCode() async {
+    _pendingReferralCode = null;
+    await _storage.delete(key: _pendingReferralCodeKey);
+    notifyListeners();
+  }
 
   Future<void> initialize() async {
     debugPrint('CUSTOMER_SESSION_RESTORE_STARTED');

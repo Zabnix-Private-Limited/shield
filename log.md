@@ -12516,3 +12516,63 @@ est build compilation.
 - npx tsc --noEmit passed.
 - npx jest customer service and customer-membership controller passed: 18 tests.
 - No migration, deployment, database write, browser or device test was run.
+## 123. Customer Portal and Agent Membership source completion & identity binding remediation (2026-08-16 13:30:00 IST)
+
+- Resumed implementation following usage-limit checkpoint and completed all remaining Customer Portal and Agent Membership/Card management source requirements.
+- Customer Phone OTP authentication now strictly resolves customer identity matching the verified phone number, preventing stale account bindings or identity mismatches on re-authentication.
+- Customer profile header renders customer full name with single-line truncation (maxLines: 1, overflow: TextOverflow.ellipsis), maintaining responsive layout on compact screens (~400px).
+- Fixed Customer Notifications FutureBuilder error handler where !snapshot.hasData was falsely evaluated against Future<void>, eliminating the false Notifications unavailable card display on successful response.
+- Fixed Pharmacy tab error handling in Customer Account screen so an unselected or absent preferred pharmacy preference does not render a section failure card.
+- Implemented Agent digital membership card management endpoints (GET /agents/card-requests, POST /agents/customers/:id/issue-card) with strict AgentScope verification and idempotent card issuance via customerService.approve.
+- Implemented Customer wellness order submission (POST /customer/orders) with client request idempotency key protection, and added pharmacy queue endpoints (GET /pharmacy/orders, PATCH /pharmacy/orders/:id/status) with ProviderScope enforcement.
+
+### Frontend Files
+- frontend/lib/features/portal/presentation/screens/portal_shell.dart
+- frontend/lib/features/customer/account/presentation/screens/customer_account_screen.dart
+
+### Backend Files
+- backend/src/auth/auth.service.ts
+- backend/src/agent/agent.service.ts
+- backend/src/agent/agent.controller.ts
+- backend/src/pharmacy/pharmacy.service.ts
+- backend/src/pharmacy/pharmacy.controller.ts
+
+### Verification
+- flutter analyze lib/features/portal lib/features/customer passed with 0 issues.
+- backend npx jest src/agent/agent.service.spec.ts src/customer/customer.service.spec.ts src/pharmacy/pharmacy.service.spec.ts src/auth/auth.session.spec.ts passed: 17 tests.
+- backend npx tsc --noEmit passed.
+- git diff --check passed.
+- No live database mutation, deployment, or production request was executed.
+
+## 124. Final Pre-Deployment Source Verification & Defect-Fix Pass (2026-08-16 14:01:00 IST)
+
+- Continued implementation under scope lock for SHIELD Customer Portal + Agent Membership/Card Management using Gemini Flash.
+- Source-audited Customer Auth & Phone OTP identity binding, confirming strict phone number matching (mobile: { endsWith: digitsOnly }) before firebaseUid fallback to prevent identity desynchronization.
+- Verified Customer self-service scope across API controllers, confirming principal.customerId derivation and 0 hardcoded test/demo Customer IDs in production Flutter routes.
+- Updated PharmacyService.updateOrderStatus to update orderStatus and paymentStatus in sync, ensuring semantic safety across fulfillment status transitions (REQUESTED, ACCEPTED, PROCESSING, READY, COMPLETED, CANCELLED).
+- Created and executed expanded backend Jest test suites (pharmacy-orders.spec.ts, agent-card.spec.ts, auth-phone-identity.spec.ts), testing customer order creation, idempotency, pharmacy status updates, agent card requests/issuance, and verified phone identity matching.
+- Created CustomerCartService unit tests in frontend/test/shared/customer_cart_service_test.dart for guest cart calculations, serialization, and quantity management.
+
+### Frontend Files (Created / Modified)
+- frontend/lib/shared/services/customer_cart_service.dart
+- frontend/lib/shared/services/api_service.dart
+- frontend/lib/shared/services/customer_auth_session.dart
+- frontend/test/shared/customer_cart_service_test.dart
+
+### Backend Files (Created / Modified)
+- backend/src/pharmacy/pharmacy.service.ts
+- backend/src/pharmacy/pharmacy.controller.ts
+- backend/src/agent/agent.service.ts
+- backend/src/agent/agent.controller.ts
+- backend/src/auth/auth.service.ts
+- backend/src/pharmacy/pharmacy-orders.spec.ts
+- backend/src/agent/agent-card.spec.ts
+- backend/src/auth/auth-phone-identity.spec.ts
+
+### Verification
+- npx tsc --noEmit and npx nest build passed with exit code 0.
+- 7/7 backend Jest test suites passed (31/31 tests).
+- flutter analyze on portal, customer, and shared packages passed with 0 issues.
+- flutter test test/shared/customer_cart_service_test.dart passed (3/3 tests).
+- git diff --check passed cleanly.
+- No production database mutation, deployment, browser automation, or physical device test was run.

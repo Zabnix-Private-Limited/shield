@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { randomUUID } from 'crypto';
@@ -478,5 +479,131 @@ export class PharmacyService {
     });
     if (!purchase) throw new NotFoundException('Order not found.');
     return this.customerOrderProjection(purchase);
+  }
+
+  async createCustomerOrder(data: {
+    customerId: bigint;
+    providerId: bigint;
+    items: Array<{ productId: bigint; quantity: number }>;
+    deliveryAddress?: string;
+    customerNotes?: string;
+    idempotencyKey?: string;
+  }) {
+    if (!data.items || data.items.length === 0) {
+      throw new BadRequestException('At least one item is required to place an order.');
+    }
+
+    const provider = await this.prisma.serviceProvider.findUnique({
+      where: { id: data.providerId },
+    });
+    if (!provider || provider.status !== 'ACTIVE') {
+      throw new BadRequestException('Selected pharmacy provider is unavailable.');
+    }
+
+    const idempotencyKey = (data.idempotencyKey ?? '').trim();
+    if (idempotencyKey) {
+      const existing = await this.prisma.purchase.findFirst({
+        where: {
+          customerId: data.customerId,
+          invoiceNumber: `ORD-KEY-${idempotencyKey.slice(0, 40)}`,
+        },
+        include: this.customerOrderInclude(),
+      });
+      if (existing) {
+        return this.customerOrderProjection(existing);
+      }
+    }
+
+    const productIds = data.items.map((i) => BigInt(i.productId));
+    const products = await this.prisma.product.findMany({
+      where: { id: { in: productIds } },
+    });
+    const productMap = new Map(products.map((p) => [p.id.toString(), p]));
+
+    let calculatedTotal = 0;
+    const itemsMapped = data.items.map((item) => {
+      const prod = productMap.get(item.productId.toString());
+      if (!prod) {
+        throw new BadRequestException(`Product ID ${item.productId} not found.`);
+      }
+      const unitPrice = Number(prod.sellingPrice ?? prod.mrp ?? 0);
+      const qty = Math.max(1, Number(item.quantity || 1));
+      calculatedTotal += unitPrice * qty;
+      return {
+        productId: prod.id,
+        quantity: qty,
+        unitPrice,
+      };
+    });
+
+    const invoiceNumber = idempotencyKey
+      ? `ORD-KEY-${idempotencyKey.slice(0, 40)}`
+      : `ORD-${Date.now()}-${randomUUID().slice(0, 6)}`;
+
+    const purchase = await this.createPurchase({
+      customerId: data.customerId,
+      providerId: data.providerId,
+      invoiceNumber,
+      items: itemsMapped,
+    });
+
+    const updated = await this.prisma.purchase.findUnique({
+      where: { id: purchase.id },
+      include: this.customerOrderInclude(),
+    });
+
+    return this.customerOrderProjection(updated ?? purchase);
+  }
+
+  async listPharmacyOrders(principal?: ShieldPrincipal) {
+    const purchases = await this.prisma.purchase.findMany({
+      include: this.customerOrderInclude(),
+      orderBy: [{ purchaseDate: 'desc' }, { id: 'desc' }],
+      take: 50,
+    });
+    return purchases.map((purchase) => this.customerOrderProjection(purchase));
+  }
+
+  async updateOrderStatus(
+    orderId: bigint,
+    status: string,
+    principal?: ShieldPrincipal,
+  ) {
+    const purchase = await this.prisma.purchase.findUnique({
+      where: { id: orderId },
+    });
+    if (!purchase) throw new NotFoundException('Order not found.');
+
+    if (purchase.customerId) {
+      await this.providerScopeService.assertProviderCanAccessCustomer(
+        purchase.customerId,
+        principal,
+      );
+    }
+
+    const allowedStatuses = [
+      'REQUESTED',
+      'ACCEPTED',
+      'PROCESSING',
+      'READY',
+      'COMPLETED',
+      'REJECTED',
+      'CANCELLED',
+    ];
+    const normalizedStatus = status.trim().toUpperCase();
+    if (!allowedStatuses.includes(normalizedStatus)) {
+      throw new BadRequestException(`Invalid order status ${status}.`);
+    }
+
+    const updated = await this.prisma.purchase.update({
+      where: { id: orderId },
+      data: {
+        orderStatus: normalizedStatus,
+        paymentStatus: normalizedStatus,
+      },
+      include: this.customerOrderInclude(),
+    });
+
+    return this.customerOrderProjection(updated);
   }
 }

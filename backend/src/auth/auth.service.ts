@@ -64,17 +64,19 @@ export class AuthService {
       );
     }
 
-    const mobile = decoded.phone_number?.trim();
-    if (!mobile) {
+    const rawMobile = decoded.phone_number?.trim();
+    if (!rawMobile) {
       throw new UnauthorizedException(
         'Firebase phone sign-in did not include a mobile number.',
       );
     }
 
-    const customer = await this.prisma.customer.findFirst({
+    const digitsOnly = rawMobile.replace(/\D/g, '').slice(-10);
+
+    let customer = await this.prisma.customer.findFirst({
       where: {
         deletedAt: null,
-        OR: [{ firebaseUid: decoded.uid }, { mobile }],
+        mobile: { endsWith: digitsOnly },
       },
       select: {
         id: true,
@@ -85,6 +87,29 @@ export class AuthService {
         firebaseUid: true,
       },
     });
+
+    if (!customer && decoded.uid) {
+      const byUid = await this.prisma.customer.findFirst({
+        where: {
+          deletedAt: null,
+          firebaseUid: decoded.uid,
+        },
+        select: {
+          id: true,
+          uuid: true,
+          mobile: true,
+          email: true,
+          status: true,
+          firebaseUid: true,
+        },
+      });
+      if (byUid) {
+        const uidDigits = (byUid.mobile ?? '').replace(/\D/g, '').slice(-10);
+        if (!uidDigits || uidDigits === digitsOnly) {
+          customer = byUid;
+        }
+      }
+    }
 
     if (!customer) {
       throw new UnauthorizedException('Customer is not provisioned in SHIELD.');

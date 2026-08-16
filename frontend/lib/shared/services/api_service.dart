@@ -13,6 +13,7 @@ import '../models/membership.dart';
 import '../models/notification.dart';
 import '../models/prescription_analysis.dart';
 import '../models/wallet.dart';
+import 'customer_auth_session.dart';
 
 class ApiService {
   static const String _productionBackendBaseUrl =
@@ -453,9 +454,10 @@ class ApiService {
     int page = 1,
     int pageSize = 24,
   }) async {
-    _requireCustomerId();
+    final isAuth = CustomerAuthSession.instance.isAuthenticated;
+    final path = isAuth ? '/customer/wellness-products' : '/wellness-products';
     final response = await _dio.get(
-      '/customer/wellness-products',
+      path,
       queryParameters: {
         if (query != null && query.trim().isNotEmpty) 'query': query.trim(),
         if (categoryId != null) 'categoryId': categoryId,
@@ -469,8 +471,22 @@ class ApiService {
   static Future<Map<String, dynamic>> getCustomerWellnessProduct(
     String id,
   ) async {
+    final isAuth = CustomerAuthSession.instance.isAuthenticated;
+    final path = isAuth
+        ? '/customer/wellness-products/$id'
+        : '/wellness-products/$id';
+    return _readEnvelope(await _dio.get(path));
+  }
+
+  static Future<Map<String, dynamic>> submitCustomerOrder(
+    Map<String, dynamic> payload,
+  ) async {
     _requireCustomerId();
-    return _readEnvelope(await _dio.get('/customer/wellness-products/$id'));
+    final response = await _dio.post(
+      '/customer/orders',
+      data: payload,
+    );
+    return _readEnvelope(response);
   }
 
   static Future<Map<String, dynamic>> saveAppointmentPrescriptionDraft(
