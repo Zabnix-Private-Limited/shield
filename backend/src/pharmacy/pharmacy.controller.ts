@@ -9,6 +9,7 @@ import {
   Query,
 } from '@nestjs/common';
 import { CurrentPrincipal } from '../auth/current-principal.decorator';
+import { Public } from '../auth/public.decorator';
 import { RequirePermissions } from '../auth/permissions.decorator';
 import type { ShieldPrincipal } from '../auth/auth.types';
 import { ProviderScopeService } from '../auth/provider-scope.service';
@@ -106,6 +107,36 @@ export class PharmacyController {
     };
   }
 
+  // Public catalogue projections intentionally contain no inventory, provider,
+  // customer, or ordering data. Checkout remains customer-authenticated.
+  @Public()
+  @Get('wellness-products')
+  async listPublicWellnessProducts(
+    @Query('query') query?: string,
+    @Query('categoryId') categoryId?: string,
+    @Query('page') page?: string,
+    @Query('pageSize') pageSize?: string,
+  ) {
+    return {
+      success: true,
+      data: await this.pharmacyService.listCustomerWellnessProducts({
+        query,
+        categoryId,
+        page,
+        pageSize,
+      }),
+    };
+  }
+
+  @Public()
+  @Get('wellness-products/:id')
+  async getPublicWellnessProduct(@Param('id') id: string) {
+    return {
+      success: true,
+      data: await this.pharmacyService.getCustomerWellnessProduct(BigInt(id)),
+    };
+  }
+
   @RequirePermissions('customers.view')
   @Get('customer/wellness-products')
   async listCustomerWellnessProducts(
@@ -120,7 +151,6 @@ export class PharmacyController {
         'Only authenticated customers can browse the customer wellness catalogue.',
       );
     }
-
     return {
       success: true,
       message: 'Customer wellness catalog retrieved',

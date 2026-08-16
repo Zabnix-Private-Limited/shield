@@ -1128,7 +1128,6 @@ class _CustomerPortalNav extends StatelessWidget {
       'services',
       'appointments',
       'documents',
-      'prescriptions',
     ]),
     MapEntry('Commerce', ['orders']),
     MapEntry('Engagement', ['referrals', 'activity', 'notifications']),
@@ -1918,7 +1917,7 @@ void _showMembershipCardDialog(BuildContext context) {
 
 String _customerRegionLabel(Customer? customer) {
   if (customer == null) {
-    return 'Loading customer context';
+    return 'Loading your profile';
   }
 
   final parts = <String>[
@@ -5206,15 +5205,6 @@ class _CustomerSettingsView extends StatelessWidget {
                   'Unable to open the privacy policy right now.',
                 );
               },
-            ),
-            _CompactSettingAction(
-              icon: Icons.contact_support_outlined,
-              title: 'Contact us',
-              subtitle: 'Reach SHIELD support for membership or service issues',
-              onTap: () => showCustomerSupportSheet(
-                context,
-                type: SupportSheetType.contact,
-              ),
             ),
             _CompactSettingAction(
               icon: Icons.feedback_outlined,

@@ -109,7 +109,10 @@ class _CustomerWalletScreenState extends State<CustomerWalletScreen> {
             );
 
             if (!accessState.serviceAccessEnabled) {
-              return _LockedWalletView(customer: customer);
+              return _LockedWalletView(
+                customer: customer,
+                accessState: accessState,
+              );
             }
 
             final visibleTransactions = wallet.recentTransactions.where((txn) {
@@ -270,9 +273,10 @@ class _RechargeIntentStatus extends StatelessWidget {
 }
 
 class _LockedWalletView extends StatelessWidget {
-  const _LockedWalletView({required this.customer});
+  const _LockedWalletView({required this.customer, required this.accessState});
 
   final Customer customer;
+  final CustomerAccessState accessState;
 
   @override
   Widget build(BuildContext context) {
@@ -299,7 +303,9 @@ class _LockedWalletView extends StatelessWidget {
                 children: [
                   Expanded(
                     child: Text(
-                      'Wallet pending activation',
+                      accessState.membership?.isActive == true
+                          ? 'Membership card needed'
+                          : 'Wallet pending activation',
                       style: AppTypography.h4.copyWith(
                         color: AppColors.white,
                         fontWeight: FontWeight.w700,
@@ -327,7 +333,9 @@ class _LockedWalletView extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               Text(
-                'SHIELD wallet benefits unlock only after admin or agent card issuance for ${customer.fullName}.',
+                accessState.membership?.isActive == true
+                    ? 'Your membership is active. Wallet benefits unlock after your SHIELD card is issued.'
+                    : 'Wallet benefits unlock after your membership and SHIELD card are issued.',
                 style: AppTypography.small.copyWith(
                   color: AppColors.white.withValues(alpha: 0.9),
                 ),
@@ -336,10 +344,14 @@ class _LockedWalletView extends StatelessWidget {
               Wrap(
                 spacing: 10,
                 runSpacing: 10,
-                children: const [
-                  _LockedWalletChip(label: 'Profile created'),
-                  _LockedWalletChip(label: 'Membership pending'),
-                  _LockedWalletChip(label: 'Products can stay visible'),
+                children: [
+                  const _LockedWalletChip(label: 'Profile created'),
+                  _LockedWalletChip(
+                    label: accessState.membership?.isActive == true
+                        ? 'Membership active'
+                        : 'Membership pending',
+                  ),
+                  const _LockedWalletChip(label: 'Products can stay visible'),
                 ],
               ),
             ],
@@ -353,9 +365,13 @@ class _LockedWalletView extends StatelessWidget {
               Text('What happens next', style: AppTypography.h4),
               const SizedBox(height: 12),
               Text(
-                '1. SHIELD admin or agent team reviews the registration.\n'
-                '2. Membership and digital card are issued.\n'
-                '3. Wallet-linked services, benefits, and redemptions become available.',
+                accessState.membership?.isActive == true
+                    ? '1. Your membership is already active.\n'
+                          '2. SHIELD issues your digital card.\n'
+                          '3. Wallet-linked services and benefits become available.'
+                    : '1. SHIELD reviews your membership request.\n'
+                          '2. Membership and digital card are issued.\n'
+                          '3. Wallet-linked services and benefits become available.',
                 style: AppTypography.body.copyWith(color: AppColors.darkGray),
               ),
             ],

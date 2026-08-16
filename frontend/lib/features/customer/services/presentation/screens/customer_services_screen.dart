@@ -759,8 +759,8 @@ class _ProviderDetailsSheet extends StatelessWidget {
               const SizedBox(height: 16),
               Text(
                 snapshot.hasError
-                    ? 'Provider details could not be loaded. You can still continue to the existing booking flow.'
-                    : 'Only customer-visible provider details are shown. Coverage, hours, ratings, and location are not available in the current customer contract.',
+                    ? 'Provider details could not be loaded. Please try again before booking.'
+                    : 'Choose this provider to continue with your request.',
                 style: AppTypography.small.copyWith(color: AppColors.gray),
               ),
               const SizedBox(height: 12),

@@ -149,13 +149,27 @@ class _CustomerVisitsScreenState extends State<CustomerVisitsScreen> {
       lastDate: DateTime.now().add(const Duration(days: 365)),
     );
     if (date == null || !mounted) return;
+    final time = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.fromDateTime(visit.appointmentDate),
+      helpText: 'Preferred time',
+    );
+    if (time == null || !mounted) return;
     final value = DateTime(
       date.year,
       date.month,
       date.day,
-      visit.appointmentDate.hour,
-      visit.appointmentDate.minute,
+      time.hour,
+      time.minute,
     );
+    if (!value.isAfter(DateTime.now())) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Choose a preferred date and time in the future.'),
+        ),
+      );
+      return;
+    }
     final success = await _controller.reschedule(visit, value);
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(

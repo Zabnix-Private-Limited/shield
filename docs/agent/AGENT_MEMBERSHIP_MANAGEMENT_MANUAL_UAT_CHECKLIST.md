@@ -14,3 +14,4 @@ All Actual, PASS/FAIL and Evidence fields are intentionally blank.
 | AM-08 | Retry conversion/review | no duplicate membership, application or card | | | |
 | AM-09 | Card state | Customer sees only actual permitted card state | | | |
 | AM-10 | Responsive/loading/error | usable membership UI; duplicate clicks safely handled | | | |
+| AM-11 | Card request processing | assigned Agent can review only an assigned customer's card request and issue the real digital card once the server workflow is released | | | |

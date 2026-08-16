@@ -6,6 +6,7 @@ import '../../../../../app/theme/app_typography.dart';
 import '../../../../../shared/services/api_service.dart';
 import '../../../../customer/shared/widgets/error_card.dart';
 import '../../../../../shared/widgets/app_card.dart';
+import '../../../../../shared/widgets/app_skeleton.dart';
 
 class CustomerActivityScreen extends StatefulWidget {
   const CustomerActivityScreen({super.key});
@@ -80,12 +81,12 @@ class _CustomerActivityScreenState extends State<CustomerActivityScreen> {
   @override
   Widget build(BuildContext context) {
     if (_isLoading && _events.isEmpty) {
-      return const Center(child: CircularProgressIndicator());
+      return const AppPortalSectionSkeleton(showHero: true, listItems: 5);
     }
     if (_error != null && _events.isEmpty) {
       return ErrorCard(
-        title: 'Activity unavailable',
-        message: 'Your customer activity timeline could not be loaded.',
+        title: 'Could not load activity',
+        message: 'Please check your connection and try again.',
         onRetry: () => _loadTimeline(reset: true),
       );
     }

@@ -4,6 +4,8 @@
 
 **READY_FOR_MANUAL_UAT** at source level. Deployment, Firebase/device, timing, and the unapplied performance-index migration remain external gates.
 
+> 2026-08-16 remediation note: this historic result does not cover the owner-requested public catalogue/cart/checkout expansion or Agent-scoped digital-card request processing. See `CUSTOMER_PORTAL_UAT_REMEDIATION_20260816.md` for corrected customer-truth findings and current source boundaries.
+
 ## Route and contract matrix
 
 | Area | Route / contract | Classification | Source evidence / gate |

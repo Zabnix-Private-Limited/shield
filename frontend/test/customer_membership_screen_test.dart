@@ -87,7 +87,9 @@ void main() {
     expect(find.text('Membership unavailable'), findsOneWidget);
   });
 
-  testWidgets('labels cached membership data as offline-safe', (tester) async {
+  testWidgets('silently revalidates cached membership data when online', (
+    tester,
+  ) async {
     final controller = MembershipController(
       customerId: '42',
       repository: _CachedMembershipRepository(_membership()),
@@ -96,10 +98,7 @@ void main() {
       MaterialApp(home: CustomerMembershipScreen(controller: controller)),
     );
     await tester.pumpAndSettle();
-    expect(
-      find.textContaining('Showing saved membership details'),
-      findsOneWidget,
-    );
+    expect(find.textContaining('Showing your last saved'), findsNothing);
   });
 
   testWidgets('renders a dedicated subscription view from the same contract', (

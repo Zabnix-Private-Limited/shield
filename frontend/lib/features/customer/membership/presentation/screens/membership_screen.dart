@@ -97,7 +97,7 @@ class _CustomerMembershipScreenState extends State<CustomerMembershipScreen> {
               parent: AlwaysScrollableScrollPhysics(),
             ),
             children: [
-              if (_controller.isShowingCached) ...[
+              if (_controller.isShowingCached && _controller.error != null) ...[
                 _CachedMembershipBanner(onRetry: _controller.refresh),
                 const SizedBox(height: 12),
               ],
@@ -181,7 +181,7 @@ class _CustomerMembershipScreenState extends State<CustomerMembershipScreen> {
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
-                        'Use Card status to request or track a physical card. Card history, replacement, lost and damaged-card actions are not available yet.',
+                        'Use Card status to request or track your digital membership card.',
                         style: AppTypography.small.copyWith(
                           color: AppColors.gray,
                         ),
@@ -946,7 +946,7 @@ class _CachedMembershipBanner extends StatelessWidget {
         const SizedBox(width: 10),
         Expanded(
           child: Text(
-            'Showing saved membership details. Refresh when you are back online.',
+            'Showing your last saved membership details.',
             style: AppTypography.small.copyWith(color: AppColors.gray),
           ),
         ),

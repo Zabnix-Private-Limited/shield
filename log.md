@@ -12461,3 +12461,58 @@ est build compilation.
 - npx jest src/auth/auth.session.spec.ts --runInBand passed: 3 tests.
 - git diff --check passed.
 - No live browser, device, database mutation, deployment or production request was run. Remaining external gate: authenticated customer restart/offline/device UAT after deployment.
+## 120. Customer truth and catalogue UAT remediation (2026-08-16 02:00:00 IST)
+
+- Re-audited owner-reported Customer Portal defects against source, schema and current contracts.
+- The active-membership/locked-wallet contradiction came from a generic locked-wallet view that always rendered Membership pending after card gating. It now distinguishes active membership awaiting card issuance from an actual pending membership.
+- Membership cache messaging is stale-while-revalidate: cached data is silent after a successful background refresh and is labelled only after a refresh failure. Activity uses the shared section skeleton; provider, prescription and activity errors use customer language.
+- Customer drawer navigation no longer exposes duplicate Prescriptions; its internal route remains available for upload/pharmacy handoffs. Customer Settings retains one Get support entry.
+- Customer wellness catalogue no longer admits legacy XLS demo/staging rows or demo labels. New public safe-read catalogue endpoints expose no inventory, provider, customer or order data; authenticated catalogue endpoints remain protected.
+- The existing card_requests model remains a legacy physical-card workflow. Customer wording is now neutral membership-card language. Agent-scoped digital-card review/issue, public Flutter catalogue/share, cart, checkout/order placement and pharmacy order queue are not implemented and must not be represented as complete.
+
+### Frontend Files
+- frontend/lib/features/customer/wallet/presentation/screens/wallet_screen.dart
+- frontend/lib/features/customer/membership/presentation/screens/membership_screen.dart
+- frontend/lib/features/customer/membership/presentation/screens/privilege_card_screen.dart
+- frontend/lib/features/customer/services/presentation/screens/customer_services_screen.dart
+- frontend/lib/features/customer/prescriptions/presentation/screens/customer_prescriptions_screen.dart
+- frontend/lib/features/customer/activity/presentation/screens/customer_activity_screen.dart
+- frontend/lib/features/portal/presentation/screens/portal_shell.dart
+- frontend/test/customer_membership_screen_test.dart
+
+### Backend Files
+- backend/src/pharmacy/pharmacy.controller.ts
+- backend/src/pharmacy/pharmacy.service.ts
+- backend/src/pharmacy/pharmacy.service.spec.ts
+
+### Verification
+- flutter test customer_membership_screen, customer_wallet_screen and customer_services_controller passed: 11 tests.
+- flutter analyze touched Customer Portal files passed.
+- npx jest pharmacy controller/service and customer-membership controller suites passed: 16 tests.
+- npx tsc --noEmit passed.
+- git diff --check passed.
+- No database migration/application, deployment, live browser, production request or device UAT was run.
+## 121. Customer visit preferred time preserved on reschedule (2026-08-16 02:20:00 IST)
+
+- Customer booking already persisted a requested date and time through the existing appointment datetime contract. Rescheduling previously selected a new date but silently retained the prior time, which did not meet the requested-date/time journey.
+- Reschedule now prompts for Preferred time after Preferred date and rejects a datetime in the past before the existing owned mutation is sent.
+
+### Frontend Files
+- frontend/lib/features/customer/visits/presentation/customer_visits_screen.dart
+
+### Verification
+- flutter analyze booking and visits files passed.
+- git diff --check passed.
+- No database action, deployment, browser, or device test was run.
+## 122. Digital card issuance retry protection (2026-08-16 02:35:00 IST)
+
+- Found that the existing authorized Customer approval path unconditionally created a ShieldCard. A repeated approval/retry could therefore issue duplicate digital cards.
+- Approval now detects an existing customer card before issuance and completes any open REQUESTED card request with the reviewing staff user, review time and factual issuance note. This retains the current Agent-authorized approval workflow and makes card issuance idempotent.
+
+### Backend Files
+- backend/src/customer/customer.service.ts
+
+### Verification
+- npx tsc --noEmit passed.
+- npx jest customer service and customer-membership controller passed: 18 tests.
+- No migration, deployment, database write, browser or device test was run.

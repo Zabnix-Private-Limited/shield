@@ -461,9 +461,9 @@ class _PhysicalCardPanel extends StatelessWidget {
     final status = request?['status']?.toString() ?? action;
     final canRequest = action == 'REQUEST_PHYSICAL_CARD';
     final description = canRequest
-        ? 'Request a physical SHIELD card for your membership.'
+        ? 'Apply for your SHIELD membership card.'
         : action == 'VIEW_CARD' && request == null
-        ? 'Your digital privilege card is issued. Physical-card history is not available yet.'
+        ? 'Your digital SHIELD membership card is ready to view.'
         : 'Request status: ${status.replaceAll('_', ' ')}';
     return Container(
       width: double.infinity,
@@ -476,7 +476,7 @@ class _PhysicalCardPanel extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Physical card', style: AppTypography.h5),
+          Text('Membership card', style: AppTypography.h5),
           const SizedBox(height: 4),
           Text(
             description,
@@ -489,7 +489,7 @@ class _PhysicalCardPanel extends StatelessWidget {
               child: FilledButton(
                 onPressed: requesting ? null : onRequest,
                 child: Text(
-                  requesting ? 'Submitting…' : 'Request physical card',
+                  requesting ? 'Submitting…' : 'Apply for membership card',
                 ),
               ),
             ),
@@ -520,7 +520,7 @@ class _PhysicalCardUnavailable extends StatelessWidget {
         const SizedBox(width: 12),
         Expanded(
           child: Text(
-            'Physical card status is unavailable right now.',
+            'Membership card status is unavailable right now.',
             style: AppTypography.small.copyWith(color: AppColors.gray),
           ),
         ),

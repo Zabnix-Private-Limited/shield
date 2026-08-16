@@ -192,8 +192,8 @@ class _CustomerPrescriptionsScreenState
 
         if (snapshot.hasError) {
           return ErrorCard(
-            title: 'Prescriptions unavailable',
-            message: 'Your prescription history could not be loaded.',
+            title: 'Could not load prescriptions',
+            message: 'Please check your connection and try again.',
             onRetry: () => setState(_loadPrescriptions),
           );
         }

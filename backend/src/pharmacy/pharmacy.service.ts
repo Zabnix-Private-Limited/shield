@@ -66,14 +66,7 @@ export class PharmacyService {
   async listWellnessProducts() {
     return this.prisma.product.findMany({
       where: {
-        OR: [
-          { status: 'ACTIVE' },
-          {
-            dataSource: 'LEGACY_XLS_20260805',
-            status: 'STAGING',
-            isDemoAvailable: true,
-          },
-        ],
+        status: 'ACTIVE',
       },
       include: { category: true },
       orderBy: { productName: 'asc' },
@@ -82,10 +75,7 @@ export class PharmacyService {
 
   private customerWellnessWhere() {
     return {
-      OR: [
-        { status: 'ACTIVE', dataSource: { not: 'LEGACY_XLS_20260805' } },
-        { dataSource: 'LEGACY_XLS_20260805', isDemoAvailable: true },
-      ],
+      status: 'ACTIVE',
     };
   }
 
@@ -105,8 +95,7 @@ export class PharmacyService {
             name: this.customerCategoryName(product.category.name),
           }
         : null,
-      catalogueKind:
-        product.dataSource === 'LEGACY_XLS_20260805' ? 'DEMO' : 'STANDARD',
+      catalogueKind: 'STANDARD',
       // A customer catalogue record is not an orderable offer.  There is no
       // customer cart/checkout/order-creation contract yet, so exposing this
       // explicitly prevents Flutter from inferring purchasability from a price
@@ -184,7 +173,7 @@ export class PharmacyService {
         id: category.id.toString(),
         name: this.customerCategoryName(category.name),
       })),
-      disclosure: 'Demo products only — not live Sahakar inventory.',
+      disclosure: null,
     };
   }
 

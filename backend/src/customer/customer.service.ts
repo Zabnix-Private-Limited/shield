@@ -1339,15 +1339,32 @@ export class CustomerService {
         }
       }
 
-      await tx.shieldCard.create({
+      // Approval may be retried. A customer can have only one active digital
+      // card; never manufacture a second card when a request/review retries.
+      const existingCard = await tx.shieldCard.findFirst({
+        where: { customerId: customer.id },
+      });
+      if (!existingCard) {
+        await tx.shieldCard.create({
+          data: {
+            uuid: randomUUID(),
+            customerId: customer.id,
+            cardNumber: `SHLD-CARD-${customer.customerCode?.split('-')[1]}`,
+            qrCode: `SHLD-CARD-${customer.customerCode?.split('-')[1]}-TOKEN`,
+            status: 'ACTIVE',
+            issuedBusinessId,
+            issuedAt: new Date(),
+          },
+        });
+      }
+
+      await tx.cardRequest.updateMany({
+        where: { customerId: customer.id, status: 'REQUESTED' },
         data: {
-          uuid: randomUUID(),
-          customerId: customer.id,
-          cardNumber: `SHLD-CARD-${customer.customerCode?.split('-')[1]}`,
-          qrCode: `SHLD-CARD-${customer.customerCode?.split('-')[1]}-TOKEN`,
-          status: 'ACTIVE',
-          issuedBusinessId,
-          issuedAt: new Date(),
+          status: 'ISSUED',
+          reviewedBy: staffUserId,
+          reviewedAt: new Date(),
+          remarks: 'Digital membership card issued.',
         },
       });
 

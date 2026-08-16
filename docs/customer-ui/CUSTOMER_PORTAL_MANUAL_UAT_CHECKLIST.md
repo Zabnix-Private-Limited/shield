@@ -18,3 +18,4 @@ All Actual/Pass/Fail/evidence fields are intentionally blank. Do not mark this d
 | CU-014A–017A | Provider-specific journeys | Pharmacy, Smart Lab, Clinic/Doctor, Home Care, Dietitian, Dental, Skin Care | each supported provider type is discoverable and correctly hands off to request/booking | | | |
 | CU-031–036 | Logout, relogin, refresh, history, expiry, account isolation | switch/expire sessions | safe redirect and no prior customer cache | | | |
 | CU-037–038 | Responsive | phone and tablet/web widths | no overflow; usable navigation | | | |
+| CU-039–046 | 2026-08-16 remediation | persistent reopen, identity phone, active-membership/no-card wallet wording, card request, public catalogue, pharmacy prescription handoff, requested booking date/time, referral attribution | record deployed evidence; do not infer a pass from source checks | | | |
