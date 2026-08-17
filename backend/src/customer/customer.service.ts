@@ -23,6 +23,43 @@ export class CustomerService {
     private readonly walletService: WalletService,
   ) {}
 
+  async checkExistingErpCustomer(rawMobile: string) {
+    if (!rawMobile || rawMobile.trim().length < 10) {
+      return { found: false, erpRecord: null };
+    }
+    const digitsOnly = rawMobile.replace(/\D/g, '').slice(-10);
+    const erpRecord = await this.prisma.erpExistingCustomer.findFirst({
+      where: {
+        mobile: { endsWith: digitsOnly },
+      },
+      include: {
+        business: {
+          select: { id: true, code: true, name: true },
+        },
+      },
+      orderBy: [{ id: 'desc' }],
+    });
+
+    if (!erpRecord) {
+      return { found: false, erpRecord: null };
+    }
+
+    return {
+      found: true,
+      erpRecord: {
+        id: erpRecord.id.toString(),
+        fullName: erpRecord.fullName,
+        mobile: erpRecord.mobile,
+        branchName: erpRecord.branchName || erpRecord.business?.name || null,
+        businessId: erpRecord.businessId ? erpRecord.businessId.toString() : null,
+        businessCode: erpRecord.business?.code || null,
+        erpCustomerCode: erpRecord.erpCustomerCode,
+        sourceProvider: erpRecord.sourceProvider,
+        status: erpRecord.status,
+      },
+    };
+  }
+
   private async recordCustomerAccountAudit(
     action: string,
     entityType: string,

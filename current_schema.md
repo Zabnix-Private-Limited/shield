@@ -473,6 +473,20 @@ CREATE TABLE "documents" (
 	"status" varchar(50),
 	"created_at" timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
+CREATE TABLE "erp_existing_customers" (
+	"id" bigserial PRIMARY KEY,
+	"uuid" uuid DEFAULT gen_random_uuid() NOT NULL,
+	"mobile" varchar(20) NOT NULL,
+	"full_name" varchar(255) NOT NULL,
+	"branch_name" varchar(255),
+	"business_id" bigint,
+	"erp_customer_code" varchar(100),
+	"source_provider" varchar(100),
+	"status" varchar(50) DEFAULT 'UNCLAIMED' NOT NULL,
+	"matched_customer_id" bigint,
+	"created_at" timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+	"updated_at" timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
 CREATE TABLE "lab_reports" (
 	"id" bigserial PRIMARY KEY,
 	"customer_id" bigint,
@@ -1008,6 +1022,8 @@ CREATE UNIQUE INDEX "document_processing_logs_pkey" ON "document_processing_logs
 CREATE UNIQUE INDEX "documents_pkey" ON "documents" ("id");
 CREATE UNIQUE INDEX "documents_uuid_key" ON "documents" ("uuid");
 CREATE INDEX "idx_documents_customer_created" ON "documents" ("customer_id","created_at");
+CREATE UNIQUE INDEX "erp_existing_customers_pkey" ON "erp_existing_customers" ("id");
+CREATE INDEX "idx_erp_existing_customers_mobile" ON "erp_existing_customers" ("mobile");
 CREATE UNIQUE INDEX "lab_reports_pkey" ON "lab_reports" ("id");
 CREATE INDEX "idx_login_history_auth_device" ON "login_history" ("auth_device_id");
 CREATE INDEX "idx_login_history_created_at" ON "login_history" ("created_at");
@@ -1187,6 +1203,8 @@ ALTER TABLE "document_extractions" ADD CONSTRAINT "document_extractions_document
 ALTER TABLE "document_processing_logs" ADD CONSTRAINT "document_processing_logs_document_id_fkey" FOREIGN KEY ("document_id") REFERENCES "documents"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 ALTER TABLE "documents" ADD CONSTRAINT "documents_customer_id_fkey" FOREIGN KEY ("customer_id") REFERENCES "customers"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 ALTER TABLE "documents" ADD CONSTRAINT "documents_uploaded_by_fkey" FOREIGN KEY ("uploaded_by") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "erp_existing_customers" ADD CONSTRAINT "erp_existing_customers_business_id_fkey" FOREIGN KEY ("business_id") REFERENCES "businesses"("id");
+ALTER TABLE "erp_existing_customers" ADD CONSTRAINT "erp_existing_customers_matched_customer_id_fkey" FOREIGN KEY ("matched_customer_id") REFERENCES "customers"("id");
 ALTER TABLE "lab_reports" ADD CONSTRAINT "lab_reports_appointment_id_fkey" FOREIGN KEY ("appointment_id") REFERENCES "appointments"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 ALTER TABLE "lab_reports" ADD CONSTRAINT "lab_reports_customer_id_fkey" FOREIGN KEY ("customer_id") REFERENCES "customers"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 ALTER TABLE "lab_reports" ADD CONSTRAINT "lab_reports_document_id_fkey" FOREIGN KEY ("document_id") REFERENCES "documents"("id") ON DELETE SET NULL ON UPDATE CASCADE;

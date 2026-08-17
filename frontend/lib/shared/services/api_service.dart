@@ -139,6 +139,18 @@ class ApiService {
     _activeCustomerId = customerId?.trim();
   }
 
+  static Future<Map<String, dynamic>> checkExistingErpCustomer(String mobile) async {
+    try {
+      final response = await _dio.get<Map<String, dynamic>>(
+        '/customers/check-existing',
+        queryParameters: {'mobile': mobile},
+      );
+      return response.data ?? const <String, dynamic>{'found': false, 'erpRecord': null};
+    } catch (_) {
+      return const <String, dynamic>{'found': false, 'erpRecord': null};
+    }
+  }
+
   static String? get currentAccessToken {
     final token = _accessToken?.trim();
     return token == null || token.isEmpty ? null : token;

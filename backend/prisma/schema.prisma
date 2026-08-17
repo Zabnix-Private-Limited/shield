@@ -30,6 +30,7 @@ model Business {
   branchScopedUsers                User[]                            @relation("BranchScopedUsers")
   agentBranchAssignments           AgentBranchAssignment[]
   providerProfileBranchAssignments ProviderProfileBranchAssignment[]
+  erpExistingCustomers             ErpExistingCustomer[]
 
   @@map("businesses")
 }
@@ -258,6 +259,7 @@ model Customer {
   dentalRecords                  DentalRecord[]
   crmActivities                  CrmActivity[]
   crmTasks                       CrmTask[]
+  erpExistingCustomers           ErpExistingCustomer[]        @relation("ErpMatchedCustomer")
   complaints                     Complaint[]
   notifications                  Notification[]
   devicePushTokens               DevicePushToken[]
@@ -1439,4 +1441,25 @@ model CommissionAllocation {
   createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
 
   @@map("commission_allocations")
+}
+
+model ErpExistingCustomer {
+  id                BigInt    @id @default(autoincrement())
+  uuid              String    @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  mobile            String    @db.VarChar(20)
+  fullName          String    @map("full_name") @db.VarChar(255)
+  branchName        String?   @map("branch_name") @db.VarChar(255)
+  businessId        BigInt?   @map("business_id")
+  erpCustomerCode   String?   @map("erp_customer_code") @db.VarChar(100)
+  sourceProvider    String?   @map("source_provider") @db.VarChar(100)
+  status            String    @default("UNCLAIMED") @db.VarChar(50)
+  matchedCustomerId BigInt?   @map("matched_customer_id")
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  business        Business? @relation(fields: [businessId], references: [id])
+  matchedCustomer Customer? @relation("ErpMatchedCustomer", fields: [matchedCustomerId], references: [id])
+
+  @@index([mobile], map: "idx_erp_existing_customers_mobile")
+  @@map("erp_existing_customers")
 }

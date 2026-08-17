@@ -36,6 +36,13 @@ export class CustomerController {
     }
   }
 
+  @Get('check-existing')
+  async checkExistingErpCustomer(
+    @Query('mobile') mobile: string,
+  ) {
+    return this.customerService.checkExistingErpCustomer(mobile);
+  }
+
   @RequirePermissions('customers.create')
   @Post()
   async create(

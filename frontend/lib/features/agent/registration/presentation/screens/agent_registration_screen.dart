@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../../app/theme/app_colors.dart';
 import '../../../../../app/theme/app_typography.dart';
+import '../../../../../shared/services/api_service.dart';
 import '../../../../../shared/utils/prescription_file_picker.dart';
 import '../../../shared/presentation/controllers/agent_portal_provider.dart';
 import '../../../shared/presentation/widgets/agent_design_system.dart';
@@ -1015,7 +1016,38 @@ class _AgentRegistrationScreenState
     setState(() => _existingLookupLoading = true);
     try {
       final customer = await controller.findExistingCustomerByMobile(mobile);
+      final erpRes = await ApiService.checkExistingErpCustomer(mobile);
       if (!mounted) return;
+      
+      if (erpRes['found'] == true && erpRes['erpRecord'] != null) {
+        final erp = Map<String, dynamic>.from(erpRes['erpRecord'] as Map);
+        final fullName = erp['fullName']?.toString() ?? '';
+        final branchName = erp['branchName']?.toString() ?? '';
+        final businessId = erp['businessId']?.toString();
+
+        if (fullName.isNotEmpty && _firstNameController.text.trim().isEmpty) {
+          final parts = fullName.split(' ');
+          _firstNameController.text = parts.first;
+          if (parts.length > 1 && _lastNameController.text.trim().isEmpty) {
+            _lastNameController.text = parts.sublist(1).join(' ');
+          }
+        }
+        if (businessId != null && businessId.isNotEmpty) {
+          _selectedBusinessId = businessId;
+        }
+
+        if (!silent && customer == null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              backgroundColor: Colors.teal.shade700,
+              content: Text(
+                'Pre-existing ERP Customer Identified: $fullName ($branchName). Form auto-filled.',
+              ),
+            ),
+          );
+        }
+      }
+
       setState(() => _existingCustomer = customer);
       if (customer != null) {
         final firstName = customer['firstName']?.toString() ?? customer['first_name']?.toString() ?? '';
