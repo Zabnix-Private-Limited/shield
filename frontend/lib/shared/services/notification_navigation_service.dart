@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import '../../app/routes/app_router.dart';
+import '../utils/deep_link_generator.dart';
 
 class NotificationNavigationService {
   NotificationNavigationService._();
@@ -13,10 +14,21 @@ class NotificationNavigationService {
   };
 
   static String resolveCustomerRoute(Map<String, dynamic> data) {
+    final deepLink =
+        data['deepLinkUrl']?.toString().trim() ??
+        data['actionUrl']?.toString().trim();
+    if (deepLink != null && deepLink.isNotEmpty) {
+      try {
+        final normalized = DeepLinkGenerator.normalizeToRoutePath(
+          Uri.parse(deepLink),
+        );
+        if (normalized != null && normalized.isNotEmpty) return normalized;
+      } catch (_) {}
+    }
+
     final explicitRoute = data['route']?.toString().trim();
     if (explicitRoute != null && explicitRoute.startsWith('/portal/customer/')) {
-      final section = Uri.tryParse(explicitRoute)?.pathSegments.last;
-      if (section != null && _customerSections.contains(section)) return explicitRoute;
+      return explicitRoute;
     }
     final section = data['section']?.toString().trim();
     if (section != null && _customerSections.contains(section)) {

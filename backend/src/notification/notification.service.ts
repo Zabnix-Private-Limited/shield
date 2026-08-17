@@ -11,6 +11,7 @@ type SendNotificationInput = {
   customerId: bigint;
   title: string;
   message: string;
+  deepLinkUrl?: string;
   data?: Record<string, string>;
 };
 
@@ -282,6 +283,7 @@ export class NotificationService {
         data: {
           customerId: data.customerId.toString(),
           notificationId: notification.id.toString(),
+          ...(data.deepLinkUrl ? { deepLinkUrl: data.deepLinkUrl, actionUrl: data.deepLinkUrl } : {}),
           ...(data.data ?? {}),
         },
       },

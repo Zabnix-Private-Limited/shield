@@ -11,6 +11,7 @@ import 'app/routes/app_router.dart';
 import 'shared/config/app_config.dart';
 import 'shared/services/customer_auth_session.dart';
 import 'shared/services/firebase_bootstrap_service.dart';
+import 'shared/services/deep_link_service.dart';
 import 'shared/services/internal_auth_session.dart';
 import 'shared/services/notification_navigation_service.dart';
 import 'shared/services/web_runtime_error_probe.dart';
@@ -74,6 +75,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       NotificationNavigationService.flushPendingNavigation();
+      unawaited(DeepLinkService.instance.initialize());
       unawaited(_initializeStoredSessions());
       unawaited(FirebaseBootstrapService.initializeBackgroundServices());
     });
