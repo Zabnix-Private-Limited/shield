@@ -61,6 +61,75 @@ export class PricingService {
       hiddenBenefit: Number(hiddenBenefit.toFixed(2)),
     };
   }
+  async calculateMonthlyPurchaseAllowance(customerId: bigint): Promise<{
+    monthlyBaseCap: number;
+    cumulativeAllowance: number;
+    cashSpent: number;
+    currentMonthlyCapAvailable: number;
+  }> {
+    const customer = await this.prisma.customer.findUnique({
+      where: { id: customerId },
+      include: { membership: true, wallet: true },
+    });
+
+    if (!customer || !customer.wallet) {
+      return {
+        monthlyBaseCap: Infinity,
+        cumulativeAllowance: Infinity,
+        cashSpent: 0,
+        currentMonthlyCapAvailable: Infinity,
+      };
+    }
+
+    const walletId = customer.wallet.id;
+    const now = new Date();
+    const subscriptionStart = customer.membership?.activationDate || customer.createdAt;
+    const monthsElapsed = Math.min(
+      12,
+      Math.max(
+        1,
+        (now.getFullYear() - subscriptionStart.getFullYear()) * 12 +
+          (now.getMonth() - subscriptionStart.getMonth()) + 1,
+      ),
+    );
+
+    const cashTxns = await this.prisma.cashWalletTransaction.findMany({
+      where: {
+        walletId,
+        createdAt: { gte: subscriptionStart },
+      },
+    });
+
+    const totalLoadedCredit = cashTxns.reduce((sum, txn) => {
+      const amt = Number(txn.amount || 0);
+      const type = (txn.transactionType || '').toUpperCase();
+      if (['RECHARGE', 'RECHARGE_BONUS', 'OPENING_BALANCE', 'CREDIT'].includes(type)) {
+        return sum + amt;
+      }
+      return sum;
+    }, 0);
+
+    const cashSpent = cashTxns.reduce((sum, txn) => {
+      const amt = Number(txn.amount || 0);
+      const type = (txn.transactionType || '').toUpperCase();
+      if (['DEBIT', 'PAYMENT', 'PURCHASE', 'SERVICE_PAYMENT'].includes(type)) {
+        return sum + amt;
+      }
+      return sum;
+    }, 0);
+
+    // Formula: Monthly Purchase Limit = (Subscription Amount + 10% Bonus) / 12 Months
+    const monthlyBaseCap = totalLoadedCredit > 0 ? Number((totalLoadedCredit / 12).toFixed(2)) : Infinity;
+    const cumulativeAllowance = totalLoadedCredit > 0 ? Number((monthlyBaseCap * monthsElapsed).toFixed(2)) : Infinity;
+    const currentMonthlyCapAvailable = Math.max(0, Number((cumulativeAllowance - cashSpent).toFixed(2)));
+
+    return {
+      monthlyBaseCap,
+      cumulativeAllowance,
+      cashSpent,
+      currentMonthlyCapAvailable,
+    };
+  }
 
   async evaluateServicePrice(
     input: PricingEvaluationInput,
@@ -79,13 +148,14 @@ export class PricingService {
       throw new NotFoundException(`Customer with ID ${input.customerId} not found`);
     }
 
-    const [serviceRule, balances, referralRule, preloadConfig] = await Promise.all([
+    const [serviceRule, balances, referralRule, preloadConfig, monthlyAllowance] = await Promise.all([
       this.prisma.serviceBenefitRule.findUnique({
         where: { serviceType: input.serviceType },
       }),
       this.getWalletLedgerBalances(input.customerId),
       this.findRewardPointRule(this.getServiceActionCode(input.serviceType)),
       this.getPreloadConfig(),
+      this.calculateMonthlyPurchaseAllowance(input.customerId),
     ]);
 
     if (!serviceRule) {

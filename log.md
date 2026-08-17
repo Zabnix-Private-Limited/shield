@@ -13399,3 +13399,21 @@ KannnanKannnanKannnanKannnanKannnanKannnanKannnanKannnanKannnanKannnanKannnanKan
 
 ### Verification
 - NestJS compilation (npm run build) succeeded with 0 errors.
+
+
+## 168. Monthly Purchase Limit Formula & Rollover Allowance Engine (2026-08-17 17:02:00 IST)
+
+- Integrated the yearly subscription monthly purchasing limit formula & rollover carry-forward rule into PricingService.
+- Implementation details:
+  1. Monthly Base Cap Formula (pricing.service.ts): Created calculateMonthlyPurchaseAllowance implementing (Subscription Principal + 10% Bonus) / 12 Months to establish monthly purchasing caps.
+  2. Allowance Rollover Engine (pricing.service.ts): Evaluates Cumulative Allowance = Monthly Base Cap × Months Elapsed minus total cash spent in subscription year so unused monthly quotas automatically roll over to subsequent months.
+  3. Pricing Engine Integration (pricing.service.ts): Integrated monthly purchase allowance calculations directly into evaluateServicePrice for real-time commercial checkouts.
+
+### Frontend Files (Modified)
+- None
+
+### Backend Files (Modified)
+- backend/src/pricing/pricing.service.ts
+
+### Verification
+- NestJS compilation (npm run build) succeeded with 0 errors.
