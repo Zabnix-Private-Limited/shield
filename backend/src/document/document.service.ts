@@ -488,8 +488,8 @@ export class DocumentService {
           title: 'New Prescription Uploaded',
           description: `Customer ${customerName} uploaded a prescription for branch review.`,
           workspace: 'provider',
-          businessId: businessId?.toString(),
           metadata: {
+            businessId: businessId?.toString(),
             documentId: created.id.toString(),
             customerId: data.customerId.toString(),
             customerName,
@@ -500,30 +500,34 @@ export class DocumentService {
 
         // Send push notification to branch pharmacy provider staff
         if (businessId) {
-          const providerStaff = await this.prisma.user.findMany({
+          const providerStaffUsers = await this.prisma.user.findMany({
             where: {
               status: 'ACTIVE',
               userType: 'PHARMACY_PROVIDER',
-              providerBranchAssignment: {
-                some: { businessId, status: 'APPROVED' },
-              },
+              branchBusinessId: businessId,
             },
-            select: { id: true, customerId: true },
+            select: { id: true, mobile: true },
           });
 
-          for (const staff of providerStaff) {
-            if (staff.customerId) {
-              await this.notificationService.send({
-                customerId: staff.customerId,
-                title: 'New Incoming Prescription',
-                message: `${customerName} submitted a prescription to your pharmacy branch for review.`,
-                deepLinkUrl:
-                  'https://shield-zabnix.vercel.app/#/portal/provider/prescriptions',
-                data: {
-                  documentId: created.id.toString(),
-                  type: 'PRESCRIPTION_UPLOADED',
-                },
+          for (const staffUser of providerStaffUsers) {
+            if (staffUser.mobile) {
+              const staffCustomer = await this.prisma.customer.findFirst({
+                where: { mobile: staffUser.mobile },
+                select: { id: true },
               });
+              if (staffCustomer) {
+                await this.notificationService.send({
+                  customerId: staffCustomer.id,
+                  title: 'New Incoming Prescription',
+                  message: `${customerName} submitted a prescription to your pharmacy branch for review.`,
+                  deepLinkUrl:
+                    'https://shield-zabnix.vercel.app/#/portal/provider/prescriptions',
+                  data: {
+                    documentId: created.id.toString(),
+                    type: 'PRESCRIPTION_UPLOADED',
+                  },
+                });
+              }
             }
           }
         }
