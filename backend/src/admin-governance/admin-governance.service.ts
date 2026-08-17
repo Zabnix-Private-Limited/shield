@@ -5952,6 +5952,107 @@ export class AdminGovernanceService {
       : 'Customer';
   }
 
+  async listProductsWithMargins() {
+    const products = await this.prisma.product.findMany({
+      include: { category: true },
+      orderBy: [{ productName: 'asc' }],
+    });
+
+    return products.map((prod) => {
+      const mrp = Number(prod.mrp || 0);
+      const sellingPrice = Number(prod.sellingPrice || prod.mrp || 0);
+      const costPrice = Number(prod.costPrice || 0);
+      const marginAmount = Math.max(0, sellingPrice - costPrice);
+      const marginPercentage =
+        sellingPrice > 0 ? Number(((marginAmount / sellingPrice) * 100).toFixed(2)) : 0;
+
+      return {
+        id: prod.id.toString(),
+        uuid: prod.uuid,
+        productCode: prod.productCode || 'N/A',
+        productName: prod.productName || 'Product',
+        brand: prod.brand || 'SHIELD Care',
+        category: prod.category?.name || 'General',
+        unit: prod.unit || 'Item',
+        mrp: `₹${mrp.toFixed(2)}`,
+        sellingPrice: `₹${sellingPrice.toFixed(2)}`,
+        costPrice: `₹${costPrice.toFixed(2)}`,
+        marginAmount: `₹${marginAmount.toFixed(2)}`,
+        marginPercentage: `${marginPercentage}%`,
+        rawSellingPrice: sellingPrice,
+        rawCostPrice: costPrice,
+        rawMarginPercentage: marginPercentage,
+        stockQuantity: Number(prod.stockQuantity || 0),
+        status: prod.status || 'ACTIVE',
+      };
+    });
+  }
+
+  async updateProductMargin(
+    id: bigint,
+    data: {
+      costPrice?: number;
+      sellingPrice?: number;
+      marginPercentage?: number;
+    },
+  ) {
+    const product = await this.prisma.product.findUnique({ where: { id } });
+    if (!product) {
+      throw new NotFoundException(`Product with ID ${id} not found`);
+    }
+
+    const sellingPrice = data.sellingPrice ?? Number(product.sellingPrice || product.mrp || 0);
+    let costPrice = data.costPrice ?? Number(product.costPrice || 0);
+    let marginPercentage = data.marginPercentage ?? Number(product.marginPercentage || 0);
+
+    if (data.marginPercentage !== undefined && sellingPrice > 0) {
+      marginPercentage = Math.max(0, Math.min(100, data.marginPercentage));
+      costPrice = Number((sellingPrice * (1 - marginPercentage / 100)).toFixed(2));
+    } else if (sellingPrice > 0) {
+      const marginAmt = Math.max(0, sellingPrice - costPrice);
+      marginPercentage = Number(((marginAmt / sellingPrice) * 100).toFixed(2));
+    }
+
+    const updated = await this.prisma.product.update({
+      where: { id },
+      data: {
+        sellingPrice,
+        costPrice,
+        marginPercentage,
+      },
+      include: { category: true },
+    });
+
+    return updated;
+  }
+
+  async getWellnessMarginsSummary() {
+    const products = await this.listProductsWithMargins();
+    const totalProducts = products.length;
+    const totalStock = products.reduce((sum, p) => sum + p.stockQuantity, 0);
+    const avgMarginPercentage =
+      totalProducts > 0
+        ? Number(
+            (
+              products.reduce((sum, p) => sum + p.rawMarginPercentage, 0) /
+              totalProducts
+            ).toFixed(2),
+          )
+        : 0;
+
+    return {
+      totalProducts,
+      totalStock,
+      avgMarginPercentage: `${avgMarginPercentage}%`,
+      teamDistributionRules: {
+        agentShare: '50% of Margin',
+        crmShare: '30% of Margin',
+        operationsPoolShare: '20% of Margin',
+      },
+      products,
+    };
+  }
+
   private formatDateTime(value?: Date | null) {
     if (value == null) {
       return 'N/A';

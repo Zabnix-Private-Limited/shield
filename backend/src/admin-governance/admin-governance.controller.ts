@@ -466,6 +466,39 @@ export class AdminGovernanceController {
     };
   }
 
+  @RequirePermissions('settings.view')
+  @Get('products')
+  async listProductsWithMargins() {
+    return {
+      success: true,
+      message: 'Products and profit margins retrieved successfully.',
+      data: await this.adminGovernanceService.listProductsWithMargins(),
+    };
+  }
+
+  @RequirePermissions('settings.update')
+  @Patch('products/:id/margin')
+  async updateProductMargin(
+    @Param('id') id: string,
+    @Body() body: { costPrice?: number; sellingPrice?: number; marginPercentage?: number },
+  ) {
+    return {
+      success: true,
+      message: 'Product profit margin updated successfully.',
+      data: await this.adminGovernanceService.updateProductMargin(BigInt(id), body),
+    };
+  }
+
+  @RequirePermissions('settings.view')
+  @Get('wellness-margins')
+  async getWellnessMarginsSummary() {
+    return {
+      success: true,
+      message: 'Wellness products margins summary retrieved successfully.',
+      data: await this.adminGovernanceService.getWellnessMarginsSummary(),
+    };
+  }
+
   private parseSettingsMutation(
     body: Record<string, unknown>,
   ): AdminGovernanceSettingsMutation {

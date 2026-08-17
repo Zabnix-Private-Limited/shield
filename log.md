@@ -13417,3 +13417,23 @@ KannnanKannnanKannnanKannnanKannnanKannnanKannnanKannnanKannnanKannnanKannnanKan
 
 ### Verification
 - NestJS compilation (npm run build) succeeded with 0 errors.
+
+
+## 169. Operations Portal Wellness Products & Margin Management APIs (2026-08-17 17:05:00 IST)
+
+- Implemented backend APIs for the Operations Team Portal to manage wellness product cost prices, selling prices, profit margins, and team margin splits.
+- Implementation details:
+  1. Product Margins Listing (admin-governance.service.ts): Created listProductsWithMargins to return products with calculated margin amounts (selling price - cost price) and percentage ((marginAmount / sellingPrice) * 100).
+  2. Margin Editing & Recalculation (admin-governance.service.ts): Created updateProductMargin allowing the Operations Team to adjust cost price or margin percentage with automatic reciprocal calculations.
+  3. Operations Summary & Splits (admin-governance.service.ts): Created getWellnessMarginsSummary returning catalog inventory metrics and operational team margin distribution rules (50% Agent, 30% CRM, 20% Operations Pool).
+  4. Controller Endpoints (admin-governance.controller.ts): Exposed GET /admin/workspaces/products, PATCH /admin/workspaces/products/:id/margin, and GET /admin/workspaces/wellness-margins.
+
+### Frontend Files (Modified)
+- None
+
+### Backend Files (Modified)
+- backend/src/admin-governance/admin-governance.service.ts
+- backend/src/admin-governance/admin-governance.controller.ts
+
+### Verification
+- NestJS compilation (npm run build) succeeded with 0 errors.
