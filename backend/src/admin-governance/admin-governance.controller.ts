@@ -159,6 +159,16 @@ export class AdminGovernanceController {
   }
 
   @RequirePermissions('agents.view')
+  @Get('agents/performance/:code')
+  async getAgentProfilePerformance(@Param('code') code: string) {
+    return {
+      success: true,
+      message: 'Agent profile performance details retrieved successfully.',
+      data: await this.adminGovernanceService.getAgentProfilePerformance(code),
+    };
+  }
+
+  @RequirePermissions('agents.view')
   @Get('agents/forms/:formId')
   async getAgentWorkspaceForm(
     @Param('formId') formId: string,

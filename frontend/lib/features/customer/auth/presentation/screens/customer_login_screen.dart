@@ -81,6 +81,16 @@ class _CustomerLoginScreenState extends State<CustomerLoginScreen> {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final uri = GoRouterState.of(context).uri;
+    final ref = uri.queryParameters['ref'] ?? uri.queryParameters['code'];
+    if (ref != null && ref.trim().isNotEmpty) {
+      CustomerAuthRepository.instance.pendingReferralCode = ref.trim();
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final reason = GoRouterState.of(context).uri.queryParameters['reason'];
     final reasonMessage = switch (reason) {
@@ -124,8 +134,16 @@ class _CustomerLoginScreenState extends State<CustomerLoginScreen> {
                     const SizedBox(height: 18),
                     Image.asset(
                       'assets/logos/shield_wordmark.png',
-                      width: 320,
+                      width: 220,
                       fit: BoxFit.contain,
+                      errorBuilder: (context, error, stackTrace) => Text(
+                        'SHIELD',
+                        style: AppTypography.h2.copyWith(
+                          color: AppColors.shieldNavy,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 2.0,
+                        ),
+                      ),
                     ),
                     const SizedBox(height: 14),
                     Text(

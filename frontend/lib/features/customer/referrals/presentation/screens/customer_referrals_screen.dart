@@ -101,7 +101,7 @@ class _ReferralCodeCard extends StatelessWidget {
   final String code;
 
   String get _referralLink =>
-      'https://shield-zahnix.vercel.app/#/customer/signup?ref=$code';
+      'https://shield-zabnix.vercel.app/#/customer/register?ref=$code';
 
   @override
   Widget build(BuildContext context) => AppCard(

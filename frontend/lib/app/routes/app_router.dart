@@ -223,6 +223,24 @@ final GoRouter router = GoRouter(
       builder: (context, state) => const CustomerRegisterScreen(),
     ),
     GoRoute(
+      path: '/customer/signup',
+      redirect: (context, state) {
+        final ref = state.uri.queryParameters['ref'] ?? state.uri.queryParameters['code'];
+        return ref != null && ref.trim().isNotEmpty
+            ? '/customer/register?ref=${Uri.encodeComponent(ref.trim())}'
+            : '/customer/register';
+      },
+    ),
+    GoRoute(
+      path: '/join',
+      redirect: (context, state) {
+        final ref = state.uri.queryParameters['ref'] ?? state.uri.queryParameters['code'];
+        return ref != null && ref.trim().isNotEmpty
+            ? '/customer/register?ref=${Uri.encodeComponent(ref.trim())}'
+            : '/customer/register';
+      },
+    ),
+    GoRoute(
       path: '/internal/login',
       name: 'internal-login',
       builder: (context, state) => const InternalLoginScreen(),

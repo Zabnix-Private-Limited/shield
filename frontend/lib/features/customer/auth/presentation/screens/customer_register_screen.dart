@@ -25,6 +25,22 @@ class _CustomerRegisterScreenState extends State<CustomerRegisterScreen> {
   String? _errorText;
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final uri = GoRouterState.of(context).uri;
+    final ref = uri.queryParameters['ref'] ?? uri.queryParameters['code'];
+    if (ref != null && ref.trim().isNotEmpty) {
+      CustomerAuthRepository.instance.pendingReferralCode = ref.trim();
+    }
+    if (_referralCodeController.text.isEmpty) {
+      final code = CustomerAuthRepository.instance.pendingReferralCode;
+      if (code != null && code.isNotEmpty) {
+        _referralCodeController.text = code;
+      }
+    }
+  }
+
+  @override
   void initState() {
     super.initState();
     if (CustomerAuthRepository.instance.pendingPhoneNumber == null) {

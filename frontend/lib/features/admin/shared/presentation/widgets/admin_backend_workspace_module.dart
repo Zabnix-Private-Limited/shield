@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import '../../exports.dart';
 import '../../../../../app/theme/app_colors.dart';
 import '../../../../../app/theme/app_typography.dart';
+import '../../../../../shared/services/api_service.dart';
 import '../../../../../shared/services/platform_file_actions.dart';
 
 class AdminBackendWorkspaceModule extends StatefulWidget {
@@ -531,7 +532,13 @@ class _ListPanel extends StatelessWidget {
               child: InkWell(
                 onTap: controller == null || panel.selectionKey == null
                     ? null
-                    : () => controller!.selectRecord(item[panel.selectionKey!]),
+                    : () {
+                        final code = item[panel.selectionKey!];
+                        controller!.selectRecord(code);
+                        if (code != null && code.toString().isNotEmpty) {
+                          _showAgentPerformanceDialog(context, code.toString());
+                        }
+                      },
                 child: AdminEntityCard(
                   item: AdminEntityItem(
                     title: item['title'] ?? 'Record',
@@ -1459,4 +1466,277 @@ class _WorkspaceFieldData {
   final bool readOnly;
   final List<String> options;
   final String? helperText;
+}
+
+Future<void> _showAgentPerformanceDialog(
+  BuildContext context,
+  String code,
+) async {
+  showDialog(
+    context: context,
+    builder: (context) => _AgentPerformanceModal(code: code),
+  );
+}
+
+class _AgentPerformanceModal extends StatefulWidget {
+  const _AgentPerformanceModal({required this.code});
+
+  final String code;
+
+  @override
+  State<_AgentPerformanceModal> createState() => _AgentPerformanceModalState();
+}
+
+class _AgentPerformanceModalState extends State<_AgentPerformanceModal> {
+  late Future<Map<String, dynamic>> _future;
+
+  @override
+  void initState() {
+    super.initState();
+    _future = ApiService.getAgentProfilePerformance(widget.code);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 720, maxHeight: 680),
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: FutureBuilder<Map<String, dynamic>>(
+            future: _future,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const SizedBox(
+                  height: 320,
+                  child: Center(
+                    child: CircularProgressIndicator(color: AppColors.shieldBlue),
+                  ),
+                );
+              }
+              if (snapshot.hasError || !snapshot.hasData) {
+                return Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.error_outline, color: Colors.red, size: 48),
+                    const SizedBox(height: 12),
+                    Text('Failed to load agent profile details.', style: AppTypography.h4),
+                    const SizedBox(height: 16),
+                    FilledButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('Close'),
+                    ),
+                  ],
+                );
+              }
+
+              final data = snapshot.data!;
+              final agent = Map<String, dynamic>.from(data['agent'] ?? {});
+              final metrics = Map<String, dynamic>.from(data['metrics'] ?? {});
+              final customers = List<Map<String, dynamic>>.from(
+                (data['addedCustomers'] as List? ?? []).map((x) => Map<String, dynamic>.from(x)),
+              );
+
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        width: 52,
+                        height: 52,
+                        decoration: BoxDecoration(
+                          color: AppColors.shieldBlue.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: const Icon(
+                          Icons.badge_outlined,
+                          color: AppColors.shieldBlue,
+                          size: 28,
+                        ),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Text(
+                                  agent['name'] ?? 'Agent Profile',
+                                  style: AppTypography.h3,
+                                ),
+                                const SizedBox(width: 10),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.shieldGreen.withValues(alpha: 0.12),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Text(
+                                    agent['status'] ?? 'ACTIVE',
+                                    style: AppTypography.tiny.copyWith(
+                                      color: AppColors.shieldGreen,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              '${agent['code']} • ${agent['role']} • ${agent['branch']}',
+                              style: AppTypography.small.copyWith(color: AppColors.gray),
+                            ),
+                          ],
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () => Navigator.pop(context),
+                        icon: const Icon(Icons.close_rounded),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  Row(
+                    children: [
+                      _StatCard(
+                        title: 'Customers Onboarded',
+                        value: '${metrics['totalCustomersOnboarded'] ?? 0}',
+                        icon: Icons.people_outline,
+                        color: AppColors.shieldBlue,
+                      ),
+                      const SizedBox(width: 12),
+                      _StatCard(
+                        title: 'Active Memberships',
+                        value: '${metrics['activeMembershipsAdded'] ?? 0}',
+                        icon: Icons.card_membership_outlined,
+                        color: AppColors.shieldGreen,
+                      ),
+                      const SizedBox(width: 12),
+                      _StatCard(
+                        title: 'Agent Earnings',
+                        value: '${metrics['totalEarningsFormatted'] ?? '₹0'}',
+                        icon: Icons.account_balance_wallet_outlined,
+                        color: Colors.amber.shade800,
+                      ),
+                      const SizedBox(width: 12),
+                      _StatCard(
+                        title: 'Tasks & Visits',
+                        value: '${(metrics['completedFollowUps'] ?? 0) + (metrics['completedVisits'] ?? 0)}',
+                        icon: Icons.task_alt_outlined,
+                        color: Colors.purple,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  Text('Onboarded Customers & Memberships Added', style: AppTypography.h4),
+                  const SizedBox(height: 10),
+                  Expanded(
+                    child: customers.isEmpty
+                        ? const Center(
+                            child: Text(
+                              'No customers onboarded by this agent yet.',
+                              style: TextStyle(color: AppColors.gray),
+                            ),
+                          )
+                        : ListView.separated(
+                            itemCount: customers.length,
+                            separatorBuilder: (_, __) => const Divider(height: 1),
+                            itemBuilder: (context, index) {
+                              final cust = customers[index];
+                              return ListTile(
+                                dense: true,
+                                leading: CircleAvatar(
+                                  backgroundColor: AppColors.lightGray,
+                                  child: Text(
+                                    (cust['name'] ?? 'C')[0].toUpperCase(),
+                                    style: const TextStyle(fontWeight: FontWeight.bold),
+                                  ),
+                                ),
+                                title: Text(
+                                  cust['name'] ?? 'Customer',
+                                  style: AppTypography.body.copyWith(fontWeight: FontWeight.w700),
+                                ),
+                                subtitle: Text(
+                                  '${cust['code']} • ${cust['mobile']} • Joined ${cust['joinedAt']}',
+                                  style: AppTypography.small,
+                                ),
+                                trailing: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  crossAxisAlignment: CrossAxisAlignment.end,
+                                  children: [
+                                    Text(
+                                      cust['membershipTier'] ?? 'Standard',
+                                      style: AppTypography.small.copyWith(
+                                        color: AppColors.shieldBlue,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                    Text(
+                                      cust['walletBalance'] ?? '₹0.00',
+                                      style: AppTypography.tiny.copyWith(
+                                        color: AppColors.darkGray,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
+                          ),
+                  ),
+                ],
+              );
+            },
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _StatCard extends StatelessWidget {
+  const _StatCard({
+    required this.title,
+    required this.value,
+    required this.icon,
+    required this.color,
+  });
+
+  final String title;
+  final String value;
+  final IconData icon;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: color.withValues(alpha: 0.2)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(icon, color: color, size: 22),
+            const SizedBox(height: 8),
+            Text(
+              value,
+              style: AppTypography.h4.copyWith(color: AppColors.shieldNavy),
+            ),
+            Text(
+              title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: AppTypography.tiny.copyWith(color: AppColors.gray),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }

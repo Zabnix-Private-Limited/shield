@@ -35,7 +35,15 @@ class CustomerAuthRepository {
   int _sendAttemptSequence = 0;
   final _stateMachine = CustomerPhoneVerificationStateMachine<Object>();
 
+  String? _pendingReferralCode;
   String? get pendingPhoneNumber => _pendingPhoneNumber;
+  String? get pendingReferralCode => _pendingReferralCode;
+  set pendingReferralCode(String? value) {
+    if (value != null && value.trim().isNotEmpty) {
+      _pendingReferralCode = value.trim();
+    }
+  }
+
   DateTime? get resendAllowedAt => _resendAllowedAt;
   CustomerPhoneVerificationState get verificationState => _stateMachine.state;
 

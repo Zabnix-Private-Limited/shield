@@ -1672,13 +1672,34 @@ export class CustomerService {
         );
       }
       let referredById: bigint | null = null;
-      let assignedAgentCode = data.agent_code || 'AGT-SAHAKAR-DEFAULT';
+      let assignedAgentCode =
+        (data.agent_code || data.agentCode || '').toString().trim() ||
+        'AGT-SAHAKAR-DEFAULT';
 
-      if (data.referred_by_code) {
-        const cleanRefCode = data.referred_by_code.toString().trim();
-        const referrerCustomer = await tx.customer.findFirst({
-          where: { referralCode: cleanRefCode },
+      const refCodeRaw = (
+        data.referred_by_code ||
+        data.referral_code ||
+        data.referralCode ||
+        data.ref ||
+        ''
+      )
+        .toString()
+        .trim();
+
+      let referrerCustomer: any = null;
+
+      if (refCodeRaw) {
+        referrerCustomer = await tx.customer.findFirst({
+          where: {
+            deletedAt: null,
+            OR: [
+              { referralCode: refCodeRaw },
+              { customerCode: refCodeRaw },
+              { mobile: refCodeRaw },
+            ],
+          },
         });
+
         if (referrerCustomer && referrerCustomer.mobile !== data.mobile) {
           referredById = referrerCustomer.id;
           if (referrerCustomer.agentCode) {
@@ -1687,9 +1708,10 @@ export class CustomerService {
         } else {
           const referrerAgent = await tx.user.findFirst({
             where: {
+              deletedAt: null,
               OR: [
-                { employeeCode: cleanRefCode },
-                { email: cleanRefCode.toLowerCase() },
+                { employeeCode: refCodeRaw },
+                { email: refCodeRaw.toLowerCase() },
               ],
             },
           });
@@ -1698,6 +1720,17 @@ export class CustomerService {
           }
         }
       }
+
+      const agentUser = await tx.user.findFirst({
+        where: {
+          employeeCode: assignedAgentCode,
+          deletedAt: null,
+        },
+        select: { id: true },
+      });
+
+      const effectiveCreatedBy =
+        staffUserId ?? agentUser?.id ?? referrerCustomer?.createdBy ?? null;
 
       const isSelfSignup =
         data.onboarding_source === 'SELF_SIGNUP' ||
@@ -1725,7 +1758,7 @@ export class CustomerService {
           state: data.state,
           pincode: data.pincode,
           status: desiredStatus,
-          createdBy: staffUserId,
+          createdBy: effectiveCreatedBy,
           approvedBy: isSelfSignup ? null : staffUserId,
           bloodGroup: data.blood_group || null,
           agentCode: assignedAgentCode,
@@ -1736,6 +1769,20 @@ export class CustomerService {
           referredById,
         },
       });
+
+      if (referredById) {
+        try {
+          await this.referralService.createPendingReferralEvent({
+            referrerCustomerId: referredById,
+            referredCustomerId: customer.id,
+            referralCode: refCodeRaw,
+          });
+        } catch (err) {
+          this.logger.warn(
+            `Failed to record pending referral event: ${err}`,
+          );
+        }
+      }
 
       const requestedMembershipTypeCode = data.membership_type_code
         ?.toString()

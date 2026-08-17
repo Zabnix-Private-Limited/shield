@@ -23,7 +23,7 @@ MembershipDashboardState resolveMembershipDashboardState({
   required MembershipApplicationEntity? application,
 }) {
   final membershipStatus = membership?.membershipStatus.trim().toUpperCase();
-  if (membershipStatus == 'ACTIVE') {
+  if (membershipStatus == 'ACTIVE' || (membership?.isActive ?? false)) {
     return MembershipDashboardState.activeMember;
   }
   if (membership != null) return MembershipDashboardState.membershipInactive;

@@ -219,8 +219,9 @@ export class AuthService {
       gender: body.gender,
       mobile,
       email: body.email,
-      agent_code: body.agent_code,
-      referred_by_code: body.referred_by_code,
+      agent_code: body.agent_code ?? body.agentCode,
+      referred_by_code:
+        body.referred_by_code ?? body.referral_code ?? body.referralCode,
     });
 
     return this.loginCustomer(firebaseIdToken, requestContext);

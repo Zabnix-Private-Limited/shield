@@ -1421,6 +1421,15 @@ class ApiService {
     return _readEnvelope(response);
   }
 
+  static Future<Map<String, dynamic>> getAgentProfilePerformance(
+    String code,
+  ) async {
+    final response = await _dio.get(
+      '/admin/workspaces/agents/performance/${Uri.encodeComponent(code)}',
+    );
+    return _readEnvelope(response);
+  }
+
   static Future<Map<String, dynamic>> customerRegister({
     required String firebaseIdToken,
     required String name,

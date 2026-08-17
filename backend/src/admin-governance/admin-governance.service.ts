@@ -2467,6 +2467,40 @@ export class AdminGovernanceService {
       },
       {
         searchHint: 'Search agents, assigned customers, follow-ups, visits, and uploads',
+    let selectedAgentDetailRows: Array<{ label: string; value: string }> = [];
+    if (query.selectedId && query.selectedId.trim().length > 0) {
+      try {
+        const perf = await this.getAgentProfilePerformance(query.selectedId);
+        selectedAgentDetailRows = [
+          { label: 'Agent Name', value: perf.agent.name },
+          { label: 'Employee Code', value: perf.agent.code },
+          { label: 'Role & Scope', value: perf.agent.role },
+          { label: 'Branch & Dept', value: `${perf.agent.branch} • ${perf.agent.department}` },
+          { label: 'Contact', value: `${perf.agent.mobile} • ${perf.agent.email}` },
+          { label: 'Account Status', value: perf.agent.status },
+          { label: 'Onboarded Customers', value: `${perf.metrics.totalCustomersOnboarded} customers` },
+          { label: 'Active Memberships', value: `${perf.metrics.activeMembershipsAdded} active` },
+          { label: 'Estimated Earnings', value: perf.metrics.totalEarningsFormatted },
+          { label: 'Tasks & Visits', value: `${perf.metrics.completedFollowUps} follow-ups, ${perf.metrics.completedVisits} visits` },
+          { label: 'Joined Date', value: perf.agent.joinedAt },
+        ];
+      } catch (err) {
+        this.logger.warn(`Agent performance details lookup failed for ${query.selectedId}: ${err}`);
+      }
+    }
+
+    return this.buildWorkspacePayload(
+      'agents',
+      {
+        eyebrow: 'Operations / Agents',
+        title: 'Agents',
+        description:
+          'Backend-owned agent operations across assignment, customers, follow-ups, visits, attendance, and uploaded records.',
+        primaryActionLabel: 'Create Agent',
+        secondaryActionLabel: 'Attendance',
+      },
+      {
+        searchHint: 'Search agents, assigned customers, follow-ups, visits, and uploads',
         tabs: ['Overview', 'Customers', 'Follow-Ups', 'Visits', 'Attendance', 'Documents', 'Timeline'],
         filters: ['ACTIVE', 'PENDING', 'INACTIVE'],
       },
@@ -2481,7 +2515,10 @@ export class AdminGovernanceService {
           title: 'Assignment posture',
           subtitle: 'Agent and branch coverage from current records.',
           type: 'list',
+          selectionKey: 'code',
+          selectedId: query.selectedId,
           items: agentTableRows.slice(0, 8).map((row) => ({
+            code: row['code'],
             title: row['name'] ?? 'Agent',
             subtitle: `${row['branch'] ?? 'Unassigned'} • ${row['role'] ?? 'AGENT'}`,
             meta: row['code'] ?? 'N/A',
@@ -2497,6 +2534,8 @@ export class AdminGovernanceService {
           title: selectedTab == 'Overview' ? 'Agent registry' : `${selectedTab} queue`,
           subtitle: 'The active tab drives the dataset returned by the backend workspace contract.',
           type: 'table',
+          selectionKey: 'code',
+          selectedId: query.selectedId,
           columns: selectedColumns,
           rows: selectedRows,
           emptyState: {
@@ -2505,22 +2544,36 @@ export class AdminGovernanceService {
             actionLabel: 'Refresh workspace',
           },
         },
-        right: {
-          title: 'Recent agent timeline',
-          subtitle: 'Live audit evidence tied to user and assignment entities.',
-          type: 'table',
-          columns: [
-            { key: 'time', label: 'Time' },
-            { key: 'event', label: 'Event' },
-            { key: 'status', label: 'Entity' },
-          ],
-          rows: timelineRows,
-          emptyState: {
-            title: 'No agent timeline rows',
-            description: 'No recent audit evidence matched the current search.',
-            actionLabel: 'Refresh workspace',
-          },
-        },
+        right: selectedAgentDetailRows.length > 0
+          ? {
+              title: `Agent Performance (${query.selectedId})`,
+              subtitle: 'Full works, onboarded customers, and earnings summary.',
+              type: 'details',
+              selectionKey: 'code',
+              selectedId: query.selectedId,
+              details: selectedAgentDetailRows,
+              emptyState: {
+                title: 'No details available',
+                description: 'Select an agent profile to view performance.',
+                actionLabel: 'Refresh workspace',
+              },
+            }
+          : {
+              title: 'Recent agent timeline',
+              subtitle: 'Live audit evidence tied to user and assignment entities.',
+              type: 'table',
+              columns: [
+                { key: 'time', label: 'Time' },
+                { key: 'event', label: 'Event' },
+                { key: 'status', label: 'Entity' },
+              ],
+              rows: timelineRows,
+              emptyState: {
+                title: 'No agent timeline rows',
+                description: 'No recent audit evidence matched the current search.',
+                actionLabel: 'Refresh workspace',
+              },
+            },
       },
       {
         actions: agentActions as any,
@@ -2538,6 +2591,157 @@ export class AdminGovernanceService {
         ],
       },
     );
+  }
+
+  async getAgentProfilePerformance(agentCodeOrId: string) {
+    const cleanCode = agentCodeOrId.trim();
+    const user = await this.prisma.user.findFirst({
+      where: {
+        deletedAt: null,
+        OR: [
+          { employeeCode: cleanCode },
+          { firebaseUid: cleanCode },
+          { email: cleanCode.toLowerCase() },
+        ],
+      },
+      include: {
+        role: true,
+        department: true,
+        branchBusiness: true,
+      },
+    });
+
+    if (!user) {
+      throw new NotFoundException(`Agent profile '${agentCodeOrId}' not found.`);
+    }
+
+    const agentCode = user.employeeCode || '';
+    const [
+      customers,
+      memberships,
+      referralEvents,
+      tasks,
+      appointments,
+      audits,
+    ] = await Promise.all([
+      this.prisma.customer.findMany({
+        where: {
+          deletedAt: null,
+          OR: [
+            { createdBy: user.id },
+            { agentCode: agentCode },
+          ],
+        },
+        include: {
+          membership: { include: { membershipType: true } },
+          wallet: true,
+        },
+        orderBy: [{ createdAt: 'desc' }],
+      }),
+      this.prisma.membership.findMany({
+        where: {
+          customer: {
+            OR: [
+              { createdBy: user.id },
+              { agentCode: agentCode },
+            ],
+          },
+        },
+        include: {
+          customer: { select: { firstName: true, lastName: true, customerCode: true } },
+          membershipType: true,
+        },
+        orderBy: [{ createdAt: 'desc' }],
+      }),
+      this.prisma.referralRewardEvent.findMany({
+        where: {
+          referrerCustomer: {
+            OR: [
+              { createdBy: user.id },
+              { agentCode: agentCode },
+            ],
+          },
+        },
+      }),
+      this.prisma.crmTask.findMany({
+        where: { assignedToUserId: user.id, deletedAt: null },
+      }),
+      this.prisma.appointment.findMany({
+        where: { providerId: user.id },
+      }),
+      this.prisma.auditLog.findMany({
+        where: { userId: user.id },
+        orderBy: [{ createdAt: 'desc' }],
+        take: 15,
+      }),
+    ]);
+
+    const activeMembershipsCount = customers.filter(
+      (c) => c.membership?.status?.toUpperCase() === 'ACTIVE',
+    ).length;
+
+    const baseEarnings =
+      activeMembershipsCount * 250 + customers.length * 50 + referralEvents.length * 20;
+
+    const customerSummaries = await Promise.all(
+      customers.map(async (c) => {
+        let cashAvailable = 0;
+        if (c.wallet) {
+          const wSummary = await this.prisma.cashWalletTransaction.aggregate({
+            where: { walletId: c.wallet.id },
+            _sum: { amount: true },
+          });
+          cashAvailable = Number(wSummary._sum.amount || 0);
+        }
+        return {
+          id: c.id.toString(),
+          code: c.customerCode || 'N/A',
+          name: `${c.firstName || ''} ${c.lastName || ''}`.trim() || 'Customer',
+          mobile: c.mobile,
+          status: c.status || 'ACTIVE',
+          membershipStatus: c.membership?.status || 'NO_MEMBERSHIP',
+          membershipTier: c.membership?.membershipType?.name || 'Standard',
+          walletBalance: `₹${cashAvailable.toFixed(2)}`,
+          joinedAt: this.formatDateTime(c.createdAt),
+        };
+      }),
+    );
+
+    return {
+      agent: {
+        id: user.id.toString(),
+        code: user.employeeCode || 'N/A',
+        name: this.resolveUserDisplayName(user as any),
+        role: user.role?.name || 'SHIELD Agent',
+        mobile: user.mobile || 'N/A',
+        email: user.email || 'N/A',
+        branch: user.branchBusiness?.name || 'Sahakar Healthcare Group',
+        department: user.department?.name || 'Field Operations',
+        status: user.status || 'ACTIVE',
+        joinedAt: this.formatDateTime(user.createdAt),
+      },
+      metrics: {
+        totalCustomersOnboarded: customers.length,
+        activeMembershipsAdded: activeMembershipsCount,
+        totalNetworkReferrals: referralEvents.length,
+        totalEarningsFormatted: `₹${baseEarnings.toLocaleString('en-IN')}`,
+        completedFollowUps: tasks.filter((t) => t.status === 'COMPLETED').length,
+        completedVisits: appointments.filter((a) => a.status === 'COMPLETED').length,
+      },
+      addedCustomers: customerSummaries,
+      membershipsAdded: memberships.map((m) => ({
+        membershipNumber: m.membershipNumber,
+        customerName: `${m.customer.firstName || ''} ${m.customer.lastName || ''}`.trim(),
+        tier: m.membershipType?.name || 'Standard Plan',
+        status: m.status,
+        activationDate: this.formatDateTime(m.activationDate),
+      })),
+      recentActivities: audits.map((a) => ({
+        time: this.formatDateTime(a.createdAt),
+        event: a.action,
+        details: JSON.stringify(a.newData || {}),
+      })),
+    };
   }
 
   async getAgentWorkspaceForm(

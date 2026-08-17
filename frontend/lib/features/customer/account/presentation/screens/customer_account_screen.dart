@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../../../../app/theme/app_colors.dart';
 import '../../../../../app/theme/app_typography.dart';
@@ -170,16 +169,6 @@ class _CustomerAccountScreenState extends ConsumerState<CustomerAccountScreen>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          children: [
-            IconButton(
-              onPressed: () => context.go('/portal/customer/profile'),
-              icon: const Icon(Icons.arrow_back),
-            ),
-            Expanded(child: Text('Profile & family', style: AppTypography.h3)),
-          ],
-        ),
-        const SizedBox(height: 12),
         AppCard(
           child: TabBar(
             controller: _tabs,

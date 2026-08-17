@@ -37,7 +37,7 @@ class WalletController extends ChangeNotifier {
       _wallet = cached;
       _isLoading = false;
       notifyListeners();
-      unawaited(_refreshInBackground());
+      await _refreshInBackground();
       return;
     }
 
