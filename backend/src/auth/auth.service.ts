@@ -402,31 +402,35 @@ export class AuthService {
   }
 
   async verifyAccessToken(token: string) {
+    // Step 1: verify the JWT signature and expiry. Any failure here is a
+    // genuine auth failure — the token is malformed or expired.
+    let payload: ShieldJwtPayload;
     try {
-      const payload = await this.jwtService.verifyAsync<ShieldJwtPayload>(token, {
+      payload = await this.jwtService.verifyAsync<ShieldJwtPayload>(token, {
         secret: this.env.jwtAccessSecret,
       });
-
-      const session = await this.runAuthStoreOperation(
-        'access_token_session_lookup',
-        () =>
-          this.prisma.authSession.findUnique({
-            where: { sessionId: payload.sid },
-            select: { revokedAt: true },
-          }),
-      );
-
-      if (!session || session.revokedAt) {
-        throw new UnauthorizedException('Session has been revoked.');
-      }
-
-      return this.mapPayloadToPrincipal(payload);
-    } catch (error) {
-      if (error instanceof UnauthorizedException) {
-        throw error;
-      }
+    } catch {
       throw new UnauthorizedException('Invalid or expired SHIELD access token.');
     }
+
+    // Step 2: check the session is not revoked. This is a DB call; if the
+    // database is unavailable (cold start, transient error), re-throw as
+    // ServiceUnavailable so the frontend treats it as a transient failure
+    // rather than destroying durable credentials.
+    const session = await this.runAuthStoreOperation(
+      'access_token_session_lookup',
+      () =>
+        this.prisma.authSession.findUnique({
+          where: { sessionId: payload.sid },
+          select: { revokedAt: true },
+        }),
+    );
+
+    if (!session || session.revokedAt) {
+      throw new UnauthorizedException('Session has been revoked.');
+    }
+
+    return this.mapPayloadToPrincipal(payload);
   }
 
   async getProfile(principal: ShieldPrincipal) {
@@ -957,9 +961,37 @@ export class AuthService {
         );
       }
 
+      // Surface DB connection / timeout errors as 503 so the frontend
+      // transient-failure guard preserves durable credentials instead of
+      // treating a cold-start hiccup as a sign-out event.
+      if (this.isAuthStoreConnectionError(error)) {
+        this.logger.error(
+          `Auth store connection error during ${action}.`,
+          error instanceof Error ? error.stack : undefined,
+        );
+        throw new ServiceUnavailableException(
+          'Authentication session store is temporarily unavailable. Please try again shortly.',
+        );
+      }
+
       throw error;
     }
   }
+
+  private isAuthStoreConnectionError(error: unknown) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      // P1001 = unreachable, P1008 = timeout, P1017 = server closed connection
+      return ['P1001', 'P1008', 'P1017'].includes(error.code);
+    }
+    if (error instanceof Prisma.PrismaClientInitializationError) {
+      return true;
+    }
+    if (error instanceof Prisma.PrismaClientRustPanicError) {
+      return true;
+    }
+    return false;
+  }
+
 
   private isAuthStoreSchemaError(error: unknown) {
     if (error instanceof Prisma.PrismaClientKnownRequestError) {

@@ -13189,3 +13189,21 @@ est build compilation.
 - NestJS compilation (npm run build) succeeded with 0 errors.
 - flutter test suites passed (11/11 tests passed).
 - git diff --check passed cleanly.
+
+## 156. Responsive Layout Optimization for All Mobile & Desktop Resolutions (2026-08-17 12:28:00 IST)
+
+- Enhanced portal shell layout (portal_shell.dart) to support responsive layouts across all mobile, tablet, and desktop viewport sizes for Super Admin, Admin, Provider, and all portal roles.
+- Key implementation details:
+  1. Universal Responsive Breakpoints: Replaced agent-only compact check with universal constraints.maxWidth < 1024 check, switching to a slide-out drawer on compact/mobile resolutions to prevent screen cramping.
+  2. Drawer Integration in Navigation: Updated _InternalPortalSidebar and _RoleRailNav to accept inDrawer parameter, correctly removing fixed width and right border when rendered inside the mobile navigation drawer.
+
+### Frontend Files (Modified)
+- frontend/lib/features/portal/presentation/screens/portal_shell.dart
+
+### Backend Files (Modified)
+- None
+
+### Verification
+- flutter test test suites passed (11/11 tests passed).
+- git diff --check passed cleanly.
+KannnanKannnan

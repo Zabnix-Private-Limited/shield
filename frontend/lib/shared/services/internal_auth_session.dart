@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -153,7 +154,21 @@ class InternalAuthSession extends ChangeNotifier {
       _isAuthenticated = true;
       _trace('session restored using existing token');
       return true;
-    } catch (_) {
+    } catch (error) {
+      // If this is a transient network/server failure (timeout, 429, 5xx, etc),
+      // do NOT attempt a refresh and do NOT clear the session. Treat the stored
+      // credentials as still valid and let the user continue. The Dio
+      // interceptor will handle per-request refreshes on 401 later.
+      if (_isTransientFailure(error)) {
+        _isAuthenticated = true;
+        _trace(
+          'session validation skipped due to transient failure '
+          '(status=${_statusCode(error)}); preserving stored credentials',
+        );
+        return true;
+      }
+
+      // Definitive auth failure (401) — try the refresh token.
       final refreshed = await _refreshAccessToken();
       if (refreshed == null || refreshed.isEmpty) {
         _trace('session restore failed because token refresh did not complete');
@@ -165,7 +180,15 @@ class InternalAuthSession extends ChangeNotifier {
         _isAuthenticated = true;
         _trace('session restored after token refresh');
         return true;
-      } catch (_) {
+      } catch (innerError) {
+        if (_isTransientFailure(innerError)) {
+          _isAuthenticated = true;
+          _trace(
+            'post-refresh profile fetch had transient failure; '
+            'access token was refreshed so credentials are kept',
+          );
+          return true;
+        }
         _trace('session restore failed after token refresh');
         return false;
       }
@@ -215,10 +238,40 @@ class InternalAuthSession extends ChangeNotifier {
 
       notifyListeners();
       return _accessToken;
-    } catch (_) {
+    } catch (error) {
+      // On a transient failure during refresh, return the existing access token
+      // so the session is not destroyed. The caller treats a non-null return as
+      // "stay logged in"; the next real 401 will trigger a proper refresh cycle
+      // through the Dio interceptor.
+      if (_isTransientFailure(error)) {
+        _trace(
+          'refresh token call had transient failure '
+          '(status=${_statusCode(error)}); keeping current credentials',
+        );
+        return _accessToken;
+      }
+      // Definitive auth error (401) — the refresh token is invalid/expired.
       return null;
     }
   }
+
+  /// Returns true when [error] is a network glitch, rate-limit, or server
+  /// error that should NOT be treated as a proof that the session is invalid.
+  bool _isTransientFailure(Object error) {
+    if (error is! DioException) return false;
+    if (error.type == DioExceptionType.connectionTimeout ||
+        error.type == DioExceptionType.sendTimeout ||
+        error.type == DioExceptionType.receiveTimeout ||
+        error.type == DioExceptionType.connectionError) {
+      return true;
+    }
+    return const {408, 429, 500, 502, 503, 504}.contains(
+      error.response?.statusCode,
+    );
+  }
+
+  int? _statusCode(Object error) =>
+      error is DioException ? error.response?.statusCode : null;
 
   Future<void> _handleSessionExpired() async {
     _trace('session expired handler invoked');

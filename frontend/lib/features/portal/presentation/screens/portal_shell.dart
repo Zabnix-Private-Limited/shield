@@ -312,18 +312,17 @@ class _PortalShellState extends State<PortalShell> {
               )
             : LayoutBuilder(
                 builder: (context, constraints) {
-                  final useCompactAgentShell =
-                      widget.role == SHIELDRole.agent &&
-                      constraints.maxWidth < 1024;
-                  if (useCompactAgentShell) {
+                  final isCompactScreen = constraints.maxWidth < 1024;
+                  if (isCompactScreen) {
                     return Scaffold(
                       backgroundColor: AppColors.lightGray,
                       drawer: Drawer(
                         child: SafeArea(
-                          child: _RoleRailNav(
+                          child: _InternalPortalSidebar(
                             portal: portal,
                             activeSectionKey: activeKey,
                             collapsed: false,
+                            inDrawer: true,
                           ),
                         ),
                       ),
@@ -346,6 +345,7 @@ class _PortalShellState extends State<PortalShell> {
                         portal: portal,
                         activeSectionKey: activeKey,
                         collapsed: !_isInternalSidebarExpanded,
+                        inDrawer: false,
                       ),
                       Expanded(
                         child: Scaffold(
@@ -835,11 +835,13 @@ class _InternalPortalSidebar extends StatelessWidget {
   final PortalRoleData portal;
   final String activeSectionKey;
   final bool collapsed;
+  final bool inDrawer;
 
   const _InternalPortalSidebar({
     required this.portal,
     required this.activeSectionKey,
     required this.collapsed,
+    this.inDrawer = false,
   });
 
   @override
@@ -848,15 +850,16 @@ class _InternalPortalSidebar extends StatelessWidget {
       return _AdminPortalNav(
         portal: portal,
         activeSectionKey: activeSectionKey,
-        inDrawer: false,
-        collapsed: collapsed,
+        inDrawer: inDrawer,
+        collapsed: inDrawer ? false : collapsed,
       );
     }
 
     return _RoleRailNav(
       portal: portal,
       activeSectionKey: activeSectionKey,
-      collapsed: collapsed,
+      collapsed: inDrawer ? false : collapsed,
+      inDrawer: inDrawer,
     );
   }
 }
@@ -866,21 +869,25 @@ class _RoleRailNav extends StatelessWidget {
     required this.portal,
     required this.activeSectionKey,
     required this.collapsed,
+    this.inDrawer = false,
   });
 
   final PortalRoleData portal;
   final String activeSectionKey;
   final bool collapsed;
+  final bool inDrawer;
 
   @override
   Widget build(BuildContext context) {
-    final width = collapsed ? 92.0 : 276.0;
+    final width = inDrawer ? null : (collapsed ? 92.0 : 276.0);
 
     return Container(
       width: width,
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: AppColors.white,
-        border: Border(right: BorderSide(color: AppColors.divider)),
+        border: inDrawer
+            ? null
+            : const Border(right: BorderSide(color: AppColors.divider)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

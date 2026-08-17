@@ -21,6 +21,9 @@ class CustomerServicesScreen extends StatefulWidget {
   State<CustomerServicesScreen> createState() => _CustomerServicesScreenState();
 }
 
+// Sentinel type for the Wellness Products tab — not a real provider category.
+const _kWellnessProductsType = 'WELLNESS_PRODUCTS';
+
 class _CustomerServicesScreenState extends State<CustomerServicesScreen> {
   late final CustomerServicesController _controller;
   late final bool _ownsController;
@@ -29,6 +32,8 @@ class _CustomerServicesScreenState extends State<CustomerServicesScreen> {
   Timer? _debounce;
   String? _lastRoute;
   bool _openingProvider = false;
+  // Tracks whether the Wellness Products tab is active (frontend-only).
+  bool _wellnessSelected = false;
 
   @override
   void initState() {
@@ -47,11 +52,19 @@ class _CustomerServicesScreenState extends State<CustomerServicesScreen> {
     final query = uri.queryParameters['q'] ?? '';
     final type = uri.queryParameters['type'];
     final loadedPage = int.tryParse(uri.queryParameters['page'] ?? '') ?? 1;
+    final wellness = type == _kWellnessProductsType;
     _search.value = _search.value.copyWith(text: query);
     if (_ownsController) {
-      _controller.restore(query: query, type: type, loadedPage: loadedPage);
+      _controller.restore(
+        query: query,
+        type: wellness ? null : type,
+        loadedPage: loadedPage,
+      );
     } else {
-      _controller.load(query: query, type: type);
+      _controller.load(query: query, type: wellness ? null : type);
+    }
+    if (_wellnessSelected != wellness) {
+      _wellnessSelected = wellness;
     }
     final providerId = uri.queryParameters['provider'];
     if (providerId != null && providerId.isNotEmpty) {
@@ -121,67 +134,77 @@ class _CustomerServicesScreenState extends State<CustomerServicesScreen> {
             const SizedBox(height: 16),
             _CategoryFilters(
               categories: _controller.categories,
-              selected: _controller.selectedType,
-              onSelected: (type) =>
-                  _applyRoute(query: _search.text, type: type),
+              selected:
+                  _wellnessSelected ? _kWellnessProductsType : _controller.selectedType,
+              onSelected: (type) {
+                if (type == _kWellnessProductsType) {
+                  setState(() => _wellnessSelected = true);
+                  _applyRoute(query: '', type: _kWellnessProductsType);
+                } else {
+                  setState(() => _wellnessSelected = false);
+                  _applyRoute(query: _search.text, type: type);
+                }
+              },
             ),
             const SizedBox(height: 20),
-            const _WellnessProductsPanel(),
-            const SizedBox(height: 24),
-            Row(
-              children: [
-                Expanded(
+            if (_wellnessSelected) ...[
+              const _WellnessProductsPanel(startsExpanded: true),
+            ] else ...[
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      _categoryPresentation(_controller.selectedType).heading,
+                      style: AppTypography.h4,
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () =>
+                        context.go('/portal/customer/book-appointment'),
+                    child: const Text('Book a visit'),
+                  ),
+                ],
+              ),
+              if (_controller.error != null)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: ErrorCard(
+                    title: 'Could not refresh providers',
+                    message: 'Showing the last available result set.',
+                    onRetry: _controller.load,
+                  ),
+                ),
+              if (_controller.page.items.isEmpty)
+                AppCard(
                   child: Text(
-                    _categoryPresentation(_controller.selectedType).heading,
-                    style: AppTypography.h4,
+                    _search.text.trim().isEmpty
+                        ? 'No active providers are available right now.'
+                        : 'No providers match your search.',
+                    style: AppTypography.small.copyWith(color: AppColors.gray),
+                  ),
+                )
+              else
+                ..._controller.page.items.map(
+                  (provider) => Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: _ProviderCard(
+                      provider: provider,
+                      onTap: () => _openProvider(provider),
+                    ),
                   ),
                 ),
-                TextButton(
-                  onPressed: () =>
-                      context.go('/portal/customer/book-appointment'),
-                  child: const Text('Book a visit'),
-                ),
-              ],
-            ),
-            if (_controller.error != null)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: ErrorCard(
-                  title: 'Could not refresh providers',
-                  message: 'Showing the last available result set.',
-                  onRetry: _controller.load,
-                ),
-              ),
-            if (_controller.page.items.isEmpty)
-              AppCard(
-                child: Text(
-                  _search.text.trim().isEmpty
-                      ? 'No active providers are available right now.'
-                      : 'No providers match your search.',
-                  style: AppTypography.small.copyWith(color: AppColors.gray),
-                ),
-              )
-            else
-              ..._controller.page.items.map(
-                (provider) => Padding(
-                  padding: const EdgeInsets.only(bottom: 10),
-                  child: _ProviderCard(
-                    provider: provider,
-                    onTap: () => _openProvider(provider),
+              if (_controller.page.page < _controller.page.totalPages)
+                Center(
+                  child: TextButton(
+                    onPressed: _controller.isLoading ? null : _loadNextPage,
+                    child: Text(
+                      _controller.isLoading
+                          ? 'Loading more…'
+                          : 'Load more providers',
+                    ),
                   ),
                 ),
-              ),
-            if (_controller.page.page < _controller.page.totalPages)
-              Center(
-                child: TextButton(
-                  onPressed: _controller.isLoading ? null : _loadNextPage,
-                  child: Text(
-                    _controller.isLoading
-                        ? 'Loading more…'
-                        : 'Load more providers',
-                  ),
-                ),
-              ),
+            ],
             const SizedBox(height: 8),
             AppCard(
               child: Row(
@@ -341,7 +364,9 @@ String _servicesRoute({
 }
 
 class _WellnessProductsPanel extends StatefulWidget {
-  const _WellnessProductsPanel();
+  const _WellnessProductsPanel({this.startsExpanded = false});
+
+  final bool startsExpanded;
 
   @override
   State<_WellnessProductsPanel> createState() => _WellnessProductsPanelState();
@@ -351,7 +376,7 @@ class _WellnessProductsPanelState extends State<_WellnessProductsPanel> {
   final _controller = CustomerWellnessProductsController();
   final _search = TextEditingController();
   Timer? _debounce;
-  var _expanded = false;
+  late var _expanded = widget.startsExpanded;
 
   @override
   void dispose() {
@@ -359,6 +384,19 @@ class _WellnessProductsPanelState extends State<_WellnessProductsPanel> {
     _search.dispose();
     _controller.dispose();
     super.dispose();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.startsExpanded) {
+      // Load immediately when used as a primary tab.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _controller.page.items.isEmpty && !_controller.isLoading) {
+          _controller.load();
+        }
+      });
+    }
   }
 
   void _toggle() {
@@ -382,166 +420,175 @@ class _WellnessProductsPanelState extends State<_WellnessProductsPanel> {
   @override
   Widget build(BuildContext context) => ListenableBuilder(
     listenable: _controller,
-    builder: (context, _) => AppCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          InkWell(
-            onTap: _toggle,
-            borderRadius: BorderRadius.circular(12),
-            child: Row(
-              children: [
-                const Icon(
-                  Icons.inventory_2_outlined,
-                  color: AppColors.shieldBlue,
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Wellness products', style: AppTypography.h4),
-                      const SizedBox(height: 3),
-                      Text(
-                        'Browse the available catalogue. Online checkout is not available.',
-                        style: AppTypography.tiny.copyWith(
-                          color: AppColors.gray,
-                        ),
-                      ),
-                    ],
+    builder: (context, _) {
+      // When used as a full-page tab (startsExpanded), skip the collapsible
+      // header and render the catalogue content directly.
+      if (widget.startsExpanded) {
+        return _buildContent();
+      }
+      return AppCard(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            InkWell(
+              onTap: _toggle,
+              borderRadius: BorderRadius.circular(12),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.inventory_2_outlined,
+                    color: AppColors.shieldBlue,
                   ),
-                ),
-                Icon(_expanded ? Icons.expand_less : Icons.expand_more),
-              ],
-            ),
-          ),
-          if (_expanded) ...[
-            const SizedBox(height: 16),
-            TextField(
-              controller: _search,
-              onChanged: _searchProducts,
-              decoration: InputDecoration(
-                hintText: 'Search wellness products',
-                prefixIcon: const Icon(Icons.search),
-                suffixIcon: _search.text.isEmpty
-                    ? null
-                    : IconButton(
-                        icon: const Icon(Icons.close),
-                        onPressed: () {
-                          _search.clear();
-                          _controller.applyFilters(
-                            query: '',
-                            categoryId: _controller.selectedCategoryId,
-                          );
-                          setState(() {});
-                        },
-                      ),
-              ),
-            ),
-            if (_controller.page.categories.isNotEmpty) ...[
-              const SizedBox(height: 12),
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  children: [
-                    ChoiceChip(
-                      label: const Text('All products'),
-                      selected: _controller.selectedCategoryId == null,
-                      onSelected: (_) => _controller.applyFilters(
-                        query: _search.text,
-                        categoryId: null,
-                      ),
-                    ),
-                    ..._controller.page.categories.map(
-                      (category) => Padding(
-                        padding: const EdgeInsets.only(left: 8),
-                        child: ChoiceChip(
-                          label: Text(category.name),
-                          selected:
-                              _controller.selectedCategoryId == category.id,
-                          onSelected: (_) => _controller.applyFilters(
-                            query: _search.text,
-                            categoryId: category.id,
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Wellness products', style: AppTypography.h4),
+                        const SizedBox(height: 3),
+                        Text(
+                          'Browse the available catalogue. Online checkout is not available.',
+                          style: AppTypography.tiny.copyWith(
+                            color: AppColors.gray,
                           ),
                         ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-            const SizedBox(height: 12),
-            if (_controller.isLoading && _controller.page.items.isEmpty)
-              const Center(
-                child: Padding(
-                  padding: EdgeInsets.all(12),
-                  child: CircularProgressIndicator(),
-                ),
-              )
-            else if (_controller.error != null &&
-                _controller.page.items.isEmpty)
-              ErrorCard(
-                title: 'Products unavailable',
-                message:
-                    'The wellness catalogue could not be loaded right now.',
-                onRetry: _controller.load,
-              )
-            else if (_controller.page.items.isEmpty)
-              Text(
-                _search.text.trim().isEmpty
-                    ? 'No wellness products are currently listed.'
-                    : 'No wellness products match your search.',
-                style: AppTypography.small.copyWith(color: AppColors.gray),
-              )
-            else ...[
-              ..._controller.page.items.map(
-                (product) => Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: _WellnessProductCard(
-                    product: product,
-                    onTap: () => showModalBottomSheet<void>(
-                      context: context,
-                      useSafeArea: true,
-                      builder: (_) =>
-                          _WellnessProductDetailsSheet(product: product),
+                      ],
                     ),
                   ),
-                ),
+                  Icon(_expanded ? Icons.expand_less : Icons.expand_more),
+                ],
               ),
-              if (_controller.error != null)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: Text(
-                    'Could not load more products. The current results are still available.',
-                    style: AppTypography.tiny.copyWith(color: AppColors.error),
-                  ),
-                ),
-              if (_controller.page.page < _controller.page.totalPages)
-                Center(
-                  child: TextButton(
-                    onPressed: _controller.isLoading
-                        ? null
-                        : _controller.loadNextPage,
-                    child: Text(
-                      _controller.isLoading
-                          ? 'Loading more…'
-                          : 'Load more products',
-                    ),
-                  ),
-                ),
-            ],
-            if (_controller.page.disclosure != null) ...[
-              const SizedBox(height: 8),
-              Text(
-                _controller.page.disclosure!,
-                style: AppTypography.tiny.copyWith(color: AppColors.gray),
-              ),
-            ],
+            ),
+          if (_expanded) ...[
+            const SizedBox(height: 16),
+            ..._buildContentItems(),
           ],
         ],
       ),
-    ),
+    );
+  },
   );
+
+  Widget _buildContent() => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: _buildContentItems(),
+  );
+
+  List<Widget> _buildContentItems() => [
+    TextField(
+      controller: _search,
+      onChanged: _searchProducts,
+      decoration: InputDecoration(
+        hintText: 'Search wellness products',
+        prefixIcon: const Icon(Icons.search),
+        suffixIcon: _search.text.isEmpty
+            ? null
+            : IconButton(
+                icon: const Icon(Icons.close),
+                onPressed: () {
+                  _search.clear();
+                  _controller.applyFilters(
+                    query: '',
+                    categoryId: _controller.selectedCategoryId,
+                  );
+                  setState(() {});
+                },
+              ),
+      ),
+    ),
+    if (_controller.page.categories.isNotEmpty) ...[
+      const SizedBox(height: 12),
+      SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: [
+            ChoiceChip(
+              label: const Text('All products'),
+              selected: _controller.selectedCategoryId == null,
+              onSelected: (_) => _controller.applyFilters(
+                query: _search.text,
+                categoryId: null,
+              ),
+            ),
+            ..._controller.page.categories.map(
+              (category) => Padding(
+                padding: const EdgeInsets.only(left: 8),
+                child: ChoiceChip(
+                  label: Text(category.name),
+                  selected: _controller.selectedCategoryId == category.id,
+                  onSelected: (_) => _controller.applyFilters(
+                    query: _search.text,
+                    categoryId: category.id,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    ],
+    const SizedBox(height: 12),
+    if (_controller.isLoading && _controller.page.items.isEmpty)
+      const Center(
+        child: Padding(
+          padding: EdgeInsets.all(12),
+          child: CircularProgressIndicator(),
+        ),
+      )
+    else if (_controller.error != null && _controller.page.items.isEmpty)
+      ErrorCard(
+        title: 'Products unavailable',
+        message: 'The wellness catalogue could not be loaded right now.',
+        onRetry: _controller.load,
+      )
+    else if (_controller.page.items.isEmpty)
+      Text(
+        _search.text.trim().isEmpty
+            ? 'No wellness products are currently listed.'
+            : 'No wellness products match your search.',
+        style: AppTypography.small.copyWith(color: AppColors.gray),
+      )
+    else ...[
+      ..._controller.page.items.map(
+        (product) => Padding(
+          padding: const EdgeInsets.only(bottom: 8),
+          child: _WellnessProductCard(
+            product: product,
+            onTap: () => showModalBottomSheet<void>(
+              context: context,
+              useSafeArea: true,
+              builder: (_) => _WellnessProductDetailsSheet(product: product),
+            ),
+          ),
+        ),
+      ),
+      if (_controller.error != null)
+        Padding(
+          padding: const EdgeInsets.only(bottom: 8),
+          child: Text(
+            'Could not load more products. The current results are still available.',
+            style: AppTypography.tiny.copyWith(color: AppColors.error),
+          ),
+        ),
+      if (_controller.page.page < _controller.page.totalPages)
+        Center(
+          child: TextButton(
+            onPressed:
+                _controller.isLoading ? null : _controller.loadNextPage,
+            child: Text(
+              _controller.isLoading ? 'Loading more…' : 'Load more products',
+            ),
+          ),
+        ),
+    ],
+    if (_controller.page.disclosure != null) ...[
+      const SizedBox(height: 8),
+      Text(
+        _controller.page.disclosure!,
+        style: AppTypography.tiny.copyWith(color: AppColors.gray),
+      ),
+    ],
+  ];
 }
 
 class _WellnessProductCard extends StatelessWidget {
@@ -659,6 +706,16 @@ class _CategoryFilters extends StatelessWidget {
               selected: selected == category.code,
               onSelected: (_) => onSelected(category.code),
             ),
+          ),
+        ),
+        // Wellness Products tab — always appended after backend categories.
+        Padding(
+          padding: const EdgeInsets.only(left: 8),
+          child: ChoiceChip(
+            avatar: const Icon(Icons.inventory_2_outlined, size: 18),
+            label: const Text('Wellness'),
+            selected: selected == _kWellnessProductsType,
+            onSelected: (_) => onSelected(_kWellnessProductsType),
           ),
         ),
       ],
@@ -823,6 +880,12 @@ _CategoryPresentation _categoryPresentation(String? type) {
         'Wellness providers',
         'Discover active wellness providers. This is separate from the Wellness Shop catalogue.',
         Icons.spa_outlined,
+      );
+    case _kWellnessProductsType:
+      return const _CategoryPresentation(
+        'Wellness products',
+        'Browse the wellness product catalogue. Online checkout is not available.',
+        Icons.inventory_2_outlined,
       );
     case 'CLINIC':
     case 'DOCTOR':
