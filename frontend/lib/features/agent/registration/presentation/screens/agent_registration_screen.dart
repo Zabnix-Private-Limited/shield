@@ -128,7 +128,6 @@ class _AgentRegistrationScreenState
     final drafts = controller.customers
         .where(
           (customer) => [
-            'PENDING',
             'INCOMPLETE',
             'REJECTED',
           ].contains((customer['status'] ?? '').toString().toUpperCase()),
@@ -1022,9 +1021,12 @@ class _AgentRegistrationScreenState
     }
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('Customer registration submitted successfully.'),
+        content: Text('Customer registration submitted successfully and sent for approval.'),
       ),
     );
+    setState(() {
+      _resetForNewDraft();
+    });
   }
 
   bool _validateCurrentStep({bool showFeedback = false}) {

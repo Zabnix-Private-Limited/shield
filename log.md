@@ -13015,3 +13015,37 @@ est build compilation.
 - Backend NestJS compilation (npm run build) succeeded with 0 errors.
 - flutter test suites passed (11/11 tests passed).
 - git diff --check passed cleanly.
+
+## 145. Dio 401 Interceptor Request Retry Fix (2026-08-17 11:24:00 IST)
+
+- Resolved issue where 401 Unauthorized errors (e.g., PUT /customers/23) triggered successful token refresh ([InternalAuthSession] access token refreshed successfully), but failed to resolve the original request cleanly due to _dio.fetch URL path options duplication.
+- Fix implemented in ApiService ([api_service.dart]):
+  1. Updated 401 onError handler to construct clean retryOptions using _dio.request<dynamic>(options.path, data: options.data, queryParameters: options.queryParameters, options: retryOptions).
+  2. Guarantees that upon background token refresh, the original failed request is immediately retried with the fresh Bearer access token and resolved (handler.resolve(retryResponse)), preventing error popups or failed autosaves when access tokens expire.
+
+### Frontend Files (Modified)
+- frontend/lib/shared/services/api_service.dart
+
+### Backend Files (Modified)
+- None
+
+### Verification
+- flutter test suites passed (11/11 tests passed).
+- git diff --check passed cleanly.
+
+## 146. Submitted Registration Lifecycle & Resume Draft List Isolation (2026-08-17 11:25:00 IST)
+
+- Resolved issue where completed & submitted customer registrations were still appearing in the Resume saved draft dropdown under status Pending.
+- Changes made in AgentRegistrationScreen ([agent_registration_screen.dart]):
+  1. Draft Filter Strictness: Updated drafts list filter to only include un-submitted work-in-progress registrations (INCOMPLETE or REJECTED status). Submitted registrations with status PENDING (Pending Approval) are automatically excluded from the Resume saved draft dropdown.
+  2. Automatic Post-Submission Form Reset: Added _resetForNewDraft() to _submitRegistration() so that upon successful submission, the form automatically resets cleanly and returns to Step 1 for the next customer registration without leaving submitted details stranded in the draft editor.
+
+### Frontend Files (Modified)
+- frontend/lib/features/agent/registration/presentation/screens/agent_registration_screen.dart
+
+### Backend Files (Modified)
+- None
+
+### Verification
+- flutter test suites passed (11/11 tests passed).
+- git diff --check passed cleanly.

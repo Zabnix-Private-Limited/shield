@@ -51,23 +51,46 @@ class ApiService {
               final response = error.response;
               final options = error.requestOptions;
               final isUnauthorized = response?.statusCode == 401;
-              final isAuthEndpoint = options.path.startsWith('/auth/');
+              final isAuthEndpoint = options.path.contains('/auth/');
               final alreadyRetried = options.extra['retried'] == true;
 
               if (isUnauthorized &&
                   !isAuthEndpoint &&
                   !alreadyRetried &&
                   _onRefreshToken != null) {
-                final refreshedToken = await _refreshAccessTokenSingleFlight();
-                if (refreshedToken != null &&
-                    refreshedToken.trim().isNotEmpty) {
-                  options.extra['retried'] = true;
-                  options.headers['Authorization'] = 'Bearer $refreshedToken';
-                  final retryResponse = await _dio.fetch<dynamic>(options);
-                  return handler.resolve(retryResponse);
-                }
-                if (_onSessionExpired != null) {
-                  await _onSessionExpired!.call();
+                try {
+                  final refreshedToken = await _refreshAccessTokenSingleFlight();
+                  if (refreshedToken != null &&
+                      refreshedToken.trim().isNotEmpty) {
+                    final retryHeaders = Map<String, dynamic>.from(options.headers);
+                    retryHeaders['Authorization'] = 'Bearer ${refreshedToken.trim()}';
+
+                    final retryExtra = Map<String, dynamic>.from(options.extra);
+                    retryExtra['retried'] = true;
+
+                    final retryOptions = Options(
+                      method: options.method,
+                      headers: retryHeaders,
+                      responseType: options.responseType,
+                      contentType: options.contentType,
+                      extra: retryExtra,
+                    );
+
+                    final retryResponse = await _dio.request<dynamic>(
+                      options.path,
+                      data: options.data,
+                      queryParameters: options.queryParameters,
+                      options: retryOptions,
+                    );
+                    return handler.resolve(retryResponse);
+                  }
+                  if (_onSessionExpired != null) {
+                    await _onSessionExpired!.call();
+                  }
+                } catch (_) {
+                  if (_onSessionExpired != null) {
+                    await _onSessionExpired!.call();
+                  }
                 }
               }
 
