@@ -238,8 +238,6 @@ class _PortalShellState extends State<PortalShell> {
           title: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const ShieldBrandLockup(compact: true),
-              const SizedBox(width: 12),
               Flexible(child: Text(portal.role.label)),
             ],
           ),
@@ -1085,8 +1083,6 @@ class _PortalHeader extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const ShieldBrandLockup(compact: true, showTagline: true),
-              const SizedBox(height: 14),
               Text(
                 portal.role.label,
                 style: AppTypography.tiny.copyWith(
@@ -1104,8 +1100,6 @@ class _PortalHeader extends StatelessWidget {
             ],
           ),
         ),
-        const SizedBox(width: 12),
-        _RoleSwitcher(portal: portal),
       ],
     );
   }
@@ -1555,39 +1549,7 @@ class _RoleSwitcher extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final resolvedPortal = PortalResolver.current;
-    final availableRoles = resolvedPortal == null
-        ? SHIELDRole.switchableRoles
-        : <SHIELDRole>[resolvedPortal.role];
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: AppColors.white,
-        border: Border.all(color: AppColors.divider),
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<SHIELDRole>(
-          value: availableRoles.contains(portal.role)
-              ? portal.role
-              : availableRoles.first,
-          items: availableRoles.map((role) {
-            return DropdownMenuItem(
-              value: role,
-              child: Text(role.label, style: AppTypography.small),
-            );
-          }).toList(),
-          onChanged: resolvedPortal == null
-              ? (value) {
-                  if (value != null) {
-                    context.go('/portal/${value.routeKey}/dashboard');
-                  }
-                }
-              : null,
-        ),
-      ),
-    );
+    return const SizedBox.shrink();
   }
 }
 

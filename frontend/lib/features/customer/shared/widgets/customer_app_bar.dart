@@ -200,12 +200,7 @@ class _CustomerMainHeader extends StatelessWidget {
                 foregroundColor: AppColors.shieldNavy,
               ),
             ),
-            if (!dense) ...[
-              const SizedBox(width: 8),
-              // The shield mark establishes the app identity without repeating
-              // the full wordmark in the compact navigation header.
-              const ShieldBrandLockup(compact: true, showWordmark: false),
-            ],
+
             const Spacer(),
             _HeaderBalanceChip(
               icon: Icons.account_balance_wallet_rounded,

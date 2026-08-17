@@ -13088,3 +13088,25 @@ est build compilation.
 ### Verification
 - flutter test suites passed (11/11 tests passed).
 - git diff --check passed cleanly.
+
+## 149. City Field Label & Validation Text Refinement (2026-08-17 11:46:00 IST)
+
+- Updated the City input field label and validation messages in AgentRegistrationScreen ([agent_registration_screen.dart]):
+  1. Form Input Label: Simplified label to City * (removed "Post Office").
+## 150. Top Header Brand Lockup & Role Switcher Dropdown Removal (2026-08-17 11:53:00 IST)
+
+- Removed the top header brand logo (ShieldBrandLockup) and role switcher dropdown (_RoleSwitcher) from page top bars across all portal routes.
+- Key implementation details:
+  1. Top Bar Header Logo Removal: Removed ShieldBrandLockup from top section header in portal_shell.dart and navigation bar in customer_app_bar.dart.
+  2. Role Switcher Dropdown Removal: Completely removed _RoleSwitcher (SHIELD Agent ▼ role switcher dropdown) from portal_shell.dart, preventing unintended role switching from top page headers repo-wide.
+
+### Frontend Files (Modified)
+- frontend/lib/features/portal/presentation/screens/portal_shell.dart
+- frontend/lib/features/customer/shared/widgets/customer_app_bar.dart
+
+### Backend Files (Modified)
+- None
+
+### Verification
+- flutter test suites passed (11/11 tests passed).
+- git diff --check passed cleanly.

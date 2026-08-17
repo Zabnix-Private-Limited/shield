@@ -649,11 +649,11 @@ class _AgentRegistrationScreenState
                       TextFormField(
                         controller: _cityController,
                         decoration: InputDecoration(
-                          label: _buildRequiredLabel('City / Post Office'),
+                          label: _buildRequiredLabel('City'),
                           helperText: 'e.g. Manjeri',
                         ),
                         validator: (v) => (v == null || v.trim().isEmpty)
-                            ? 'Enter city/post office'
+                            ? 'Enter city'
                             : null,
                       ),
                     ),
