@@ -24,6 +24,24 @@ void _traceRouter(String message) {
   }
 }
 
+CustomTransitionPage<void> _buildFadeTransitionPage({
+  required LocalKey key,
+  required Widget child,
+}) {
+  return CustomTransitionPage<void>(
+    key: key,
+    child: child,
+    transitionDuration: const Duration(milliseconds: 200),
+    reverseTransitionDuration: const Duration(milliseconds: 150),
+    transitionsBuilder: (context, animation, secondaryAnimation, child) {
+      return FadeTransition(
+        opacity: CurveTween(curve: Curves.easeOutCubic).animate(animation),
+        child: child,
+      );
+    },
+  );
+}
+
 final GoRouter router = GoRouter(
   navigatorKey: rootNavigatorKey,
   // Stored-session restoration runs after the first frame. Start on the
@@ -252,9 +270,12 @@ final GoRouter router = GoRouter(
     ),
     GoRoute(
       path: '/portal/customer/membership/:detail',
-      builder: (context, state) => PortalShell(
-        role: SHIELDRole.customer,
-        sectionKey: 'membership-${state.pathParameters['detail']}',
+      pageBuilder: (context, state) => _buildFadeTransitionPage(
+        key: state.pageKey,
+        child: PortalShell(
+          role: SHIELDRole.customer,
+          sectionKey: 'membership-${state.pathParameters['detail']}',
+        ),
       ),
     ),
     GoRoute(
@@ -264,22 +285,28 @@ final GoRouter router = GoRouter(
         requestedRoleKey: SHIELDRole.agent.routeKey,
         sectionKey: 'customers',
       ),
-      builder: (context, state) => PortalShell(
-        role: SHIELDRole.agent,
-        sectionKey: 'customers',
-        customerId: state.pathParameters['customerId'],
+      pageBuilder: (context, state) => _buildFadeTransitionPage(
+        key: state.pageKey,
+        child: PortalShell(
+          role: SHIELDRole.agent,
+          sectionKey: 'customers',
+          customerId: state.pathParameters['customerId'],
+        ),
       ),
     ),
     GoRoute(
       path: '/portal/:role/:section',
       name: 'role-portal',
-      builder: (context, state) {
+      pageBuilder: (context, state) {
         final requestedRole = SHIELDRole.fromRouteKey(
           state.pathParameters['role'],
         );
         final resolvedRole = PortalResolver.current?.role ?? requestedRole;
         final section = state.pathParameters['section'];
-        return PortalShell(role: resolvedRole, sectionKey: section);
+        return _buildFadeTransitionPage(
+          key: ValueKey('${resolvedRole.routeKey}-$section'),
+          child: PortalShell(role: resolvedRole, sectionKey: section),
+        );
       },
     ),
     GoRoute(
