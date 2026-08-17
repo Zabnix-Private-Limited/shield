@@ -68,6 +68,7 @@ class _AgentRegistrationScreenState
   String? _draftCustomerId;
   String? _selectedBusinessId;
   Map<String, dynamic>? _existingCustomer;
+  Map<String, dynamic>? _existingErpRecord;
   bool _existingLookupLoading = false;
   bool _convertingExistingCustomer = false;
   bool _prescriptionSkipped = false;
@@ -450,6 +451,66 @@ class _AgentRegistrationScreenState
                       ? 'Searching existing customers...'
                       : 'Check existing customer',
                 ),
+                if (_existingErpRecord != null) ...[
+                  const SizedBox(height: 14),
+                  Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: Colors.teal.shade50,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: Colors.teal.shade200),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.inventory_2_outlined,
+                          color: Colors.teal.shade800,
+                          size: 24,
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Pre-existing ERP Customer Found',
+                                style: AppTypography.body.copyWith(
+                                  color: Colors.teal.shade900,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                '${_existingErpRecord!['fullName'] ?? 'Customer'} • Branch: ${_existingErpRecord!['branchName'] ?? 'Default Branch'} (${_existingErpRecord!['sourceProvider'] ?? 'ERP'})',
+                                style: AppTypography.small.copyWith(
+                                  color: AppColors.darkGray,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.teal.shade700,
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            'ERP MATCH',
+                            style: AppTypography.tiny.copyWith(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
                 if (_existingCustomer != null) ...[
                   const SizedBox(height: 16),
                   _ExistingCustomerResult(
@@ -1033,11 +1094,12 @@ class _AgentRegistrationScreenState
       final erpRes = await ApiService.checkExistingErpCustomer(mobile);
       if (!mounted) return;
       
+      Map<String, dynamic>? erpRecord;
       if (erpRes['found'] == true && erpRes['erpRecord'] != null) {
-        final erp = Map<String, dynamic>.from(erpRes['erpRecord'] as Map);
-        final fullName = erp['fullName']?.toString() ?? '';
-        final branchName = erp['branchName']?.toString() ?? '';
-        final businessId = erp['businessId']?.toString();
+        erpRecord = Map<String, dynamic>.from(erpRes['erpRecord'] as Map);
+        final fullName = erpRecord['fullName']?.toString() ?? '';
+        final branchName = erpRecord['branchName']?.toString() ?? '';
+        final businessId = erpRecord['businessId']?.toString();
 
         if (fullName.isNotEmpty && _firstNameController.text.trim().isEmpty) {
           final parts = fullName.split(' ');
@@ -1062,7 +1124,10 @@ class _AgentRegistrationScreenState
         }
       }
 
-      setState(() => _existingCustomer = customer);
+      setState(() {
+        _existingCustomer = customer;
+        _existingErpRecord = erpRecord;
+      });
       if (customer != null) {
         final firstName = customer['firstName']?.toString() ?? customer['first_name']?.toString() ?? '';
         final lastName = customer['lastName']?.toString() ?? customer['last_name']?.toString() ?? '';
