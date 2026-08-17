@@ -13207,3 +13207,84 @@ est build compilation.
 - flutter test test suites passed (11/11 tests passed).
 - git diff --check passed cleanly.
 KannnanKannnanKannnanKannnanKannnanKannnanKannnanKannnanKannnanKannnanKannnanKannnan
+
+## 157. Durable Refresh Session Policy & Environment Configuration Hardening (2026-08-17 15:10:00 IST)
+
+- Hardened authentication session persistence across NestJS backend and Flutter frontend to prevent unexpected session expirations.
+- Implementation details:
+  1. Refresh Token Session Policy (AuthService & CustomerAuthSession in auth.service.ts and customer_auth_session.dart): Implemented durable refresh token rotation retaining persistent active auth sessions across app restarts unless explicitly revoked or signed out.
+  2. Environment Configuration Hardening (AppEnv in app-env.ts): Standardized production JWT secrets, Cloudflare R2 parameters, and Firebase OTP session TTLs.
+
+### Frontend Files (Modified)
+- frontend/lib/shared/services/customer_auth_session.dart
+
+### Backend Files (Modified)
+- backend/src/auth/auth.service.ts
+- backend/src/config/app-env.ts
+
+### Verification
+- NestJS compilation (npm run build) succeeded with 0 errors.
+- flutter analyze passed cleanly.
+
+## 158. ERP Existing Customers Registry & Check Integration (2026-08-17 15:15:00 IST)
+
+- Integrated provider ERP pre-existing customer registry lookup into NestJS backend and Flutter customer registration wizard.
+- Implementation details:
+  1. ErpExistingCustomer Prisma Model (backend/prisma/schema.prisma): Added erp_existing_customers table storing pre-collected pharmacy/provider customer records (mobile, fullName, branchName, businessId, sourceProvider, status).
+  2. Check-Existing Endpoint (CustomerController & CustomerService in customer-account.controller.ts and customer.service.ts): Implemented GET /customers/check-existing?mobile=... endpoint returning ERP customer affiliation data.
+  3. Automatic Debounced Pre-Check (AgentRegistrationScreen in agent_registration_screen.dart): Added instant 350ms debounced phone lookup auto-filling customer name and preferred branch when typing a 10-digit phone number.
+
+### Frontend Files (Modified)
+- frontend/lib/features/agent/registration/presentation/screens/agent_registration_screen.dart
+
+### Backend Files (Modified)
+- backend/prisma/schema.prisma
+- backend/src/customer/customer.service.ts
+- backend/src/customer/customer-account.controller.ts
+
+### Verification
+- NestJS compilation (npm run build) succeeded with 0 errors.
+- flutter analyze passed cleanly.
+
+## 159. Customer Registration Duplicate Prevention & ERP Commission Exclusion Rules (2026-08-17 15:24:00 IST)
+
+- Enforced duplicate member account prevention and implemented commercial commission rules for ERP existing customers.
+- Implementation details:
+  1. Duplicate Member Check (CustomerService.createCustomerAggregate in customer.service.ts): Throws ConflictException('Member already exists in SHIELD. Cannot register a duplicate account.') if phone number matches an existing registered customer. Displays red error alert in UI and blocks registration progress.
+  2. ERP Customer Onboarding Source & Status Linking (customer.service.ts): Sets onboardingSource = 'ERP_CONVERTED' for ERP matches and updates erp_existing_customers.status = 'LINKED' with matched_customer_id.
+  3. Agent Commission Exclusion (AgentService.getWorkspace in agent.service.ts): Excludes ERP_CONVERTED customer registrations from agent onboarding commission calculations (directActiveEarnings, directRegEarnings, childActiveEarnings, childRegEarnings).
+  4. Referral Reward Retention (ReferralService in referral.service.ts): Retains full referral reward points distribution for referring members.
+
+### Frontend Files (Modified)
+- frontend/lib/features/agent/registration/presentation/screens/agent_registration_screen.dart
+
+### Backend Files (Modified)
+- backend/src/customer/customer.service.ts
+- backend/src/agent/agent.service.ts
+
+### Verification
+- NestJS compilation (npm run build) succeeded with 0 errors.
+- flutter analyze passed cleanly.
+
+## 160. Prescription Upload UI Error Fix & Customer Branch Pharmacy Filtering (2026-08-17 15:28:00 IST)
+
+- Fixed prescription screen 404 error screen, restricted Aadhaar input field, and enabled branch-based pharmacy provider filtering.
+- Implementation details:
+  1. Aadhaar Field Limitation (AgentRegistrationScreen in agent_registration_screen.dart): Restricted Aadhaar input field to numeric digits only and maximum 15 digits using FilteringTextInputFormatter.digitsOnly and LengthLimitingTextInputFormatter(15).
+  2. Resilient Prescription Loading (CustomerPrescriptionsController & CustomerPrescriptionsRepository): Isolated prescription document list loading from preferred pharmacy lookup to prevent missing preferred provider 404 errors from blanking out the prescription screen.
+  3. Customer Branch Pharmacy Filtering (CustomerService.listEligiblePharmacies in customer.service.ts): Filtered GET /customer/pharmacies response by customer's privilege card issuing branch (shieldCard.issuedBusinessId), returning only the pharmacy connected to the customer's branch.
+
+### Frontend Files (Modified)
+- frontend/lib/features/agent/registration/presentation/screens/agent_registration_screen.dart
+- frontend/lib/features/customer/prescriptions/data/customer_prescriptions_repository.dart
+- frontend/lib/features/customer/prescriptions/presentation/customer_prescriptions_controller.dart
+- frontend/lib/features/customer/documents/data/customer_documents_repository.dart
+
+### Backend Files (Modified)
+- backend/src/customer/customer.service.ts
+- backend/src/customer/customer-account.controller.ts
+
+### Verification
+- NestJS compilation (npm run build) succeeded with 0 errors.
+- flutter analyze passed cleanly (0 errors).
+- Pushed commits 859bac7 and 15513dd to main branch for Vercel deployment.

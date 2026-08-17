@@ -113,6 +113,7 @@
 6. Timestamps: IST format (YYYY-MM-DD HH:mm:ss IST)
 7. Engineer-to-Engineer: Explain *why* choices were made
 8. Method: Use append-log.js or PowerShell append, NEVER full rewrite or Edit tool
+9. Mandatory Session Update: ALWAYS append a detailed entry to log.md after completing features, bug fixes, or backend/frontend modifications before finishing the response or ending the turn.
 
 ## Agent Workflow Rules
 1. Prefer the best project-safe fix without repeatedly asking for confirmation on every small issue.

@@ -32,6 +32,8 @@
    - Customer and internal-user login should stay signed in by default across app restarts.
    - Prefer short-lived access tokens plus effectively long-lived refresh sessions over forcing frequent sign-ins.
    - End sessions only on intentional sign-out, explicit revocation, or security-driven reset.
+14. **Mandatory Log Updates**:
+   - ALWAYS append a detailed entry to `log.md` after completing features, bug fixes, or code changes before completing the task.
 
 ## Technology Stack Rules
 ### Frontend
