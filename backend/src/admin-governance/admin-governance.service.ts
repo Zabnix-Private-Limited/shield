@@ -2549,10 +2549,14 @@ export class AdminGovernanceService {
       normalizedFormId === 'create-agent-form' ||
       normalizedFormId === 'create-agent'
     ) {
-      const branches = await this.prisma.business.findMany({
-        where: { status: 'ACTIVE' },
-        select: { name: true },
-      });
+      const [branches, nextCode] = await Promise.all([
+        this.prisma.business.findMany({
+          where: { status: 'ACTIVE' },
+          select: { name: true },
+        }),
+        this.generateNextAgentCode(),
+      ]);
+
       const branchOptions = branches.length
         ? branches.map((b) => b.name)
         : [
@@ -2573,7 +2577,9 @@ export class AdminGovernanceService {
             label: 'Agent / Employee Code',
             type: 'text',
             required: true,
-            helperText: 'e.g. AGNT-0003 or EMP-0003',
+            readOnly: true,
+            value: nextCode,
+            helperText: 'Auto-generated. Cannot be changed.',
           },
           {
             key: 'mobile',
@@ -2633,6 +2639,31 @@ export class AdminGovernanceService {
     );
   }
 
+  /**
+   * Derives the next sequential AGNT-NNNN code by scanning existing
+   * employeeCodes that match the AGNT-\d+ pattern.
+   */
+  private async generateNextAgentCode(): Promise<string> {
+    const allCodes = await this.prisma.user.findMany({
+      where: {
+        employeeCode: { startsWith: 'AGNT-' },
+        deletedAt: null,
+      },
+      select: { employeeCode: true },
+    });
+
+    let maxSeq = 0;
+    for (const { employeeCode } of allCodes) {
+      const match = /^AGNT-(\d+)$/i.exec(employeeCode ?? '');
+      if (match) {
+        const seq = parseInt(match[1], 10);
+        if (seq > maxSeq) maxSeq = seq;
+      }
+    }
+
+    return `AGNT-${String(maxSeq + 1).padStart(4, '0')}`;
+  }
+
   async executeAgentWorkspaceAction(
     actionId: string,
     body: any,
@@ -2641,7 +2672,7 @@ export class AdminGovernanceService {
     if (actionId === 'create-agent') {
       const firstName = (body.firstName ?? body.first_name ?? '').toString().trim();
       const lastName = (body.lastName ?? body.last_name ?? '').toString().trim();
-      const employeeCode = (body.employeeCode ?? body.employee_code ?? '').toString().trim();
+      let employeeCode = (body.employeeCode ?? body.employee_code ?? '').toString().trim();
       const mobile = (body.mobile ?? '').toString().trim();
       const email = (body.email ?? '').toString().trim().toLowerCase();
       const departmentName = (body.department ?? 'Field Operations').toString().trim();
@@ -2649,8 +2680,24 @@ export class AdminGovernanceService {
       const accessScope = (body.accessScope ?? body.access_scope ?? 'BRANCH_SCOPED').toString().trim();
       const status = (body.status ?? 'ACTIVE').toString().trim().toUpperCase();
 
-      if (!firstName || !employeeCode || !mobile || !email) {
-        throw new BadRequestException('First Name, Agent/Employee Code, Mobile, and Email are required.');
+      if (!firstName || !mobile || !email) {
+        throw new BadRequestException('First Name, Mobile, and Email are required.');
+      }
+
+      // Auto-generate the agent code if the form did not supply one (or if
+      // the submitted value collides with an existing code — handles race conditions
+      // where two agents are provisioned simultaneously from the same pre-generated code).
+      if (!employeeCode) {
+        employeeCode = await this.generateNextAgentCode();
+      } else {
+        // Verify the submitted code is not already taken.
+        const codeInUse = await this.prisma.user.findFirst({
+          where: { employeeCode, deletedAt: null },
+        });
+        if (codeInUse) {
+          // Regenerate to avoid collision.
+          employeeCode = await this.generateNextAgentCode();
+        }
       }
 
       const existingUser = await this.prisma.user.findFirst({
@@ -2716,9 +2763,10 @@ export class AdminGovernanceService {
       }
 
       return {
-        message: `Agent ${firstName} ${lastName} (${employeeCode}) created as ACTIVE. Agent can now sign in using Google Sign-In with ${email}.`,
+        message: `Agent ${firstName}${lastName ? ' ' + lastName : ''} provisioned with code ${employeeCode}. They can sign in via Google Sign-In using ${email}.`,
         agentId: newUser.id.toString(),
         uuid: newUser.uuid,
+        employeeCode,
       };
     }
 
