@@ -62,6 +62,7 @@ class InternalAuthSession extends ChangeNotifier {
     final canRestore =
         activeKind == null || activeKind == ShieldSessionKind.internal;
     if (canRestore && _accessToken != null && _accessToken!.isNotEmpty) {
+      _isAuthenticated = true;
       ApiService.configureAuthHandlers(
         onRefreshToken: _refreshAccessToken,
         onSessionExpired: _handleSessionExpired,
@@ -69,7 +70,7 @@ class InternalAuthSession extends ChangeNotifier {
       ApiService.setAccessToken(_accessToken!);
       final validated = await _validateOrRefreshSession();
       if (!validated) {
-        await _clearSessionStorage(notify: false);
+        await _clearSessionStorage(notify: true);
       } else if (activeKind == null) {
         await ActiveAuthSession.setActiveKind(ShieldSessionKind.internal);
       }

@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../../app/theme/app_colors.dart';
+import '../../../../../app/theme/app_typography.dart';
 import '../../../../../shared/utils/prescription_file_picker.dart';
 import '../../../shared/presentation/controllers/agent_portal_provider.dart';
 import '../../../shared/presentation/widgets/agent_design_system.dart';
@@ -314,7 +316,7 @@ class _AgentRegistrationScreenState
                       TextFormField(
                         controller: _firstNameController,
                         decoration: const InputDecoration(
-                          labelText: 'First name',
+                          labelText: 'First name *',
                         ),
                         validator: (value) =>
                             value == null || value.trim().isEmpty
@@ -334,7 +336,7 @@ class _AgentRegistrationScreenState
                       TextFormField(
                         controller: _mobileController,
                         keyboardType: TextInputType.phone,
-                        decoration: const InputDecoration(labelText: 'Phone'),
+                        decoration: const InputDecoration(labelText: 'Phone *'),
                         onChanged: (_) =>
                             setState(() => _existingCustomer = null),
                         validator: (value) {
@@ -382,7 +384,7 @@ class _AgentRegistrationScreenState
                         ],
                         onChanged: (value) =>
                             setState(() => _gender = value ?? 'MALE'),
-                        decoration: const InputDecoration(labelText: 'Gender'),
+                        decoration: const InputDecoration(labelText: 'Gender *'),
                       ),
                     ),
                   ],
@@ -427,9 +429,12 @@ class _AgentRegistrationScreenState
                     initialValue: _draftCustomerId == null
                         ? ''
                         : 'Generated after final registration',
-                    decoration: const InputDecoration(
+                    style: AppTypography.body.copyWith(color: AppColors.darkGray),
+                    decoration: InputDecoration(
                       labelText: 'SHIELD customer ID',
                       hintText: 'Generated automatically after registration',
+                      filled: true,
+                      fillColor: AppColors.lightGray,
                     ),
                   ),
                 ),
@@ -463,7 +468,7 @@ class _AgentRegistrationScreenState
                   TextFormField(
                     controller: _aadhaarController,
                     decoration: const InputDecoration(
-                      labelText: 'Aadhaar / Government ID',
+                      labelText: 'Aadhaar / Government ID *',
                     ),
                     validator: (value) => value == null || value.trim().isEmpty
                         ? 'Capture the identity number'
@@ -476,8 +481,11 @@ class _AgentRegistrationScreenState
                     initialValue: employeeCode.isEmpty
                         ? 'Agent code unavailable'
                         : employeeCode,
-                    decoration: const InputDecoration(
+                    style: AppTypography.body.copyWith(color: AppColors.darkGray),
+                    decoration: InputDecoration(
                       labelText: 'Assigned agent',
+                      filled: true,
+                      fillColor: AppColors.lightGray,
                     ),
                   ),
                 ),
@@ -531,7 +539,7 @@ class _AgentRegistrationScreenState
                             ? 'Choose membership plan'
                             : null,
                         decoration: const InputDecoration(
-                          labelText: 'Membership plan',
+                          labelText: 'Membership plan *',
                         ),
                       ),
                     ),
@@ -558,7 +566,7 @@ class _AgentRegistrationScreenState
                             ? 'Choose branch'
                             : null,
                         decoration: const InputDecoration(
-                          labelText: 'Preferred branch',
+                          labelText: 'Preferred branch *',
                         ),
                       ),
                     ),
@@ -567,7 +575,7 @@ class _AgentRegistrationScreenState
                       child: TextFormField(
                         controller: _addressController,
                         maxLines: 3,
-                        decoration: const InputDecoration(labelText: 'Address'),
+                        decoration: const InputDecoration(labelText: 'Address *'),
                         validator: (value) =>
                             value == null || value.trim().isEmpty
                             ? 'Enter address'

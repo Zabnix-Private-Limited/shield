@@ -102,6 +102,10 @@ class AppTheme {
         borderRadius: BorderRadius.circular(18),
         borderSide: const BorderSide(color: AppColors.divider),
       ),
+      disabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(18),
+        borderSide: BorderSide(color: AppColors.divider.withValues(alpha: 0.6)),
+      ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(18),
         borderSide: const BorderSide(color: AppColors.shieldBlue, width: 1.6),

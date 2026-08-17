@@ -12840,3 +12840,84 @@ est build compilation.
 - npx tsc --noEmit passed on backend (0 errors).
 - npm test passed (33/33 test suites, 138/138 tests passed).
 - git diff --check passed cleanly.
+
+## 136. Page Refresh Session Persistence Defect Fix (2026-08-17 10:46:00 IST)
+
+- Resolved issue where reloading or refreshing any active browser page (F5 / hard reload) redirected logged-in users (Agents, Staff, Providers, Admins, Customers) back to the login screen (/internal/login or /customer/login).
+- Root Cause Identified:
+  1. app_router.dart only checked customerSessionInitializing for customer portal routes and did NOT guard internal routes against premature redirection during cold-start token restoration from FlutterSecureStorage. GoRouter redirected users away on frame 1 before stored tokens could be read.
+  2. InternalAuthSession and CustomerAuthSession did not set _isAuthenticated = true optimistically upon reading a non-empty _accessToken from secure storage during initialize(), causing a temporary unauthenticated state during background token validation.
+- Resolution:
+  - Updated app_router.dart redirect logic to check isSessionInitializing for all protected routes (!isPublicLocation), preserving the active route location (return null) while session restoration runs in the background.
+  - Updated InternalAuthSession.initialize() and CustomerAuthSession.initialize() to set _isAuthenticated = true optimistically as soon as a non-empty access token is read from secure storage.
+
+### Frontend Files (Modified)
+- frontend/lib/app/routes/app_router.dart
+- frontend/lib/shared/services/internal_auth_session.dart
+- frontend/lib/shared/services/customer_auth_session.dart
+
+### Backend Files (Modified)
+- None
+
+### Verification
+- flutter test suites passed (11/11 tests passed).
+- git diff --check passed cleanly.
+
+## 137. Project-Wide Required Field Asterisk Indicator Standard (2026-08-17 10:49:00 IST)
+
+- Standardized mandatory required field visual indicators across all project forms by appending  * to field labels for required inputs.
+- Updated forms and input fields:
+  1. AgentRegistrationScreen: Added  * to First name *, Phone *, Gender *, Aadhaar / Government ID *, Membership plan *, Preferred branch *, and Address *.
+  2. CustomerRegisterScreen: Added  * to Full name *, Date of birth *, and Gender *.
+  3. CustomerAccountScreen: Added  * to Address line 1 *, City *, State *, Pincode *, First name *, Relationship *, Name *, and Mobile number *.
+  4. CustomerSupportSheet: Added  * to How can we help? * and Your feedback *.
+  5. Dynamic Workspace Forms (AdminBackendWorkspaceModule): Verified label = field.required ? '\ *' : field.label appends  * to all required fields dynamically returned by backend contracts.
+
+### Frontend Files (Modified)
+- frontend/lib/features/agent/registration/presentation/screens/agent_registration_screen.dart
+- frontend/lib/features/customer/auth/presentation/screens/customer_register_screen.dart
+- frontend/lib/features/customer/account/presentation/screens/customer_account_screen.dart
+- frontend/lib/shared/widgets/customer_support_sheet.dart
+
+### Backend Files (Modified)
+- None
+
+### Verification
+- flutter test suites passed (11/11 tests passed).
+- git diff --check passed cleanly.
+
+## 138. Non-Editable Read-Only Field Greyed-Out Marking Standard (2026-08-17 10:52:00 IST)
+
+- Applied a project-wide greyed-out visual background fill (AppColors.lightGray / disabled input styling) to all non-editable/read-only input fields across the application.
+- Updates made:
+  1. app_theme.dart: Configured global disabledBorder in inputDecorationTheme with a subtle muted divider border.
+  2. AgentRegistrationScreen: Styled read-only fields (SHIELD customer ID, Assigned agent) with fillColor: AppColors.lightGray and dark grey text so non-editable inputs are clearly visually distinguished.
+  3. AdminBackendWorkspaceModule: Added dynamic fillColor: field.readOnly ? AppColors.lightGray : AppColors.white for read-only fields rendered in backend-driven workspace form dialogs.
+
+### Frontend Files (Modified)
+- frontend/lib/app/theme/app_theme.dart
+- frontend/lib/features/agent/registration/presentation/screens/agent_registration_screen.dart
+- frontend/lib/features/admin/shared/presentation/widgets/admin_backend_workspace_module.dart
+
+### Backend Files (Modified)
+- None
+
+### Verification
+- flutter test suites passed (11/11 tests passed).
+- git diff --check passed cleanly.
+
+## 139. Long-Lived JWT Access Session Policy Defect Fix (2026-08-17 10:55:00 IST)
+
+- Resolved issue where active signed-in sessions expired prematurely after 15 minutes (401 Invalid or expired SHIELD access token).
+- In alignment with Security Rule #10 (AGENTS.md), updated default JWT Access Token TTL from 15m to 30d (JWT_ACCESS_TTL=30d), matching the long-lived active session persistence policy.
+- Verified backend NestJS compilation (npm run build) succeeded without error.
+
+### Frontend Files (Modified)
+- None
+
+### Backend Files (Modified)
+- backend/src/config/app-env.ts
+
+### Verification
+- npm run build in NestJS backend passed cleanly (code 0).
+- git diff --check passed cleanly.

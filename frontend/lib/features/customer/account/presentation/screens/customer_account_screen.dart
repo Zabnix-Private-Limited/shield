@@ -444,20 +444,20 @@ class _AddressEditorState extends State<_AddressEditor> {
             ),
           TextField(
             controller: _line1,
-            decoration: const InputDecoration(labelText: 'Address line 1'),
+            decoration: const InputDecoration(labelText: 'Address line 1 *'),
           ),
           TextField(
             controller: _city,
-            decoration: const InputDecoration(labelText: 'City'),
+            decoration: const InputDecoration(labelText: 'City *'),
           ),
           TextField(
             controller: _state,
-            decoration: const InputDecoration(labelText: 'State'),
+            decoration: const InputDecoration(labelText: 'State *'),
           ),
           TextField(
             controller: _pincode,
             keyboardType: TextInputType.number,
-            decoration: const InputDecoration(labelText: 'Pincode'),
+            decoration: const InputDecoration(labelText: 'Pincode *'),
           ),
           const SizedBox(height: 16),
           AppButton(
@@ -465,11 +465,17 @@ class _AddressEditorState extends State<_AddressEditor> {
             onPressed: _saving
                 ? null
                 : () async {
-                    if (_line1.text.trim().isEmpty) {
-                      setState(() => _error = 'Address line 1 is required.');
+                    if (_line1.text.trim().isEmpty ||
+                        _city.text.trim().isEmpty ||
+                        _state.text.trim().isEmpty ||
+                        _pincode.text.trim().isEmpty) {
+                      setState(() => _error = 'Fill all address fields.');
                       return;
                     }
-                    setState(() => _saving = true);
+                    setState(() {
+                      _saving = true;
+                      _error = null;
+                    });
                     try {
                       await widget.onSave({
                         'addressLine1': _line1.text,
@@ -544,11 +550,11 @@ class _DependentEditorState extends State<_DependentEditor> {
             ),
           TextField(
             controller: _name,
-            decoration: const InputDecoration(labelText: 'First name'),
+            decoration: const InputDecoration(labelText: 'First name *'),
           ),
           TextField(
             controller: _relation,
-            decoration: const InputDecoration(labelText: 'Relationship'),
+            decoration: const InputDecoration(labelText: 'Relationship *'),
           ),
           const SizedBox(height: 16),
           AppButton(
@@ -646,7 +652,7 @@ class _ContactEditorState extends State<_ContactEditor> {
               style: AppTypography.small.copyWith(color: AppColors.error),
             ),
           DropdownButtonFormField<String>(
-            initialValue: _type,
+            value: _type,
             items: const [
               DropdownMenuItem(
                 value: 'EMERGENCY',
@@ -661,12 +667,12 @@ class _ContactEditorState extends State<_ContactEditor> {
           ),
           TextField(
             controller: _name,
-            decoration: const InputDecoration(labelText: 'Name'),
+            decoration: const InputDecoration(labelText: 'Name *'),
           ),
           TextField(
             controller: _mobile,
             keyboardType: TextInputType.phone,
-            decoration: const InputDecoration(labelText: 'Mobile number'),
+            decoration: const InputDecoration(labelText: 'Mobile number *'),
           ),
           const SizedBox(height: 16),
           AppButton(

@@ -159,7 +159,7 @@ class _CustomerSupportSheetState extends State<_CustomerSupportSheet> {
                       const SizedBox(height: 12),
                       _SupportTextField(
                         controller: _messageController,
-                        label: isContact ? 'How can we help?' : 'Your feedback',
+                        label: isContact ? 'How can we help? *' : 'Your feedback *',
                         maxLines: 5,
                         textInputAction: TextInputAction.newline,
                       ),

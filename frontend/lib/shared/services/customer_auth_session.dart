@@ -91,6 +91,7 @@ class CustomerAuthSession extends ChangeNotifier {
     final hasAccess = _accessToken?.isNotEmpty == true;
     final hasRefresh = _refreshToken?.isNotEmpty == true;
     if (canRestore && (hasAccess || hasRefresh)) {
+      _isAuthenticated = true;
       if (hasAccess) {
         ApiService.setAccessToken(_accessToken!);
         debugPrint('CUSTOMER_ACCESS_STAGED');
@@ -101,7 +102,7 @@ class CustomerAuthSession extends ChangeNotifier {
           ? await _validateOrRefreshSession()
           : await _restoreFromRefreshToken();
       if (!validated && _lastRefreshWasAuthInvalid) {
-        await _clearSessionStorage(notify: false, reason: 'auth_invalid');
+        await _clearSessionStorage(notify: true, reason: 'auth_invalid');
       } else if (validated || hasRefresh) {
         // Retain the durable session on temporary backend/network failures. A
         // subsequent protected request can retry the existing single-flight

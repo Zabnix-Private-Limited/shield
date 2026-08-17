@@ -4,6 +4,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../../exports.dart';
+import '../../../../../app/theme/app_colors.dart';
+import '../../../../../app/theme/app_typography.dart';
 import '../../../../../shared/services/platform_file_actions.dart';
 
 class AdminBackendWorkspaceModule extends StatefulWidget {
@@ -1265,7 +1267,11 @@ class _WorkspaceFormDialogState extends State<_WorkspaceFormDialog> {
                 : (value) => setState(() {
                     _selectedValues[field.key] = value ?? '';
                   }),
-            decoration: InputDecoration(labelText: label),
+            decoration: InputDecoration(
+              labelText: label,
+              filled: field.readOnly,
+              fillColor: field.readOnly ? AppColors.lightGray : null,
+            ),
           ),
         );
       case 'checkbox':
@@ -1294,9 +1300,14 @@ class _WorkspaceFormDialogState extends State<_WorkspaceFormDialog> {
                 : field.type == 'date'
                 ? TextInputType.datetime
                 : TextInputType.text,
+            style: field.readOnly
+                ? AppTypography.body.copyWith(color: AppColors.darkGray)
+                : null,
             decoration: InputDecoration(
               labelText: label,
               helperText: field.helperText,
+              filled: true,
+              fillColor: field.readOnly ? AppColors.lightGray : AppColors.white,
             ),
           ),
         );

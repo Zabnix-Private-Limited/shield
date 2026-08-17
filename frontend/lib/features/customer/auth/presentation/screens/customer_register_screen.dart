@@ -136,7 +136,7 @@ class _CustomerRegisterScreenState extends State<CustomerRegisterScreen> {
                     ),
                     const SizedBox(height: 24),
                     _LabeledField(
-                      label: 'Full name',
+                      label: 'Full name *',
                       child: TextFormField(
                         controller: _nameController,
                         decoration: _inputDecoration('Enter your full name'),
@@ -150,7 +150,7 @@ class _CustomerRegisterScreenState extends State<CustomerRegisterScreen> {
                     ),
                     const SizedBox(height: 16),
                     _LabeledField(
-                      label: 'Date of birth',
+                      label: 'Date of birth *',
                       child: InkWell(
                         onTap: _pickDob,
                         borderRadius: BorderRadius.circular(16),
@@ -171,7 +171,7 @@ class _CustomerRegisterScreenState extends State<CustomerRegisterScreen> {
                     ),
                     const SizedBox(height: 16),
                     _LabeledField(
-                      label: 'Gender',
+                      label: 'Gender *',
                       child: Wrap(
                         spacing: 10,
                         children: ['MALE', 'FEMALE', 'OTHER'].map((value) {

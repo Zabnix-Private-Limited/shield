@@ -51,6 +51,10 @@ final GoRouter router = GoRouter(
         location == '/';
     final customerSessionInitializing =
         !CustomerAuthSession.instance.isInitialized;
+    final internalSessionInitializing =
+        !InternalAuthSession.instance.isInitialized;
+    final isSessionInitializing =
+        customerSessionInitializing || internalSessionInitializing;
     final isPublicCatalogueRoute =
         location == '/portal/customer/wellness-products' ||
         location.startsWith('/portal/customer/wellness-products/') ||
@@ -75,13 +79,14 @@ final GoRouter router = GoRouter(
       return '/session-expired?kind=$kind';
     }
 
-    // A cold-start deep link must wait for secure-storage restoration. Without
-    // this guard GoRouter can treat the temporary INITIALIZING state as an
-    // unauthenticated customer and flash the OTP entry route.
-    if (customerSessionInitializing &&
-        isCustomerPortal &&
-        location != '/customer/splash') {
-      return '/customer/splash';
+    // A cold-start deep link or page refresh must wait for secure-storage session restoration.
+    // Without this guard GoRouter treats the temporary INITIALIZING state as an
+    // unauthenticated user and redirects away from the active portal route on reload.
+    if (isSessionInitializing && !isPublicLocation) {
+      if (isCustomerPortal && location != '/customer/splash') {
+        return '/customer/splash';
+      }
+      return null;
     }
 
     if (isAuthenticated &&
