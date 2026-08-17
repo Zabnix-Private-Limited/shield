@@ -12978,3 +12978,21 @@ est build compilation.
 ### Verification
 - flutter test suites passed (11/11 tests passed).
 - git diff --check passed cleanly.
+
+## 143. Comprehensive Customer Registration Draft Preservation & Hydration Upgrade (2026-08-17 11:13:00 IST)
+
+- Upgraded customer registration draft management so that every detail entered by an agent is completely saved, persisted, and restored.
+- Key improvements implemented:
+  1. Payload Completeness: Updated _saveRegistration() payload to include issued_business_id and business_id alongside first_name, last_name, mobile, email, aadhaar_number, gender, address_line1, referred_by_code, and membership_type_code.
+  2. Full Draft Hydration: Upgraded _hydrateDraft() so that selecting a saved draft from the Resume saved draft dropdown restores all customer details across all 5 steps (First name, Last name, Mobile, Email, Gender, Aadhaar/Government ID, Alternative mobile, Alternative contact name, Relationship, Membership plan, Preferred branch, Address, Referral code, and uploaded document count).
+  3. Manual Save Draft Button: Added an explicit Save Draft button on the bottom control bar next to Previous / Next, allowing agents to explicitly save draft progress at any point during registration.
+
+### Frontend Files (Modified)
+- frontend/lib/features/agent/registration/presentation/screens/agent_registration_screen.dart
+
+### Backend Files (Modified)
+- None
+
+### Verification
+- flutter test suites passed (11/11 tests passed).
+- git diff --check passed cleanly.

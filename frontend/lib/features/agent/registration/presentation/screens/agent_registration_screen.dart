@@ -276,6 +276,14 @@ class _AgentRegistrationScreenState
                     : () => setState(() => _currentStep -= 1),
                 label: 'Previous',
               ),
+              const SizedBox(width: 10),
+              AgentSecondaryButton(
+                onPressed: _autoSaving
+                    ? null
+                    : () => _manualSaveDraft(controller),
+                icon: const Icon(Icons.bookmark_outline, size: 18),
+                label: _autoSaving ? 'Saving...' : 'Save Draft',
+              ),
               const Spacer(),
               if (_currentStep < 4)
                 AgentPrimaryButton(
@@ -1088,6 +1096,16 @@ class _AgentRegistrationScreenState
     );
   }
 
+  Future<void> _manualSaveDraft(dynamic controller) async {
+    _setAutoSaveState(true, 'Saving draft...');
+    try {
+      await _saveRegistration(controller, submit: false, showFeedback: true);
+      _setAutoSaveState(false, 'Draft saved successfully.');
+    } catch (_) {
+      _setAutoSaveState(false, 'Save draft failed. Please check network connection.');
+    }
+  }
+
   Future<void> _saveRegistration(
     dynamic controller, {
     required bool submit,
@@ -1103,6 +1121,8 @@ class _AgentRegistrationScreenState
       'address_line1': _addressController.text.trim(),
       'referred_by_code': _referralController.text.trim(),
       'membership_type_code': _membershipTypeCode,
+      'issued_business_id': _selectedBusinessId,
+      'business_id': _selectedBusinessId,
       'status': submit ? 'PENDING' : 'INCOMPLETE',
     };
 
@@ -1135,7 +1155,7 @@ class _AgentRegistrationScreenState
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            submit ? 'Registration submitted.' : 'Draft saved successfully.',
+            submit ? 'Registration submitted successfully.' : 'Draft saved successfully.',
           ),
         ),
       );
@@ -1143,15 +1163,72 @@ class _AgentRegistrationScreenState
   }
 
   void _hydrateDraft(Map<String, dynamic> selected) {
-    _firstNameController.text =
-        selected['fullName']?.toString().split(' ').firstOrNull ?? '';
-    _lastNameController.text =
-        selected['fullName']?.toString().split(' ').skip(1).join(' ') ?? '';
-    _mobileController.text = selected['mobile']?.toString() ?? '';
-    _emailController.text = selected['email']?.toString() ?? '';
-    _addressController.text = selected['addressLine1']?.toString() ?? '';
-    _currentStep = 0;
-    _uploadedDocumentCount = 0;
+    setState(() {
+      final customerId = selected['id']?.toString();
+      if (customerId != null && customerId.isNotEmpty) {
+        _draftCustomerId = customerId;
+      }
+
+      final fullName = selected['fullName']?.toString() ?? selected['first_name']?.toString() ?? '';
+      _firstNameController.text = selected['firstName']?.toString() ??
+          selected['first_name']?.toString() ??
+          (fullName.split(' ').firstOrNull ?? '');
+      _lastNameController.text = selected['lastName']?.toString() ??
+          selected['last_name']?.toString() ??
+          (fullName.split(' ').skip(1).join(' '));
+      _mobileController.text = selected['mobile']?.toString() ?? '';
+      _emailController.text = selected['email']?.toString() ?? '';
+      _aadhaarController.text = selected['aadhaarNumber']?.toString() ??
+          selected['aadhaar_number']?.toString() ??
+          '';
+      _addressController.text = selected['addressLine1']?.toString() ??
+          selected['address_line1']?.toString() ??
+          '';
+      _referralController.text = selected['referredByCode']?.toString() ??
+          selected['referred_by_code']?.toString() ??
+          '';
+
+      final genderVal = (selected['gender']?.toString() ?? 'MALE').toUpperCase();
+      if (['MALE', 'FEMALE', 'OTHER'].contains(genderVal)) {
+        _gender = genderVal;
+      }
+
+      final memType = selected['membershipTypeCode']?.toString() ??
+          selected['membership_type_code']?.toString();
+      if (memType != null && memType.isNotEmpty) {
+        _membershipTypeCode = memType;
+      }
+
+      final busId = selected['issuedBusinessId']?.toString() ??
+          selected['business_id']?.toString() ??
+          selected['issued_business_id']?.toString();
+      if (busId != null && busId.isNotEmpty) {
+        _selectedBusinessId = busId;
+      }
+
+      final contacts = selected['customerContacts'];
+      if (contacts is List && contacts.isNotEmpty) {
+        final firstContact = contacts.first;
+        if (firstContact is Map) {
+          _alternativeMobileController.text =
+              firstContact['mobile']?.toString() ?? '';
+          _alternativeContactNameController.text =
+              firstContact['name']?.toString() ?? '';
+          _alternativeRelationshipController.text =
+              firstContact['relationship']?.toString() ?? '';
+        }
+      }
+
+      final docs = selected['documents'];
+      if (docs is List) {
+        _uploadedDocumentCount = docs.length;
+      } else {
+        _uploadedDocumentCount = 0;
+      }
+
+      _currentStep = 0;
+      _autoSaveMessage = 'Draft restored. Changes autosave when navigating steps.';
+    });
   }
 
   void _resetForNewDraft() {
