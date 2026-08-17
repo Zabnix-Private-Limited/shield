@@ -10,6 +10,8 @@ import { AgentScopeService } from '../auth/agent-scope.service';
 import { ProviderScopeService } from '../auth/provider-scope.service';
 import { PrescriptionIntelligenceService } from './prescription-intelligence.service';
 import { StorageService } from '../storage/storage.service';
+import { PlatformRealtimeService } from '../platform-capabilities/platform-realtime.service';
+import { NotificationService } from '../notification/notification.service';
 
 type ExtractedPrescriptionMedicine = {
   name: string;
@@ -33,6 +35,8 @@ export class DocumentService {
     private readonly providerScopeService: ProviderScopeService,
     private prescriptionIntelligenceService: PrescriptionIntelligenceService,
     private storageService: StorageService,
+    private readonly platformRealtimeService: PlatformRealtimeService,
+    private readonly notificationService: NotificationService,
   ) {}
 
   private normalizeDocumentType(documentType?: string | null) {
@@ -458,6 +462,75 @@ export class DocumentService {
         uploadedBy: data.uploadedBy,
       },
     });
+
+    if (data.documentType.toUpperCase() === 'PRESCRIPTION') {
+      try {
+        const customer = await this.prisma.customer.findUnique({
+          where: { id: data.customerId },
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            mobile: true,
+            shieldCard: { select: { issuedBusinessId: true } },
+          },
+        });
+        const customerName = customer
+          ? `${customer.firstName} ${customer.lastName}`.trim()
+          : 'Customer';
+        const businessId = customer?.shieldCard?.issuedBusinessId;
+
+        // Publish WebSocket realtime event to Pharmacy Provider Portal shell
+        this.platformRealtimeService.publish({
+          id: `prescription-uploaded:${created.id.toString()}`,
+          type: 'PRESCRIPTION_UPLOADED',
+          category: 'prescription',
+          title: 'New Prescription Uploaded',
+          description: `Customer ${customerName} uploaded a prescription for branch review.`,
+          workspace: 'provider',
+          businessId: businessId?.toString(),
+          metadata: {
+            documentId: created.id.toString(),
+            customerId: data.customerId.toString(),
+            customerName,
+            deepLinkUrl:
+              'https://shield-zabnix.vercel.app/#/portal/provider/prescriptions',
+          },
+        });
+
+        // Send push notification to branch pharmacy provider staff
+        if (businessId) {
+          const providerStaff = await this.prisma.user.findMany({
+            where: {
+              status: 'ACTIVE',
+              userType: 'PHARMACY_PROVIDER',
+              providerBranchAssignment: {
+                some: { businessId, status: 'APPROVED' },
+              },
+            },
+            select: { id: true, customerId: true },
+          });
+
+          for (const staff of providerStaff) {
+            if (staff.customerId) {
+              await this.notificationService.send({
+                customerId: staff.customerId,
+                title: 'New Incoming Prescription',
+                message: `${customerName} submitted a prescription to your pharmacy branch for review.`,
+                deepLinkUrl:
+                  'https://shield-zabnix.vercel.app/#/portal/provider/prescriptions',
+                data: {
+                  documentId: created.id.toString(),
+                  type: 'PRESCRIPTION_UPLOADED',
+                },
+              });
+            }
+          }
+        }
+      } catch (err) {
+        // Silently catch realtime dispatch error to ensure upload succeeds
+      }
+    }
 
     return this.runAutomatedPrescriptionPipeline(
       created.id,

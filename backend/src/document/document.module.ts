@@ -5,8 +5,11 @@ import { PrescriptionIntelligenceService } from './prescription-intelligence.ser
 import { PrismaModule } from '../prisma/prisma.module';
 import { StorageModule } from '../storage/storage.module';
 
+import { PlatformCapabilitiesModule } from '../platform-capabilities/platform-capabilities.module';
+import { NotificationModule } from '../notification/notification.module';
+
 @Module({
-  imports: [PrismaModule, StorageModule],
+  imports: [PrismaModule, StorageModule, PlatformCapabilitiesModule, NotificationModule],
   controllers: [DocumentController],
   providers: [DocumentService, PrescriptionIntelligenceService],
   exports: [DocumentService],

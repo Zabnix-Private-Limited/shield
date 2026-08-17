@@ -13315,3 +13315,24 @@ KannnanKannnanKannnanKannnanKannnanKannnanKannnanKannnanKannnanKannnanKannnanKan
 ### Verification
 - NestJS compilation (npm run build) succeeded with 0 errors.
 - flutter analyze passed cleanly (0 errors).
+
+
+## 162. ERP Bulk Customer Import & Real-Time Prescription Notifications (2026-08-17 15:50:00 IST)
+
+- Implemented ERP legacy customer bulk import API endpoints and real-time branch notifications for customer prescription uploads.
+- Implementation details:
+  1. ERP Legacy Customer Bulk Import Endpoints (CustomerService.bulkImportErpCustomers, AdminGovernanceController, CustomerAccountController): Implemented POST /admin/workspaces/erp/import and POST /customer/erp-customers/import endpoints for bulk upserting pre-existing customer records into erp_existing_customers with phone number normalization and detailed import reports.
+  2. Prescription Real-Time WebSocket & FCM Push Dispatch (DocumentService.upload in document.service.ts): On customer prescription upload, automatically queries issuing branch (shieldCard.issuedBusinessId), emits real-time WebSocket event (PRESCRIPTION_UPLOADED) to the Pharmacy Provider Portal, and sends FCM push notifications with deepLinkUrl to active branch pharmacy staff.
+
+### Frontend Files (Modified)
+- None
+
+### Backend Files (Modified)
+- backend/src/customer/customer.service.ts
+- backend/src/customer/customer-account.controller.ts
+- backend/src/admin-governance/admin-governance.controller.ts
+- backend/src/document/document.module.ts
+- backend/src/document/document.service.ts
+
+### Verification
+- NestJS compilation (npm run build) succeeded with 0 errors.

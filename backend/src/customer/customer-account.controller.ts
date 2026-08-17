@@ -319,4 +319,20 @@ export class CustomerAccountController {
       ),
     };
   }
+
+  @RequirePermissions('customers.create')
+  @Post('erp-customers/import')
+  async importErpCustomers(@Body() body: any) {
+    const records = Array.isArray(body)
+      ? body
+      : Array.isArray(body?.records)
+        ? body.records
+        : [];
+    const result = await this.customerService.bulkImportErpCustomers(records);
+    return {
+      success: true,
+      message: `Successfully processed ${result.importedCount} ERP customer records.`,
+      data: result,
+    };
+  }
 }

@@ -8,11 +8,30 @@ import {
   AdminGovernanceWorkspaceQuery,
 } from './admin-governance.service';
 
+import { CustomerService } from '../customer/customer.service';
+
 @Controller('admin/workspaces')
 export class AdminGovernanceController {
   constructor(
     private readonly adminGovernanceService: AdminGovernanceService,
+    private readonly customerService: CustomerService,
   ) {}
+
+  @RequirePermissions('customers.create')
+  @Post('erp/import')
+  async importErpCustomers(@Body() body: any) {
+    const records = Array.isArray(body)
+      ? body
+      : Array.isArray(body?.records)
+        ? body.records
+        : [];
+    const result = await this.customerService.bulkImportErpCustomers(records);
+    return {
+      success: true,
+      message: `Successfully processed ${result.importedCount} ERP customer records.`,
+      data: result,
+    };
+  }
 
   @RequirePermissions('settings.view')
   @Get('settings')

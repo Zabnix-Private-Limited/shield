@@ -1969,4 +1969,103 @@ export class CustomerService {
       return { customer, walletId: wallet.id };
     });
   }
+
+  async bulkImportErpCustomers(
+    records: Array<{
+      mobile: string;
+      fullName: string;
+      branchName?: string;
+      businessId?: string | number;
+      erpCustomerCode?: string;
+      sourceProvider?: string;
+    }>,
+  ) {
+    if (!Array.isArray(records) || records.length === 0) {
+      throw new BadRequestException(
+        'At least one customer record is required for bulk import.',
+      );
+    }
+
+    let importedCount = 0;
+    let skippedCount = 0;
+    const errors: string[] = [];
+
+    for (const record of records) {
+      try {
+        const rawMobile = record.mobile?.toString().trim();
+        const fullName = record.fullName?.toString().trim();
+
+        if (!rawMobile || rawMobile.replace(/\D/g, '').length < 10) {
+          errors.push(
+            `Invalid mobile format for record: ${fullName || 'Unknown'}`,
+          );
+          skippedCount++;
+          continue;
+        }
+
+        if (!fullName || fullName.length === 0) {
+          errors.push(`Missing full name for mobile: ${rawMobile}`);
+          skippedCount++;
+          continue;
+        }
+
+        const cleanMobile = rawMobile.replace(/\D/g, '').slice(-10);
+        let parsedBusinessId: bigint | null = null;
+
+        if (record.businessId) {
+          try {
+            parsedBusinessId = BigInt(record.businessId.toString());
+          } catch (_) {}
+        }
+
+        const existing = await this.prisma.erpExistingCustomer.findFirst({
+          where: { mobile: cleanMobile },
+        });
+
+        if (existing) {
+          await this.prisma.erpExistingCustomer.update({
+            where: { id: existing.id },
+            data: {
+              fullName,
+              branchName: record.branchName?.trim() || existing.branchName,
+              businessId: parsedBusinessId ?? existing.businessId,
+              erpCustomerCode:
+                record.erpCustomerCode?.trim() || existing.erpCustomerCode,
+              sourceProvider:
+                record.sourceProvider?.trim() || existing.sourceProvider,
+              updatedAt: new Date(),
+            },
+          });
+          importedCount++;
+        } else {
+          await this.prisma.erpExistingCustomer.create({
+            data: {
+              uuid: randomUUID(),
+              mobile: cleanMobile,
+              fullName,
+              branchName: record.branchName?.trim() || null,
+              businessId: parsedBusinessId,
+              erpCustomerCode: record.erpCustomerCode?.trim() || null,
+              sourceProvider: record.sourceProvider?.trim() || 'ERP_IMPORT',
+              status: 'UNCLAIMED',
+            },
+          });
+          importedCount++;
+        }
+      } catch (err: any) {
+        errors.push(
+          `Failed to import ${record.fullName || record.mobile}: ${err.message}`,
+        );
+        skippedCount++;
+      }
+    }
+
+    return {
+      success: true,
+      total: records.length,
+      importedCount,
+      skippedCount,
+      errors: errors.slice(0, 25),
+    };
+  }
 }
