@@ -20,10 +20,21 @@ class ApiService {
       'https://shield-backend.vercel.app';
   static String? _accessToken;
   static String? _activeCustomerId;
+  static Customer? _cachedCustomerProfile;
+  static DateTime? _cachedCustomerProfileTime;
+  static final Map<String, _CacheEntry<PortalSectionData>> _roleSectionCache = {};
   static final Map<String, Map<String, dynamic>>
   _providerPlatformWorkspaceCache = <String, Map<String, dynamic>>{};
   static final Map<String, Map<String, dynamic>>
   _adminGovernanceWorkspaceCache = <String, Map<String, dynamic>>{};
+
+  static void clearApiCache() {
+    _cachedCustomerProfile = null;
+    _cachedCustomerProfileTime = null;
+    _roleSectionCache.clear();
+    _providerPlatformWorkspaceCache.clear();
+    _adminGovernanceWorkspaceCache.clear();
+  }
   static Future<String?> Function()? _onRefreshToken;
   static Future<void> Function()? _onSessionExpired;
   static Future<String?>? _refreshInFlight;
@@ -341,8 +352,16 @@ class ApiService {
 
   static Future<PortalSectionData> getRoleSectionData(
     SHIELDRole role,
-    String section,
-  ) async {
+    String section, {
+    bool forceRefresh = false,
+  }) async {
+    final cacheKey = '${role.routeKey}:$section';
+    if (!forceRefresh && _roleSectionCache.containsKey(cacheKey)) {
+      final entry = _roleSectionCache[cacheKey]!;
+      if (entry.isFresh(const Duration(seconds: 30))) {
+        return entry.data;
+      }
+    }
     final customerId = _resolveOptionalCustomerId();
     final response = await _dio.get(
       '/dashboard/role/${role.routeKey}/$section',
@@ -350,7 +369,9 @@ class ApiService {
           ? null
           : <String, dynamic>{'customer_id': customerId},
     );
-    return PortalSectionData.fromJson(_readEnvelope(response));
+    final data = PortalSectionData.fromJson(_readEnvelope(response));
+    _roleSectionCache[cacheKey] = _CacheEntry(data);
+    return data;
   }
 
   static Future<List<Appointment>> getAppointments(SHIELDRole role) async {
@@ -737,12 +758,23 @@ class ApiService {
     return Customer.fromJson(_readEnvelope(response));
   }
 
-  static Future<Customer> getMyCustomerProfile() async {
+  static Future<Customer> getMyCustomerProfile({bool forceRefresh = false}) async {
+    if (!forceRefresh &&
+        _cachedCustomerProfile != null &&
+        _cachedCustomerProfileTime != null &&
+        DateTime.now().difference(_cachedCustomerProfileTime!) < const Duration(seconds: 30)) {
+      return _cachedCustomerProfile!;
+    }
     final response = await _dio.get('/customer/profile');
-    return Customer.fromJson(_readEnvelope(response));
+    final customer = Customer.fromJson(_readEnvelope(response));
+    _cachedCustomerProfile = customer;
+    _cachedCustomerProfileTime = DateTime.now();
+    return customer;
   }
 
   static Future<Customer> updateMyCustomerProfile(Customer customer) async {
+    _cachedCustomerProfile = null;
+    _cachedCustomerProfileTime = null;
     final response = await _dio.patch(
       '/customer/profile',
       data: {
@@ -2206,8 +2238,15 @@ class ApiService {
       '/master-data/admin/$domain',
       maxAttempts: 3,
     );
-    return _readEnvelopeList(
-      response,
-    ).map((item) => Map<String, dynamic>.from(item as Map)).toList();
+    return _readEnvelopeList(response)
+        .map((item) => Map<String, dynamic>.from(item as Map))
+        .toList();
   }
+}
+
+class _CacheEntry<T> {
+  final T data;
+  final DateTime timestamp;
+  _CacheEntry(this.data) : timestamp = DateTime.now();
+  bool isFresh(Duration ttl) => DateTime.now().difference(timestamp) < ttl;
 }

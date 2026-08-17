@@ -1319,6 +1319,13 @@ class _WorkspaceFormDialogState extends State<_WorkspaceFormDialog> {
   }
 
   Widget _buildField(_WorkspaceFieldData field) {
+    final selectedDept = (_selectedValues['department'] ?? '').trim().toLowerCase();
+    final isAdminDept = selectedDept.contains('admin');
+
+    if (isAdminDept && (field.key == 'branch' || field.key == 'accessScope')) {
+      return const SizedBox.shrink();
+    }
+
     final labelWidget = _buildRequiredLabel(field.label, isRequired: field.required);
     switch (field.type) {
       case 'dropdown':
@@ -1392,6 +1399,9 @@ class _WorkspaceFormDialogState extends State<_WorkspaceFormDialog> {
 
   Map<String, Object?> _collectValues() {
     final values = <String, Object?>{};
+    final selectedDept = (_selectedValues['department'] ?? '').trim().toLowerCase();
+    final isAdminDept = selectedDept.contains('admin');
+
     for (final field in _fields) {
       switch (field.type) {
         case 'checkbox':
@@ -1404,6 +1414,12 @@ class _WorkspaceFormDialogState extends State<_WorkspaceFormDialog> {
           values[field.key] = _controllers[field.key]?.text.trim() ?? '';
       }
     }
+
+    if (isAdminDept) {
+      values['accessScope'] = 'ORGANIZATION';
+      values['branch'] = '';
+    }
+
     return values;
   }
 }

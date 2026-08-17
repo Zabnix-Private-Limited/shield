@@ -1,12 +1,13 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../app/theme/app_colors.dart';
 import '../../app/theme/app_typography.dart';
 
 enum AppButtonType { primary, secondary, outline, danger }
 
-class AppButton extends StatelessWidget {
+class AppButton extends StatefulWidget {
   final String text;
-  final VoidCallback? onPressed;
+  final FutureOr<void> Function()? onPressed;
   final AppButtonType type;
   final bool isLoading;
   final double? width;
@@ -23,13 +24,40 @@ class AppButton extends StatelessWidget {
   });
 
   @override
+  State<AppButton> createState() => _AppButtonState();
+}
+
+class _AppButtonState extends State<AppButton> {
+  bool _localLoading = false;
+
+  void _handlePress() async {
+    if (widget.isLoading || _localLoading || widget.onPressed == null) return;
+    final result = widget.onPressed!();
+    if (result is Future) {
+      setState(() => _localLoading = true);
+      try {
+        await result;
+      } finally {
+        if (mounted) {
+          setState(() => _localLoading = false);
+        }
+      }
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final effectiveLoading = widget.isLoading || _localLoading;
+    final effectiveOnPressed = (widget.onPressed == null || effectiveLoading)
+        ? null
+        : _handlePress;
+
     final loadingIndicator = SizedBox(
       width: 20,
       height: 20,
       child: CircularProgressIndicator(
         strokeWidth: 2.2,
-        color: switch (type) {
+        color: switch (widget.type) {
           AppButtonType.primary || AppButtonType.danger => Colors.white,
           _ => AppColors.shieldBlue,
         },
@@ -37,30 +65,30 @@ class AppButton extends StatelessWidget {
     );
 
     return SizedBox(
-      width: width,
-      height: height ?? 54,
-      child: switch (type) {
+      width: widget.width,
+      height: widget.height ?? 54,
+      child: switch (widget.type) {
         AppButtonType.primary => ElevatedButton(
-          onPressed: isLoading ? null : onPressed,
-          child: isLoading
+          onPressed: effectiveOnPressed,
+          child: effectiveLoading
               ? loadingIndicator
               : Text(
-                  text,
+                  widget.text,
                   style: AppTypography.body.copyWith(
                     fontWeight: FontWeight.w700,
                   ),
                 ),
         ),
         AppButtonType.secondary => OutlinedButton(
-          onPressed: isLoading ? null : onPressed,
+          onPressed: effectiveOnPressed,
           style: OutlinedButton.styleFrom(
             backgroundColor: AppColors.lightGray,
             side: BorderSide.none,
           ),
-          child: isLoading
+          child: effectiveLoading
               ? loadingIndicator
               : Text(
-                  text,
+                  widget.text,
                   style: AppTypography.body.copyWith(
                     fontWeight: FontWeight.w700,
                     color: AppColors.shieldNavy,
@@ -68,23 +96,23 @@ class AppButton extends StatelessWidget {
                 ),
         ),
         AppButtonType.outline => OutlinedButton(
-          onPressed: isLoading ? null : onPressed,
-          child: isLoading
+          onPressed: effectiveOnPressed,
+          child: effectiveLoading
               ? loadingIndicator
               : Text(
-                  text,
+                  widget.text,
                   style: AppTypography.body.copyWith(
                     fontWeight: FontWeight.w700,
                   ),
                 ),
         ),
         AppButtonType.danger => ElevatedButton(
-          onPressed: isLoading ? null : onPressed,
+          onPressed: effectiveOnPressed,
           style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
-          child: isLoading
+          child: effectiveLoading
               ? loadingIndicator
               : Text(
-                  text,
+                  widget.text,
                   style: AppTypography.body.copyWith(
                     fontWeight: FontWeight.w700,
                     color: Colors.white,

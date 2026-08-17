@@ -2417,6 +2417,7 @@ export class AdminGovernanceService {
             label: 'Department',
             type: 'select',
             options: [
+              'Administration',
               'Field Operations',
               'Customer Enrollment',
               'Healthcare Services',
@@ -2601,6 +2602,7 @@ export class AdminGovernanceService {
             label: 'Department',
             type: 'select',
             options: [
+              'Administration',
               'Field Operations',
               'Customer Enrollment',
               'Healthcare Services',
@@ -2684,6 +2686,10 @@ export class AdminGovernanceService {
         throw new BadRequestException('First Name, Mobile, and Email are required.');
       }
 
+      const isAdmin = departmentName.toLowerCase().includes('admin');
+      const resolvedUserType = isAdmin ? 'ADMIN' : 'SHIELD_AGENT';
+      const resolvedAccessScope = isAdmin ? 'ORGANIZATION' : (accessScope || 'BRANCH_SCOPED');
+
       // Auto-generate the agent code if the form did not supply one (or if
       // the submitted value collides with an existing code — handles race conditions
       // where two agents are provisioned simultaneously from the same pre-generated code).
@@ -2711,12 +2717,14 @@ export class AdminGovernanceService {
         throw new BadRequestException('A user with this mobile or email already exists.');
       }
 
-      // Resolve branch
-      const branch = await this.prisma.business.findFirst({
-        where: {
-          name: { contains: branchName, mode: 'insensitive' },
-        },
-      });
+      // Resolve branch (only required for non-admin branch-scoped users)
+      const branch = isAdmin
+        ? null
+        : await this.prisma.business.findFirst({
+            where: {
+              name: { contains: branchName, mode: 'insensitive' },
+            },
+          });
 
       // Resolve department
       let department = await this.prisma.department.findFirst({
@@ -2727,9 +2735,9 @@ export class AdminGovernanceService {
         department = await this.prisma.department.findFirst();
       }
 
-      // Resolve role for SHIELD_AGENT
+      // Resolve role (ADMIN or AGENT)
       const role = await this.prisma.role.findFirst({
-        where: { name: { contains: 'AGENT', mode: 'insensitive' } },
+        where: { name: { contains: isAdmin ? 'ADMIN' : 'AGENT', mode: 'insensitive' } },
       });
 
       const newUser = await this.prisma.user.create({
@@ -2740,8 +2748,8 @@ export class AdminGovernanceService {
           employeeCode,
           mobile,
           email,
-          userType: 'SHIELD_AGENT',
-          accessScope: accessScope || 'BRANCH_SCOPED',
+          userType: resolvedUserType,
+          accessScope: resolvedAccessScope,
           status: status || 'ACTIVE',
           branchBusinessId: branch?.id ?? null,
           departmentId: department?.id ?? null,
@@ -2749,7 +2757,7 @@ export class AdminGovernanceService {
         },
       });
 
-      if (branch?.id) {
+      if (!isAdmin && branch?.id) {
         await this.prisma.agentBranchAssignment.create({
           data: {
             uuid: crypto.randomUUID(),
