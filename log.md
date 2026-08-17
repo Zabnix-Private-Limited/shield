@@ -13362,3 +13362,21 @@ KannnanKannnanKannnanKannnanKannnanKannnanKannnanKannnanKannnanKannnanKannnanKan
 
 ### Verification
 - NestJS compilation (npm run build) succeeded with 0 errors.
+
+
+## 166. Universal Member Tier Discount First Evaluation Rule (2026-08-17 16:56:00 IST)
+
+- Updated commercial pricing rule engine (PricingService.evaluateServicePrice) to evaluate flat membership tier discounts (Founding 15%, Standard 10%) FIRST directly on original order amounts across all services and products without distinction.
+- Implementation details:
+  1. Primary Membership Discount Layer (pricing.service.ts): Calculate membership discount percentage directly on originalAmount, setting afterMembership = originalAmount - membershipDiscountApplied.
+  2. Secondary Benefit & Reward Deductions (pricing.service.ts): Applied SHIELD promotional benefit grants and reward points redemption to the remaining balance after membership discount.
+  3. Receipt Line Items (pricing.service.ts): Re-ordered customerVisibleLines array to render Membership Discount Applied as the primary deduction line.
+
+### Frontend Files (Modified)
+- None
+
+### Backend Files (Modified)
+- backend/src/pricing/pricing.service.ts
+
+### Verification
+- NestJS compilation (npm run build) succeeded with 0 errors.

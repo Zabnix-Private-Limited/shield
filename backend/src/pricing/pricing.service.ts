@@ -94,6 +94,20 @@ export class PricingService {
 
     const originalAmount = Number(input.originalAmount.toFixed(2));
     const allowedWallets = this.parseWalletsAllowed(serviceRule.walletsAllowed);
+
+    // 1. Membership Discount applies FIRST to the original price (Founding 15%, Standard 10%)
+    const membershipDiscountRate = Number(
+      customer.membership?.membershipType?.discountPercentage || 0,
+    );
+    const membershipDiscountApplied = Number(
+      (originalAmount * (membershipDiscountRate / 100)).toFixed(2),
+    );
+    const afterMembership = Math.max(
+      0,
+      Number((originalAmount - membershipDiscountApplied).toFixed(2)),
+    );
+
+    // 2. SHIELD Benefit applies to the balance after membership discount
     const benefitEligible =
       Boolean(serviceRule.isBenefitEligible) &&
       allowedWallets.includes('BENEFIT') &&
@@ -102,20 +116,13 @@ export class PricingService {
       ? Math.min(
           Number(serviceRule.maxBenefitAmount || 0),
           balances.hiddenBenefit,
-          originalAmount,
+          afterMembership,
         )
       : 0;
 
-    const afterBenefit = Number((originalAmount - benefitApplied).toFixed(2));
-    const membershipDiscountRate = Number(
-      customer.membership?.membershipType?.discountPercentage || 0,
-    );
-    const membershipDiscountApplied = Number(
-      (afterBenefit * (membershipDiscountRate / 100)).toFixed(2),
-    );
-    const afterMembership = Math.max(
+    const afterBenefit = Math.max(
       0,
-      Number((afterBenefit - membershipDiscountApplied).toFixed(2)),
+      Number((afterMembership - benefitApplied).toFixed(2)),
     );
 
     const requestedRewardPoints = Number(input.requestedRewardPoints || 0);
@@ -139,14 +146,14 @@ export class PricingService {
           Number(activeRedemptionRule.pointsRequired);
         rewardPointsRedeemed = Number(redeemablePoints.toFixed(2));
         rewardPointCreditValue = Number(
-          Math.min(afterMembership, redeemablePoints * ratio).toFixed(2),
+          Math.min(afterBenefit, redeemablePoints * ratio).toFixed(2),
         );
       }
     }
 
     const finalPayableAmount = Math.max(
       0,
-      Number((afterMembership - rewardPointCreditValue).toFixed(2)),
+      Number((afterBenefit - rewardPointCreditValue).toFixed(2)),
     );
 
     const rewardPointsEarned = Number(
@@ -156,11 +163,11 @@ export class PricingService {
     );
 
     const customerVisibleLines = [
-      ...(benefitApplied > 0
-        ? [{ label: 'SHIELD Benefit Applied', amount: benefitApplied }]
-        : []),
       ...(membershipDiscountApplied > 0
         ? [{ label: 'Membership Discount Applied', amount: membershipDiscountApplied }]
+        : []),
+      ...(benefitApplied > 0
+        ? [{ label: 'SHIELD Benefit Applied', amount: benefitApplied }]
         : []),
       ...(rewardPointCreditValue > 0
         ? [{ label: 'Reward Credit Applied', amount: rewardPointCreditValue }]
