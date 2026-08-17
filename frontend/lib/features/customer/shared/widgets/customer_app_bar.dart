@@ -40,15 +40,12 @@ class _CustomerAppBarState extends State<CustomerAppBar> {
   @override
   void initState() {
     super.initState();
-    _dashboardController = DashboardController();
-    if (_isMainPage) {
-      _dashboardController.load();
-    }
+    _dashboardController = DashboardController.instance;
+    _dashboardController.load();
   }
 
   @override
   void dispose() {
-    _dashboardController.dispose();
     super.dispose();
   }
 
@@ -164,13 +161,15 @@ class _CustomerMainHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cashLabel = cashBalance == null
-        ? (isLoading ? 'Loading' : '₹0')
+        ? (isLoading ? '...' : '₹0.00')
         : AppDisplayFormatters.formatCurrencyString(
-            cashBalance!.toStringAsFixed(0),
+            cashBalance!.toStringAsFixed(2),
           );
     final rewardLabel = rewardPoints == null
-        ? (isLoading ? 'Loading' : '0')
-        : rewardPoints!.toStringAsFixed(0);
+        ? (isLoading ? '...' : '0')
+        : AppDisplayFormatters.formatNumberString(
+            rewardPoints!.toStringAsFixed(0),
+          );
 
     return LayoutBuilder(
       builder: (context, constraints) {

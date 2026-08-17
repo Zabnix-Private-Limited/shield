@@ -7,7 +7,24 @@ import '../../data/models/wallet_model.dart';
 import '../../data/repositories/wallet_repository.dart';
 
 class WalletController extends ChangeNotifier {
-  WalletController({WalletRepository? repository, this.customerId})
+  static final WalletController _instance = WalletController._internal();
+  static WalletController get instance => _instance;
+
+  factory WalletController({
+    WalletRepository? repository,
+    String? customerId,
+  }) {
+    if (repository != null ||
+        (customerId != null && customerId.trim().isNotEmpty)) {
+      return WalletController._internal(
+        repository: repository,
+        customerId: customerId,
+      );
+    }
+    return _instance;
+  }
+
+  WalletController._internal({WalletRepository? repository, this.customerId})
     : _repository = repository ?? WalletRepository();
 
   final WalletRepository _repository;
@@ -27,8 +44,13 @@ class WalletController extends ChangeNotifier {
   String get _resolvedCustomerId =>
       ApiService.requireAuthenticatedCustomerId(customerId);
 
-  Future<void> load() async {
-    _isLoading = true;
+  Future<void> load({bool forceRefresh = false}) async {
+    if (_wallet != null && !forceRefresh) {
+      _refreshInBackground();
+      return;
+    }
+
+    _isLoading = _wallet == null;
     _error = null;
     notifyListeners();
 

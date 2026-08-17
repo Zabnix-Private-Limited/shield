@@ -13336,3 +13336,8 @@ KannnanKannnanKannnanKannnanKannnanKannnanKannnanKannnanKannnanKannnanKannnanKan
 
 ### Verification
 - NestJS compilation (npm run build) succeeded with 0 errors.
+
+
+## 163. Persistent Cached DB State & Zero-Flash Header Badges (2026-08-17 16:11:00 IST)
+
+- Resolved UI header zero-value flashes (₹0.00 & 

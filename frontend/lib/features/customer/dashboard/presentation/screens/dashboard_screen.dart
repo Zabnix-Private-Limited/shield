@@ -27,12 +27,11 @@ class _CustomerDashboardScreenState extends State<CustomerDashboardScreen> {
   @override
   void initState() {
     super.initState();
-    _controller = DashboardController()..load();
+    _controller = DashboardController.instance..load();
   }
 
   @override
   void dispose() {
-    _controller.dispose();
     super.dispose();
   }
 
