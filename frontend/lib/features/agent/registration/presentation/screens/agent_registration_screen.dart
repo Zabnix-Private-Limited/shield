@@ -27,6 +27,23 @@ class _AgentRegistrationScreenState
   final _membershipFormKey = GlobalKey<FormState>();
   final _documentsFormKey = GlobalKey<FormState>();
 
+  static const List<String> _keralaDistricts = [
+    'Alappuzha',
+    'Ernakulam',
+    'Idukki',
+    'Kannur',
+    'Kasaragod',
+    'Kollam',
+    'Kottayam',
+    'Kozhikode',
+    'Malappuram',
+    'Palakkad',
+    'Pathanamthitta',
+    'Thiruvananthapuram',
+    'Thrissur',
+    'Wayanad',
+  ];
+
   final _firstNameController = TextEditingController();
   final _lastNameController = TextEditingController();
   final _mobileController = TextEditingController();
@@ -37,9 +54,14 @@ class _AgentRegistrationScreenState
   final _aadhaarController = TextEditingController();
   final _referralController = TextEditingController();
   final _addressController = TextEditingController();
+  final _houseController = TextEditingController();
+  final _localityController = TextEditingController();
+  final _cityController = TextEditingController();
+  final _pincodeController = TextEditingController();
   final _initialBalanceController = TextEditingController();
 
   String _gender = 'MALE';
+  String _selectedDistrict = 'Malappuram';
   String? _membershipTypeCode;
   String? _draftCustomerId;
   String? _selectedBusinessId;
@@ -52,6 +74,7 @@ class _AgentRegistrationScreenState
   bool _autoSaving = false;
   String _autoSaveMessage = 'Draft autosaves when you move between steps.';
   Timer? _saveMessageTimer;
+  Timer? _phoneCheckDebounce;
 
   @override
   void initState() {
@@ -64,6 +87,7 @@ class _AgentRegistrationScreenState
   @override
   void dispose() {
     _saveMessageTimer?.cancel();
+    _phoneCheckDebounce?.cancel();
     _firstNameController.dispose();
     _lastNameController.dispose();
     _mobileController.dispose();
@@ -74,6 +98,10 @@ class _AgentRegistrationScreenState
     _aadhaarController.dispose();
     _referralController.dispose();
     _addressController.dispose();
+    _houseController.dispose();
+    _localityController.dispose();
+    _cityController.dispose();
+    _pincodeController.dispose();
     _initialBalanceController.dispose();
     super.dispose();
   }
@@ -353,8 +381,7 @@ class _AgentRegistrationScreenState
                         decoration: InputDecoration(
                           label: _buildRequiredLabel('Phone'),
                         ),
-                        onChanged: (_) =>
-                            setState(() => _existingCustomer = null),
+                        onChanged: (val) => _onPhoneChanged(val, controller),
                         validator: (value) {
                           final text = value?.trim() ?? '';
                           if (text.isEmpty) {
@@ -594,18 +621,80 @@ class _AgentRegistrationScreenState
                         ),
                       ),
                     ),
-                    SizedBox(
-                      width: double.infinity,
-                      child: TextFormField(
-                        controller: _addressController,
-                        maxLines: 3,
+                    _fieldBox(
+                      TextFormField(
+                        controller: _houseController,
                         decoration: InputDecoration(
-                          label: _buildRequiredLabel('Address'),
+                          label: _buildRequiredLabel('House / Building / Room Name & Number'),
+                          helperText: 'e.g. Grace Villa, House No 12/340',
                         ),
-                        validator: (value) =>
-                            value == null || value.trim().isEmpty
-                            ? 'Enter address'
+                        validator: (v) => (v == null || v.trim().isEmpty)
+                            ? 'Enter house/building details'
                             : null,
+                      ),
+                    ),
+                    _fieldBox(
+                      TextFormField(
+                        controller: _localityController,
+                        decoration: InputDecoration(
+                          label: _buildRequiredLabel('Ward / Locality / Place'),
+                          helperText: 'e.g. Ward 5, Perinthalmanna',
+                        ),
+                        validator: (v) => (v == null || v.trim().isEmpty)
+                            ? 'Enter ward/locality'
+                            : null,
+                      ),
+                    ),
+                    _fieldBox(
+                      TextFormField(
+                        controller: _cityController,
+                        decoration: InputDecoration(
+                          label: _buildRequiredLabel('City / Post Office'),
+                          helperText: 'e.g. Manjeri',
+                        ),
+                        validator: (v) => (v == null || v.trim().isEmpty)
+                            ? 'Enter city/post office'
+                            : null,
+                      ),
+                    ),
+                    _fieldBox(
+                      DropdownButtonFormField<String>(
+                        key: ValueKey('district_$_selectedDistrict'),
+                        initialValue: _selectedDistrict,
+                        isExpanded: true,
+                        items: _keralaDistricts
+                            .map((dist) => DropdownMenuItem<String>(
+                                  value: dist,
+                                  child: Text(dist, overflow: TextOverflow.ellipsis),
+                                ))
+                            .toList(),
+                        onChanged: (val) {
+                          if (val != null) {
+                            setState(() => _selectedDistrict = val);
+                          }
+                        },
+                        decoration: InputDecoration(
+                          label: _buildRequiredLabel('District'),
+                        ),
+                        validator: (v) => (v == null || v.trim().isEmpty)
+                            ? 'Select district'
+                            : null,
+                      ),
+                    ),
+                    _fieldBox(
+                      TextFormField(
+                        controller: _pincodeController,
+                        keyboardType: TextInputType.number,
+                        decoration: InputDecoration(
+                          label: _buildRequiredLabel('Pincode'),
+                          helperText: '6-digit postal code',
+                        ),
+                        validator: (v) {
+                          final text = v?.trim() ?? '';
+                          if (text.isEmpty) return 'Enter pincode';
+                          if (text.length < 6) return 'Enter 6-digit pincode';
+                          return null;
+                        },
                       ),
                     ),
                     _fieldBox(
@@ -762,7 +851,11 @@ class _AgentRegistrationScreenState
         final isGovernmentIdMissing = _aadhaarController.text.trim().isEmpty;
         final isPlanMissing = (_membershipTypeCode ?? '').trim().isEmpty;
         final isBranchMissing = (_selectedBusinessId ?? '').trim().isEmpty;
-        final isAddressMissing = _addressController.text.trim().isEmpty;
+        final isHouseMissing = _houseController.text.trim().isEmpty;
+        final isLocalityMissing = _localityController.text.trim().isEmpty;
+        final isCityMissing = _cityController.text.trim().isEmpty;
+        final isPincodeMissing = _pincodeController.text.trim().length < 6;
+        final isAddressMissing = isHouseMissing || isLocalityMissing || isCityMissing || isPincodeMissing;
 
         return _StepContentCard(
           title: 'Review and Submit',
@@ -893,12 +986,30 @@ class _AgentRegistrationScreenState
     }
   }
 
-  Future<void> _lookupExistingCustomer(dynamic controller) async {
+  void _onPhoneChanged(String value, dynamic controller) {
+    setState(() => _existingCustomer = null);
+    _phoneCheckDebounce?.cancel();
+    final phone = value.trim();
+    if (phone.length >= 10) {
+      _phoneCheckDebounce = Timer(const Duration(milliseconds: 350), () {
+        if (mounted && _mobileController.text.trim().length >= 10) {
+          _lookupExistingCustomer(controller, silent: true);
+        }
+      });
+    }
+  }
+
+  Future<void> _lookupExistingCustomer(
+    dynamic controller, {
+    bool silent = false,
+  }) async {
     final mobile = _mobileController.text.trim();
     if (mobile.length < 10) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Enter a complete mobile number first.')),
-      );
+      if (!silent) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Enter a complete mobile number first.')),
+        );
+      }
       return;
     }
     setState(() => _existingLookupLoading = true);
@@ -906,7 +1017,53 @@ class _AgentRegistrationScreenState
       final customer = await controller.findExistingCustomerByMobile(mobile);
       if (!mounted) return;
       setState(() => _existingCustomer = customer);
-      if (customer == null) {
+      if (customer != null) {
+        final firstName = customer['firstName']?.toString() ?? customer['first_name']?.toString() ?? '';
+        final lastName = customer['lastName']?.toString() ?? customer['last_name']?.toString() ?? '';
+        final email = customer['email']?.toString() ?? '';
+        final aadhaar = customer['aadhaarNumber']?.toString() ??
+            customer['aadhaar_number']?.toString() ??
+            customer['aadhaar']?.toString() ??
+            customer['governmentId']?.toString() ??
+            '';
+        final address = customer['addressLine1']?.toString() ?? customer['address_line1']?.toString() ?? '';
+        final gender = (customer['gender']?.toString() ?? 'MALE').toUpperCase();
+
+        if (firstName.isNotEmpty && _firstNameController.text.trim().isEmpty) {
+          _firstNameController.text = firstName;
+        }
+        if (lastName.isNotEmpty && _lastNameController.text.trim().isEmpty) {
+          _lastNameController.text = lastName;
+        }
+        if (email.isNotEmpty && _emailController.text.trim().isEmpty) {
+          _emailController.text = email;
+        }
+        if (aadhaar.isNotEmpty && _aadhaarController.text.trim().isEmpty) {
+          _aadhaarController.text = aadhaar;
+        }
+        if (address.isNotEmpty && _addressController.text.trim().isEmpty) {
+          _addressController.text = address;
+        }
+        if (['MALE', 'FEMALE', 'OTHER'].contains(gender)) {
+          _gender = gender;
+        }
+
+        final customerId = customer['id']?.toString();
+        if (customerId != null && customerId.isNotEmpty) {
+          _draftCustomerId = customerId;
+        }
+
+        if (!silent) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              backgroundColor: AppColors.shieldBlue,
+              content: Text(
+                'Existing customer found: ${customer['firstName'] ?? ''} (${customer['customerCode'] ?? ''}). Form auto-filled.',
+              ),
+            ),
+          );
+        }
+      } else if (!silent) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('No existing customer found. Continue registration.'),
@@ -970,8 +1127,20 @@ class _AgentRegistrationScreenState
     if ((_selectedBusinessId ?? '').trim().isEmpty) {
       missing.add(const _MissingRequirement(step: 2, fieldName: 'Preferred branch *'));
     }
-    if (_addressController.text.trim().isEmpty) {
-      missing.add(const _MissingRequirement(step: 2, fieldName: 'Address *'));
+    if (_houseController.text.trim().isEmpty) {
+      missing.add(const _MissingRequirement(step: 2, fieldName: 'House / Building / Room Name & Number *'));
+    }
+    if (_localityController.text.trim().isEmpty) {
+      missing.add(const _MissingRequirement(step: 2, fieldName: 'Ward / Locality / Place *'));
+    }
+    if (_cityController.text.trim().isEmpty) {
+      missing.add(const _MissingRequirement(step: 2, fieldName: 'City *'));
+    }
+    if (_selectedDistrict.trim().isEmpty) {
+      missing.add(const _MissingRequirement(step: 2, fieldName: 'District *'));
+    }
+    if (_pincodeController.text.trim().isEmpty) {
+      missing.add(const _MissingRequirement(step: 2, fieldName: 'Pincode *'));
     }
 
     return missing;
@@ -1048,7 +1217,11 @@ class _AgentRegistrationScreenState
         valid = _membershipFormKey.currentState?.validate() ?? false;
         if ((_membershipTypeCode ?? '').trim().isEmpty) missingInCurrentStep.add('Membership plan *');
         if ((_selectedBusinessId ?? '').trim().isEmpty) missingInCurrentStep.add('Preferred branch *');
-        if (_addressController.text.trim().isEmpty) missingInCurrentStep.add('Address *');
+        if (_houseController.text.trim().isEmpty) missingInCurrentStep.add('House / Building Name & Number *');
+        if (_localityController.text.trim().isEmpty) missingInCurrentStep.add('Ward / Locality / Place *');
+        if (_cityController.text.trim().isEmpty) missingInCurrentStep.add('City *');
+        if (_selectedDistrict.trim().isEmpty) missingInCurrentStep.add('District *');
+        if (_pincodeController.text.trim().length < 6) missingInCurrentStep.add('Pincode (6 digits) *');
         break;
       default:
         valid = true;
@@ -1132,6 +1305,22 @@ class _AgentRegistrationScreenState
     required bool submit,
     required bool showFeedback,
   }) async {
+    final house = _houseController.text.trim();
+    final locality = _localityController.text.trim();
+    final city = _cityController.text.trim();
+    final pincode = _pincodeController.text.trim();
+    final district = _selectedDistrict;
+
+    final fullAddress = [
+      if (house.isNotEmpty) house,
+      if (locality.isNotEmpty) locality,
+      if (city.isNotEmpty) city,
+      if (district.isNotEmpty) '$district District',
+      if (pincode.isNotEmpty) 'PIN: $pincode',
+      'Kerala',
+    ].join(', ');
+    _addressController.text = fullAddress;
+
     final payload = {
       'first_name': _firstNameController.text.trim(),
       'last_name': _lastNameController.text.trim(),
@@ -1139,7 +1328,13 @@ class _AgentRegistrationScreenState
       'email': _emailController.text.trim(),
       'aadhaar_number': _aadhaarController.text.trim(),
       'gender': _gender,
-      'address_line1': _addressController.text.trim(),
+      'address_line1': house.isNotEmpty ? house : fullAddress,
+      'address_line2': locality,
+      'city': city,
+      'district': district,
+      'state': 'Kerala',
+      'pincode': pincode,
+      'address': fullAddress,
       'referred_by_code': _referralController.text.trim(),
       'membership_type_code': _membershipTypeCode,
       'issued_business_id': _selectedBusinessId,
@@ -1203,10 +1398,37 @@ class _AgentRegistrationScreenState
       _emailController.text = selected['email']?.toString() ?? '';
       _aadhaarController.text = selected['aadhaarNumber']?.toString() ??
           selected['aadhaar_number']?.toString() ??
+          selected['aadhaar']?.toString() ??
+          selected['governmentId']?.toString() ??
+          selected['government_id']?.toString() ??
+          selected['identityNumber']?.toString() ??
+          selected['identity_number']?.toString() ??
           '';
-      _addressController.text = selected['addressLine1']?.toString() ??
+      _houseController.text = selected['addressLine1']?.toString() ??
           selected['address_line1']?.toString() ??
+          selected['address']?.toString() ??
           '';
+      _localityController.text = selected['addressLine2']?.toString() ??
+          selected['address_line2']?.toString() ??
+          '';
+      _cityController.text = selected['city']?.toString() ?? '';
+      _pincodeController.text = selected['pincode']?.toString() ?? '';
+
+      final dist = selected['district']?.toString();
+      if (dist != null && dist.isNotEmpty && _keralaDistricts.contains(dist)) {
+        _selectedDistrict = dist;
+      } else {
+        _selectedDistrict = 'Malappuram';
+      }
+
+      _addressController.text = [
+        if (_houseController.text.trim().isNotEmpty) _houseController.text.trim(),
+        if (_localityController.text.trim().isNotEmpty) _localityController.text.trim(),
+        if (_cityController.text.trim().isNotEmpty) _cityController.text.trim(),
+        if (_selectedDistrict.isNotEmpty) '$_selectedDistrict District',
+        if (_pincodeController.text.trim().isNotEmpty) 'PIN: ${_pincodeController.text.trim()}',
+        'Kerala',
+      ].join(', ');
       _referralController.text = selected['referredByCode']?.toString() ??
           selected['referred_by_code']?.toString() ??
           '';
@@ -1270,6 +1492,11 @@ class _AgentRegistrationScreenState
     _aadhaarController.clear();
     _referralController.clear();
     _addressController.clear();
+    _houseController.clear();
+    _localityController.clear();
+    _cityController.clear();
+    _pincodeController.clear();
+    _selectedDistrict = 'Malappuram';
     _initialBalanceController.clear();
     _uploadedDocumentCount = 0;
     _currentStep = 0;

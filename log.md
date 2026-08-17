@@ -13049,3 +13049,42 @@ est build compilation.
 ### Verification
 - flutter test suites passed (11/11 tests passed).
 - git diff --check passed cleanly.
+
+## 147. Automatic Real-Time Phone Lookup & Form Auto-Prefill Upgrade (2026-08-17 11:35:00 IST)
+
+- Resolved issue where agents entering an existing customer's phone number could proceed without checking existing record status, or where resuming a draft left government ID blank due to key name variations.
+- Improvements implemented in AgentRegistrationScreen ([agent_registration_screen.dart]):
+  1. Real-Time Automatic Phone Lookup: Added _onPhoneChanged debounced listener on the Phone field (_mobileController). When 10 digits are typed, an API lookup automatically fires without requiring the agent to manually click the Check existing customer button.
+  2. Automatic Form Pre-filling: If an existing customer is found, the system auto-fills First name, Last name, Email, Aadhaar / Government ID, Address, Gender, and links _draftCustomerId.
+  3. Expanded Government ID Key Resolution: Updated _hydrateDraft() and customer lookup parsing to inspect all possible key aliases (aadhaarNumber, aadhaar_number, aadhaar, governmentId, government_id, identityNumber, identity_number), ensuring Step 2 (Identity) is never left blank upon draft resumption.
+
+### Frontend Files (Modified)
+- frontend/lib/features/agent/registration/presentation/screens/agent_registration_screen.dart
+
+### Backend Files (Modified)
+- None
+
+### Verification
+- flutter test suites passed (11/11 tests passed).
+- git diff --check passed cleanly.
+
+## 148. Structured Kerala Address Component & Detailed Payload Integration (2026-08-17 11:39:00 IST)
+
+- Replaced single generic Address input box with a 5-field structured address component in Customer Registration (Step 3: Membership, Branch & Address).
+- Key implementation details in AgentRegistrationScreen ([agent_registration_screen.dart]):
+  1. House / Building / Room Name & Number (* Required): Added _houseController (address_line1).
+  2. Ward / Locality / Place (* Required): Added _localityController (address_line2).
+  3. City / Post Office (* Required): Added _cityController (city).
+  4. Kerala State District Dropdown (* Required): Added hardcoded dropdown with all 14 Kerala state districts (Alappuzha, Ernakulam, Idukki, Kannur, Kasaragod, Kollam, Kottayam, Kozhikode, Malappuram, Palakkad, Pathanamthitta, Thiruvananthapuram, Thrissur, Wayanad) defaulting to Malappuram.
+  5. Pincode (* Required): Added _pincodeController (pincode).
+  6. Backend Payload & Hydration: Maps address_line1, address_line2, city, district, state ('Kerala'), pincode, and address (full string), persisting all individual address fields cleanly into Prisma database columns without leaving address details blank.
+
+### Frontend Files (Modified)
+- frontend/lib/features/agent/registration/presentation/screens/agent_registration_screen.dart
+
+### Backend Files (Modified)
+- None
+
+### Verification
+- flutter test suites passed (11/11 tests passed).
+- git diff --check passed cleanly.
