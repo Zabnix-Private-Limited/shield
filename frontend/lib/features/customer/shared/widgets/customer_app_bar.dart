@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_typography.dart';
 import '../../../../shared/utils/app_display_formatters.dart';
-import '../../../../shared/widgets/shield_brand_lockup.dart';
 import '../../dashboard/presentation/controllers/dashboard_controller.dart';
 import '../../../portal/presentation/portal_role_data.dart';
 import '../theme/customer_design_tokens.dart';

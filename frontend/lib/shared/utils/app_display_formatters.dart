@@ -10,6 +10,9 @@ class AppDisplayFormatters {
     symbol: '₹',
     decimalDigits: 2,
   );
+  static final NumberFormat _integerNumber = NumberFormat.decimalPattern(
+    'en_IN',
+  );
 
   static String formatCell(String key, String value) {
     final normalizedValue = value.trim();
@@ -58,6 +61,15 @@ class AppDisplayFormatters {
       return value.trim();
     }
     return _currency.format(parsed);
+  }
+
+  static String formatNumberString(String value) {
+    final sanitized = value.replaceAll(RegExp(r'[^0-9.-]'), '');
+    final parsed = num.tryParse(sanitized);
+    if (parsed == null) {
+      return value.trim();
+    }
+    return _integerNumber.format(parsed);
   }
 
   static String formatPhone(String value) {
