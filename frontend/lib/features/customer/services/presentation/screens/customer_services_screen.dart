@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../../shared/widgets/shimmer_loading.dart';
+
 import '../../../../../app/theme/app_colors.dart';
 import '../../../../../app/theme/app_typography.dart';
 import '../../../../../shared/widgets/app_card.dart';
@@ -88,7 +90,10 @@ class _CustomerServicesScreenState extends State<CustomerServicesScreen> {
     listenable: _controller,
     builder: (context, _) {
       if (_controller.isLoading && _controller.categories.isEmpty) {
-        return const Center(child: CircularProgressIndicator());
+        return const Padding(
+          padding: EdgeInsets.all(20),
+          child: ShimmerProviderListLoading(),
+        );
       }
       if (_controller.error != null && _controller.categories.isEmpty) {
         return ErrorCard(

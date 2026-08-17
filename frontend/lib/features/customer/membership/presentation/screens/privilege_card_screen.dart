@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../../../../../shared/widgets/shimmer_loading.dart';
+
 import '../../../../../app/theme/app_colors.dart';
 import '../../../../../app/theme/app_typography.dart';
 import '../../../../../shared/models/customer.dart';
@@ -64,7 +66,10 @@ class _CustomerPrivilegeCardScreenState
       listenable: _membershipController,
       builder: (context, _) {
         if (_membershipController.isLoading && !_membershipController.hasData) {
-          return const Center(child: CircularProgressIndicator());
+          return const Padding(
+            padding: EdgeInsets.all(20),
+            child: ShimmerCardLoading(cardCount: 2),
+          );
         }
         if (_membershipController.error != null &&
             !_membershipController.hasData) {
@@ -93,7 +98,10 @@ class _CustomerPrivilegeCardScreenState
               );
             }
             if (!customerSnapshot.hasData) {
-              return const Center(child: CircularProgressIndicator());
+              return const Padding(
+                padding: EdgeInsets.all(20),
+                child: ShimmerCardLoading(cardCount: 2),
+              );
             }
             return RefreshIndicator(
               onRefresh: _refresh,

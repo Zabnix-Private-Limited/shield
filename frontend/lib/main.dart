@@ -59,11 +59,12 @@ Future<void> main() async {
 }
 
 Future<void> _initializeStoredSessions() async {
-  // Preserve the established validation order while letting SHIELD paint its
-  // branded entry state immediately. The router keeps portal routes guarded
-  // until these sessions finish restoring.
-  await CustomerAuthSession.instance.initialize();
-  await InternalAuthSession.instance.initialize();
+  // Run both session restorations in parallel — they are independent and
+  // running them concurrently roughly halves startup latency.
+  await Future.wait([
+    CustomerAuthSession.instance.initialize(),
+    InternalAuthSession.instance.initialize(),
+  ]);
 }
 
 class MyApp extends StatelessWidget {

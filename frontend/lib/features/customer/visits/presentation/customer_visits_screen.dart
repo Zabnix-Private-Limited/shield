@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../shared/widgets/shimmer_loading.dart';
+
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_typography.dart';
 import '../../../../shared/models/appointment.dart';
@@ -39,7 +41,10 @@ class _CustomerVisitsScreenState extends State<CustomerVisitsScreen> {
     listenable: _controller,
     builder: (context, _) {
       if (_controller.isLoading && _controller.appointments.isEmpty) {
-        return const Center(child: CircularProgressIndicator());
+        return const Padding(
+          padding: EdgeInsets.all(20),
+          child: ShimmerListLoading(),
+        );
       }
       if (_controller.error != null && _controller.appointments.isEmpty) {
         return ErrorCard(

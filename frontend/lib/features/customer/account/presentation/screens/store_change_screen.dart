@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../../../shared/widgets/shimmer_loading.dart';
+
 import '../../../../../app/theme/app_colors.dart';
 import '../../../../../app/theme/app_typography.dart';
 import '../../../../../shared/services/api_service.dart';
@@ -34,7 +36,10 @@ class _CustomerStoreChangeScreenState extends State<CustomerStoreChangeScreen> {
         future: _requests,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+            return const Padding(
+              padding: EdgeInsets.all(20),
+              child: ShimmerListLoading(itemCount: 3),
+            );
           }
           if (snapshot.hasError || !snapshot.hasData) {
             return ErrorCard(

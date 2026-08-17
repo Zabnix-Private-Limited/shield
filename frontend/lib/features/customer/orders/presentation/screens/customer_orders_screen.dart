@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../../../shared/widgets/shimmer_loading.dart';
+
 import '../../../../../app/theme/app_colors.dart';
 import '../../../../../app/theme/app_typography.dart';
 import '../../../../../shared/utils/app_display_formatters.dart';
@@ -59,7 +61,10 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
       future: _ordersFuture,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
+          return const Padding(
+            padding: EdgeInsets.all(20),
+            child: ShimmerListLoading(),
+          );
         }
         if (snapshot.hasError || !snapshot.hasData) {
           return ErrorCard(

@@ -33,7 +33,6 @@ class _CustomerSplashScreenState extends State<CustomerSplashScreen> {
   }
 
   Future<void> _routeNext() async {
-    await Future<void>.delayed(const Duration(milliseconds: 480));
     if (!mounted) {
       return;
     }
