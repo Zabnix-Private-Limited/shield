@@ -2602,10 +2602,10 @@ export class AdminGovernanceService {
 
     const agentCodes = [
       user.employeeCode,
-      user.agentCode,
-      user.username,
+      (user as any).agentCode,
+      (user as any).username,
       agentCodeOrId,
-    ].filter((c): c is string => Boolean(c && c.trim().length > 0));
+    ].filter((c): c is string => Boolean(c && typeof c === 'string' && c.trim().length > 0));
 
     const directCustomers = await this.prisma.customer.findMany({
       where: {
@@ -2623,9 +2623,6 @@ export class AdminGovernanceService {
     });
 
     const directCustomerIds = directCustomers.map((c) => c.id);
-    const directCustomerCodes = directCustomers
-      .map((c) => c.customerCode)
-      .filter((c): c is string => Boolean(c && c.trim().length > 0));
 
     const [
       childCustomers,
@@ -2635,15 +2632,11 @@ export class AdminGovernanceService {
       appointments,
       audits,
     ] = await Promise.all([
-      directCustomerIds.length > 0 || directCustomerCodes.length > 0
+      directCustomerIds.length > 0
         ? this.prisma.customer.findMany({
             where: {
               deletedAt: null,
-              OR: [
-                ...(directCustomerIds.length > 0 ? [{ referredById: { in: directCustomerIds } }] : []),
-                ...(directCustomerCodes.length > 0 ? [{ referredByCode: { in: directCustomerCodes } }] : []),
-              ],
-              ...(directCustomerIds.length > 0 ? { NOT: { id: { in: directCustomerIds } } } : {}),
+              referredById: { in: directCustomerIds },
             },
             include: {
               membership: { include: { membershipType: true } },
@@ -2728,6 +2721,7 @@ export class AdminGovernanceService {
       }
 
       for (const txn of legacyTxns) {
+        if (!txn.walletId) continue;
         const wKey = txn.walletId.toString();
         const current = walletBalancesMap.get(wKey) || 0;
         const amt = Number(txn.amount || 0);
