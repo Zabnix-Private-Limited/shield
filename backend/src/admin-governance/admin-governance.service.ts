@@ -1,4 +1,4 @@
-import { BadRequestException, ForbiddenException, Injectable } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import type { CommercialSetting, Customer, User } from '@prisma/client';
 import type { ShieldPrincipal } from '../auth/auth.types';
 import { getAppEnv } from '../config/app-env';
@@ -2455,22 +2455,11 @@ export class AdminGovernanceService {
       },
     ];
 
-    return this.buildWorkspacePayload(
-      'agents',
-      {
-        eyebrow: 'Operations / Agents',
-        title: 'Agents',
-        description:
-          'Backend-owned agent operations across assignment, customers, follow-ups, visits, attendance, and uploaded records.',
-        primaryActionLabel: 'Create Agent',
-        secondaryActionLabel: 'Attendance',
-      },
-      {
-        searchHint: 'Search agents, assigned customers, follow-ups, visits, and uploads',
+    const selectedAgentCode = query.selectedId?.trim() || undefined;
     let selectedAgentDetailRows: Array<{ label: string; value: string }> = [];
-    if (query.selectedId && query.selectedId.trim().length > 0) {
+    if (selectedAgentCode && selectedAgentCode.length > 0) {
       try {
-        const perf = await this.getAgentProfilePerformance(query.selectedId);
+        const perf = await this.getAgentProfilePerformance(selectedAgentCode);
         selectedAgentDetailRows = [
           { label: 'Agent Name', value: perf.agent.name },
           { label: 'Employee Code', value: perf.agent.code },
@@ -2485,7 +2474,7 @@ export class AdminGovernanceService {
           { label: 'Joined Date', value: perf.agent.joinedAt },
         ];
       } catch (err) {
-        this.logger.warn(`Agent performance details lookup failed for ${query.selectedId}: ${err}`);
+        // detail lookup silent fallback
       }
     }
 
@@ -2516,7 +2505,7 @@ export class AdminGovernanceService {
           subtitle: 'Agent and branch coverage from current records.',
           type: 'list',
           selectionKey: 'code',
-          selectedId: query.selectedId,
+          selectedId: selectedAgentCode,
           items: agentTableRows.slice(0, 8).map((row) => ({
             code: row['code'],
             title: row['name'] ?? 'Agent',
@@ -2535,7 +2524,7 @@ export class AdminGovernanceService {
           subtitle: 'The active tab drives the dataset returned by the backend workspace contract.',
           type: 'table',
           selectionKey: 'code',
-          selectedId: query.selectedId,
+          selectedId: selectedAgentCode,
           columns: selectedColumns,
           rows: selectedRows,
           emptyState: {
@@ -2546,11 +2535,11 @@ export class AdminGovernanceService {
         },
         right: selectedAgentDetailRows.length > 0
           ? {
-              title: `Agent Performance (${query.selectedId})`,
+              title: `Agent Performance (${selectedAgentCode})`,
               subtitle: 'Full works, onboarded customers, and earnings summary.',
               type: 'details',
               selectionKey: 'code',
-              selectedId: query.selectedId,
+              selectedId: selectedAgentCode,
               details: selectedAgentDetailRows,
               emptyState: {
                 title: 'No details available',
@@ -2664,7 +2653,7 @@ export class AdminGovernanceService {
         },
       }),
       this.prisma.crmTask.findMany({
-        where: { assignedToUserId: user.id, deletedAt: null },
+        where: { assignedTo: user.id },
       }),
       this.prisma.appointment.findMany({
         where: { providerId: user.id },
@@ -2731,7 +2720,7 @@ export class AdminGovernanceService {
       addedCustomers: customerSummaries,
       membershipsAdded: memberships.map((m) => ({
         membershipNumber: m.membershipNumber,
-        customerName: `${m.customer.firstName || ''} ${m.customer.lastName || ''}`.trim(),
+        customerName: `${m.customer?.firstName || ''} ${m.customer?.lastName || ''}`.trim(),
         tier: m.membershipType?.name || 'Standard Plan',
         status: m.status,
         activationDate: this.formatDateTime(m.activationDate),
