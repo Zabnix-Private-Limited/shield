@@ -12823,3 +12823,20 @@ est build compilation.
 - npx tsc --noEmit passed on backend (0 errors).
 - flutter test passed (11/11 tests passed).
 - git diff --check passed cleanly.
+
+## 135. Operational Role Platform Report Permissions Defect Fix (2026-08-17 10:43:00 IST)
+
+- Resolved HTTP 403 Forbidden (Missing required permissions: reports.view) when loading workspace report registries (GET /platform-capabilities/reports?workspace=agent).
+- Root Cause Identified: The @Get('reports') endpoint in PlatformCapabilitiesController required the reports.view permission, but operational roles (SHIELD_AGENT, CRM_EXECUTIVE, PHARMACY_PROVIDER, LAB_PROVIDER, DOCTOR, HOMECARE_PROVIDER, DENTAL_PROVIDER, COSMETIC_PROVIDER, DIETITIAN) were missing ...permissionsFor(['reports'], ['view', 'export']) in rbac-catalog.ts.
+- Resolution: Updated RBAC_ROLES catalog definitions in backend/src/auth/rbac-catalog.ts to include reports.view and reports.export permissions for all operational workspace roles.
+
+### Backend Files (Modified)
+- backend/src/auth/rbac-catalog.ts
+
+### Frontend Files (Modified)
+- None
+
+### Verification
+- npx tsc --noEmit passed on backend (0 errors).
+- npm test passed (33/33 test suites, 138/138 tests passed).
+- git diff --check passed cleanly.

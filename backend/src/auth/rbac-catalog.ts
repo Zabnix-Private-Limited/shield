@@ -195,6 +195,7 @@ export const RBAC_ROLES: RoleDefinition[] = [
       ...permissionsFor(['referrals'], ['view', 'export']),
       ...permissionsFor(['agents'], ['view']),
       ...permissionsFor(['analytics'], ['view']),
+      ...permissionsFor(['reports'], ['view', 'export']),
       ...permissionsFor(['documents'], ['view', 'create']),
       ...permissionsFor(['appointments'], ['view', 'create', 'update']),
       ...permissionsFor(['crm'], ['view', 'create', 'update']),
@@ -216,6 +217,7 @@ export const RBAC_ROLES: RoleDefinition[] = [
       ...permissionsFor(['appointments'], ['view']),
       ...permissionsFor(['membership'], ['view']),
       ...permissionsFor(['analytics'], ['view']),
+      ...permissionsFor(['reports'], ['view', 'export']),
       ...permissionsFor(['notifications'], ['view', 'create', 'update']),
     ],
   },
@@ -236,6 +238,7 @@ export const RBAC_ROLES: RoleDefinition[] = [
       ...permissionsFor(['appointments'], ['view']),
       ...permissionsFor(['notifications'], ['view']),
       ...permissionsFor(['analytics'], ['view']),
+      ...permissionsFor(['reports'], ['view', 'export']),
     ],
   },
   {
@@ -254,6 +257,7 @@ export const RBAC_ROLES: RoleDefinition[] = [
       ...permissionsFor(['settings'], ['view', 'update']),
       ...permissionsFor(['notifications'], ['view']),
       ...permissionsFor(['analytics'], ['view']),
+      ...permissionsFor(['reports'], ['view', 'export']),
     ],
   },
   {
@@ -275,6 +279,7 @@ export const RBAC_ROLES: RoleDefinition[] = [
       ...permissionsFor(['settings'], ['view', 'update']),
       ...permissionsFor(['notifications'], ['view']),
       ...permissionsFor(['analytics'], ['view']),
+      ...permissionsFor(['reports'], ['view', 'export']),
     ],
   },
   {
@@ -293,6 +298,7 @@ export const RBAC_ROLES: RoleDefinition[] = [
       ...permissionsFor(['settings'], ['view', 'update']),
       ...permissionsFor(['notifications'], ['view']),
       ...permissionsFor(['analytics'], ['view']),
+      ...permissionsFor(['reports'], ['view', 'export']),
     ],
   },
   {
@@ -311,6 +317,7 @@ export const RBAC_ROLES: RoleDefinition[] = [
       ...permissionsFor(['settings'], ['view', 'update']),
       ...permissionsFor(['notifications'], ['view']),
       ...permissionsFor(['analytics'], ['view']),
+      ...permissionsFor(['reports'], ['view', 'export']),
     ],
   },
   {
@@ -329,6 +336,7 @@ export const RBAC_ROLES: RoleDefinition[] = [
       ...permissionsFor(['settings'], ['view', 'update']),
       ...permissionsFor(['notifications'], ['view']),
       ...permissionsFor(['analytics'], ['view']),
+      ...permissionsFor(['reports'], ['view', 'export']),
     ],
   },
   {
@@ -347,6 +355,7 @@ export const RBAC_ROLES: RoleDefinition[] = [
       ...permissionsFor(['settings'], ['view', 'update']),
       ...permissionsFor(['notifications'], ['view']),
       ...permissionsFor(['analytics'], ['view']),
+      ...permissionsFor(['reports'], ['view', 'export']),
     ],
   },
   {
