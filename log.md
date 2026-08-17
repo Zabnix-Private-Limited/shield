@@ -13380,3 +13380,22 @@ KannnanKannnanKannnanKannnanKannnanKannnanKannnanKannnanKannnanKannnanKannnanKan
 
 ### Verification
 - NestJS compilation (npm run build) succeeded with 0 errors.
+
+
+## 167. 10% Extra Cash Loading Bonus & Zero Purchase Discount Model (2026-08-17 16:59:00 IST)
+
+- Updated commercial pricing & wallet recharge architecture to eliminate purchase discounts for all users and grant an automatic 10% extra cash bonus whenever funds are loaded into cash wallets.
+- Implementation details:
+  1. Automatic 10% Extra Cash Bonus (wallet.service.ts): Updated WalletService.recharge to automatically generate a secondary RECHARGE_BONUS cash transaction equal to 10% of the principal loaded amount (e.g. ₹1,000 recharge yields ₹1,000 principal + ₹100 bonus cash = ₹1,100 total loaded value).
+  2. Cash Ledger Recognition (pricing.service.ts): Added RECHARGE_BONUS to positive cash transaction types in PricingService.isPositiveCashEntry.
+  3. Zero Purchase Discount Policy (pricing.service.ts): Set purchase membership discount rate to 0% in evaluateServicePrice, ensuring full original bill amounts are processed without deduction.
+
+### Frontend Files (Modified)
+- None
+
+### Backend Files (Modified)
+- backend/src/wallet/wallet.service.ts
+- backend/src/pricing/pricing.service.ts
+
+### Verification
+- NestJS compilation (npm run build) succeeded with 0 errors.

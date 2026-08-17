@@ -95,17 +95,10 @@ export class PricingService {
     const originalAmount = Number(input.originalAmount.toFixed(2));
     const allowedWallets = this.parseWalletsAllowed(serviceRule.walletsAllowed);
 
-    // 1. Membership Discount applies FIRST to the original price (Founding 15%, Standard 10%)
-    const membershipDiscountRate = Number(
-      customer.membership?.membershipType?.discountPercentage || 0,
-    );
-    const membershipDiscountApplied = Number(
-      (originalAmount * (membershipDiscountRate / 100)).toFixed(2),
-    );
-    const afterMembership = Math.max(
-      0,
-      Number((originalAmount - membershipDiscountApplied).toFixed(2)),
-    );
+    // User Directive: No purchase discounts for customers or anyone - everyone gets 10% extra bonus when loading money
+    const membershipDiscountRate = 0;
+    const membershipDiscountApplied = 0;
+    const afterMembership = originalAmount;
 
     // 2. SHIELD Benefit applies to the balance after membership discount
     const benefitEligible =
@@ -431,8 +424,14 @@ export class PricingService {
   }
 
   private isPositiveCashEntry(transactionType: string) {
-    return ['CREDIT', 'RECHARGE', 'OPENING_BALANCE', 'POINT_REDEMPTION_CREDIT', 'REVERSAL_CREDIT']
-      .includes(transactionType.toUpperCase());
+    return [
+      'CREDIT',
+      'RECHARGE',
+      'RECHARGE_BONUS',
+      'OPENING_BALANCE',
+      'POINT_REDEMPTION_CREDIT',
+      'REVERSAL_CREDIT',
+    ].includes(transactionType.toUpperCase());
   }
 
   private isPositiveRewardEntry(transactionType: string) {

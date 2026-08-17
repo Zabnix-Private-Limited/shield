@@ -195,7 +195,7 @@ export class WalletService {
       });
     }
 
-    return this.prisma.cashWalletTransaction.create({
+    const rechargeTx = await this.prisma.cashWalletTransaction.create({
       data: {
         uuid: randomUUID(),
         walletId: wallet.id,
@@ -205,6 +205,24 @@ export class WalletService {
         createdBy: staffUserId,
       },
     });
+
+    const bonusAmount = Number((normalizedAmount * 0.10).toFixed(2));
+    if (bonusAmount > 0) {
+      await this.prisma.cashWalletTransaction.create({
+        data: {
+          uuid: randomUUID(),
+          walletId: wallet.id,
+          transactionType: 'RECHARGE_BONUS',
+          amount: bonusAmount,
+          remarks: `10% extra loading bonus (₹${bonusAmount.toFixed(2)})`,
+          createdBy: staffUserId,
+          referenceType: 'CASH_WALLET_TRANSACTION',
+          referenceId: rechargeTx.id,
+        },
+      });
+    }
+
+    return rechargeTx;
   }
 
   async createRechargeIntent(
