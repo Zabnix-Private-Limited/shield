@@ -13345,3 +13345,20 @@ KannnanKannnanKannnanKannnanKannnanKannnanKannnanKannnanKannnanKannnanKannnanKan
 ## 164. Persistent Cached State & Zero-Value Flash Resolution (2026-08-17 16:13:00 IST)
 
 - Fixed top app bar header badge zero-value flashes (₹0.00 & 
+
+## 165. Agent Child Referrals Lookup & Live Cash Wallet Balance Aggregation (2026-08-17 16:25:00 IST)
+
+- Resolved missing child referrals network and static zero-wallet display (Wallet: ₹0.00) in agent workspace modal views.
+- Implementation details:
+  1. Multi-Identifier Agent Matching (admin-governance.service.ts): Expanded agent code resolution to check user.employeeCode, user.agentCode, user.username, and agentCodeOrId so direct customers tied to agent user accounts are consistently matched regardless of initial registration source.
+  2. Dual-Link Child Referral Network Query (admin-governance.service.ts): Enhanced child customers query to inspect both referredById and referredByCode across all direct customer IDs and codes, ensuring full multi-tier referral graph traversal.
+  3. Dynamic Multi-Ledger Cash Wallet Calculation (admin-governance.service.ts): Replaced static/incomplete sums with full multi-ledger cash transaction aggregations (cashWalletTransaction & walletTransaction), evaluating positive credits (RECHARGE, CREDIT, REFUND, REWARD, COMMISSION) vs debits to compute live cash wallet balances.
+
+### Frontend Files (Modified)
+- None
+
+### Backend Files (Modified)
+- backend/src/admin-governance/admin-governance.service.ts
+
+### Verification
+- NestJS compilation (npm run build) succeeded with 0 errors.

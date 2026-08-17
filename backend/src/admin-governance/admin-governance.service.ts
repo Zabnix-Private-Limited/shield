@@ -2600,13 +2600,19 @@ export class AdminGovernanceService {
       throw new NotFoundException(`Agent profile '${agentCodeOrId}' not found.`);
     }
 
-    const agentCode = user.employeeCode || '';
+    const agentCodes = [
+      user.employeeCode,
+      user.agentCode,
+      user.username,
+      agentCodeOrId,
+    ].filter((c): c is string => Boolean(c && c.trim().length > 0));
+
     const directCustomers = await this.prisma.customer.findMany({
       where: {
         deletedAt: null,
         OR: [
           { createdBy: user.id },
-          { agentCode: agentCode },
+          ...(agentCodes.length > 0 ? [{ agentCode: { in: agentCodes } }] : []),
         ],
       },
       include: {
@@ -2617,6 +2623,9 @@ export class AdminGovernanceService {
     });
 
     const directCustomerIds = directCustomers.map((c) => c.id);
+    const directCustomerCodes = directCustomers
+      .map((c) => c.customerCode)
+      .filter((c): c is string => Boolean(c && c.trim().length > 0));
 
     const [
       childCustomers,
@@ -2626,11 +2635,15 @@ export class AdminGovernanceService {
       appointments,
       audits,
     ] = await Promise.all([
-      directCustomerIds.length > 0
+      directCustomerIds.length > 0 || directCustomerCodes.length > 0
         ? this.prisma.customer.findMany({
             where: {
               deletedAt: null,
-              referredById: { in: directCustomerIds },
+              OR: [
+                ...(directCustomerIds.length > 0 ? [{ referredById: { in: directCustomerIds } }] : []),
+                ...(directCustomerCodes.length > 0 ? [{ referredByCode: { in: directCustomerCodes } }] : []),
+              ],
+              ...(directCustomerIds.length > 0 ? { NOT: { id: { in: directCustomerIds } } } : {}),
             },
             include: {
               membership: { include: { membershipType: true } },
@@ -2647,7 +2660,7 @@ export class AdminGovernanceService {
           customer: {
             OR: [
               { createdBy: user.id },
-              { agentCode: agentCode },
+              ...(agentCodes.length > 0 ? [{ agentCode: { in: agentCodes } }] : []),
             ],
           },
         },
@@ -2662,7 +2675,7 @@ export class AdminGovernanceService {
           referrerCustomer: {
             OR: [
               { createdBy: user.id },
-              { agentCode: agentCode },
+              ...(agentCodes.length > 0 ? [{ agentCode: { in: agentCodes } }] : []),
             ],
           },
         },
@@ -2680,26 +2693,47 @@ export class AdminGovernanceService {
       }),
     ]);
 
-    // Fast wallet balance aggregation in single groupBy query
+    // Accurate multi-ledger cash wallet balance aggregation
     const walletIds = [
-      ...directCustomers.map((c) => c.wallet?.id).filter(Boolean),
-      ...childCustomers.map((c) => c.wallet?.id).filter(Boolean),
-    ] as bigint[];
+      ...directCustomers.map((c) => c.wallet?.id).filter((id): id is bigint => Boolean(id)),
+      ...childCustomers.map((c) => c.wallet?.id).filter((id): id is bigint => Boolean(id)),
+    ];
 
     const walletBalancesMap = new Map<string, number>();
+
     if (walletIds.length > 0) {
-      const aggregations = await this.prisma.cashWalletTransaction.groupBy({
-        by: ['walletId'],
-        where: { walletId: { in: walletIds } },
-        _sum: { amount: true },
-      });
-      for (const agg of aggregations) {
-        if (agg.walletId) {
-          walletBalancesMap.set(
-            agg.walletId.toString(),
-            Number(agg._sum.amount || 0),
-          );
-        }
+      const [cashTxns, legacyTxns] = await Promise.all([
+        this.prisma.cashWalletTransaction.findMany({
+          where: { walletId: { in: walletIds } },
+          select: { walletId: true, transactionType: true, amount: true },
+        }),
+        this.prisma.walletTransaction.findMany({
+          where: { walletId: { in: walletIds }, subLedgerType: 'CASH' },
+          select: { walletId: true, transactionType: true, amount: true },
+        }),
+      ]);
+
+      const positiveCashTypes = new Set([
+        'RECHARGE', 'CREDIT', 'REFUND', 'REWARD', 'COMMISSION',
+        'POINT_REDEMPTION_CREDIT', 'WELCOME_BONUS', 'ADJUSTMENT_CREDIT',
+      ]);
+
+      for (const txn of cashTxns) {
+        const wKey = txn.walletId.toString();
+        const current = walletBalancesMap.get(wKey) || 0;
+        const amt = Number(txn.amount || 0);
+        const type = (txn.transactionType || '').toUpperCase();
+        const isPositive = positiveCashTypes.has(type);
+        walletBalancesMap.set(wKey, current + (isPositive ? amt : -amt));
+      }
+
+      for (const txn of legacyTxns) {
+        const wKey = txn.walletId.toString();
+        const current = walletBalancesMap.get(wKey) || 0;
+        const amt = Number(txn.amount || 0);
+        const type = (txn.transactionType || '').toUpperCase();
+        const isPositive = positiveCashTypes.has(type) || type === 'CREDIT';
+        walletBalancesMap.set(wKey, current + (isPositive ? amt : -amt));
       }
     }
 
@@ -2726,7 +2760,7 @@ export class AdminGovernanceService {
 
     const customerSummaries = directCustomers.map((c) => {
       const cash = c.wallet?.id
-        ? walletBalancesMap.get(c.wallet.id.toString()) || 0
+        ? Math.max(0, walletBalancesMap.get(c.wallet.id.toString()) || 0)
         : 0;
       return {
         id: c.id.toString(),
@@ -2735,7 +2769,7 @@ export class AdminGovernanceService {
         mobile: c.mobile,
         status: c.status || 'ACTIVE',
         membershipStatus: c.membership?.status || 'NO_MEMBERSHIP',
-        membershipTier: c.membership?.membershipType?.name || 'Standard',
+        membershipTier: c.membership?.membershipType?.name || 'Standard Member',
         walletBalance: `₹${cash.toFixed(2)}`,
         joinedAt: this.formatDateTime(c.createdAt),
       };
@@ -2743,7 +2777,7 @@ export class AdminGovernanceService {
 
     const childReferralSummaries = childCustomers.map((c) => {
       const cash = c.wallet?.id
-        ? walletBalancesMap.get(c.wallet.id.toString()) || 0
+        ? Math.max(0, walletBalancesMap.get(c.wallet.id.toString()) || 0)
         : 0;
       const parentName = c.referredBy
         ? `${c.referredBy.firstName || ''} ${c.referredBy.lastName || ''}`.trim()
@@ -2761,7 +2795,7 @@ export class AdminGovernanceService {
         parentCustomerCode: parentCode,
         status: c.status || 'ACTIVE',
         membershipStatus: c.membership?.status || 'NO_MEMBERSHIP',
-        membershipTier: c.membership?.membershipType?.name || 'Standard',
+        membershipTier: c.membership?.membershipType?.name || 'Standard Member',
         walletBalance: `₹${cash.toFixed(2)}`,
         earnedCommission: `₹${earnedCommission}`,
         joinedAt: this.formatDateTime(c.createdAt),
