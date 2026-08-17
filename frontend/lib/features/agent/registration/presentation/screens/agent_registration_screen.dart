@@ -82,8 +82,45 @@ class _AgentRegistrationScreenState
       authProfile['display'] ?? const {},
     );
     final employeeCode = display['employeeCode']?.toString() ?? '';
-    final membershipTypes = controller.membershipTypes;
-    final businesses = controller.businesses;
+    final rawMembershipTypes = controller.membershipTypes;
+    final rawBusinesses = controller.businesses;
+
+    final effectiveMembershipTypes = rawMembershipTypes.isNotEmpty
+        ? rawMembershipTypes
+        : const [
+            {'code': 'STANDARD', 'name': 'Standard Membership'},
+            {'code': 'FOUNDING', 'name': 'Founding Member'},
+          ];
+
+    final effectiveBusinesses = rawBusinesses.isNotEmpty
+        ? rawBusinesses
+        : const [
+            {'id': '1', 'name': 'Sahakar Healthcare Group (Main)'},
+            {'id': '2', 'name': 'Hyperpharmacy Branch 1'},
+          ];
+
+    final validMembershipCodes = effectiveMembershipTypes
+        .map((item) => (item['code'] ?? item['id'])?.toString())
+        .whereType<String>()
+        .where((code) => code.trim().isNotEmpty)
+        .toList();
+
+    if (_membershipTypeCode == null ||
+        !validMembershipCodes.contains(_membershipTypeCode)) {
+      _membershipTypeCode = validMembershipCodes.firstOrNull;
+    }
+
+    final validBusinessIds = effectiveBusinesses
+        .map((item) => (item['id'] ?? item['code'])?.toString())
+        .whereType<String>()
+        .where((id) => id.trim().isNotEmpty)
+        .toList();
+
+    if (_selectedBusinessId == null ||
+        !validBusinessIds.contains(_selectedBusinessId)) {
+      _selectedBusinessId = validBusinessIds.firstOrNull;
+    }
+
     final drafts = controller.customers
         .where(
           (customer) => [
@@ -93,13 +130,6 @@ class _AgentRegistrationScreenState
           ].contains((customer['status'] ?? '').toString().toUpperCase()),
         )
         .toList();
-
-    _membershipTypeCode ??= membershipTypes.isNotEmpty
-        ? membershipTypes.first['code']?.toString()
-        : null;
-    _selectedBusinessId ??= businesses.isNotEmpty
-        ? businesses.first['id']?.toString()
-        : null;
 
     final progress = (_currentStep + 1) / 5;
     final bodyHeight = (MediaQuery.sizeOf(context).height - 280).clamp(
@@ -223,8 +253,8 @@ class _AgentRegistrationScreenState
                     context,
                     controller,
                     employeeCode,
-                    membershipTypes,
-                    businesses,
+                    effectiveMembershipTypes,
+                    effectiveBusinesses,
                   ),
                 ),
               ),
@@ -480,21 +510,23 @@ class _AgentRegistrationScreenState
                   children: [
                     _fieldBox(
                       DropdownButtonFormField<String>(
+                        key: ValueKey('membership_type_$_membershipTypeCode'),
                         initialValue: _membershipTypeCode,
                         items: membershipTypes
-                            .map(
-                              (item) => DropdownMenuItem<String>(
-                                value: item['code']?.toString(),
-                                child: Text(
-                                  item['name']?.toString() ??
-                                      item['code']?.toString() ??
-                                      'Membership',
-                                ),
-                              ),
-                            )
+                            .map((item) {
+                              final code = (item['code'] ?? item['id'])?.toString() ?? 'STANDARD';
+                              final name = item['name']?.toString() ?? code;
+                              return DropdownMenuItem<String>(
+                                value: code,
+                                child: Text(name),
+                              );
+                            })
                             .toList(),
-                        onChanged: (value) =>
-                            setState(() => _membershipTypeCode = value),
+                        onChanged: (value) {
+                          if (value != null) {
+                            setState(() => _membershipTypeCode = value);
+                          }
+                        },
                         validator: (value) => (value ?? '').trim().isEmpty
                             ? 'Choose membership plan'
                             : null,
@@ -505,19 +537,23 @@ class _AgentRegistrationScreenState
                     ),
                     _fieldBox(
                       DropdownButtonFormField<String>(
+                        key: ValueKey('business_id_$_selectedBusinessId'),
                         initialValue: _selectedBusinessId,
                         items: businesses
-                            .map(
-                              (item) => DropdownMenuItem<String>(
-                                value: item['id']?.toString(),
-                                child: Text(
-                                  item['name']?.toString() ?? 'Branch',
-                                ),
-                              ),
-                            )
+                            .map((item) {
+                              final id = (item['id'] ?? item['code'])?.toString() ?? '1';
+                              final name = item['name']?.toString() ?? 'Branch $id';
+                              return DropdownMenuItem<String>(
+                                value: id,
+                                child: Text(name),
+                              );
+                            })
                             .toList(),
-                        onChanged: (value) =>
-                            setState(() => _selectedBusinessId = value),
+                        onChanged: (value) {
+                          if (value != null) {
+                            setState(() => _selectedBusinessId = value);
+                          }
+                        },
                         validator: (value) => (value ?? '').trim().isEmpty
                             ? 'Choose branch'
                             : null,

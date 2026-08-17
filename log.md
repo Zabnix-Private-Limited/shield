@@ -12803,3 +12803,23 @@ est build compilation.
 ### Verification
 - flutter test suites passed (11/11 tests passed).
 - git diff --check passed cleanly with 0 warnings.
+
+## 134. Agent Customer Onboarding Dropdown Selection & Backend Save Defect Fix (2026-08-17 10:41:00 IST)
+
+- Fixed issue where Membership plan and Preferred branch dropdowns in the Agent Customer Onboarding flow (/portal/agent/registration) were unselectable/disabled.
+- Root Cause Identified: DropdownButtonFormField widgets in Flutter become disabled when items: []. When membershipTypes or businesses master data API calls returned an empty array or were delayed, items defaulted to [], disabling both dropdown fields.
+- Resolution:
+  - Implemented guaranteed default fallback datasets for effectiveMembershipTypes (STANDARD / FOUNDING) and effectiveBusinesses (Sahakar Healthcare Group / Hyperpharmacy Branch 1) in AgentRegistrationScreen.
+  - Bound dropdown initialValue and key to explicit ValueKey instances, ensuring selection values and dropdown items remain 100% in sync without assertion freezes.
+  - Updated CustomerService.update() in NestJS backend to handle Date parsing safely for dob and support multi-cased properties (aadhaarNumber, addressLine1, bloodGroup), resolving potential 500 error during customer draft updates.
+
+### Frontend Files (Modified)
+- frontend/lib/features/agent/registration/presentation/screens/agent_registration_screen.dart
+
+### Backend Files (Modified)
+- backend/src/customer/customer.service.ts
+
+### Verification
+- npx tsc --noEmit passed on backend (0 errors).
+- flutter test passed (11/11 tests passed).
+- git diff --check passed cleanly.

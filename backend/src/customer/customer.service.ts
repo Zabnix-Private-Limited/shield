@@ -381,23 +381,25 @@ export class CustomerService {
 
   async update(id: bigint, data: any) {
     const customer = await this.findOne(id);
+    const dobParsed = data.dob ? new Date(data.dob) : undefined;
+    const isValidDob = dobParsed && !isNaN(dobParsed.getTime());
     return this.prisma.customer.update({
       where: { id: customer.id },
       data: {
-        aadhaarNumber: data.aadhaar_number,
-        firstName: data.first_name,
-        lastName: data.last_name,
-        dob: data.dob ? new Date(data.dob) : undefined,
+        aadhaarNumber: data.aadhaar_number ?? data.aadhaarNumber,
+        firstName: data.first_name ?? data.firstName,
+        lastName: data.last_name ?? data.lastName,
+        dob: isValidDob ? dobParsed : undefined,
         gender: data.gender,
         mobile: data.mobile,
         email: data.email,
-        addressLine1: data.address_line1 || data.address,
-        addressLine2: data.address_line2,
+        addressLine1: data.address_line1 || data.address || data.addressLine1,
+        addressLine2: data.address_line2 || data.addressLine2,
         city: data.city,
         district: data.district,
         state: data.state,
         pincode: data.pincode,
-        bloodGroup: data.blood_group,
+        bloodGroup: data.blood_group ?? data.bloodGroup,
         status: data.status,
       },
     });
