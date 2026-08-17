@@ -180,19 +180,24 @@ class _AgentRegistrationScreenState
             DropdownButtonFormField<String>(
               key: ValueKey(_draftCustomerId),
               initialValue: _draftCustomerId,
+              isExpanded: true,
               decoration: const InputDecoration(
                 labelText: 'Resume saved draft',
               ),
               items: [
                 const DropdownMenuItem<String>(
                   value: null,
-                  child: Text('Start a new registration'),
+                  child: Text(
+                    'Start a new registration',
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
                 ...drafts.map(
                   (draft) => DropdownMenuItem<String>(
                     value: draft['id']?.toString(),
                     child: Text(
                       '${draft['fullName'] ?? 'Customer'} • ${draft['mobile'] ?? ''} • ${_humanize(draft['status'])}',
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
                 ),
@@ -315,8 +320,8 @@ class _AgentRegistrationScreenState
                     _fieldBox(
                       TextFormField(
                         controller: _firstNameController,
-                        decoration: const InputDecoration(
-                          labelText: 'First name *',
+                        decoration: InputDecoration(
+                          label: _buildRequiredLabel('First name'),
                         ),
                         validator: (value) =>
                             value == null || value.trim().isEmpty
@@ -336,7 +341,9 @@ class _AgentRegistrationScreenState
                       TextFormField(
                         controller: _mobileController,
                         keyboardType: TextInputType.phone,
-                        decoration: const InputDecoration(labelText: 'Phone *'),
+                        decoration: InputDecoration(
+                          label: _buildRequiredLabel('Phone'),
+                        ),
                         onChanged: (_) =>
                             setState(() => _existingCustomer = null),
                         validator: (value) {
@@ -371,20 +378,26 @@ class _AgentRegistrationScreenState
                     _fieldBox(
                       DropdownButtonFormField<String>(
                         initialValue: _gender,
+                        isExpanded: true,
                         items: const [
-                          DropdownMenuItem(value: 'MALE', child: Text('Male')),
+                          DropdownMenuItem(
+                            value: 'MALE',
+                            child: Text('Male', overflow: TextOverflow.ellipsis),
+                          ),
                           DropdownMenuItem(
                             value: 'FEMALE',
-                            child: Text('Female'),
+                            child: Text('Female', overflow: TextOverflow.ellipsis),
                           ),
                           DropdownMenuItem(
                             value: 'OTHER',
-                            child: Text('Other'),
+                            child: Text('Other', overflow: TextOverflow.ellipsis),
                           ),
                         ],
                         onChanged: (value) =>
                             setState(() => _gender = value ?? 'MALE'),
-                        decoration: const InputDecoration(labelText: 'Gender *'),
+                        decoration: InputDecoration(
+                          label: _buildRequiredLabel('Gender'),
+                        ),
                       ),
                     ),
                   ],
@@ -467,8 +480,8 @@ class _AgentRegistrationScreenState
                 _fieldBox(
                   TextFormField(
                     controller: _aadhaarController,
-                    decoration: const InputDecoration(
-                      labelText: 'Aadhaar / Government ID *',
+                    decoration: InputDecoration(
+                      label: _buildRequiredLabel('Aadhaar / Government ID'),
                     ),
                     validator: (value) => value == null || value.trim().isEmpty
                         ? 'Capture the identity number'
@@ -520,13 +533,14 @@ class _AgentRegistrationScreenState
                       DropdownButtonFormField<String>(
                         key: ValueKey('membership_type_$_membershipTypeCode'),
                         initialValue: _membershipTypeCode,
+                        isExpanded: true,
                         items: membershipTypes
                             .map((item) {
                               final code = (item['code'] ?? item['id'])?.toString() ?? 'STANDARD';
                               final name = item['name']?.toString() ?? code;
                               return DropdownMenuItem<String>(
                                 value: code,
-                                child: Text(name),
+                                child: Text(name, overflow: TextOverflow.ellipsis),
                               );
                             })
                             .toList(),
@@ -538,8 +552,8 @@ class _AgentRegistrationScreenState
                         validator: (value) => (value ?? '').trim().isEmpty
                             ? 'Choose membership plan'
                             : null,
-                        decoration: const InputDecoration(
-                          labelText: 'Membership plan *',
+                        decoration: InputDecoration(
+                          label: _buildRequiredLabel('Membership plan'),
                         ),
                       ),
                     ),
@@ -547,13 +561,14 @@ class _AgentRegistrationScreenState
                       DropdownButtonFormField<String>(
                         key: ValueKey('business_id_$_selectedBusinessId'),
                         initialValue: _selectedBusinessId,
+                        isExpanded: true,
                         items: businesses
                             .map((item) {
                               final id = (item['id'] ?? item['code'])?.toString() ?? '1';
                               final name = item['name']?.toString() ?? 'Branch $id';
                               return DropdownMenuItem<String>(
                                 value: id,
-                                child: Text(name),
+                                child: Text(name, overflow: TextOverflow.ellipsis),
                               );
                             })
                             .toList(),
@@ -565,8 +580,8 @@ class _AgentRegistrationScreenState
                         validator: (value) => (value ?? '').trim().isEmpty
                             ? 'Choose branch'
                             : null,
-                        decoration: const InputDecoration(
-                          labelText: 'Preferred branch *',
+                        decoration: InputDecoration(
+                          label: _buildRequiredLabel('Preferred branch'),
                         ),
                       ),
                     ),
@@ -575,7 +590,9 @@ class _AgentRegistrationScreenState
                       child: TextFormField(
                         controller: _addressController,
                         maxLines: 3,
-                        decoration: const InputDecoration(labelText: 'Address *'),
+                        decoration: InputDecoration(
+                          label: _buildRequiredLabel('Address'),
+                        ),
                         validator: (value) =>
                             value == null || value.trim().isEmpty
                             ? 'Enter address'
@@ -1040,7 +1057,24 @@ class _AgentRegistrationScreenState
   }
 
   Widget _fieldBox(Widget child) {
-    return SizedBox(width: 280, child: child);
+    return SizedBox(width: 320, child: child);
+  }
+
+  Widget _buildRequiredLabel(String text) {
+    return Text.rich(
+      TextSpan(
+        text: text,
+        children: const [
+          TextSpan(
+            text: ' *',
+            style: TextStyle(
+              color: AppColors.error,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 

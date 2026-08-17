@@ -12921,3 +12921,41 @@ est build compilation.
 ### Verification
 - npm run build in NestJS backend passed cleanly (code 0).
 - git diff --check passed cleanly.
+
+## 140. Dropdown Text Truncation & Field Box Responsive Overflow Fix (2026-08-17 11:00:00 IST)
+
+- Resolved issue where long branch and item names (e.g. SHIELD Hyper Pharmacy Manjeri, Sahakar Hyper Pharmacy - Perinthalmanna) overflowed out of the Preferred branch and Membership plan dropdown input field borders on lower resolution screens or compact form cards.
+- Fixes applied:
+  1. AgentRegistrationScreen: Added isExpanded: true to all DropdownButtonFormField instances (Drafts, Gender, Membership Plan, Preferred Branch) and wrapped item labels with TextOverflow.ellipsis. Increased field box width to 320px to fit long names comfortably.
+  2. AdminBackendWorkspaceModule: Added isExpanded: true and TextOverflow.ellipsis to all dynamic select dropdown fields in backend-driven workspace form dialogs.
+
+### Frontend Files (Modified)
+- frontend/lib/features/agent/registration/presentation/screens/agent_registration_screen.dart
+- frontend/lib/features/admin/shared/presentation/widgets/admin_backend_workspace_module.dart
+
+### Backend Files (Modified)
+- None
+
+### Verification
+- flutter test suites passed (11/11 tests passed).
+- git diff --check passed cleanly.
+
+## 141. Bright Red Required Field Asterisk Indicator Upgrade (2026-08-17 11:02:00 IST)
+
+- Upgraded mandatory required field indicators across form screens to render a bold RED (AppColors.error / #DC2626) asterisk ( *) right next to required field labels.
+- Changes made:
+  1. AgentRegistrationScreen: Replaced string labels with rich _buildRequiredLabel widgets rendering red asterisks for First name, Phone, Gender, Aadhaar / Government ID, Membership plan, Preferred branch, and Address.
+  2. CustomerRegisterScreen: Updated _LabeledField component to dynamically render red asterisks for required fields (Full name, Date of birth, Gender).
+  3. AdminBackendWorkspaceModule: Updated dynamic workspace form dialog generator to render rich red asterisks (_buildRequiredLabel) for backend-flagged required fields (field.required == true).
+
+### Frontend Files (Modified)
+- frontend/lib/features/agent/registration/presentation/screens/agent_registration_screen.dart
+- frontend/lib/features/customer/auth/presentation/screens/customer_register_screen.dart
+- frontend/lib/features/admin/shared/presentation/widgets/admin_backend_workspace_module.dart
+
+### Backend Files (Modified)
+- None
+
+### Verification
+- flutter test suites passed (11/11 tests passed).
+- git diff --check passed cleanly.

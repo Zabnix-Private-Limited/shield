@@ -334,14 +334,32 @@ class _LabeledField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final hasAsterisk = label.endsWith(' *');
+    final cleanLabel = hasAsterisk
+        ? label.substring(0, label.length - 2).trim()
+        : label;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          label,
-          style: AppTypography.small.copyWith(
-            color: AppColors.darkGray,
-            fontWeight: FontWeight.w700,
+        Text.rich(
+          TextSpan(
+            text: cleanLabel,
+            style: AppTypography.small.copyWith(
+              color: AppColors.darkGray,
+              fontWeight: FontWeight.w700,
+            ),
+            children: hasAsterisk
+                ? const [
+                    TextSpan(
+                      text: ' *',
+                      style: TextStyle(
+                        color: AppColors.error,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ]
+                : const [],
           ),
         ),
         const SizedBox(height: 8),

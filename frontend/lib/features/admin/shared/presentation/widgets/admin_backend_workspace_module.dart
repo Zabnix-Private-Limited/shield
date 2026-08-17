@@ -1243,14 +1243,33 @@ class _WorkspaceFormDialogState extends State<_WorkspaceFormDialog> {
     );
   }
 
+  Widget _buildRequiredLabel(String text, {required bool isRequired}) {
+    if (!isRequired) return Text(text);
+    return Text.rich(
+      TextSpan(
+        text: text,
+        children: const [
+          TextSpan(
+            text: ' *',
+            style: TextStyle(
+              color: AppColors.error,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildField(_WorkspaceFieldData field) {
-    final label = field.required ? '${field.label} *' : field.label;
+    final labelWidget = _buildRequiredLabel(field.label, isRequired: field.required);
     switch (field.type) {
       case 'dropdown':
       case 'select':
         return Padding(
           padding: const EdgeInsets.only(bottom: 14),
           child: DropdownButtonFormField<String>(
+            isExpanded: true,
             initialValue: _selectedValues[field.key]?.isEmpty ?? true
                 ? null
                 : _selectedValues[field.key],
@@ -1258,7 +1277,7 @@ class _WorkspaceFormDialogState extends State<_WorkspaceFormDialog> {
                 .map(
                   (option) => DropdownMenuItem<String>(
                     value: option,
-                    child: Text(option),
+                    child: Text(option, overflow: TextOverflow.ellipsis),
                   ),
                 )
                 .toList(growable: false),
@@ -1268,7 +1287,7 @@ class _WorkspaceFormDialogState extends State<_WorkspaceFormDialog> {
                     _selectedValues[field.key] = value ?? '';
                   }),
             decoration: InputDecoration(
-              labelText: label,
+              label: labelWidget,
               filled: field.readOnly,
               fillColor: field.readOnly ? AppColors.lightGray : null,
             ),
@@ -1285,7 +1304,7 @@ class _WorkspaceFormDialogState extends State<_WorkspaceFormDialog> {
                 : (value) => setState(() {
                     _boolValues[field.key] = value ?? false;
                   }),
-            title: Text(label),
+            title: labelWidget,
           ),
         );
       default:
@@ -1304,7 +1323,7 @@ class _WorkspaceFormDialogState extends State<_WorkspaceFormDialog> {
                 ? AppTypography.body.copyWith(color: AppColors.darkGray)
                 : null,
             decoration: InputDecoration(
-              labelText: label,
+              label: labelWidget,
               helperText: field.helperText,
               filled: true,
               fillColor: field.readOnly ? AppColors.lightGray : AppColors.white,
