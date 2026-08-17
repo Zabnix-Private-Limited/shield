@@ -175,6 +175,27 @@ export class CustomerService {
     const result = await this.createCustomerAggregate(data, staffUserId);
     const preloadConfig = await this.getSafePreloadConfig();
 
+    const initialCash = Number(
+      data.initial_wallet_balance ??
+      data.initial_balance ??
+      data.opening_balance ??
+      0,
+    );
+
+    if (!isNaN(initialCash) && initialCash > 0) {
+      await this.walletService.createLedgerEntry({
+        walletId: result.walletId,
+        transactionType: 'OPENING_BALANCE',
+        subLedgerType: WALLET_LEDGER_TYPES.CASH,
+        amount: initialCash,
+        remarks: 'Initial wallet balance added during registration',
+        createdBy: staffUserId,
+        metadata: {
+          source: 'CUSTOMER_REGISTRATION',
+        },
+      });
+    }
+
     if (
       preloadConfig.cashPreloadEnabled &&
       preloadConfig.cashPreloadAmount > 0

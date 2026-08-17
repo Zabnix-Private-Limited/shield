@@ -12996,3 +12996,22 @@ est build compilation.
 ### Verification
 - flutter test suites passed (11/11 tests passed).
 - git diff --check passed cleanly.
+
+## 144. Initial Wallet Balance Field Integration in Customer Registration (2026-08-17 11:21:00 IST)
+
+- Added an optional Initial wallet balance input field to the Customer Registration form (Step 3: Membership & Branch) allowing agents to specify opening cash balance for new customer accounts.
+- Key implementation details:
+  1. Frontend Input Field: Added _initialBalanceController field (Initial wallet balance (optional)) in Step 3 with ₹ prefix and decimal numeric keyboard.
+  2. Draft & Review Integration: Included initial_wallet_balance and opening_balance in payload generation (_saveRegistration), draft hydration (_hydrateDraft), draft reset (_resetForNewDraft), and Step 5 summary review list (_ReviewItem).
+  3. Backend Ledger Auto-Crediting: Updated CustomerService.create in NestJS backend to automatically create an OPENING_BALANCE ledger entry in wallet_transactions under CASH whenever initial_wallet_balance > 0 is provided during customer creation.
+
+### Frontend Files (Modified)
+- frontend/lib/features/agent/registration/presentation/screens/agent_registration_screen.dart
+
+### Backend Files (Modified)
+- backend/src/customer/customer.service.ts
+
+### Verification
+- Backend NestJS compilation (npm run build) succeeded with 0 errors.
+- flutter test suites passed (11/11 tests passed).
+- git diff --check passed cleanly.

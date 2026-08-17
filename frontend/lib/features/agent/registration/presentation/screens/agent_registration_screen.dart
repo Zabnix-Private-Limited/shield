@@ -37,6 +37,7 @@ class _AgentRegistrationScreenState
   final _aadhaarController = TextEditingController();
   final _referralController = TextEditingController();
   final _addressController = TextEditingController();
+  final _initialBalanceController = TextEditingController();
 
   String _gender = 'MALE';
   String? _membershipTypeCode;
@@ -73,6 +74,7 @@ class _AgentRegistrationScreenState
     _aadhaarController.dispose();
     _referralController.dispose();
     _addressController.dispose();
+    _initialBalanceController.dispose();
     super.dispose();
   }
 
@@ -607,6 +609,17 @@ class _AgentRegistrationScreenState
                             : null,
                       ),
                     ),
+                    _fieldBox(
+                      TextFormField(
+                        controller: _initialBalanceController,
+                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        decoration: const InputDecoration(
+                          labelText: 'Initial wallet balance (optional)',
+                          prefixText: '₹ ',
+                          helperText: 'Opening cash balance credited to customer wallet',
+                        ),
+                      ),
+                    ),
                   ],
                 ),
               ],
@@ -846,6 +859,12 @@ class _AgentRegistrationScreenState
                 value: _addressController.text.trim(),
                 required: true,
                 missing: isAddressMissing,
+              ),
+              _ReviewItem(
+                label: 'Initial wallet balance',
+                value: _initialBalanceController.text.trim().isEmpty
+                    ? '₹ 0.00'
+                    : '₹ ${_initialBalanceController.text.trim()}',
               ),
               _ReviewItem(
                 label: 'Documents uploaded',
@@ -1123,6 +1142,8 @@ class _AgentRegistrationScreenState
       'membership_type_code': _membershipTypeCode,
       'issued_business_id': _selectedBusinessId,
       'business_id': _selectedBusinessId,
+      'initial_wallet_balance': _initialBalanceController.text.trim(),
+      'opening_balance': _initialBalanceController.text.trim(),
       'status': submit ? 'PENDING' : 'INCOMPLETE',
     };
 
@@ -1187,6 +1208,11 @@ class _AgentRegistrationScreenState
       _referralController.text = selected['referredByCode']?.toString() ??
           selected['referred_by_code']?.toString() ??
           '';
+      _initialBalanceController.text = selected['initialWalletBalance']?.toString() ??
+          selected['initial_wallet_balance']?.toString() ??
+          selected['openingBalance']?.toString() ??
+          selected['opening_balance']?.toString() ??
+          '';
 
       final genderVal = (selected['gender']?.toString() ?? 'MALE').toUpperCase();
       if (['MALE', 'FEMALE', 'OTHER'].contains(genderVal)) {
@@ -1242,6 +1268,7 @@ class _AgentRegistrationScreenState
     _aadhaarController.clear();
     _referralController.clear();
     _addressController.clear();
+    _initialBalanceController.clear();
     _uploadedDocumentCount = 0;
     _currentStep = 0;
     _existingCustomer = null;
