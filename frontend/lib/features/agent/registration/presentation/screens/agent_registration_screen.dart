@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -517,12 +518,25 @@ class _AgentRegistrationScreenState
                 _fieldBox(
                   TextFormField(
                     controller: _aadhaarController,
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [
+                      FilteringTextInputFormatter.digitsOnly,
+                      LengthLimitingTextInputFormatter(15),
+                    ],
                     decoration: InputDecoration(
                       label: _buildRequiredLabel('Aadhaar / Government ID'),
+                      helperText: 'Numbers only (max 15 digits)',
                     ),
-                    validator: (value) => value == null || value.trim().isEmpty
-                        ? 'Capture the identity number'
-                        : null,
+                    validator: (value) {
+                      final text = value?.trim() ?? '';
+                      if (text.isEmpty) {
+                        return 'Capture the identity number';
+                      }
+                      if (text.length > 15) {
+                        return 'Maximum 15 digits allowed';
+                      }
+                      return null;
+                    },
                   ),
                 ),
                 _fieldBox(
