@@ -1,5 +1,3 @@
-import 'package:flutter/foundation.dart';
-
 class DeepLinkGenerator {
   static const String customScheme = 'shield';
   static const String customHost = 'app';

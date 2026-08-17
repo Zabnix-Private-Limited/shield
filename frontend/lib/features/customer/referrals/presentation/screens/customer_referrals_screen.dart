@@ -7,6 +7,7 @@ import '../../../../../app/theme/app_colors.dart';
 import '../../../../../app/theme/app_typography.dart';
 import '../../../../../shared/services/api_service.dart';
 import '../../../../../shared/utils/app_display_formatters.dart';
+import '../../../../../shared/utils/deep_link_generator.dart';
 import '../../../../../shared/widgets/app_card.dart';
 import '../../../../customer/shared/widgets/error_card.dart';
 import '../../domain/customer_referral_summary.dart';
@@ -100,8 +101,7 @@ class _ReferralCodeCard extends StatelessWidget {
 
   final String code;
 
-  String get _referralLink =>
-      'https://shield-zabnix.vercel.app/#/customer/register?ref=$code';
+  String get _referralLink => DeepLinkGenerator.customerReferralWeb(code);
 
   @override
   Widget build(BuildContext context) => AppCard(

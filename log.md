@@ -13288,3 +13288,30 @@ KannnanKannnanKannnanKannnanKannnanKannnanKannnanKannnanKannnanKannnanKannnanKan
 - NestJS compilation (npm run build) succeeded with 0 errors.
 - flutter analyze passed cleanly (0 errors).
 - Pushed commits 859bac7 and 15513dd to main branch for Vercel deployment.
+
+
+## 161. Repo-Wide Deep Linking Implementation (2026-08-17 15:46:00 IST)
+
+- Implemented comprehensive repo-wide deep linking support across Flutter frontend (Web/Android/iOS/Desktop) and NestJS backend notification delivery.
+- Implementation details:
+  1. App Links Dependency & Android Manifest Filters (pubspec.yaml & AndroidManifest.xml): Added app_links package (6.4.1) and configured Android intent-filters for custom app scheme (shield://app) and HTTPS web domains (https://shield-zabnix.vercel.app).
+  2. Central DeepLinkGenerator Utility (deep_link_generator.dart): Added standardized URL and scheme generators for customer referrals (shield://app/customer/signup?ref=...), pharmacy prescription uploads (?provider=...), appointment bookings, wallet settlements, and privilege cards. Normalizes incoming custom URIs and fragment paths into canonical internal GoRouter routes.
+  3. DeepLinkService Runtime Listener (deep_link_service.dart & main.dart): Initialized global deep link stream listener catching cold-start and runtime deep links, persisting pending referral codes, and routing seamlessly via GoRouter.
+  4. Backend Push Notification Deep Link Support (NotificationService in notification.service.ts): Added deepLinkUrl support to SendNotificationInput, embedding deepLinkUrl / actionUrl into FCM data payloads.
+  5. Notification Navigation Service Resolution (notification_navigation_service.dart): Updated NotificationNavigationService to resolve deepLinkUrl parameters directly into active portal screens.
+
+### Frontend Files (Modified)
+- frontend/pubspec.yaml
+- frontend/android/app/src/main/AndroidManifest.xml
+- frontend/lib/main.dart
+- frontend/lib/shared/utils/deep_link_generator.dart (NEW)
+- frontend/lib/shared/services/deep_link_service.dart (NEW)
+- frontend/lib/shared/services/notification_navigation_service.dart
+- frontend/lib/features/customer/referrals/presentation/screens/customer_referrals_screen.dart
+
+### Backend Files (Modified)
+- backend/src/notification/notification.service.ts
+
+### Verification
+- NestJS compilation (npm run build) succeeded with 0 errors.
+- flutter analyze passed cleanly (0 errors).
