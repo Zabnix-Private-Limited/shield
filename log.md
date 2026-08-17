@@ -12693,3 +12693,113 @@ est build compilation.
 - 7/7 backend Jest test suites passed (39/39 tests).
 - git diff --check passed cleanly.
 - No database migrations were executed or applied.
+
+## 129. Customer Membership Request Option & Full Interactive Request Flow (2026-08-17 09:36:00 IST)
+
+- Implemented membership request handling and full interactive application flow for signed-in members without an active membership.
+- Updated GreetingHeader in frontend/lib/features/customer/dashboard/presentation/widgets/greeting_header.dart so when a customer does not have an active membership, the card action button displays Request membership (or Request membership again / View application status) instead of defaulting to View membership card.
+- Created MembershipRequestSheet (showMembershipRequestSheet) in frontend/lib/features/customer/dashboard/presentation/widgets/membership_request_sheet.dart, implementing the complete multi-step membership request flow:
+  1. Overview of applicant info & privilege card benefits (digital card, healthcare discounts, wallet cashback).
+  2. Interactive submission via POST /customer/membership/application with loading state.
+  3. Real-time application reference ticket (MAP-2026-XXXXXXXX) & confirmation view.
+  4. Real-time refresh of dashboard header state (PENDING).
+- Updated CustomerMembershipScreen (frontend/lib/features/customer/membership/presentation/screens/membership_screen.dart) to render a dedicated _NoActiveMembershipView with a return-to-home request action when membership is null.
+- Updated test suites in frontend/test/customer_dashboard_membership_header_test.dart and frontend/test/transaction_list_test.dart.
+
+### Frontend Files (Modified / Created)
+- frontend/lib/features/customer/dashboard/presentation/widgets/membership_request_sheet.dart [NEW]
+- frontend/lib/features/customer/dashboard/presentation/widgets/greeting_header.dart
+- frontend/lib/features/customer/membership/presentation/screens/membership_screen.dart
+- frontend/test/customer_dashboard_membership_header_test.dart
+- frontend/test/transaction_list_test.dart
+
+### Backend Files (Modified)
+- None
+
+### Verification
+- flutter test test/customer_dashboard_membership_header_test.dart test/customer_dashboard_card_context_test.dart passed (6/6 tests).
+- git diff --check passed cleanly with 0 whitespace warnings.
+
+## 130. Profile Name Layout Alignment & Membership/Wallet Cross-Screen Status Synchronization (2026-08-17 09:40:00 IST)
+
+- Resolved Profile Screen header truncation and synchronized cross-screen membership/wallet entitlement messaging.
+- Issue 1 (Profile Card Full Name Truncation Fix): Rearranged the Profile hero card in frontend/lib/features/portal/presentation/screens/portal_shell.dart. Placed Avatar & Membership Status chip on top row, and placed customer full name (customer.fullName.toUpperCase()) on its own dedicated full-width line with softWrap: true and removed maxLines: 1 cap, guaranteeing full customer name visibility across every device resolution without ... truncation.
+- Issue 2 (Wallet vs Membership Cross-Screen Message Consistency): Replaced contradictory yellow warning box on MembershipScreen when sub-subscription is null with a clean Membership tier entitlement card (Standard member entitlement is active). Aligned _MembershipHero card status badge (CARD PENDING) and supporting text with CustomerAccessState and WalletScreen so all screens present 100% consistent membership card status and entitlement facts.
+
+### Frontend Files (Modified)
+- frontend/lib/features/portal/presentation/screens/portal_shell.dart
+- frontend/lib/features/customer/membership/presentation/screens/membership_screen.dart
+- frontend/test/customer_membership_screen_test.dart
+
+### Backend Files (Modified)
+- None
+
+### Verification
+- flutter test test/customer_membership_screen_test.dart test/customer_dashboard_membership_header_test.dart test/customer_dashboard_card_context_test.dart test/transaction_list_test.dart passed (14/14 tests).
+- git diff --check passed cleanly with 0 warnings.
+
+## 131. Admin Data Table Checkbox Gesture & State Reset Fix (2026-08-17 09:45:00 IST)
+
+- Fixed table checkbox click latency, gesture collisions, and selection wiping across admin/operations data tables (AdminDataTable).
+- Fixed Root Cause 1 (Selection Wiping on Rebuild): Removed destructive _selectedRowIds.clear() inside didUpdateWidget(). AdminDataTable now only updates _selectedRowIds when selectedRowId explicitly changes, preserving user checkbox selections during parent widget re-renders.
+- Fixed Root Cause 2 (Gesture Competition): Isolated the row Checkbox container inside a GestureDetector(onTap: () {}, behavior: HitTestBehavior.opaque). This prevents the parent row InkWell.onTap (row navigation/detail view) from intercepting or fighting with Checkbox.onChanged touch events.
+- Fixed Root Cause 3 (Hit Target Area): Expanded checkbox cell container width to 48px with shrink-wrapped centering for clean, immediate tap recognition on Flutter web.
+
+### Frontend Files (Modified)
+- frontend/lib/features/admin/shared/components/admin_data_table.dart
+- frontend/test/admin_data_table_test.dart
+
+### Backend Files (Modified)
+- None
+
+### Verification
+- flutter test test/admin_data_table_test.dart passed (2/2 tests).
+- git diff --check passed cleanly with 0 warnings.
+
+## 132. Agents Workspace Provisioning & Agent Registration Action (2026-08-17 09:52:00 IST)
+
+- Implemented full provision for enrolling and creating new SHIELD agents inside the Agents workspace (/portal/super-admin/agents).
+- Added backend workspace action contract create-agent and form schema create-agent-form in backend/src/admin-governance/admin-governance.service.ts with all required provisioning fields:
+  - First Name (firstName)
+  - Last Name (lastName)
+  - Agent / Employee Code (employeeCode)
+  - Mobile Number (mobile)
+  - Work Email (email)
+  - Department (department)
+  - Assigned Branch Location (branch)
+  - Access Scope (accessScope)
+  - Initial Status (status)
+- Added executeAgentWorkspaceAction() handler in admin-governance.service.ts to validate fields, verify uniqueness of mobile/email, resolve role and branch, persist new User entity (userType: SHIELD_AGENT), and create primary AgentBranchAssignment mapping in PostgreSQL.
+- Added @Post('agents/actions/:actionId') route in backend/src/admin-governance/admin-governance.controller.ts.
+- Updated header primary action button to Create Agent in the frontend Agents workspace, launching the modal form dialog.
+
+### Backend Files (Modified)
+- backend/src/admin-governance/admin-governance.service.ts
+- backend/src/admin-governance/admin-governance.controller.ts
+
+### Frontend Files (Modified)
+- None (rendered via backend workspace contract)
+
+### Verification
+- npx tsc --noEmit passed on backend with 0 errors.
+- npm test passed on backend (33/33 test suites, 138/138 tests passed).
+- git diff --check passed cleanly with 0 warnings.
+
+## 133. Optional Referral & Agent Code Fields in Customer Registration (2026-08-17 09:55:00 IST)
+
+- Added optional Referral Code (referralCode / referral_code) and Agent Code (agentCode / agent_code) input fields to the customer registration / onboarding screen (CustomerRegisterScreen).
+- Updated CustomerRegisterScreen in frontend/lib/features/customer/auth/presentation/screens/customer_register_screen.dart with dedicated Referral code (Optional) and Agent code (Optional) input fields formatted with prefix icons.
+- Updated CustomerAuthRepository (registerCustomer()) and ApiService (customerRegister()) to pass referralCode and agentCode payloads to POST /auth/customer/register.
+- Verified backend AuthService.registerCustomer() maps referred_by_code and agent_code into CustomerService.create(), establishing referrer and onboarding agent relationships upon registration.
+
+### Frontend Files (Modified)
+- frontend/lib/features/customer/auth/presentation/screens/customer_register_screen.dart
+- frontend/lib/features/customer/auth/data/customer_auth_repository.dart
+- frontend/lib/shared/services/api_service.dart
+
+### Backend Files (Modified)
+- None (backend already maps referred_by_code and agent_code)
+
+### Verification
+- flutter test suites passed (11/11 tests passed).
+- git diff --check passed cleanly with 0 warnings.

@@ -93,6 +93,58 @@ void main() {
       expect(changedPageSize, 50);
     },
   );
+
+  testWidgets('toggles row checkboxes cleanly without wiping selection on rebuild', (
+    tester,
+  ) async {
+    List<String>? selectedIds;
+    await tester.pumpWidget(
+      StatefulBuilder(
+        builder: (context, setState) {
+          return MaterialApp(
+            home: Scaffold(
+              body: AdminDataTable<Map<String, String>>(
+                columns: [
+                  AdminDataTableColumn<Map<String, String>>(
+                    key: 'customer',
+                    label: 'Customer',
+                    valueBuilder: _readValue('customer'),
+                  ),
+                ],
+                rows: const [
+                  {'id': '1', 'customer': 'Arun Thomas'},
+                  {'id': '2', 'customer': 'Bina Joseph'},
+                ],
+                selectionKey: (row) => row['id'] ?? '',
+                selectionEnabled: true,
+                onSelectionChanged: (ids) {
+                  setState(() {
+                    selectedIds = ids;
+                  });
+                },
+              ),
+            ),
+          );
+        },
+      ),
+    );
+
+    // Find checkboxes
+    final checkboxes = find.byType(Checkbox);
+    expect(checkboxes, findsNWidgets(3)); // 1 header + 2 row checkboxes
+
+    // Tap first row checkbox
+    await tester.tap(checkboxes.at(1));
+    await tester.pumpAndSettle();
+
+    expect(selectedIds, contains('1'));
+
+    // Tap header checkbox (Select All)
+    await tester.tap(checkboxes.first);
+    await tester.pumpAndSettle();
+
+    expect(selectedIds, containsAll(['1', '2']));
+  });
 }
 
 String Function(Map<String, String>) _readValue(String key) {

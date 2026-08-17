@@ -76,13 +76,25 @@ class _AdminDataTableState<T> extends State<AdminDataTable<T>> {
   @override
   void initState() {
     super.initState();
-    _syncSelection();
+    _syncInitialSelection();
   }
 
   @override
   void didUpdateWidget(covariant AdminDataTable<T> oldWidget) {
     super.didUpdateWidget(oldWidget);
-    _syncSelection();
+    if (oldWidget.selectedRowId != widget.selectedRowId) {
+      if (widget.selectedRowId != null && widget.selectedRowId!.isNotEmpty) {
+        setState(() {
+          _selectedRowIds.add(widget.selectedRowId!);
+        });
+      }
+    }
+  }
+
+  void _syncInitialSelection() {
+    if (widget.selectedRowId != null && widget.selectedRowId!.isNotEmpty) {
+      _selectedRowIds.add(widget.selectedRowId!);
+    }
   }
 
   List<T> get _sortedRows {
@@ -164,10 +176,13 @@ class _AdminDataTableState<T> extends State<AdminDataTable<T>> {
               children: [
                 if (widget.selectionEnabled)
                   SizedBox(
-                    width: 44,
-                    child: Checkbox(
-                      value: _allVisibleSelected,
-                      onChanged: (_) => _toggleSelectAllVisible(),
+                    width: 48,
+                    child: Center(
+                      child: Checkbox(
+                        value: _allVisibleSelected,
+                        onChanged: (_) => _toggleSelectAllVisible(),
+                        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
                     ),
                   ),
                 ...widget.columns.asMap().entries.map(
@@ -241,15 +256,24 @@ class _AdminDataTableState<T> extends State<AdminDataTable<T>> {
                   child: Row(
                     children: [
                       if (widget.selectionEnabled)
-                        SizedBox(
-                          width: 44,
-                          child: Checkbox(
-                            value:
-                                rowId != null &&
-                                _selectedRowIds.contains(rowId),
-                            onChanged: rowId == null
-                                ? null
-                                : (_) => _toggleRowSelection(rowId),
+                        GestureDetector(
+                          onTap: () {},
+                          behavior: HitTestBehavior.opaque,
+                          child: SizedBox(
+                            width: 48,
+                            height: 36,
+                            child: Center(
+                              child: Checkbox(
+                                value:
+                                    rowId != null &&
+                                    _selectedRowIds.contains(rowId),
+                                onChanged: rowId == null
+                                    ? null
+                                    : (_) => _toggleRowSelection(rowId),
+                                materialTapTargetSize:
+                                    MaterialTapTargetSize.shrinkWrap,
+                              ),
+                            ),
                           ),
                         ),
                       ...widget.columns.map(
@@ -281,16 +305,7 @@ class _AdminDataTableState<T> extends State<AdminDataTable<T>> {
     );
   }
 
-  void _syncSelection() {
-    _selectedRowIds
-      ..clear()
-      ..addAll(
-        widget.selectedRowId == null
-            ? const <String>[]
-            : <String>[widget.selectedRowId!],
-      );
-    _notifySelectionChanged();
-  }
+
 
   void _handleSortTap(int index, AdminDataTableColumn<T> column) {
     final resolvedSortKey = column.sortKey ?? column.key;

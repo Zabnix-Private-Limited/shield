@@ -7,6 +7,7 @@ import '../../../../../shared/models/customer.dart';
 import '../../../../../shared/models/membership.dart';
 import '../../domain/entities/dashboard_entity.dart';
 import '../controllers/dashboard_controller.dart';
+import 'membership_request_sheet.dart';
 
 enum MembershipDashboardState {
   noApplication,
@@ -109,35 +110,55 @@ class GreetingHeader extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'No membership card yet',
+            'No active membership card',
             style: AppTypography.h4.copyWith(color: AppColors.white),
           ),
           const SizedBox(height: 4),
           Text(
-            'Apply for a SHIELD membership card to access eligible member benefits.',
+            'Apply for a SHIELD membership card to access digital card privileges and healthcare discounts.',
             style: copy,
           ),
           const SizedBox(height: 14),
           _Action(
-            label: 'Apply for membership card',
-            onTap: () => _submit(context),
+            label: 'Request membership',
+            onTap: () => _openRequestFlow(context),
           ),
         ],
       );
     }
     if (state == MembershipDashboardState.applicationPending) {
-      return _ApplicationDetails(
-        title: 'Membership application',
-        message: 'Your membership application is being reviewed.',
-        application: application!,
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _ApplicationDetails(
+            title: 'Membership application',
+            message: 'Your membership application is being reviewed.',
+            application: application!,
+          ),
+          const SizedBox(height: 10),
+          _Action(
+            label: 'View application status',
+            onTap: () => _openRequestFlow(context, existingApplication: application),
+          ),
+        ],
       );
     }
     if (state == MembershipDashboardState.approvedAwaitingActivation) {
-      return _ApplicationDetails(
-        title: 'Membership approved',
-        message:
-            'Your membership has been approved and is awaiting activation/card issuance.',
-        application: application!,
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _ApplicationDetails(
+            title: 'Membership approved',
+            message:
+                'Your membership has been approved and is awaiting activation/card issuance.',
+            application: application!,
+          ),
+          const SizedBox(height: 10),
+          _Action(
+            label: 'Track card issuance',
+            onTap: () => _openRequestFlow(context, existingApplication: application),
+          ),
+        ],
       );
     }
     if (state == MembershipDashboardState.applicationRejected) {
@@ -156,12 +177,19 @@ class GreetingHeader extends StatelessWidget {
             style: copy,
           ),
           const SizedBox(height: 14),
-          _Action(label: 'Apply again', onTap: () => _submit(context)),
+          _Action(
+            label: 'Request membership again',
+            onTap: () => _openRequestFlow(context),
+          ),
         ],
       );
     }
     if (state == MembershipDashboardState.activeMember) {
       final item = membership!;
+      final hasActiveCard =
+          item.cardStatus?.trim().toUpperCase() == 'ACTIVE' ||
+          item.cardStatus?.trim().toUpperCase() == 'ISSUED';
+
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -172,40 +200,48 @@ class GreetingHeader extends StatelessWidget {
             value:
                 '${item.endDate.day.toString().padLeft(2, '0')}/${item.endDate.month.toString().padLeft(2, '0')}/${item.endDate.year}',
           ),
-          if (item.cardStatus?.trim().toUpperCase() == 'ACTIVE' ||
-              item.cardStatus?.trim().toUpperCase() == 'ISSUED') ...[
-            const SizedBox(height: 10),
-            _Action(
-              label: 'View membership card',
-              onTap: () => context.go('/portal/customer/membership'),
-            ),
-          ],
+          const SizedBox(height: 10),
+          _Action(
+            label: hasActiveCard
+                ? 'View membership card'
+                : 'Request membership card',
+            onTap: () {
+              if (hasActiveCard) {
+                context.go('/portal/customer/membership');
+              } else {
+                _openRequestFlow(context, existingApplication: application);
+              }
+            },
+          ),
         ],
       );
     }
-    return Text(
-      'Your membership is ${membership?.membershipStatus.toLowerCase() ?? 'inactive'}.',
-      style: copy,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Your membership is ${membership?.membershipStatus.toLowerCase() ?? 'inactive'}.',
+          style: copy,
+        ),
+        const SizedBox(height: 14),
+        _Action(
+          label: 'Request membership',
+          onTap: () => _openRequestFlow(context),
+        ),
+      ],
     );
   }
 
-  Future<void> _submit(BuildContext context) async {
-    try {
-      await controller.submitMembershipApplication();
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Membership application submitted.')),
-        );
-      }
-    } catch (_) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Unable to submit membership application.'),
-          ),
-        );
-      }
-    }
+  void _openRequestFlow(
+    BuildContext context, {
+    MembershipApplicationEntity? existingApplication,
+  }) {
+    showMembershipRequestSheet(
+      context,
+      customer: customer,
+      controller: controller,
+      existingApplication: existingApplication,
+    );
   }
 }
 

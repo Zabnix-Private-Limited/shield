@@ -33,12 +33,20 @@ void main() {
     );
   }
 
-  testWidgets('renders the compact no-application state on a narrow phone', (
+  testWidgets('renders the compact no-application state on a narrow phone and opens request flow sheet', (
     tester,
   ) async {
     await tester.pumpWidget(subject(320, null));
-    expect(find.text('No membership card yet'), findsOneWidget);
-    expect(find.text('Apply for membership card'), findsOneWidget);
+    expect(find.text('No active membership card'), findsOneWidget);
+    expect(find.text('Request membership'), findsOneWidget);
+
+    // Tap Request membership button
+    await tester.tap(find.text('Request membership'));
+    await tester.pumpAndSettle();
+
+    // Verify sheet modal opens with membership benefits & request options
+    expect(find.text('Request SHIELD Membership'), findsOneWidget);
+    expect(find.text('Submit Request'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -58,6 +66,7 @@ void main() {
     );
     expect(find.text('Membership application'), findsOneWidget);
     expect(find.text('MAP-2026-TEST'), findsOneWidget);
+    expect(find.text('View application status'), findsOneWidget);
     expect(find.text('Digital card'), findsNothing);
     expect(find.text('Plan'), findsNothing);
     expect(tester.takeException(), isNull);

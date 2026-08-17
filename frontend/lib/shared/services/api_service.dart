@@ -1371,6 +1371,8 @@ class ApiService {
     required String name,
     required DateTime dob,
     required String gender,
+    String? referralCode,
+    String? agentCode,
     String? deviceId,
     String? deviceLabel,
     String? platform,
@@ -1382,6 +1384,10 @@ class ApiService {
         'name': name.trim(),
         'dob': dob.toIso8601String(),
         'gender': gender,
+        if (referralCode != null && referralCode.trim().isNotEmpty)
+          'referral_code': referralCode.trim(),
+        if (agentCode != null && agentCode.trim().isNotEmpty)
+          'agent_code': agentCode.trim(),
         if (deviceId != null && deviceId.trim().isNotEmpty)
           'device_id': deviceId.trim(),
         if (deviceLabel != null && deviceLabel.trim().isNotEmpty)

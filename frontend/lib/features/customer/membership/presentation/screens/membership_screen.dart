@@ -69,10 +69,8 @@ class _CustomerMembershipScreenState extends State<CustomerMembershipScreen> {
 
         final membership = _controller.membership;
         if (membership == null) {
-          return ErrorCard(
-            title: 'Membership unavailable',
-            message: 'No membership data is available right now.',
-            onRetry: _controller.load,
+          return _NoActiveMembershipView(
+            onRefresh: _controller.refresh,
           );
         }
 
@@ -600,12 +598,12 @@ class _SubscriptionEntitlementCard extends StatelessWidget {
               width: 40,
               height: 40,
               decoration: BoxDecoration(
-                color: AppColors.warning.withValues(alpha: 0.12),
+                color: AppColors.shieldBlue.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(14),
               ),
               child: const Icon(
-                Icons.info_outline_rounded,
-                color: AppColors.warning,
+                Icons.verified_outlined,
+                color: AppColors.shieldBlue,
               ),
             ),
             const SizedBox(width: 12),
@@ -613,10 +611,29 @@ class _SubscriptionEntitlementCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Subscription entitlement', style: AppTypography.h5),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text('Membership tier entitlement', style: AppTypography.h5),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: AppColors.shieldGreen.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          'ACTIVE',
+                          style: AppTypography.tiny.copyWith(
+                            color: AppColors.shieldGreen,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                   const SizedBox(height: 4),
                   Text(
-                    'There is no current subscription entitlement on this membership.',
+                    'Standard member entitlement is active. Includes privilege discounts across partner clinics, labs, and pharmacies.',
                     style: AppTypography.small.copyWith(color: AppColors.gray),
                   ),
                 ],
@@ -954,4 +971,71 @@ class _CachedMembershipBanner extends StatelessWidget {
       ],
     ),
   );
+}
+
+class _NoActiveMembershipView extends StatelessWidget {
+  final Future<void> Function() onRefresh;
+
+  const _NoActiveMembershipView({required this.onRefresh});
+
+  @override
+  Widget build(BuildContext context) {
+    return RefreshIndicator(
+      onRefresh: onRefresh,
+      color: AppColors.shieldBlue,
+      child: ListView(
+        physics: const BouncingScrollPhysics(
+          parent: AlwaysScrollableScrollPhysics(),
+        ),
+        children: [
+          Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: AppColors.shieldNavy,
+              borderRadius: BorderRadius.circular(24),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppColors.white.withValues(alpha: .15),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.card_membership_rounded,
+                    color: AppColors.white,
+                    size: 32,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'No Active Membership Card',
+                  style: AppTypography.h3.copyWith(color: AppColors.white),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'You do not have an active SHIELD membership card linked to your account yet. Request a membership from the home screen to unlock digital privilege card benefits.',
+                  style: AppTypography.small.copyWith(
+                    color: AppColors.white.withValues(alpha: .85),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                FilledButton.icon(
+                  onPressed: () => context.go('/portal/customer/home'),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: AppColors.white,
+                    foregroundColor: AppColors.shieldNavy,
+                  ),
+                  icon: const Icon(Icons.arrow_back_rounded, size: 18),
+                  label: const Text('Return to Home & Request Membership'),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }

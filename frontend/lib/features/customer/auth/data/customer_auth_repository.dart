@@ -277,6 +277,8 @@ class CustomerAuthRepository {
     required String name,
     required DateTime dob,
     required String gender,
+    String? referralCode,
+    String? agentCode,
   }) async {
     final firebaseUser = _firebaseAuth.currentUser;
     if (firebaseUser == null) {
@@ -295,6 +297,8 @@ class CustomerAuthRepository {
       name: name,
       dob: dob,
       gender: gender,
+      referralCode: referralCode,
+      agentCode: agentCode,
       deviceId: deviceId,
       deviceLabel: deviceLabel,
       platform: platform,

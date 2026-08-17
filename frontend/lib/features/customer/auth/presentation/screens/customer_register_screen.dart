@@ -17,6 +17,8 @@ class CustomerRegisterScreen extends StatefulWidget {
 class _CustomerRegisterScreenState extends State<CustomerRegisterScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
+  final _referralCodeController = TextEditingController();
+  final _agentCodeController = TextEditingController();
   DateTime? _dob;
   String _gender = 'MALE';
   bool _isSubmitting = false;
@@ -37,6 +39,8 @@ class _CustomerRegisterScreenState extends State<CustomerRegisterScreen> {
   @override
   void dispose() {
     _nameController.dispose();
+    _referralCodeController.dispose();
+    _agentCodeController.dispose();
     super.dispose();
   }
 
@@ -72,11 +76,16 @@ class _CustomerRegisterScreenState extends State<CustomerRegisterScreen> {
       _errorText = null;
     });
 
+    final referralCode = _referralCodeController.text.trim();
+    final agentCode = _agentCodeController.text.trim();
+
     try {
       await CustomerAuthRepository.instance.registerCustomer(
         name: _nameController.text,
         dob: _dob!,
         gender: _gender,
+        referralCode: referralCode.isEmpty ? null : referralCode,
+        agentCode: agentCode.isEmpty ? null : agentCode,
       );
       if (!mounted) {
         return;
@@ -184,6 +193,34 @@ class _CustomerRegisterScreenState extends State<CustomerRegisterScreen> {
                             ),
                           );
                         }).toList(),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    _LabeledField(
+                      label: 'Referral code (Optional)',
+                      child: TextFormField(
+                        controller: _referralCodeController,
+                        textCapitalization: TextCapitalization.characters,
+                        decoration: _inputDecoration('Enter referral code (e.g. SHIELD-REF-XXXX)').copyWith(
+                          prefixIcon: const Icon(
+                            Icons.card_giftcard_outlined,
+                            color: AppColors.gray,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    _LabeledField(
+                      label: 'Agent code (Optional)',
+                      child: TextFormField(
+                        controller: _agentCodeController,
+                        textCapitalization: TextCapitalization.characters,
+                        decoration: _inputDecoration('Enter agent code (e.g. AGNT-0001)').copyWith(
+                          prefixIcon: const Icon(
+                            Icons.badge_outlined,
+                            color: AppColors.gray,
+                          ),
+                        ),
                       ),
                     ),
                     if (_errorText != null) ...[

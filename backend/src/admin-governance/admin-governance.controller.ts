@@ -158,6 +158,24 @@ export class AdminGovernanceController {
     };
   }
 
+  @RequirePermissions('agents.create')
+  @Post('agents/actions/:actionId')
+  async executeAgentWorkspaceAction(
+    @Param('actionId') actionId: string,
+    @Body() body: any,
+    @CurrentPrincipal() principal?: ShieldPrincipal,
+  ) {
+    return {
+      success: true,
+      message: 'Admin agent workspace action executed successfully.',
+      data: await this.adminGovernanceService.executeAgentWorkspaceAction(
+        actionId,
+        body,
+        principal,
+      ),
+    };
+  }
+
   @RequirePermissions('crm.view')
   @Get('crm')
   async getCrmWorkspace(@Query() query: Record<string, string | undefined>) {

@@ -3689,45 +3689,32 @@ class _CustomerProfilePortalViewState
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            customer.fullName.toUpperCase(),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+                    Row(
+                      children: [
+                        CircleAvatar(
+                          radius: 20,
+                          backgroundColor: AppColors.white.withValues(alpha: 0.16),
+                          child: Text(
+                            _initials(customer),
                             style: AppTypography.body.copyWith(
                               color: AppColors.white,
                               fontWeight: FontWeight.w700,
-                              letterSpacing: 0.7,
                             ),
                           ),
-                          const SizedBox(height: 4),
-                          Text(
-                            customer.customerCode,
-                            style: AppTypography.small.copyWith(
-                              color: AppColors.white.withValues(alpha: 0.84),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    CircleAvatar(
-                      radius: 23,
-                      backgroundColor: AppColors.white.withValues(alpha: 0.16),
-                      child: Text(
-                        _initials(customer),
-                        style: AppTypography.body.copyWith(
-                          color: AppColors.white,
-                          fontWeight: FontWeight.w700,
                         ),
-                      ),
+                        const SizedBox(width: 10),
+                        Text(
+                          customer.customerCode,
+                          style: AppTypography.small.copyWith(
+                            color: AppColors.white.withValues(alpha: 0.84),
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(width: 10),
                     Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 10,
@@ -3751,6 +3738,17 @@ class _CustomerProfilePortalViewState
                       ),
                     ),
                   ],
+                ),
+                const SizedBox(height: 14),
+                Text(
+                  customer.fullName.toUpperCase(),
+                  softWrap: true,
+                  style: AppTypography.h4.copyWith(
+                    color: AppColors.white,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.5,
+                    height: 1.2,
+                  ),
                 ),
                 const SizedBox(height: 12),
                 Wrap(

@@ -44,9 +44,9 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('SHLD-00042'), findsWidgets);
-      expect(find.text('Subscription entitlement'), findsOneWidget);
+      expect(find.text('Membership tier entitlement'), findsOneWidget);
       expect(
-        find.textContaining('no current subscription entitlement'),
+        find.textContaining('Standard member entitlement is active'),
         findsOneWidget,
       );
       expect(find.text('₹10000'), findsNothing);

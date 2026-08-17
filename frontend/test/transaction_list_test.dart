@@ -8,6 +8,7 @@ WalletTransaction _transaction(int index) => WalletTransaction(
   uuid: 'txn-$index',
   walletId: 'wallet-1',
   transactionType: 'CREDIT',
+  ledgerEntryType: 'CASH',
   amount: index.toDouble(),
   remarks: 'Transaction $index',
   createdAt: DateTime.utc(2026, 8, 4),

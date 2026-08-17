@@ -2360,6 +2360,100 @@ export class AdminGovernanceService {
                       { key: 'updatedAt', label: 'Updated' },
                     ];
 
+    const agentActions = [
+      {
+        id: 'create-agent',
+        label: 'Create Agent',
+        icon: 'person_add',
+        color: 'primary',
+        category: 'WORKSPACE',
+        endpoint: '/admin/agents/actions/create-agent',
+        method: 'POST',
+        refreshAfterSuccess: true,
+        permission: 'agents.create',
+        requiresSelection: false,
+        allowBulk: false,
+        dialog: {
+          type: 'FORM',
+          formId: 'create-agent-form',
+          title: 'Create New SHIELD Agent',
+          description:
+            'Enroll a new agent with employee code, department, branch assignment, and profile credentials.',
+          submitLabel: 'Create Agent',
+        },
+      },
+    ];
+
+    const agentForms = [
+      {
+        id: 'create-agent-form',
+        title: 'Agent Provisioning Form',
+        fields: [
+          { key: 'firstName', label: 'First Name', type: 'text', required: true },
+          { key: 'lastName', label: 'Last Name', type: 'text', required: false },
+          {
+            key: 'employeeCode',
+            label: 'Agent / Employee Code',
+            type: 'text',
+            required: true,
+            helperText: 'e.g. AGNT-0003 or EMP-0003',
+          },
+          {
+            key: 'mobile',
+            label: 'Mobile Number',
+            type: 'text',
+            required: true,
+            helperText: '10-digit mobile number',
+          },
+          {
+            key: 'email',
+            label: 'Email Address',
+            type: 'text',
+            required: true,
+            helperText: 'Work email address',
+          },
+          {
+            key: 'department',
+            label: 'Department',
+            type: 'select',
+            options: [
+              'Field Operations',
+              'Customer Enrollment',
+              'Healthcare Services',
+              'Sales',
+              'Customer Support',
+            ],
+            required: true,
+          },
+          {
+            key: 'branch',
+            label: 'Assigned Branch',
+            type: 'select',
+            options: [
+              'Sahakar Healthcare Group',
+              'Hyperpharmacy Branch 1',
+              'Hyperpharmacy Main Store',
+            ],
+            required: true,
+          },
+          {
+            key: 'accessScope',
+            label: 'Access Scope',
+            type: 'select',
+            options: ['BRANCH_SCOPED', 'CROSS_BRANCH', 'ORGANIZATION'],
+            required: true,
+          },
+          {
+            key: 'status',
+            label: 'Initial Status',
+            type: 'select',
+            options: ['ACTIVE', 'PENDING', 'INACTIVE'],
+            required: true,
+          },
+        ],
+      },
+    ];
+
     return this.buildWorkspacePayload(
       'agents',
       {
@@ -2367,7 +2461,7 @@ export class AdminGovernanceService {
         title: 'Agents',
         description:
           'Backend-owned agent operations across assignment, customers, follow-ups, visits, attendance, and uploaded records.',
-        primaryActionLabel: 'Refresh workspace',
+        primaryActionLabel: 'Create Agent',
         secondaryActionLabel: 'Attendance',
       },
       {
@@ -2399,7 +2493,7 @@ export class AdminGovernanceService {
           },
         },
         center: {
-          title: selectedTab == 'Overview' ? 'Agent registry' : '$selectedTab queue',
+          title: selectedTab == 'Overview' ? 'Agent registry' : `${selectedTab} queue`,
           subtitle: 'The active tab drives the dataset returned by the backend workspace contract.',
           type: 'table',
           columns: selectedColumns,
@@ -2427,7 +2521,114 @@ export class AdminGovernanceService {
           },
         },
       },
+      {
+        actions: agentActions as any,
+        forms: agentForms,
+        permissions: {
+          canCreate: true,
+          canEdit: true,
+        },
+        exports: [
+          {
+            id: 'agents-export-csv',
+            label: 'CSV',
+            format: 'CSV',
+          },
+        ],
+      },
     );
+  }
+
+  async executeAgentWorkspaceAction(
+    actionId: string,
+    body: any,
+    principal?: ShieldPrincipal,
+  ) {
+    if (actionId === 'create-agent') {
+      const firstName = (body.firstName ?? body.first_name ?? '').toString().trim();
+      const lastName = (body.lastName ?? body.last_name ?? '').toString().trim();
+      const employeeCode = (body.employeeCode ?? body.employee_code ?? '').toString().trim();
+      const mobile = (body.mobile ?? '').toString().trim();
+      const email = (body.email ?? '').toString().trim().toLowerCase();
+      const departmentName = (body.department ?? 'Field Operations').toString().trim();
+      const branchName = (body.branch ?? 'Sahakar Healthcare Group').toString().trim();
+      const accessScope = (body.accessScope ?? body.access_scope ?? 'BRANCH_SCOPED').toString().trim();
+      const status = (body.status ?? 'ACTIVE').toString().trim().toUpperCase();
+
+      if (!firstName || !employeeCode || !mobile || !email) {
+        throw new BadRequestException('First Name, Agent/Employee Code, Mobile, and Email are required.');
+      }
+
+      const existingUser = await this.prisma.user.findFirst({
+        where: {
+          OR: [{ mobile }, { email }],
+          deletedAt: null,
+        },
+      });
+
+      if (existingUser) {
+        throw new BadRequestException('A user with this mobile or email already exists.');
+      }
+
+      // Resolve branch
+      const branch = await this.prisma.business.findFirst({
+        where: {
+          name: { contains: branchName, mode: 'insensitive' },
+        },
+      });
+
+      // Resolve department
+      let department = await this.prisma.department.findFirst({
+        where: { name: { contains: departmentName, mode: 'insensitive' } },
+      });
+
+      if (!department) {
+        department = await this.prisma.department.findFirst();
+      }
+
+      // Resolve role for SHIELD_AGENT
+      const role = await this.prisma.role.findFirst({
+        where: { name: { contains: 'AGENT', mode: 'insensitive' } },
+      });
+
+      const newUser = await this.prisma.user.create({
+        data: {
+          uuid: crypto.randomUUID(),
+          firstName,
+          lastName,
+          employeeCode,
+          mobile,
+          email,
+          userType: 'SHIELD_AGENT',
+          accessScope: accessScope || 'BRANCH_SCOPED',
+          status: status || 'ACTIVE',
+          branchBusinessId: branch?.id ?? null,
+          departmentId: department?.id ?? null,
+          roleId: role?.id ?? null,
+        },
+      });
+
+      if (branch?.id) {
+        await this.prisma.agentBranchAssignment.create({
+          data: {
+            uuid: crypto.randomUUID(),
+            userId: newUser.id,
+            businessId: branch.id,
+            status: 'APPROVED',
+            isPrimary: true,
+            approvedAt: new Date(),
+          },
+        }).catch(() => null);
+      }
+
+      return {
+        message: `Agent ${firstName} ${lastName} (${employeeCode}) created successfully.`,
+        agentId: newUser.id.toString(),
+        uuid: newUser.uuid,
+      };
+    }
+
+    throw new BadRequestException(`Unknown agent action: ${actionId}`);
   }
 
   async getCrmWorkspace(query: AdminGovernanceWorkspaceQuery) {
