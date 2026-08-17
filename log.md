@@ -13133,3 +13133,40 @@ est build compilation.
 ### Verification
 - flutter test suites passed (11/11 tests passed).
 - git diff --check passed cleanly.
+
+## 153. Self-Signup Pending Status Rule & Referral Link Provision (2026-08-17 12:06:00 IST)
+
+- Implemented strict self-signup status rules, referring agent assignment, and referral signup link provisions across NestJS backend and Flutter frontend.
+- Key implementation details:
+  1. Self-Signup Customer Status Rule (CustomerService.createCustomerAggregate in customer.service.ts): Self-registered customers (onboardingSource = 'SELF_SIGNUP') are assigned status PENDING (requiring staff/agent verification), while Agent-created registrations remain ACTIVE.
+  2. Referring Agent Binding: When a customer self-registers using a referral code, the customer is linked to the referrer (referredById) and automatically assigned to the referrer's SHIELD Agent (agentCode = referrer.agentCode). Full referral tracking (ReferralRewardEvent with status PENDING) is persisted for live audit and reward qualification.
+  3. Referral Signup Link & Actions (CustomerReferralsScreen in customer_referrals_screen.dart): Added a dedicated Referral Signup Link section with a [ Copy Link ] button (https://shield-zahnix.vercel.app/#/customer/signup?ref=\) for seamless sharing and tracked customer onboarding.
+
+### Frontend Files (Modified)
+- frontend/lib/features/customer/referrals/presentation/screens/customer_referrals_screen.dart
+
+### Backend Files (Modified)
+- backend/src/customer/customer.service.ts
+
+### Verification
+- NestJS compilation (npm run build) succeeded with 0 errors.
+- flutter test suites passed (11/11 tests passed).
+- git diff --check passed cleanly.
+
+## 154. Agent Creation Status & Google Sign-In Provision Alignment (2026-08-17 12:08:00 IST)
+
+- Aligned Agent Provisioning Modal (create-agent-form) and creation backend endpoint (/admin/agents/actions/create-agent) to set status to ACTIVE and require Firebase Google Sign-In with the provisioned email address.
+- Implementation details:
+  1. Default Active Status: Form defaults Initial Status to ACTIVE, creating user records with status: 'ACTIVE', userType: 'SHIELD_AGENT', and agentBranchAssignment(status: 'APPROVED').
+  2. Google Sign-In Email Label: Labeled email field as Email Address (Google Sign-In) with helper text clarifying that provisioned agents authenticate via Google Sign-In with that exact email address.
+
+### Frontend Files (Modified)
+- None
+
+### Backend Files (Modified)
+- backend/src/admin-governance/admin-governance.service.ts
+
+### Verification
+- NestJS compilation (npm run build) succeeded with 0 errors.
+- flutter test suites passed (11/11 tests passed).
+- git diff --check passed cleanly.

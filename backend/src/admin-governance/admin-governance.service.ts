@@ -2407,10 +2407,10 @@ export class AdminGovernanceService {
           },
           {
             key: 'email',
-            label: 'Email Address',
+            label: 'Email Address (Google Sign-In)',
             type: 'text',
             required: true,
-            helperText: 'Work email address',
+            helperText: 'Agent will authenticate via Google Sign-In using this email address.',
           },
           {
             key: 'department',
@@ -2622,7 +2622,7 @@ export class AdminGovernanceService {
       }
 
       return {
-        message: `Agent ${firstName} ${lastName} (${employeeCode}) created successfully.`,
+        message: `Agent ${firstName} ${lastName} (${employeeCode}) created as ACTIVE. Agent can now sign in using Google Sign-In with ${email}.`,
         agentId: newUser.id.toString(),
         uuid: newUser.uuid,
       };

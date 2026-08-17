@@ -1672,19 +1672,41 @@ export class CustomerService {
         );
       }
       let referredById: bigint | null = null;
+      let assignedAgentCode = data.agent_code || 'AGT-SAHAKAR-DEFAULT';
+
       if (data.referred_by_code) {
-        const referrer = await tx.customer.findFirst({
-          where: { referralCode: data.referred_by_code },
+        const cleanRefCode = data.referred_by_code.toString().trim();
+        const referrerCustomer = await tx.customer.findFirst({
+          where: { referralCode: cleanRefCode },
         });
-        if (referrer && referrer.mobile !== data.mobile) {
-          referredById = referrer.id;
+        if (referrerCustomer && referrerCustomer.mobile !== data.mobile) {
+          referredById = referrerCustomer.id;
+          if (referrerCustomer.agentCode) {
+            assignedAgentCode = referrerCustomer.agentCode;
+          }
+        } else {
+          const referrerAgent = await tx.user.findFirst({
+            where: {
+              OR: [
+                { employeeCode: cleanRefCode },
+                { email: cleanRefCode.toLowerCase() },
+              ],
+            },
+          });
+          if (referrerAgent && referrerAgent.employeeCode) {
+            assignedAgentCode = referrerAgent.employeeCode;
+          }
         }
       }
 
-      const desiredStatus = (data.status ?? 'ACTIVE')
-        .toString()
-        .trim()
-        .toUpperCase();
+      const isSelfSignup =
+        data.onboarding_source === 'SELF_SIGNUP' ||
+        data.onboardingSource === 'SELF_SIGNUP' ||
+        !staffUserId;
+      const desiredStatus = isSelfSignup
+        ? 'PENDING'
+        : (data.status ?? 'ACTIVE').toString().trim().toUpperCase();
+
       const customer = await tx.customer.create({
         data: {
           uuid: customerUuid,
@@ -1702,11 +1724,12 @@ export class CustomerService {
           district: data.district,
           state: data.state,
           pincode: data.pincode,
-          status: desiredStatus || 'ACTIVE',
+          status: desiredStatus,
           createdBy: staffUserId,
-          approvedBy: staffUserId,
+          approvedBy: isSelfSignup ? null : staffUserId,
           bloodGroup: data.blood_group || null,
-          agentCode: data.agent_code || 'AGT-SAHAKAR-DEFAULT',
+          agentCode: assignedAgentCode,
+          onboardingSource: isSelfSignup ? 'SELF_SIGNUP' : 'NEW_REGISTRATION',
           referralCode:
             data.referral_code ||
             `REF-${Math.floor(100000 + Math.random() * 900000)}`,

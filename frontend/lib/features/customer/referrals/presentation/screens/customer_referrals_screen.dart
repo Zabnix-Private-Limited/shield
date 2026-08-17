@@ -95,42 +95,93 @@ class _ReferralCodeCard extends StatelessWidget {
 
   final String code;
 
+  String get _referralLink =>
+      'https://shield-zahnix.vercel.app/#/customer/signup?ref=$code';
+
   @override
   Widget build(BuildContext context) => AppCard(
-    child: Row(
-      children: [
-        const Icon(Icons.account_tree_outlined, color: AppColors.shieldBlue),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Your referral code', style: AppTypography.small),
-              const SizedBox(height: 4),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.account_tree_outlined, color: AppColors.shieldBlue),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Your referral code', style: AppTypography.small),
+                      const SizedBox(height: 4),
+                      Text(
+                        code.isEmpty ? 'Not available' : code,
+                        style: AppTypography.h4.copyWith(color: AppColors.shieldNavy),
+                      ),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  onPressed: code.isEmpty
+                      ? null
+                      : () async {
+                          await Clipboard.setData(ClipboardData(text: code));
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Referral code copied.')),
+                            );
+                          }
+                        },
+                  icon: const Icon(Icons.copy_outlined),
+                  tooltip: 'Copy referral code',
+                ),
+              ],
+            ),
+            if (code.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              const Divider(),
+              const SizedBox(height: 8),
               Text(
-                code.isEmpty ? 'Not available' : code,
-                style: AppTypography.h4.copyWith(color: AppColors.shieldNavy),
+                'Referral Signup Link',
+                style: AppTypography.tiny.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.shieldNavy,
+                ),
+              ),
+              const SizedBox(height: 4),
+              SelectableText(
+                _referralLink,
+                style: AppTypography.small.copyWith(color: AppColors.shieldBlue),
+              ),
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  OutlinedButton.icon(
+                    onPressed: () async {
+                      await Clipboard.setData(ClipboardData(text: _referralLink));
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                              'Referral signup link copied to clipboard!',
+                            ),
+                          ),
+                        );
+                      }
+                    },
+                    icon: const Icon(Icons.link_rounded, size: 18),
+                    label: const Text('Copy Link'),
+                  ),
+                  const SizedBox(width: 10),
+                  Text(
+                    'Tracked & assigned to your agent',
+                    style: AppTypography.tiny.copyWith(color: AppColors.gray),
+                  ),
+                ],
               ),
             ],
-          ),
+          ],
         ),
-        IconButton(
-          onPressed: code.isEmpty
-              ? null
-              : () async {
-                  await Clipboard.setData(ClipboardData(text: code));
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Referral code copied.')),
-                    );
-                  }
-                },
-          icon: const Icon(Icons.copy_outlined),
-          tooltip: 'Copy referral code',
-        ),
-      ],
-    ),
-  );
+      );
 }
 
 class _SummaryGrid extends StatelessWidget {
