@@ -12959,3 +12959,22 @@ est build compilation.
 ### Verification
 - flutter test suites passed (11/11 tests passed).
 - git diff --check passed cleanly.
+
+## 142. Form Step Navigation Guard & Missing Field Highlight System (2026-08-17 11:10:00 IST)
+
+- Resolved issue where users could navigate forward via the Next button or reach the Review and Submit step despite missing required form fields (e.g. Government ID).
+- Improvements implemented:
+  1. Strict Step Navigation Guard: Updated _goToNextStep() to trigger step validation (_validateCurrentStep). If any required field in the active step is empty or invalid, navigation is blocked, field validation error messages appear under inputs, and an error SnackBar lists the specific missing required fields.
+  2. Review Step Red Warning Badges: Missing required values on Step 5 (Review) no longer render as neutral grey Not set / Not selected. They now render a prominent RED WARNING BADGE (Required * (Missing)) alongside red-asterisked labels.
+  3. Missing Required Fields Banner & Quick Fix Action: Added a red banner at the top of the Review step listing all missing required fields with a [ Fix Now ] button that jumps directly to the step needing completion.
+  4. Submission Guard with Automatic Step Jump: Attempting to submit an incomplete registration triggers a clear SnackBar (Cannot submit registration. Missing required fields: ...) and automatically redirects the user to the exact step containing the missing data.
+
+### Frontend Files (Modified)
+- frontend/lib/features/agent/registration/presentation/screens/agent_registration_screen.dart
+
+### Backend Files (Modified)
+- None
+
+### Verification
+- flutter test suites passed (11/11 tests passed).
+- git diff --check passed cleanly.

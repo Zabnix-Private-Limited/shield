@@ -736,23 +736,80 @@ class _AgentRegistrationScreenState
           ),
         );
       default:
+        final missingRequirements = _getMissingRequirements();
+        final isFirstNameMissing = _firstNameController.text.trim().isEmpty;
+        final isMobileMissing = _mobileController.text.trim().length < 10;
+        final isGovernmentIdMissing = _aadhaarController.text.trim().isEmpty;
+        final isPlanMissing = (_membershipTypeCode ?? '').trim().isEmpty;
+        final isBranchMissing = (_selectedBusinessId ?? '').trim().isEmpty;
+        final isAddressMissing = _addressController.text.trim().isEmpty;
+
         return _StepContentCard(
           title: 'Review and Submit',
           summary:
-              'Check the customer summary once before sending it for approval. This keeps the final action intentional instead of accidental.',
+              'Check the customer summary once before sending it for approval. Required missing fields are highlighted.',
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              if (missingRequirements.isNotEmpty) ...[
+                Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: AppColors.error.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: AppColors.error.withValues(alpha: 0.3)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.warning_amber_rounded, color: AppColors.error),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Missing Required Fields',
+                              style: AppTypography.small.copyWith(
+                                color: AppColors.error,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              'Please complete: ${missingRequirements.map((m) => m.fieldName).join(', ')}',
+                              style: AppTypography.small.copyWith(color: AppColors.darkGray),
+                            ),
+                          ],
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: () => setState(
+                          () => _currentStep = missingRequirements.first.step,
+                        ),
+                        child: const Text(
+                          'Fix Now',
+                          style: TextStyle(
+                            color: AppColors.error,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+              ],
               _ReviewItem(
                 label: 'Customer',
-                value:
-                    '${_firstNameController.text.trim()} ${_lastNameController.text.trim()}'
-                        .trim()
-                        .ifBlank('Not set'),
+                value: '${_firstNameController.text.trim()} ${_lastNameController.text.trim()}'.trim(),
+                required: true,
+                missing: isFirstNameMissing,
               ),
               _ReviewItem(
                 label: 'Phone',
-                value: _mobileController.text.trim().ifBlank('Not set'),
+                value: _mobileController.text.trim(),
+                required: true,
+                missing: isMobileMissing,
               ),
               _ReviewItem(
                 label: 'Email',
@@ -760,23 +817,27 @@ class _AgentRegistrationScreenState
               ),
               _ReviewItem(
                 label: 'Government ID',
-                value: _aadhaarController.text.trim().ifBlank('Not set'),
+                value: _aadhaarController.text.trim(),
+                required: true,
+                missing: isGovernmentIdMissing,
               ),
               _ReviewItem(
                 label: 'Membership plan',
-                value:
-                    _membershipTypeCode?.ifBlank('Not selected') ??
-                    'Not selected',
+                value: _membershipTypeCode ?? '',
+                required: true,
+                missing: isPlanMissing,
               ),
               _ReviewItem(
                 label: 'Preferred branch',
-                value:
-                    _selectedBusinessId?.ifBlank('Not selected') ??
-                    'Not selected',
+                value: _selectedBusinessId ?? '',
+                required: true,
+                missing: isBranchMissing,
               ),
               _ReviewItem(
                 label: 'Address',
-                value: _addressController.text.trim().ifBlank('Not set'),
+                value: _addressController.text.trim(),
+                required: true,
+                missing: isAddressMissing,
               ),
               _ReviewItem(
                 label: 'Documents uploaded',
@@ -784,15 +845,21 @@ class _AgentRegistrationScreenState
               ),
               const SizedBox(height: 16),
               AgentStatusBadge(
-                label: _draftCustomerId == null
-                    ? 'New registration'
-                    : 'Saved draft ready to submit',
-                color: _draftCustomerId == null
-                    ? AgentColors.warning
-                    : AgentColors.success,
-                icon: _draftCustomerId == null
-                    ? Icons.edit_note_outlined
-                    : Icons.check_circle_outline,
+                label: missingRequirements.isNotEmpty
+                    ? 'Incomplete registration - Fix missing fields'
+                    : (_draftCustomerId == null
+                        ? 'New registration'
+                        : 'Saved draft ready to submit'),
+                color: missingRequirements.isNotEmpty
+                    ? AgentColors.danger
+                    : (_draftCustomerId == null
+                        ? AgentColors.warning
+                        : AgentColors.success),
+                icon: missingRequirements.isNotEmpty
+                    ? Icons.error_outline
+                    : (_draftCustomerId == null
+                        ? Icons.edit_note_outlined
+                        : Icons.check_circle_outline),
               ),
             ],
           ),
@@ -856,8 +923,36 @@ class _AgentRegistrationScreenState
     }
   }
 
+  List<_MissingRequirement> _getMissingRequirements() {
+    final missing = <_MissingRequirement>[];
+
+    if (_firstNameController.text.trim().isEmpty) {
+      missing.add(const _MissingRequirement(step: 0, fieldName: 'First name *'));
+    }
+    if (_mobileController.text.trim().length < 10) {
+      missing.add(const _MissingRequirement(step: 0, fieldName: 'Phone number *'));
+    }
+    if (_gender.trim().isEmpty) {
+      missing.add(const _MissingRequirement(step: 0, fieldName: 'Gender *'));
+    }
+    if (_aadhaarController.text.trim().isEmpty) {
+      missing.add(const _MissingRequirement(step: 1, fieldName: 'Aadhaar / Government ID *'));
+    }
+    if ((_membershipTypeCode ?? '').trim().isEmpty) {
+      missing.add(const _MissingRequirement(step: 2, fieldName: 'Membership plan *'));
+    }
+    if ((_selectedBusinessId ?? '').trim().isEmpty) {
+      missing.add(const _MissingRequirement(step: 2, fieldName: 'Preferred branch *'));
+    }
+    if (_addressController.text.trim().isEmpty) {
+      missing.add(const _MissingRequirement(step: 2, fieldName: 'Address *'));
+    }
+
+    return missing;
+  }
+
   Future<bool> _goToNextStep(dynamic controller) async {
-    if (!_validateCurrentStep()) {
+    if (!_validateCurrentStep(showFeedback: true)) {
       return false;
     }
     await _autoSaveDraft(controller);
@@ -869,13 +964,28 @@ class _AgentRegistrationScreenState
   }
 
   Future<void> _submitRegistration(dynamic controller) async {
-    if (!_validateAllSteps()) {
-      final messenger = ScaffoldMessenger.of(context);
-      messenger.showSnackBar(
-        const SnackBar(
-          content: Text('Complete the missing registration details first.'),
+    final missingRequirements = _getMissingRequirements();
+    if (missingRequirements.isNotEmpty) {
+      final firstMissing = missingRequirements.first;
+      final missingNames = missingRequirements.map((m) => m.fieldName).join(', ');
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: AppColors.error,
+          duration: const Duration(seconds: 4),
+          content: Text(
+            'Cannot submit registration. Missing required fields: $missingNames',
+            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+          ),
+          action: SnackBarAction(
+            label: 'FIX NOW',
+            textColor: Colors.white,
+            onPressed: () => setState(() => _currentStep = firstMissing.step),
+          ),
         ),
       );
+
+      setState(() => _currentStep = firstMissing.step);
       return;
     }
 
@@ -890,17 +1000,44 @@ class _AgentRegistrationScreenState
     );
   }
 
-  bool _validateCurrentStep() {
+  bool _validateCurrentStep({bool showFeedback = false}) {
+    bool valid = true;
+    final missingInCurrentStep = <String>[];
+
     switch (_currentStep) {
       case 0:
-        return _detailsFormKey.currentState?.validate() ?? false;
+        valid = _detailsFormKey.currentState?.validate() ?? false;
+        if (_firstNameController.text.trim().isEmpty) missingInCurrentStep.add('First name *');
+        if (_mobileController.text.trim().length < 10) missingInCurrentStep.add('Phone *');
+        if (_gender.trim().isEmpty) missingInCurrentStep.add('Gender *');
+        break;
       case 1:
-        return _identityFormKey.currentState?.validate() ?? false;
+        valid = _identityFormKey.currentState?.validate() ?? false;
+        if (_aadhaarController.text.trim().isEmpty) missingInCurrentStep.add('Aadhaar / Government ID *');
+        break;
       case 2:
-        return _membershipFormKey.currentState?.validate() ?? false;
+        valid = _membershipFormKey.currentState?.validate() ?? false;
+        if ((_membershipTypeCode ?? '').trim().isEmpty) missingInCurrentStep.add('Membership plan *');
+        if ((_selectedBusinessId ?? '').trim().isEmpty) missingInCurrentStep.add('Preferred branch *');
+        if (_addressController.text.trim().isEmpty) missingInCurrentStep.add('Address *');
+        break;
       default:
-        return true;
+        valid = true;
     }
+
+    if (!valid && showFeedback && missingInCurrentStep.isNotEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: AppColors.error,
+          content: Text(
+            'Cannot proceed. Please complete required fields: ${missingInCurrentStep.join(', ')}',
+            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+          ),
+        ),
+      );
+    }
+
+    return valid;
   }
 
   bool _validateAllSteps() {
@@ -1259,10 +1396,17 @@ class _RequiredDocumentRow extends StatelessWidget {
 }
 
 class _ReviewItem extends StatelessWidget {
-  const _ReviewItem({required this.label, required this.value});
+  const _ReviewItem({
+    required this.label,
+    required this.value,
+    this.required = false,
+    this.missing = false,
+  });
 
   final String label;
   final String value;
+  final bool required;
+  final bool missing;
 
   @override
   Widget build(BuildContext context) {
@@ -1273,10 +1417,61 @@ class _ReviewItem extends StatelessWidget {
         children: [
           SizedBox(
             width: 160,
-            child: Text(label, style: Theme.of(context).textTheme.bodySmall),
+            child: Text.rich(
+              TextSpan(
+                text: label,
+                style: Theme.of(context).textTheme.bodySmall,
+                children: required
+                    ? const [
+                        TextSpan(
+                          text: ' *',
+                          style: TextStyle(
+                            color: AppColors.error,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ]
+                    : const [],
+              ),
+            ),
           ),
           const SizedBox(width: 12),
-          Expanded(child: Text(value)),
+          Expanded(
+            child: missing
+                ? Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.error.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: AppColors.error.withValues(alpha: 0.4),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: const [
+                        Icon(
+                          Icons.warning_amber_rounded,
+                          size: 16,
+                          color: AppColors.error,
+                        ),
+                        SizedBox(width: 6),
+                        Text(
+                          'Required * (Missing)',
+                          style: TextStyle(
+                            color: AppColors.error,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                : Text(value.trim().isEmpty ? 'Not set' : value),
+          ),
         ],
       ),
     );
@@ -1306,4 +1501,10 @@ extension _FirstOrNull on List<String> {
 
 extension on String {
   String ifBlank(String fallback) => trim().isEmpty ? fallback : this;
+}
+
+class _MissingRequirement {
+  const _MissingRequirement({required this.step, required this.fieldName});
+  final int step;
+  final String fieldName;
 }
