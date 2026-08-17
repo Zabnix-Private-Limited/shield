@@ -13110,3 +13110,26 @@ est build compilation.
 ### Verification
 - flutter test suites passed (11/11 tests passed).
 - git diff --check passed cleanly.
+
+## 151. Immediate Customer Activation Pipeline upon Agent Registration (2026-08-17 12:00:00 IST)
+
+- Updated Customer Registration submission pipeline across NestJS backend and Flutter frontend to set customer status directly to ACTIVE (removing PENDING approval waiting period for new registrations added by SHIELD agents).
+- Changes implemented:
+  1. Backend Registration Aggregate (CustomerService.createCustomerAggregate in customer.service.ts): Sets customer status to ACTIVE, approvedBy to registering staff/agent ID, membership.status to ACTIVE (with activationDate), wallet.status to ACTIVE, creditAccount.status to ACTIVE, and auto-issues digital shieldCard (SHLD-CARD-...).
+  2. Frontend Submission Payload (AgentRegistrationScreen in agent_registration_screen.dart): Submits 'status': 'ACTIVE' upon customer registration submission, displaying \
+## 152. Super Admin Agent Creation Header Action Provisioning (2026-08-17 12:03:00 IST)
+
+- Resolved missing Agent Creation provision in Super Admin Agents workspace (/portal/super-admin/agents).
+- Key implementation details:
+  1. Frontend Header Action Resolution (_resolveHeaderAction in admin_backend_workspace_module.dart): Enabled primaryActionLabel resolution to bind directly to backend-owned workspace create actions (create-agent), rendering a prominent + Create Agent button in the workspace header.
+  2. Modal Form Trigger: Clicking + Create Agent opens the interactive Agent Provisioning Form modal (create-agent-form) requesting First Name, Last Name, Email, Mobile, Employee Code, Department, Branch, Access Scope, and Status, posting directly to /admin/agents/actions/create-agent.
+
+### Frontend Files (Modified)
+- frontend/lib/features/admin/shared/presentation/widgets/admin_backend_workspace_module.dart
+
+### Backend Files (Modified)
+- None
+
+### Verification
+- flutter test suites passed (11/11 tests passed).
+- git diff --check passed cleanly.

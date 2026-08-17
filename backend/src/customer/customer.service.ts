@@ -1681,7 +1681,7 @@ export class CustomerService {
         }
       }
 
-      const desiredStatus = (data.status ?? 'PENDING')
+      const desiredStatus = (data.status ?? 'ACTIVE')
         .toString()
         .trim()
         .toUpperCase();
@@ -1702,8 +1702,9 @@ export class CustomerService {
           district: data.district,
           state: data.state,
           pincode: data.pincode,
-          status: desiredStatus || 'PENDING',
+          status: desiredStatus || 'ACTIVE',
           createdBy: staffUserId,
+          approvedBy: staffUserId,
           bloodGroup: data.blood_group || null,
           agentCode: data.agent_code || 'AGT-SAHAKAR-DEFAULT',
           referralCode:
@@ -1736,12 +1737,8 @@ export class CustomerService {
             membershipTypeId: stdType.id,
             membershipNumber: `SHLD-${new Date().getFullYear()}-${customerCode.split('-')[1]}`,
             joiningFee: stdType.joiningFee,
-            status:
-              desiredStatus === 'ACTIVE'
-                ? 'ACTIVE'
-                : desiredStatus === 'APPROVED'
-                  ? 'ACTIVE'
-                  : 'INACTIVE',
+            status: 'ACTIVE',
+            activationDate: new Date(),
           },
         });
       }
@@ -1762,6 +1759,40 @@ export class CustomerService {
           availableCredit: 3000.0,
           outstandingAmount: 0.0,
           status: 'ACTIVE',
+        },
+      });
+
+      let issuedBusinessId = data.issued_business_id
+        ? BigInt(data.issued_business_id)
+        : data.business_id
+          ? BigInt(data.business_id)
+          : null;
+
+      if (!issuedBusinessId && staffUserId) {
+        const staffUser = await tx.user.findUnique({
+          where: { id: staffUserId },
+          include: { department: true },
+        });
+        issuedBusinessId = staffUser?.department?.businessId || null;
+      }
+      if (!issuedBusinessId) {
+        const defaultBiz = await tx.business.findFirst({
+          where: { status: 'ACTIVE' },
+          orderBy: { id: 'asc' },
+        });
+        issuedBusinessId = defaultBiz?.id ?? null;
+      }
+
+      const cardCodeToken = customerCode.split('-')[1];
+      await tx.shieldCard.create({
+        data: {
+          uuid: randomUUID(),
+          customerId: customer.id,
+          cardNumber: `SHLD-CARD-${cardCodeToken}`,
+          qrCode: `SHLD-CARD-${cardCodeToken}-TOKEN`,
+          status: 'ACTIVE',
+          issuedBusinessId,
+          issuedAt: new Date(),
         },
       });
 

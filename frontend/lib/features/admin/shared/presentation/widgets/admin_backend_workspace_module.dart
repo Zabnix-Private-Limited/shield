@@ -63,15 +63,23 @@ class _AdminBackendWorkspaceModuleState
       description: header.description,
       primaryAction: _resolveHeaderAction(
         label: header.primaryActionLabel,
-        icon: Icons.bolt_outlined,
+        icon: Icons.person_add_alt_1_rounded,
         toolbar: toolbar,
+        workspaceActions: workspaceActions,
         controller: controller,
+        onWorkspaceAction: controller == null
+            ? null
+            : (action) => _handleAction(controller, action),
       ),
       secondaryAction: _resolveHeaderAction(
         label: header.secondaryActionLabel,
         icon: Icons.tune_outlined,
         toolbar: toolbar,
+        workspaceActions: workspaceActions,
         controller: controller,
+        onWorkspaceAction: controller == null
+            ? null
+            : (action) => _handleAction(controller, action),
       ),
       metrics: metrics,
       child: Column(
@@ -790,7 +798,9 @@ AdminActionItem? _resolveHeaderAction({
   required String? label,
   required IconData icon,
   required _ToolbarData toolbar,
+  required List<AdminWorkspaceActionDescriptor> workspaceActions,
   required AdminWorkspaceController? controller,
+  required ValueChanged<AdminWorkspaceActionDescriptor>? onWorkspaceAction,
 }) {
   if (label == null || controller == null) {
     return null;
@@ -798,6 +808,26 @@ AdminActionItem? _resolveHeaderAction({
   final normalized = label.trim().toLowerCase();
   if (normalized.isEmpty) {
     return null;
+  }
+
+  if (onWorkspaceAction != null && workspaceActions.isNotEmpty) {
+    final matchingAction = workspaceActions.firstWhere(
+      (a) =>
+          a.label.trim().toLowerCase() == normalized ||
+          a.id.trim().toLowerCase() == normalized.replaceAll(' ', '-') ||
+          normalized.contains(a.label.trim().toLowerCase()),
+      orElse: () => workspaceActions.first,
+    );
+    if (normalized.contains('create') ||
+        normalized.contains('add') ||
+        normalized.contains('new') ||
+        matchingAction.label.trim().toLowerCase() == normalized) {
+      return AdminActionItem(
+        label: label,
+        icon: icon,
+        onPressed: () => onWorkspaceAction(matchingAction),
+      );
+    }
   }
 
   String? matchingTab() {
@@ -868,6 +898,13 @@ AdminActionItem? _resolveHeaderAction({
       label: label,
       icon: icon,
       onPressed: controller.refresh,
+    );
+  }
+  if (onWorkspaceAction != null && workspaceActions.isNotEmpty) {
+    return AdminActionItem(
+      label: label,
+      icon: icon,
+      onPressed: () => onWorkspaceAction(workspaceActions.first),
     );
   }
   return null;

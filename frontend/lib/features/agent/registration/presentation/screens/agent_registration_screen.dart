@@ -1190,7 +1190,7 @@ class _AgentRegistrationScreenState
     }
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('Customer registration submitted successfully and sent for approval.'),
+        content: Text('Customer registered and activated successfully.'),
       ),
     );
     setState(() {
@@ -1341,7 +1341,7 @@ class _AgentRegistrationScreenState
       'business_id': _selectedBusinessId,
       'initial_wallet_balance': _initialBalanceController.text.trim(),
       'opening_balance': _initialBalanceController.text.trim(),
-      'status': submit ? 'PENDING' : 'INCOMPLETE',
+      'status': submit ? 'ACTIVE' : 'INCOMPLETE',
     };
 
     if (_draftCustomerId == null) {
