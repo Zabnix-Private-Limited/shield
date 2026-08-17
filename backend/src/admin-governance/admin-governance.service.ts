@@ -2458,23 +2458,19 @@ export class AdminGovernanceService {
     const selectedAgentCode = query.selectedId?.trim() || undefined;
     let selectedAgentDetailRows: Array<{ label: string; value: string }> = [];
     if (selectedAgentCode && selectedAgentCode.length > 0) {
-      try {
-        const perf = await this.getAgentProfilePerformance(selectedAgentCode);
+      const selectedAgentUser = agentUsers.find(
+        (u) => u.employeeCode === selectedAgentCode || u.uuid === selectedAgentCode,
+      );
+      if (selectedAgentUser) {
         selectedAgentDetailRows = [
-          { label: 'Agent Name', value: perf.agent.name },
-          { label: 'Employee Code', value: perf.agent.code },
-          { label: 'Role & Scope', value: perf.agent.role },
-          { label: 'Branch & Dept', value: `${perf.agent.branch} • ${perf.agent.department}` },
-          { label: 'Contact', value: `${perf.agent.mobile} • ${perf.agent.email}` },
-          { label: 'Account Status', value: perf.agent.status },
-          { label: 'Onboarded Customers', value: `${perf.metrics.totalCustomersOnboarded} customers` },
-          { label: 'Active Memberships', value: `${perf.metrics.activeMembershipsAdded} active` },
-          { label: 'Estimated Earnings', value: perf.metrics.totalEarningsFormatted },
-          { label: 'Tasks & Visits', value: `${perf.metrics.completedFollowUps} follow-ups, ${perf.metrics.completedVisits} visits` },
-          { label: 'Joined Date', value: perf.agent.joinedAt },
+          { label: 'Agent Name', value: this.resolveUserDisplayName(selectedAgentUser as any) },
+          { label: 'Employee Code', value: selectedAgentUser.employeeCode || 'N/A' },
+          { label: 'Role & Scope', value: (selectedAgentUser as any).role?.name || 'SHIELD Agent' },
+          { label: 'Branch & Dept', value: `${(selectedAgentUser as any).branchBusiness?.name || 'Sahakar Healthcare Group'}` },
+          { label: 'Contact', value: `${selectedAgentUser.mobile || 'N/A'}` },
+          { label: 'Account Status', value: selectedAgentUser.status || 'ACTIVE' },
+          { label: 'Performance Breakdown', value: 'Click agent card to view onboarded customers, child referrals network, and calculated earnings modal' },
         ];
-      } catch (err) {
-        // detail lookup silent fallback
       }
     }
 
@@ -2605,28 +2601,47 @@ export class AdminGovernanceService {
     }
 
     const agentCode = user.employeeCode || '';
+    const directCustomers = await this.prisma.customer.findMany({
+      where: {
+        deletedAt: null,
+        OR: [
+          { createdBy: user.id },
+          { agentCode: agentCode },
+        ],
+      },
+      include: {
+        membership: { include: { membershipType: true } },
+        wallet: true,
+      },
+      orderBy: [{ createdAt: 'desc' }],
+    });
+
+    const directCustomerIds = directCustomers.map((c) => c.id);
+
     const [
-      customers,
+      childCustomers,
       memberships,
       referralEvents,
       tasks,
       appointments,
       audits,
     ] = await Promise.all([
-      this.prisma.customer.findMany({
-        where: {
-          deletedAt: null,
-          OR: [
-            { createdBy: user.id },
-            { agentCode: agentCode },
-          ],
-        },
-        include: {
-          membership: { include: { membershipType: true } },
-          wallet: true,
-        },
-        orderBy: [{ createdAt: 'desc' }],
-      }),
+      directCustomerIds.length > 0
+        ? this.prisma.customer.findMany({
+            where: {
+              deletedAt: null,
+              referredById: { in: directCustomerIds },
+            },
+            include: {
+              membership: { include: { membershipType: true } },
+              wallet: true,
+              referredBy: {
+                select: { id: true, customerCode: true, firstName: true, lastName: true },
+              },
+            },
+            orderBy: [{ createdAt: 'desc' }],
+          })
+        : Promise.resolve([] as any[]),
       this.prisma.membership.findMany({
         where: {
           customer: {
@@ -2665,36 +2680,93 @@ export class AdminGovernanceService {
       }),
     ]);
 
-    const activeMembershipsCount = customers.filter(
+    // Fast wallet balance aggregation in single groupBy query
+    const walletIds = [
+      ...directCustomers.map((c) => c.wallet?.id).filter(Boolean),
+      ...childCustomers.map((c) => c.wallet?.id).filter(Boolean),
+    ] as bigint[];
+
+    const walletBalancesMap = new Map<string, number>();
+    if (walletIds.length > 0) {
+      const aggregations = await this.prisma.cashWalletTransaction.groupBy({
+        by: ['walletId'],
+        where: { walletId: { in: walletIds } },
+        _sum: { amount: true },
+      });
+      for (const agg of aggregations) {
+        if (agg.walletId) {
+          walletBalancesMap.set(
+            agg.walletId.toString(),
+            Number(agg._sum.amount || 0),
+          );
+        }
+      }
+    }
+
+    const directActiveCount = directCustomers.filter(
       (c) => c.membership?.status?.toUpperCase() === 'ACTIVE',
     ).length;
+    const directRegCount = directCustomers.length;
 
-    const baseEarnings =
-      activeMembershipsCount * 250 + customers.length * 50 + referralEvents.length * 20;
+    const childActiveCount = childCustomers.filter(
+      (c) => c.membership?.status?.toUpperCase() === 'ACTIVE',
+    ).length;
+    const childRegCount = childCustomers.length;
 
-    const customerSummaries = await Promise.all(
-      customers.map(async (c) => {
-        let cashAvailable = 0;
-        if (c.wallet) {
-          const wSummary = await this.prisma.cashWalletTransaction.aggregate({
-            where: { walletId: c.wallet.id },
-            _sum: { amount: true },
-          });
-          cashAvailable = Number(wSummary._sum.amount || 0);
-        }
-        return {
-          id: c.id.toString(),
-          code: c.customerCode || 'N/A',
-          name: `${c.firstName || ''} ${c.lastName || ''}`.trim() || 'Customer',
-          mobile: c.mobile,
-          status: c.status || 'ACTIVE',
-          membershipStatus: c.membership?.status || 'NO_MEMBERSHIP',
-          membershipTier: c.membership?.membershipType?.name || 'Standard',
-          walletBalance: `₹${cashAvailable.toFixed(2)}`,
-          joinedAt: this.formatDateTime(c.createdAt),
-        };
-      }),
-    );
+    const directActiveEarnings = directActiveCount * 250;
+    const directRegEarnings = directRegCount * 50;
+    const childActiveEarnings = childActiveCount * 100;
+    const childRegEarnings = childRegCount * 30;
+
+    const totalEarnings =
+      directActiveEarnings +
+      directRegEarnings +
+      childActiveEarnings +
+      childRegEarnings;
+
+    const customerSummaries = directCustomers.map((c) => {
+      const cash = c.wallet?.id
+        ? walletBalancesMap.get(c.wallet.id.toString()) || 0
+        : 0;
+      return {
+        id: c.id.toString(),
+        code: c.customerCode || 'N/A',
+        name: `${c.firstName || ''} ${c.lastName || ''}`.trim() || 'Customer',
+        mobile: c.mobile,
+        status: c.status || 'ACTIVE',
+        membershipStatus: c.membership?.status || 'NO_MEMBERSHIP',
+        membershipTier: c.membership?.membershipType?.name || 'Standard',
+        walletBalance: `₹${cash.toFixed(2)}`,
+        joinedAt: this.formatDateTime(c.createdAt),
+      };
+    });
+
+    const childReferralSummaries = childCustomers.map((c) => {
+      const cash = c.wallet?.id
+        ? walletBalancesMap.get(c.wallet.id.toString()) || 0
+        : 0;
+      const parentName = c.referredBy
+        ? `${c.referredBy.firstName || ''} ${c.referredBy.lastName || ''}`.trim()
+        : 'Parent Customer';
+      const parentCode = c.referredBy?.customerCode || '';
+      const isActive = c.membership?.status?.toUpperCase() === 'ACTIVE';
+      const earnedCommission = isActive ? 130 : 30;
+
+      return {
+        id: c.id.toString(),
+        code: c.customerCode || 'N/A',
+        name: `${c.firstName || ''} ${c.lastName || ''}`.trim() || 'Child Customer',
+        mobile: c.mobile,
+        parentCustomerName: parentName,
+        parentCustomerCode: parentCode,
+        status: c.status || 'ACTIVE',
+        membershipStatus: c.membership?.status || 'NO_MEMBERSHIP',
+        membershipTier: c.membership?.membershipType?.name || 'Standard',
+        walletBalance: `₹${cash.toFixed(2)}`,
+        earnedCommission: `₹${earnedCommission}`,
+        joinedAt: this.formatDateTime(c.createdAt),
+      };
+    });
 
     return {
       agent: {
@@ -2710,14 +2782,33 @@ export class AdminGovernanceService {
         joinedAt: this.formatDateTime(user.createdAt),
       },
       metrics: {
-        totalCustomersOnboarded: customers.length,
-        activeMembershipsAdded: activeMembershipsCount,
-        totalNetworkReferrals: referralEvents.length,
-        totalEarningsFormatted: `₹${baseEarnings.toLocaleString('en-IN')}`,
+        totalCustomersOnboarded: directCustomers.length,
+        activeMembershipsAdded: directActiveCount,
+        totalChildReferrals: childCustomers.length,
+        activeChildMemberships: childActiveCount,
+        totalNetworkReferrals: referralEvents.length + childCustomers.length,
+        totalEarningsFormatted: `₹${totalEarnings.toLocaleString('en-IN')}`,
         completedFollowUps: tasks.filter((t) => t.status === 'COMPLETED').length,
         completedVisits: appointments.filter((a) => a.status === 'COMPLETED').length,
       },
+      earningsBreakdown: {
+        totalEarnings: totalEarnings,
+        directActiveRate: '₹250 / Active Direct',
+        directActiveCount: directActiveCount,
+        directActiveEarnings: `₹${directActiveEarnings}`,
+        directRegRate: '₹50 / Direct Customer',
+        directRegCount: directRegCount,
+        directRegEarnings: `₹${directRegEarnings}`,
+        childActiveRate: '₹100 / Active Child Referral',
+        childActiveCount: childActiveCount,
+        childActiveEarnings: `₹${childActiveEarnings}`,
+        childRegRate: '₹30 / Child Referral',
+        childRegCount: childRegCount,
+        childRegEarnings: `₹${childRegEarnings}`,
+        formulaText: `₹250 × ${directActiveCount} (Active Direct) + ₹50 × ${directRegCount} (Direct Cust) + ₹100 × ${childActiveCount} (Child Active) + ₹30 × ${childRegCount} (Child Cust)`,
+      },
       addedCustomers: customerSummaries,
+      childReferrals: childReferralSummaries,
       membershipsAdded: memberships.map((m) => ({
         membershipNumber: m.membershipNumber,
         customerName: `${m.customer?.firstName || ''} ${m.customer?.lastName || ''}`.trim(),

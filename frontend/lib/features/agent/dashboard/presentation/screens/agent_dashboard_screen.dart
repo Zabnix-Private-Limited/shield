@@ -7,6 +7,7 @@ import '../../../shared/presentation/controllers/agent_portal_provider.dart';
 import '../../../shared/presentation/widgets/agent_design_system.dart';
 import '../../../shared/presentation/widgets/agent_experience_widgets.dart';
 import '../../../shared/presentation/widgets/agent_section_header.dart';
+import '../../../../../shared/services/internal_auth_session.dart';
 
 class AgentDashboardScreen extends ConsumerStatefulWidget {
   const AgentDashboardScreen({super.key});
@@ -34,12 +35,15 @@ class _AgentDashboardScreenState extends ConsumerState<AgentDashboardScreen> {
     final display = Map<String, dynamic>.from(
       authProfile['display'] ?? const {},
     );
-    final firstName =
-        display['fullName']?.toString().trim().split(' ').firstOrNull ??
-        'Agent';
+    final sessionDisplayName = InternalAuthSession.instance.displayName?.trim();
+    final rawName = (sessionDisplayName != null && sessionDisplayName.isNotEmpty)
+        ? sessionDisplayName
+        : (display['fullName']?.toString().trim() ?? '');
+    final firstName = rawName.isNotEmpty ? rawName.split(' ').first : '';
+    final greetingTitle = firstName.isNotEmpty ? 'Good morning, $firstName' : 'Agent Operations';
 
     if (controller.isLoading && controller.workspace.isEmpty) {
-      return _DashboardLoadingState(firstName: firstName);
+      return _DashboardLoadingState(firstName: firstName.isNotEmpty ? firstName : 'Agent');
     }
 
     if ((controller.error ?? '').trim().isNotEmpty &&
@@ -208,7 +212,7 @@ class _AgentDashboardScreenState extends ConsumerState<AgentDashboardScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         AgentSectionHeader(
-          title: 'Good morning, $firstName',
+          title: greetingTitle,
           description: 'Start with what needs action today.',
         ),
         const SizedBox(height: 12),
@@ -583,8 +587,4 @@ String _resolveDashboardError(String message) {
   return normalized.isEmpty
       ? 'The dashboard could not be loaded right now.'
       : normalized;
-}
-
-extension on List<String> {
-  String? get firstOrNull => isEmpty ? null : first;
 }

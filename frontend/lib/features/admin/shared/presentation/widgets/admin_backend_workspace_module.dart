@@ -524,36 +524,38 @@ class _ListPanel extends StatelessWidget {
       );
     }
 
-    return Column(
-      children: panel.items
-          .map(
-            (item) => Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: InkWell(
-                onTap: controller == null || panel.selectionKey == null
-                    ? null
-                    : () {
-                        final code = item[panel.selectionKey!];
-                        controller!.selectRecord(code);
-                        if (code != null && code.toString().isNotEmpty) {
-                          _showAgentPerformanceDialog(context, code.toString());
-                        }
-                      },
-                child: AdminEntityCard(
-                  item: AdminEntityItem(
-                    title: item['title'] ?? 'Record',
-                    subtitle: item['subtitle'] ?? '',
-                    meta: item['meta'] ?? '',
-                    status: AppDisplayFormatters.formatStatusLabel(
-                      item['status'] ?? 'UNKNOWN',
-                    ),
-                    color: _statusColor(item['status']),
-                  ),
+    return ListView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: panel.items.length,
+      itemBuilder: (context, index) {
+        final item = panel.items[index];
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: InkWell(
+            onTap: controller == null || panel.selectionKey == null
+                ? null
+                : () {
+                    final code = item[panel.selectionKey!];
+                    controller!.selectRecord(code);
+                    if (code != null && code.toString().isNotEmpty) {
+                      _showAgentPerformanceDialog(context, code.toString());
+                    }
+                  },
+            child: AdminEntityCard(
+              item: AdminEntityItem(
+                title: item['title'] ?? 'Record',
+                subtitle: item['subtitle'] ?? '',
+                meta: item['meta'] ?? '',
+                status: AppDisplayFormatters.formatStatusLabel(
+                  item['status'] ?? 'UNKNOWN',
                 ),
+                color: _statusColor(item['status']),
               ),
             ),
-          )
-          .toList(growable: false),
+          ),
+        );
+      },
     );
   }
 }
@@ -1534,8 +1536,14 @@ class _AgentPerformanceModalState extends State<_AgentPerformanceModal> {
               final data = snapshot.data!;
               final agent = Map<String, dynamic>.from(data['agent'] ?? {});
               final metrics = Map<String, dynamic>.from(data['metrics'] ?? {});
+              final breakdown = Map<String, dynamic>.from(data['earningsBreakdown'] ?? {});
+              final formulaText = breakdown['formulaText']?.toString() ?? '';
+
               final customers = List<Map<String, dynamic>>.from(
                 (data['addedCustomers'] as List? ?? []).map((x) => Map<String, dynamic>.from(x)),
+              );
+              final childReferrals = List<Map<String, dynamic>>.from(
+                (data['childReferrals'] as List? ?? []).map((x) => Map<String, dynamic>.from(x)),
               );
 
               return Column(
@@ -1598,93 +1606,228 @@ class _AgentPerformanceModalState extends State<_AgentPerformanceModal> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 16),
                   Row(
                     children: [
                       _StatCard(
-                        title: 'Customers Onboarded',
+                        title: 'Direct Customers',
                         value: '${metrics['totalCustomersOnboarded'] ?? 0}',
                         icon: Icons.people_outline,
                         color: AppColors.shieldBlue,
                       ),
-                      const SizedBox(width: 12),
+                      const SizedBox(width: 10),
                       _StatCard(
                         title: 'Active Memberships',
                         value: '${metrics['activeMembershipsAdded'] ?? 0}',
                         icon: Icons.card_membership_outlined,
                         color: AppColors.shieldGreen,
                       ),
-                      const SizedBox(width: 12),
+                      const SizedBox(width: 10),
                       _StatCard(
-                        title: 'Agent Earnings',
+                        title: 'Child Referrals',
+                        value: '${metrics['totalChildReferrals'] ?? 0}',
+                        icon: Icons.share_outlined,
+                        color: Colors.deepPurple,
+                      ),
+                      const SizedBox(width: 10),
+                      _StatCard(
+                        title: 'Calculated Earnings',
                         value: '${metrics['totalEarningsFormatted'] ?? '₹0'}',
                         icon: Icons.account_balance_wallet_outlined,
                         color: Colors.amber.shade800,
                       ),
-                      const SizedBox(width: 12),
-                      _StatCard(
-                        title: 'Tasks & Visits',
-                        value: '${(metrics['completedFollowUps'] ?? 0) + (metrics['completedVisits'] ?? 0)}',
-                        icon: Icons.task_alt_outlined,
-                        color: Colors.purple,
-                      ),
                     ],
                   ),
-                  const SizedBox(height: 20),
-                  Text('Onboarded Customers & Memberships Added', style: AppTypography.h4),
-                  const SizedBox(height: 10),
-                  Expanded(
-                    child: customers.isEmpty
-                        ? const Center(
-                            child: Text(
-                              'No customers onboarded by this agent yet.',
-                              style: TextStyle(color: AppColors.gray),
-                            ),
-                          )
-                        : ListView.separated(
-                            itemCount: customers.length,
-                            separatorBuilder: (_, __) => const Divider(height: 1),
-                            itemBuilder: (context, index) {
-                              final cust = customers[index];
-                              return ListTile(
-                                dense: true,
-                                leading: CircleAvatar(
-                                  backgroundColor: AppColors.lightGray,
-                                  child: Text(
-                                    (cust['name'] ?? 'C')[0].toUpperCase(),
-                                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  if (formulaText.isNotEmpty) ...[
+                    const SizedBox(height: 12),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: Colors.amber.shade50,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.amber.shade200),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.calculate_outlined, color: Colors.amber.shade900, size: 20),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Earnings & Commission Formula Rate',
+                                  style: AppTypography.tiny.copyWith(
+                                    color: Colors.amber.shade900,
+                                    fontWeight: FontWeight.w700,
                                   ),
                                 ),
-                                title: Text(
-                                  cust['name'] ?? 'Customer',
-                                  style: AppTypography.body.copyWith(fontWeight: FontWeight.w700),
+                                const SizedBox(height: 2),
+                                Text(
+                                  formulaText,
+                                  style: AppTypography.tiny.copyWith(
+                                    color: AppColors.shieldNavy,
+                                    fontWeight: FontWeight.w600,
+                                  ),
                                 ),
-                                subtitle: Text(
-                                  '${cust['code']} • ${cust['mobile']} • Joined ${cust['joinedAt']}',
-                                  style: AppTypography.small,
-                                ),
-                                trailing: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  crossAxisAlignment: CrossAxisAlignment.end,
-                                  children: [
-                                    Text(
-                                      cust['membershipTier'] ?? 'Standard',
-                                      style: AppTypography.small.copyWith(
-                                        color: AppColors.shieldBlue,
-                                        fontWeight: FontWeight.w700,
-                                      ),
-                                    ),
-                                    Text(
-                                      cust['walletBalance'] ?? '₹0.00',
-                                      style: AppTypography.tiny.copyWith(
-                                        color: AppColors.darkGray,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            },
+                              ],
+                            ),
                           ),
+                        ],
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: 14),
+                  Expanded(
+                    child: DefaultTabController(
+                      length: 2,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          TabBar(
+                            labelColor: AppColors.shieldBlue,
+                            unselectedLabelColor: AppColors.gray,
+                            indicatorColor: AppColors.shieldBlue,
+                            isScrollable: true,
+                            tabAlignment: TabAlignment.start,
+                            tabs: [
+                              Tab(text: 'Direct Customers (${customers.length})'),
+                              Tab(text: 'Child Referrals Network (${childReferrals.length})'),
+                            ],
+                          ),
+                          const SizedBox(height: 10),
+                          Expanded(
+                            child: TabBarView(
+                              children: [
+                                customers.isEmpty
+                                    ? const Center(
+                                        child: Text(
+                                          'No direct customers onboarded by this agent yet.',
+                                          style: TextStyle(color: AppColors.gray),
+                                        ),
+                                      )
+                                    : ListView.separated(
+                                        itemCount: customers.length,
+                                        separatorBuilder: (_, __) => const Divider(height: 1),
+                                        itemBuilder: (context, index) {
+                                          final cust = customers[index];
+                                          return ListTile(
+                                            dense: true,
+                                            leading: CircleAvatar(
+                                              backgroundColor: AppColors.lightGray,
+                                              child: Text(
+                                                (cust['name'] ?? 'C')[0].toUpperCase(),
+                                                style: const TextStyle(fontWeight: FontWeight.bold),
+                                              ),
+                                            ),
+                                            title: Text(
+                                              cust['name'] ?? 'Customer',
+                                              style: AppTypography.body.copyWith(fontWeight: FontWeight.w700),
+                                            ),
+                                            subtitle: Text(
+                                              '${cust['code']} • ${cust['mobile']} • Joined ${cust['joinedAt']}',
+                                              style: AppTypography.small,
+                                            ),
+                                            trailing: Column(
+                                              mainAxisAlignment: MainAxisAlignment.center,
+                                              crossAxisAlignment: CrossAxisAlignment.end,
+                                              children: [
+                                                Text(
+                                                  cust['membershipTier'] ?? 'Standard',
+                                                  style: AppTypography.small.copyWith(
+                                                    color: AppColors.shieldBlue,
+                                                    fontWeight: FontWeight.w700,
+                                                  ),
+                                                ),
+                                                Text(
+                                                  'Wallet: ${cust['walletBalance'] ?? '₹0.00'}',
+                                                  style: AppTypography.tiny.copyWith(
+                                                    color: AppColors.darkGray,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          );
+                                        },
+                                      ),
+                                childReferrals.isEmpty
+                                    ? const Center(
+                                        child: Text(
+                                          'No child referrals registered under this agent\'s customers yet.',
+                                          style: TextStyle(color: AppColors.gray),
+                                        ),
+                                      )
+                                    : ListView.separated(
+                                        itemCount: childReferrals.length,
+                                        separatorBuilder: (_, __) => const Divider(height: 1),
+                                        itemBuilder: (context, index) {
+                                          final child = childReferrals[index];
+                                          return ListTile(
+                                            dense: true,
+                                            leading: CircleAvatar(
+                                              backgroundColor: AppColors.shieldBlue.withValues(alpha: 0.1),
+                                              child: const Icon(
+                                                Icons.share_outlined,
+                                                size: 18,
+                                                color: AppColors.shieldBlue,
+                                              ),
+                                            ),
+                                            title: Row(
+                                              children: [
+                                                Text(
+                                                  child['name'] ?? 'Child Customer',
+                                                  style: AppTypography.body.copyWith(fontWeight: FontWeight.w700),
+                                                ),
+                                                const SizedBox(width: 8),
+                                                Container(
+                                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                                  decoration: BoxDecoration(
+                                                    color: AppColors.shieldBlue.withValues(alpha: 0.1),
+                                                    borderRadius: BorderRadius.circular(6),
+                                                  ),
+                                                  child: Text(
+                                                    'Child Referral',
+                                                    style: AppTypography.tiny.copyWith(
+                                                      color: AppColors.shieldBlue,
+                                                      fontWeight: FontWeight.w700,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                            subtitle: Text(
+                                              '${child['code']} • Referred by: ${child['parentCustomerName']} (${child['parentCustomerCode']}) • Joined ${child['joinedAt']}',
+                                              style: AppTypography.small,
+                                            ),
+                                            trailing: Column(
+                                              mainAxisAlignment: MainAxisAlignment.center,
+                                              crossAxisAlignment: CrossAxisAlignment.end,
+                                              children: [
+                                                Text(
+                                                  'Earned: ${child['earnedCommission'] ?? '₹0'}',
+                                                  style: AppTypography.small.copyWith(
+                                                    color: AppColors.shieldGreen,
+                                                    fontWeight: FontWeight.w700,
+                                                  ),
+                                                ),
+                                                Text(
+                                                  'Wallet: ${child['walletBalance'] ?? '₹0.00'}',
+                                                  style: AppTypography.tiny.copyWith(
+                                                    color: AppColors.darkGray,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          );
+                                        },
+                                      ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
                 ],
               );

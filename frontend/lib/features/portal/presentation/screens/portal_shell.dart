@@ -52,12 +52,10 @@ import '../../../../shared/widgets/app_page_frame.dart';
 import '../../../../shared/widgets/app_responsive.dart';
 import '../../../../shared/widgets/app_skeleton.dart';
 import '../../../../shared/widgets/shield_date_input_field.dart';
-import '../../../../shared/widgets/shield_brand_lockup.dart';
 import '../../../../shared/services/api_service.dart';
 import '../../../../shared/services/app_policy_links.dart';
 import '../../../../shared/services/customer_auth_session.dart';
 import '../../../../shared/services/internal_auth_session.dart';
-import '../../../../shared/services/portal_resolver.dart';
 import '../../../customer/services/presentation/screens/customer_services_screen.dart';
 import '../../../customer/support/presentation/screens/customer_support_screen.dart';
 import '../../../customer/booking/presentation/customer_booking_screen.dart';
@@ -1052,6 +1050,11 @@ class _PortalHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final staffDisplayName = InternalAuthSession.instance.displayName?.trim();
+    final headerEyebrow = (staffDisplayName != null && staffDisplayName.isNotEmpty)
+        ? '$staffDisplayName • ${portal.role.label}'
+        : portal.role.label;
+
     return Row(
       children: [
         if (onSidebarToggle != null)
@@ -1091,7 +1094,7 @@ class _PortalHeader extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                portal.role.label,
+                headerEyebrow,
                 style: AppTypography.tiny.copyWith(
                   color: portal.accentColor,
                   fontWeight: FontWeight.w700,
@@ -1546,17 +1549,6 @@ class _AdminPortalNav extends StatelessWidget {
         ],
       ),
     );
-  }
-}
-
-class _RoleSwitcher extends StatelessWidget {
-  final PortalRoleData portal;
-
-  const _RoleSwitcher({required this.portal});
-
-  @override
-  Widget build(BuildContext context) {
-    return const SizedBox.shrink();
   }
 }
 

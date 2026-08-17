@@ -82,9 +82,9 @@ class GreetingHeader extends StatelessWidget {
             children: [
               Expanded(
                 child: Text(
-                  state == MembershipDashboardState.activeMember
-                      ? customer.fullName.toUpperCase()
-                      : 'Membership',
+                  customer.fullName.trim().isNotEmpty
+                      ? customer.fullName
+                      : 'Customer Profile',
                   style: AppTypography.body.copyWith(
                     color: AppColors.white,
                     fontWeight: FontWeight.w700,
