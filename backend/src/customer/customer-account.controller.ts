@@ -267,10 +267,14 @@ export class CustomerAccountController {
 
   @RequirePermissions('customers.view')
   @Get('pharmacies')
-  async pharmacies() {
+  async pharmacies(@CurrentPrincipal() principal?: ShieldPrincipal) {
+    const customerId =
+      principal?.principalType === 'CUSTOMER' && principal.customerId
+        ? BigInt(principal.customerId)
+        : undefined;
     return {
       success: true,
-      data: await this.customerService.listEligiblePharmacies(),
+      data: await this.customerService.listEligiblePharmacies(customerId),
     };
   }
 

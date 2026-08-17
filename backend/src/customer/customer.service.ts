@@ -1108,7 +1108,28 @@ export class CustomerService {
     return preference;
   }
 
-  async listEligiblePharmacies() {
+  async listEligiblePharmacies(customerId?: bigint) {
+    if (customerId) {
+      const card = await this.prisma.shieldCard.findFirst({
+        where: { customerId },
+        select: { issuedBusinessId: true },
+      });
+      if (card?.issuedBusinessId) {
+        const branchPharmacies = await this.prisma.serviceProvider.findMany({
+          where: {
+            status: 'ACTIVE',
+            providerType: 'PHARMACY',
+            businessId: card.issuedBusinessId,
+          },
+          include: { business: true },
+          orderBy: { providerName: 'asc' },
+        });
+        if (branchPharmacies.length > 0) {
+          return branchPharmacies;
+        }
+      }
+    }
+
     return this.prisma.serviceProvider.findMany({
       where: { status: 'ACTIVE', providerType: 'PHARMACY' },
       include: { business: true },
