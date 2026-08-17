@@ -50,11 +50,14 @@ class ApiService {
         ..interceptors.add(
           InterceptorsWrapper(
             onRequest: (options, handler) {
-              final accessToken = _accessToken?.trim();
-              if (accessToken != null && accessToken.isNotEmpty) {
-                options.headers['Authorization'] = 'Bearer $accessToken';
-              } else {
-                options.headers.remove('Authorization');
+              final isRetried = options.extra['retried'] == true;
+              if (!isRetried) {
+                final accessToken = _accessToken?.trim();
+                if (accessToken != null && accessToken.isNotEmpty) {
+                  options.headers['Authorization'] = 'Bearer $accessToken';
+                } else {
+                  options.headers.remove('Authorization');
+                }
               }
               handler.next(options);
             },
@@ -73,6 +76,8 @@ class ApiService {
                   final refreshedToken = await _refreshAccessTokenSingleFlight();
                   if (refreshedToken != null &&
                       refreshedToken.trim().isNotEmpty) {
+                    setAccessToken(refreshedToken.trim());
+
                     final retryHeaders = Map<String, dynamic>.from(options.headers);
                     retryHeaders['Authorization'] = 'Bearer ${refreshedToken.trim()}';
 
@@ -98,10 +103,10 @@ class ApiService {
                   if (_onSessionExpired != null) {
                     await _onSessionExpired!.call();
                   }
-                } catch (_) {
-                  if (_onSessionExpired != null) {
-                    await _onSessionExpired!.call();
-                  }
+                } catch (refreshErr) {
+                  debugPrint(
+                    '[ApiService] Token refresh single flight caught error: $refreshErr',
+                  );
                 }
               }
 

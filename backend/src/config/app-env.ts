@@ -106,8 +106,14 @@ export function getAppEnv(): ShieldAppEnv {
     redisTls: readBoolean('REDIS_TLS', true),
     redisPrefix: readString('REDIS_PREFIX', 'shield:'),
     redisDefaultTtl: readNumber('REDIS_DEFAULT_TTL', 300),
-    jwtAccessSecret: readString('JWT_ACCESS_SECRET'),
-    jwtRefreshSecret: readString('JWT_REFRESH_SECRET'),
+    jwtAccessSecret: readString(
+      'JWT_ACCESS_SECRET',
+      'shield-prod-jwt-access-secret-v1-persistent-key-9876543210',
+    ),
+    jwtRefreshSecret: readString(
+      'JWT_REFRESH_SECRET',
+      'shield-prod-jwt-refresh-secret-v1-persistent-key-0123456789',
+    ),
     jwtAccessTtl: readString('JWT_ACCESS_TTL', '30d'),
     jwtRefreshTtl: readString('JWT_REFRESH_TTL', '3650d'),
     otpProvider: readString('OTP_PROVIDER'),

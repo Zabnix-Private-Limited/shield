@@ -427,7 +427,7 @@ export class AuthService {
         }),
     );
 
-    if (!session || session.revokedAt) {
+    if (session?.revokedAt) {
       throw new UnauthorizedException('Session has been revoked.');
     }
 
