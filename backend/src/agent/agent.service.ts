@@ -196,15 +196,22 @@ export class AgentService {
         })
       : [];
 
+    const isEligibleForCommission = (c: any) =>
+      c.onboardingSource !== 'ERP_CONVERTED';
+
     const directActiveCount = customers.filter(
-      (c) => c.membership?.status?.toUpperCase() === 'ACTIVE',
+      (c) =>
+        isEligibleForCommission(c) &&
+        c.membership?.status?.toUpperCase() === 'ACTIVE',
     ).length;
     const childActiveCount = childCustomers.filter(
-      (c) => c.membership?.status?.toUpperCase() === 'ACTIVE',
+      (c) =>
+        isEligibleForCommission(c) &&
+        c.membership?.status?.toUpperCase() === 'ACTIVE',
     ).length;
 
-    const directRegCount = customers.length;
-    const childRegCount = childCustomers.length;
+    const directRegCount = customers.filter(isEligibleForCommission).length;
+    const childRegCount = childCustomers.filter(isEligibleForCommission).length;
 
     const directActiveEarnings = directActiveCount * 250;
     const directRegEarnings = directRegCount * 50;

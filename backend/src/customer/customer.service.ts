@@ -1705,9 +1705,14 @@ export class CustomerService {
       });
       if (existingCustomer) {
         throw new ConflictException(
-          'Customer already exists. Use existing-customer conversion instead.',
+          'Member already exists in SHIELD. Cannot register a duplicate account.',
         );
       }
+
+      const erpExisting = await tx.erpExistingCustomer.findFirst({
+        where: { mobile: { endsWith: normalizedMobile } },
+      });
+
       let referredById: bigint | null = null;
       let assignedAgentCode =
         (data.agent_code || data.agentCode || '').toString().trim() ||
@@ -1777,6 +1782,12 @@ export class CustomerService {
         ? 'PENDING'
         : (data.status ?? 'ACTIVE').toString().trim().toUpperCase();
 
+      const onboardingSource = erpExisting
+        ? 'ERP_CONVERTED'
+        : isSelfSignup
+          ? 'SELF_SIGNUP'
+          : 'NEW_REGISTRATION';
+
       const customer = await tx.customer.create({
         data: {
           uuid: customerUuid,
@@ -1799,13 +1810,24 @@ export class CustomerService {
           approvedBy: isSelfSignup ? null : staffUserId,
           bloodGroup: data.blood_group || null,
           agentCode: assignedAgentCode,
-          onboardingSource: isSelfSignup ? 'SELF_SIGNUP' : 'NEW_REGISTRATION',
+          onboardingSource,
           referralCode:
             data.referral_code ||
             `REF-${Math.floor(100000 + Math.random() * 900000)}`,
           referredById,
         },
       });
+
+      if (erpExisting) {
+        await tx.erpExistingCustomer.update({
+          where: { id: erpExisting.id },
+          data: {
+            status: 'LINKED',
+            matchedCustomerId: customer.id,
+            updatedAt: new Date(),
+          },
+        });
+      }
 
       if (referredById) {
         try {
