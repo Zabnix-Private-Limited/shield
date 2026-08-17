@@ -211,10 +211,30 @@ class _AdminBackendWorkspaceModuleState
     }
     Map<String, Object?> payload = const <String, Object?>{};
     if (action.dialog?.type == 'FORM') {
-      final form = await controller.loadForm(
-        action.dialog?.formId ?? action.id,
-        recordId: recordId,
-      );
+      final formId = action.dialog?.formId ?? action.id;
+      Map<String, dynamic>? form;
+      try {
+        form = await controller.loadForm(formId, recordId: recordId);
+      } catch (_) {
+        final payloadForms = (widget.snapshot.data is Map<String, dynamic>)
+            ? (widget.snapshot.data as Map<String, dynamic>)['forms'] as List?
+            : null;
+        if (payloadForms != null) {
+          final found = payloadForms.firstWhere(
+            (f) =>
+                f is Map &&
+                (f['id'] == formId || f['id'] == action.id),
+            orElse: () => null,
+          );
+          if (found is Map) {
+            form = Map<String, dynamic>.from(found);
+          }
+        }
+      }
+      if (form == null) {
+        _showMessage('Form configuration unavailable for this action.');
+        return;
+      }
       final values = await _showWorkspaceFormDialog(form);
       if (values == null) {
         return;

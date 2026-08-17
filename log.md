@@ -13170,3 +13170,22 @@ est build compilation.
 - NestJS compilation (npm run build) succeeded with 0 errors.
 - flutter test suites passed (11/11 tests passed).
 - git diff --check passed cleanly.
+
+## 155. Fix Agent Workspace Form 404 & Schema Loading Fallback (2026-08-17 12:17:00 IST)
+
+- Fixed 404 error when opening the Agent Provisioning Form (GET /admin/workspaces/agents/forms/create-agent-form).
+- Key implementation details:
+  1. Backend Form Endpoint (AdminGovernanceController & AdminGovernanceService in admin-governance.controller.ts and admin-governance.service.ts): Implemented @Get('agents/forms/:formId') returning getAgentWorkspaceForm schema with all fields, options, and default values.
+  2. Frontend Schema Fallback (AdminBackendWorkspaceModule in admin_backend_workspace_module.dart): Added a resilient fallback to embedded forms from workspace payload data if an external network fetch ever fails or is offline, guaranteeing modal rendering.
+
+### Frontend Files (Modified)
+- frontend/lib/features/admin/shared/presentation/widgets/admin_backend_workspace_module.dart
+
+### Backend Files (Modified)
+- backend/src/admin-governance/admin-governance.controller.ts
+- backend/src/admin-governance/admin-governance.service.ts
+
+### Verification
+- NestJS compilation (npm run build) succeeded with 0 errors.
+- flutter test suites passed (11/11 tests passed).
+- git diff --check passed cleanly.

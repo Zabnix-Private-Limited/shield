@@ -2539,6 +2539,100 @@ export class AdminGovernanceService {
     );
   }
 
+  async getAgentWorkspaceForm(
+    formId: string,
+    recordId?: string | null,
+    principal?: ShieldPrincipal,
+  ) {
+    const normalizedFormId = formId.trim().toLowerCase();
+    if (
+      normalizedFormId === 'create-agent-form' ||
+      normalizedFormId === 'create-agent'
+    ) {
+      const branches = await this.prisma.business.findMany({
+        where: { status: 'ACTIVE' },
+        select: { name: true },
+      });
+      const branchOptions = branches.length
+        ? branches.map((b) => b.name)
+        : [
+            'Sahakar Healthcare Group',
+            'Hyperpharmacy Branch 1',
+            'Hyperpharmacy Main Store',
+          ];
+
+      return {
+        id: 'create-agent-form',
+        entity: 'agent',
+        title: 'Agent Provisioning Form',
+        fields: [
+          { key: 'firstName', label: 'First Name', type: 'text', required: true },
+          { key: 'lastName', label: 'Last Name', type: 'text', required: false },
+          {
+            key: 'employeeCode',
+            label: 'Agent / Employee Code',
+            type: 'text',
+            required: true,
+            helperText: 'e.g. AGNT-0003 or EMP-0003',
+          },
+          {
+            key: 'mobile',
+            label: 'Mobile Number',
+            type: 'text',
+            required: true,
+            helperText: '10-digit mobile number',
+          },
+          {
+            key: 'email',
+            label: 'Email Address (Google Sign-In)',
+            type: 'text',
+            required: true,
+            helperText:
+              'Agent will authenticate via Google Sign-In using this email address.',
+          },
+          {
+            key: 'department',
+            label: 'Department',
+            type: 'select',
+            options: [
+              'Field Operations',
+              'Customer Enrollment',
+              'Healthcare Services',
+              'Sales',
+              'Customer Support',
+            ],
+            required: true,
+          },
+          {
+            key: 'branch',
+            label: 'Assigned Branch',
+            type: 'select',
+            options: branchOptions,
+            required: true,
+          },
+          {
+            key: 'accessScope',
+            label: 'Access Scope',
+            type: 'select',
+            options: ['BRANCH_SCOPED', 'CROSS_BRANCH', 'ORGANIZATION'],
+            required: true,
+          },
+          {
+            key: 'status',
+            label: 'Initial Status',
+            type: 'select',
+            options: ['ACTIVE', 'PENDING', 'INACTIVE'],
+            value: 'ACTIVE',
+            required: true,
+          },
+        ],
+      };
+    }
+    throw new BadRequestException(
+      `Unsupported agent workspace form "${formId}".`,
+    );
+  }
+
   async executeAgentWorkspaceAction(
     actionId: string,
     body: any,

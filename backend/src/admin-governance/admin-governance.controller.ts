@@ -158,6 +158,24 @@ export class AdminGovernanceController {
     };
   }
 
+  @RequirePermissions('agents.view')
+  @Get('agents/forms/:formId')
+  async getAgentWorkspaceForm(
+    @Param('formId') formId: string,
+    @Query() query: Record<string, string | undefined>,
+    @CurrentPrincipal() principal?: ShieldPrincipal,
+  ) {
+    return {
+      success: true,
+      message: 'Admin agent workspace form retrieved successfully.',
+      data: await this.adminGovernanceService.getAgentWorkspaceForm(
+        formId,
+        this.normalizeString(query.record_id),
+        principal,
+      ),
+    };
+  }
+
   @RequirePermissions('agents.create')
   @Post('agents/actions/:actionId')
   async executeAgentWorkspaceAction(
