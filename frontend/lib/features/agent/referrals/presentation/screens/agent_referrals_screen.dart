@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../../../../../app/theme/app_colors.dart';
+import '../../../../../app/theme/app_typography.dart';
 import '../../../shared/presentation/controllers/agent_portal_provider.dart';
 import '../../../shared/presentation/widgets/agent_design_system.dart';
 import '../../../shared/presentation/widgets/agent_experience_widgets.dart';
@@ -26,15 +28,24 @@ class _AgentReferralsScreenState extends ConsumerState<AgentReferralsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final workspace = ref
-        .watch(agentPortalControllerProvider)
-        .selectedCustomerWorkspace;
+    final controller = ref.watch(agentPortalControllerProvider);
+    final agentWorkspace = controller.workspace;
+    final customerWorkspace = controller.selectedCustomerWorkspace;
+
     final referralSummary = Map<String, dynamic>.from(
-      workspace['referralSummary'] ?? const {},
+      (agentWorkspace['referralSummary'] != null &&
+              (agentWorkspace['referralSummary'] as Map).isNotEmpty)
+          ? agentWorkspace['referralSummary']
+          : (customerWorkspace['referralSummary'] ?? const {}),
     );
+
     final referralTree = Map<String, dynamic>.from(
-      workspace['referralTree'] ?? const {},
+      (agentWorkspace['referralTree'] != null &&
+              (agentWorkspace['referralTree'] as Map).isNotEmpty)
+          ? agentWorkspace['referralTree']
+          : (customerWorkspace['referralTree'] ?? const {}),
     );
+
     final history = List<Map<String, dynamic>>.from(
       (referralSummary['history'] as List? ?? const <dynamic>[]).map(
         (item) => Map<String, dynamic>.from(item as Map),
@@ -44,6 +55,11 @@ class _AgentReferralsScreenState extends ConsumerState<AgentReferralsScreen> {
       referralSummary['statuses'] ?? const {},
     );
 
+    final referralCode = referralSummary['referralCode']?.toString() ?? '';
+    final referralLink = referralSummary['referralLink']?.toString() ?? '';
+    final formulaText = referralSummary['formulaText']?.toString() ?? '';
+    final totalEarnings = referralSummary['earnedEarningsFormatted']?.toString() ?? '₹0';
+
     return AgentWorkspaceSurface(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -51,38 +67,172 @@ class _AgentReferralsScreenState extends ConsumerState<AgentReferralsScreen> {
           const AgentSectionHeader(
             title: 'Customer Network',
             description:
-                'Track customer growth, reward status, and referral activity through one shared network workspace instead of a collection of unrelated cards.',
+                'Track customer growth, reward status, child referral tree, and calculated earnings through one shared network workspace.',
           ),
+          if (referralLink.isNotEmpty) ...[
+            AgentUi.gapH(AgentUi.space16),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: AppColors.shieldBlue.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: AppColors.shieldBlue.withValues(alpha: 0.2),
+                ),
+              ),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.link_rounded,
+                    color: AppColors.shieldBlue,
+                    size: 24,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Text(
+                              'Your Agent Referral Link',
+                              style: AppTypography.body.copyWith(
+                                color: AppColors.shieldNavy,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            if (referralCode.isNotEmpty) ...[
+                              const SizedBox(width: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 2,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: AppColors.shieldBlue,
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Text(
+                                  referralCode,
+                                  style: AppTypography.tiny.copyWith(
+                                    color: AppColors.white,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                        const SizedBox(height: 2),
+                        SelectableText(
+                          referralLink,
+                          style: AppTypography.small.copyWith(
+                            color: AppColors.darkGray,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.shieldBlue,
+                      foregroundColor: AppColors.white,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                    onPressed: () {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Agent referral link copied to clipboard!'),
+                          duration: Duration(seconds: 2),
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.copy_rounded, size: 16),
+                    label: const Text('Copy Link'),
+                  ),
+                ],
+              ),
+            ),
+          ],
           AgentUi.gapH(AgentUi.space16),
           AgentMetricGrid(
             children: [
               AgentMetricCard(
                 value: '${referralSummary['directReferrals'] ?? 0}',
                 label: 'Direct Customers',
-                helper: 'Customers directly linked to this member.',
+                helper: 'Customers directly onboarded by this agent.',
                 icon: Icons.people_alt_outlined,
               ),
               AgentMetricCard(
                 value: '${referralSummary['totalReferrals'] ?? 0}',
                 label: 'Total Network',
                 helper:
-                    'All connected customers in the visible referral graph.',
+                    'All connected direct & child referral customers.',
                 icon: Icons.account_tree_outlined,
               ),
               AgentMetricCard(
-                value: '${referralSummary['availablePoints'] ?? 0}',
-                label: 'Network Rewards',
-                helper: 'Reward points still available in the network.',
-                icon: Icons.card_giftcard_outlined,
+                value: '${referralSummary['activeMemberships'] ?? 0}',
+                label: 'Active Memberships',
+                helper: 'Active membership count in the network.',
+                icon: Icons.card_membership_outlined,
               ),
               AgentMetricCard(
-                value: '${referralSummary['earnedPoints'] ?? 0}',
-                label: 'Earned Rewards',
-                helper: 'Reward points already claimed or earned.',
-                icon: Icons.emoji_events_outlined,
+                value: totalEarnings,
+                label: 'Calculated Earnings',
+                helper: 'Total agent network earnings & commission.',
+                icon: Icons.account_balance_wallet_outlined,
               ),
             ],
           ),
+          if (formulaText.isNotEmpty) ...[
+            AgentUi.gapH(AgentUi.space12),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                color: Colors.amber.shade50,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.amber.shade200),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.calculate_outlined,
+                    color: Colors.amber.shade900,
+                    size: 20,
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Commission Rate & Earnings Formula',
+                          style: AppTypography.tiny.copyWith(
+                            color: Colors.amber.shade900,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          formulaText,
+                          style: AppTypography.tiny.copyWith(
+                            color: AppColors.shieldNavy,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
           AgentUi.gapH(AgentUi.space16),
           Column(
             children: [
@@ -183,8 +333,32 @@ class _ReferralTreeNode extends StatelessWidget {
         (item) => Map<String, dynamic>.from(item),
       ),
     );
-    final indent = depth * 20.0;
-    final isActive = node['active'] == true;
+    final indent = depth * 22.0;
+    final statusStr = (node['status']?.toString() ?? 'ACTIVE').toUpperCase();
+    final isActive = statusStr == 'ACTIVE' || node['active'] == true;
+    final roleStr = node['role']?.toString() ?? '';
+    final isAgent = roleStr == 'AGENT';
+    final isChild = roleStr == 'CHILD_REFERRAL';
+
+    final nameText = node['name']?.toString().trim().isNotEmpty == true
+        ? node['name'].toString()
+        : (isAgent ? 'SHIELD Agent' : 'Customer');
+
+    final codeText = node['code']?.toString() ?? '';
+    final parentName = node['parentName']?.toString() ?? '';
+
+    String subtitleText = '';
+    if (isAgent) {
+      subtitleText = 'Agent Root • Code: $codeText';
+    } else {
+      final joinedRaw = node['joinedAt'] ?? node['registrationDate'];
+      final joinedStr = joinedRaw != null ? _formatDate(joinedRaw) : 'Active';
+      subtitleText = '$codeText • Joined $joinedStr';
+      if (parentName.isNotEmpty) {
+        subtitleText += ' • Referred by $parentName';
+      }
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -192,45 +366,88 @@ class _ReferralTreeNode extends StatelessWidget {
           margin: EdgeInsets.only(left: indent, bottom: AgentUi.space12),
           padding: AgentUi.cardBodyPadding,
           decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surfaceContainerLowest,
+            color: isAgent
+                ? AppColors.shieldBlue.withValues(alpha: 0.06)
+                : Theme.of(context).colorScheme.surfaceContainerLowest,
             borderRadius: AgentUi.radius(AgentUi.radiusMedium),
+            border: Border.all(
+              color: isAgent
+                  ? AppColors.shieldBlue.withValues(alpha: 0.2)
+                  : AppColors.divider,
+            ),
           ),
           child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Container(
-                width: 40,
-                height: 40,
+                width: 38,
+                height: 38,
                 decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.primaryContainer,
+                  color: isAgent
+                      ? AppColors.shieldBlue
+                      : (isChild
+                          ? AppColors.shieldBlue.withValues(alpha: 0.12)
+                          : Theme.of(context).colorScheme.primaryContainer),
                   borderRadius: AgentUi.radius(AgentUi.radiusMedium),
                 ),
-                child: const Icon(Icons.person_outline),
+                child: Icon(
+                  isAgent
+                      ? Icons.badge_outlined
+                      : (isChild
+                          ? Icons.share_outlined
+                          : Icons.person_outline),
+                  color: isAgent ? AppColors.white : AppColors.shieldBlue,
+                  size: 20,
+                ),
               ),
               AgentUi.gapW(AgentUi.space12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      node['name']?.toString().trim().isNotEmpty == true
-                          ? node['name'].toString()
-                          : 'Customer',
-                      style: Theme.of(context).textTheme.titleSmall,
+                    Row(
+                      children: [
+                        Text(
+                          nameText,
+                          style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                                fontWeight: FontWeight.w700,
+                              ),
+                        ),
+                        if (isChild) ...[
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: AppColors.shieldBlue.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              'Child Referral',
+                              style: AppTypography.tiny.copyWith(
+                                color: AppColors.shieldBlue,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                     AgentUi.gapH(AgentUi.space4),
                     Text(
-                      'Joined ${_formatDate(node['registrationDate'])} • Rewards ${node['rewardPoints'] ?? 0}',
+                      subtitleText,
                       style: Theme.of(context).textTheme.bodySmall,
                     ),
                   ],
                 ),
               ),
               AgentStatusBadge(
-                label: isActive ? 'Active' : 'Inactive',
+                label: isActive ? 'Active' : 'Pending',
                 color: AgentUi.statusColor(
                   context,
-                  isActive ? 'ACTIVE' : 'INACTIVE',
+                  isActive ? 'ACTIVE' : 'PENDING',
                 ),
                 icon: isActive
                     ? Icons.check_circle_outline

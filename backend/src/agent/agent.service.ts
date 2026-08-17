@@ -178,6 +178,45 @@ export class AgentService {
       );
     }
 
+    const directCustomerIds = customerIds;
+    const childCustomers = directCustomerIds.length > 0
+      ? await this.prisma.customer.findMany({
+          where: {
+            deletedAt: null,
+            referredById: { in: directCustomerIds },
+          },
+          include: {
+            membership: true,
+            shieldCard: true,
+            referredBy: {
+              select: { id: true, customerCode: true, firstName: true, lastName: true },
+            },
+          },
+          orderBy: [{ createdAt: 'desc' }],
+        })
+      : [];
+
+    const directActiveCount = customers.filter(
+      (c) => c.membership?.status?.toUpperCase() === 'ACTIVE',
+    ).length;
+    const childActiveCount = childCustomers.filter(
+      (c) => c.membership?.status?.toUpperCase() === 'ACTIVE',
+    ).length;
+
+    const directRegCount = customers.length;
+    const childRegCount = childCustomers.length;
+
+    const directActiveEarnings = directActiveCount * 250;
+    const directRegEarnings = directRegCount * 50;
+    const childActiveEarnings = childActiveCount * 100;
+    const childRegEarnings = childRegCount * 30;
+
+    const totalNetworkEarnings =
+      directActiveEarnings +
+      directRegEarnings +
+      childActiveEarnings +
+      childRegEarnings;
+
     const activeCustomerCount = customers.filter(
       (customer) => (customer.status ?? '').trim().toUpperCase() === 'ACTIVE',
     ).length;
@@ -199,6 +238,68 @@ export class AgentService {
         : Number(
             ((monthlyActiveCustomers / monthlyCustomersAdded) * 100).toFixed(1),
           );
+
+    const statusCounts: Record<string, number> = {};
+    for (const c of [...customers, ...childCustomers]) {
+      const st = (c.status || 'ACTIVE').toUpperCase();
+      statusCounts[st] = (statusCounts[st] || 0) + 1;
+    }
+
+    const agentTreeChildren = customers.map((c) => {
+      const childrenOfC = childCustomers
+        .filter((child) => child.referredById === c.id)
+        .map((child) => ({
+          id: child.id.toString(),
+          name: `${child.firstName || ''} ${child.lastName || ''}`.trim() || 'Child Customer',
+          code: child.customerCode || 'N/A',
+          role: 'CHILD_REFERRAL',
+          status: child.status || 'ACTIVE',
+          membershipStatus: child.membership?.status || 'NO_MEMBERSHIP',
+          parentName: `${c.firstName || ''} ${c.lastName || ''}`.trim(),
+          parentCode: c.customerCode || '',
+          joinedAt: child.createdAt ? child.createdAt.toISOString() : null,
+        }));
+
+      return {
+        id: c.id.toString(),
+        name: `${c.firstName || ''} ${c.lastName || ''}`.trim() || 'Customer',
+        code: c.customerCode || 'N/A',
+        role: 'DIRECT_CUSTOMER',
+        status: c.status || 'ACTIVE',
+        membershipStatus: c.membership?.status || 'NO_MEMBERSHIP',
+        children: childrenOfC,
+        joinedAt: c.createdAt ? c.createdAt.toISOString() : null,
+      };
+    });
+
+    const referralSummary = {
+      directReferrals: customers.length,
+      totalReferrals: customers.length + childCustomers.length,
+      activeMemberships: directActiveCount + childActiveCount,
+      availablePoints: referralEvents.length * 50,
+      earnedPoints: totalNetworkEarnings,
+      earnedEarningsFormatted: `₹${totalNetworkEarnings.toLocaleString('en-IN')}`,
+      referralCode: context.agentCode,
+      referralLink: `https://shield-zabnix.vercel.app/#/customer/register?ref=${context.agentCode}`,
+      statuses: statusCounts,
+      formulaText: `₹250 × ${directActiveCount} (Direct Active) + ₹50 × ${directRegCount} (Direct Cust) + ₹100 × ${childActiveCount} (Child Active) + ₹30 × ${childRegCount} (Child Cust)`,
+      history: referralEvents.slice(0, 15).map((e) => ({
+        id: e.id.toString(),
+        title: 'Referral Event',
+        status: e.status,
+        points: e.rewardPoints,
+        date: e.createdAt ? e.createdAt.toISOString() : null,
+      })),
+    };
+
+    const referralTree = {
+      id: context.agentCode,
+      name: context.displayName || 'SHIELD Agent',
+      code: context.agentCode,
+      role: 'AGENT',
+      status: 'ACTIVE',
+      children: agentTreeChildren,
+    };
 
     return {
       generatedAt: today.toISOString(),
@@ -247,6 +348,8 @@ export class AgentService {
             (event.status ?? '').trim().toUpperCase() === 'REWARDED',
         ).length,
       },
+      referralSummary,
+      referralTree,
       customers: customers.map((customer) => ({
         id: customer.id.toString(),
         customerCode: customer.customerCode,
