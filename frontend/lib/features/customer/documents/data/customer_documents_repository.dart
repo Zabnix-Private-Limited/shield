@@ -5,7 +5,16 @@ import '../../../../shared/models/shield_role.dart';
 import '../../../../shared/services/api_service.dart';
 
 class CustomerDocumentsRepository {
-  Future<List<Document>> list() => ApiService.getDocuments(SHIELDRole.customer);
+  Future<List<Document>> list() async {
+    try {
+      return await ApiService.getDocuments(SHIELDRole.customer);
+    } catch (e) {
+      if (e is StateError || e.toString().contains('customer session')) {
+        return const [];
+      }
+      rethrow;
+    }
+  }
 
   Future<Document> upload({
     required String fileName,

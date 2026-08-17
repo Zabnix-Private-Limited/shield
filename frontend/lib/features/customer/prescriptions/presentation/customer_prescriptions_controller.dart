@@ -20,12 +20,13 @@ class CustomerPrescriptionsController extends ChangeNotifier {
     error = null;
     notifyListeners();
     try {
-      final results = await Future.wait([
-        _repository.list(),
-        _repository.preferredPharmacy(),
-      ]);
-      prescriptions = results[0] as List<Document>;
-      preferredPharmacy = results[1] as Map<String, dynamic>?;
+      final docs = await _repository.list();
+      prescriptions = docs;
+      try {
+        preferredPharmacy = await _repository.preferredPharmacy();
+      } catch (_) {
+        preferredPharmacy = null;
+      }
     } catch (value) {
       error = value;
     } finally {

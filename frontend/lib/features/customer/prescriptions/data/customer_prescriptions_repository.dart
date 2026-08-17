@@ -25,6 +25,11 @@ class CustomerPrescriptionsRepository {
     customerNotes: customerNotes,
   );
 
-  Future<Map<String, dynamic>?> preferredPharmacy() =>
-      ApiService.getPreferredProvider();
+  Future<Map<String, dynamic>?> preferredPharmacy() async {
+    try {
+      return await ApiService.getPreferredProvider();
+    } catch (_) {
+      return null;
+    }
+  }
 }
