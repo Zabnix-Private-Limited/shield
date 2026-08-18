@@ -62,4 +62,10 @@ class AppTypography {
     fontWeight: FontWeight.w500,
     height: 1.38,
   );
+
+  static const TextStyle subtitle1 = h4;
+  static const TextStyle subtitle2 = h5;
+  static const TextStyle body1 = body;
+  static const TextStyle body2 = small;
+  static const TextStyle caption = tiny;
 }

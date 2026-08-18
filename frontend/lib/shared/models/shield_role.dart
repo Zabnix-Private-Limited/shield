@@ -53,13 +53,35 @@ enum SHIELDRole {
     }
   }
 
+  static const Set<String> disabledRoleCodes = {
+    'CRM_EXECUTIVE',
+    'DOCTOR',
+    'HOMECARE_PROVIDER',
+    'DENTAL_PROVIDER',
+    'COSMETIC_PROVIDER',
+    'DIETITIAN',
+  };
+
+  static bool isRoleEnabled(String? roleCode) {
+    if (roleCode == null) return false;
+    return !disabledRoleCodes.contains(roleCode.trim().toUpperCase());
+  }
+
+  // DEV MODE: Active switchable roles for current release.
+  // PRODUCTION CODE (UNCOMMENT FOR FULL PROD RELEASE):
+  // static List<SHIELDRole> get switchableRoles => const [
+  //   SHIELDRole.customer,
+  //   SHIELDRole.agent,
+  //   SHIELDRole.provider,
+  //   SHIELDRole.crmExecutive,
+  //   SHIELDRole.shieldExecutive,
+  //   SHIELDRole.manager,
+  //   SHIELDRole.superAdmin,
+  // ];
   static List<SHIELDRole> get switchableRoles => const [
     SHIELDRole.customer,
     SHIELDRole.agent,
     SHIELDRole.provider,
-    SHIELDRole.crmExecutive,
-    SHIELDRole.shieldExecutive,
-    SHIELDRole.manager,
     SHIELDRole.superAdmin,
   ];
 }

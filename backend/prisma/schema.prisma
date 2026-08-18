@@ -485,27 +485,37 @@ model Wallet {
 }
 
 model WalletRechargeIntent {
-  id                BigInt    @id @default(autoincrement())
-  uuid              String    @unique @db.Uuid
-  customerId        BigInt    @map("customer_id")
-  walletId          BigInt    @map("wallet_id")
-  amount            Decimal   @db.Decimal(15, 2)
-  idempotencyKey    String    @unique @map("idempotency_key") @db.VarChar(120)
-  providerCode      String?   @map("provider_code") @db.VarChar(80)
-  providerReference String?   @unique @map("provider_reference") @db.VarChar(160)
-  status            String    @default("INITIATED") @db.VarChar(40)
-  failureCode       String?   @map("failure_code") @db.VarChar(100)
-  failureReason     String?   @map("failure_reason") @db.Text
-  creditedAt        DateTime? @map("credited_at") @db.Timestamptz(6)
-  failedAt          DateTime? @map("failed_at") @db.Timestamptz(6)
-  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt         DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  id                  BigInt    @id @default(autoincrement())
+  uuid                String    @unique @db.Uuid
+  customerId          BigInt    @map("customer_id")
+  walletId            BigInt    @map("wallet_id")
+  providerId          BigInt?   @map("provider_id")
+  paymentMethodId     BigInt?   @map("payment_method_id")
+  paymentChannel      String?   @default("BANK_TRANSFER") @map("payment_channel") @db.VarChar(50)
+  referenceNumber     String?   @map("reference_number") @db.VarChar(120)
+  proofStoragePath    String?   @map("proof_storage_path") @db.Text
+  amount              Decimal   @db.Decimal(15, 2)
+  idempotencyKey      String    @unique @map("idempotency_key") @db.VarChar(120)
+  providerCode        String?   @map("provider_code") @db.VarChar(80)
+  providerReference   String?   @unique @map("provider_reference") @db.VarChar(160)
+  status              String    @default("INITIATED") @db.VarChar(40)
+  failureCode         String?   @map("failure_code") @db.VarChar(100)
+  failureReason       String?   @map("failure_reason") @db.Text
+  rejectionReason     String?   @map("rejection_reason") @db.Text
+  destinationSnapshot Json?     @map("destination_snapshot")
+  reviewedBy          BigInt?   @map("reviewed_by")
+  reviewedAt          DateTime? @map("reviewed_at") @db.Timestamptz(6)
+  creditedAt          DateTime? @map("credited_at") @db.Timestamptz(6)
+  failedAt            DateTime? @map("failed_at") @db.Timestamptz(6)
+  createdAt           DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt           DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
   wallet   Wallet   @relation(fields: [walletId], references: [id], onDelete: Restrict)
 
   @@index([customerId, status, createdAt], map: "idx_wallet_recharge_intents_customer_status")
   @@index([walletId, status], map: "idx_wallet_recharge_intents_wallet_status")
+  @@index([providerId, status, createdAt], map: "idx_wallet_recharge_intents_provider_status")
   @@map("wallet_recharge_intents")
 }
 
@@ -775,6 +785,7 @@ model ServiceProvider {
   prescriptionPharmacyRequests PrescriptionPharmacyRequest[]
   previousStoreChangeRequests  StoreChangeRequest[]          @relation("StoreChangePreviousProvider")
   requestedStoreChangeRequests StoreChangeRequest[]          @relation("StoreChangeRequestedProvider")
+  paymentMethods               ServiceProviderPaymentMethod[]
 
   @@map("service_providers")
 }
@@ -874,6 +885,7 @@ model Purchase {
   purchaseKind    String?   @default("GENERAL") @map("purchase_kind") @db.VarChar(50)
   paymentStatus   String?   @default("PENDING") @map("payment_status") @db.VarChar(50)
   orderStatus     String    @default("PLACED") @map("order_status") @db.VarChar(50)
+  orderStatusUpdatedAt DateTime? @map("order_status_updated_at") @db.Timestamptz(6)
   paymentSummary  Json?     @map("payment_summary")
   billingSnapshot Json?     @map("billing_snapshot")
 
@@ -1462,4 +1474,39 @@ model ErpExistingCustomer {
 
   @@index([mobile], map: "idx_erp_existing_customers_mobile")
   @@map("erp_existing_customers")
+}
+
+model ServiceProviderPaymentMethod {
+  id                BigInt    @id @default(autoincrement())
+  uuid              String    @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  providerId        BigInt    @map("provider_id")
+  methodType        String    @map("method_type") @db.VarChar(30)
+  displayLabel      String?   @map("display_label") @db.VarChar(100)
+
+  // Bank Account fields
+  accountHolderName String?   @map("account_holder_name") @db.VarChar(255)
+  bankName          String?   @map("bank_name") @db.VarChar(255)
+  accountNumber     String?   @map("account_number") @db.VarChar(50)
+  ifscCode          String?   @map("ifsc_code") @db.VarChar(20)
+  branchName        String?   @map("branch_name") @db.VarChar(255)
+
+  // UPI fields
+  upiId             String?   @map("upi_id") @db.VarChar(120)
+
+  // QR Metadata
+  qrStoragePath     String?   @map("qr_storage_path")
+  qrFileName        String?   @map("qr_file_name") @db.VarChar(255)
+  qrMimeType        String?   @map("qr_mime_type") @db.VarChar(50)
+
+  // State & Audit
+  isActive          Boolean   @default(true) @map("is_active")
+  isPrimary         Boolean   @default(false) @map("is_primary")
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt         DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  provider ServiceProvider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+
+  @@index([providerId, isActive, deletedAt], map: "idx_sp_payment_methods_provider_active")
+  @@map("service_provider_payment_methods")
 }

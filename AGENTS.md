@@ -123,6 +123,7 @@
 5. Do not make Prisma schema application part of the default Vercel build path.
 6. When building or expanding any portal (Customer, Provider, CRM, Manager, Executive, or Super Admin), prefer backend-driven workspace contracts over frontend-owned business semantics, and treat the Provider Portal architecture as the template to generalize from.
 7. When expanding the Provider Portal, prefer adding backend-owned modules/plugins inside the shared Provider Platform shell over creating separate provider-type portals or duplicate workflow pages.
+8. **Production Code Preservation Rule**: When implementing auth bypasses, temporary dev modes, or disabling features/roles for local development, **NEVER delete production-ready code, guards, assertions, or route logic**. Always comment out production code blocks with clear tags (`// PRODUCTION CODE (UNCOMMENT FOR PROD)` / `// DEV BYPASS MODE:`) so production security and functionality can be restored cleanly without re-writing logic.
 
 ## Project File Structure
 ```

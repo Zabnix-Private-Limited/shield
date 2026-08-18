@@ -5798,12 +5798,12 @@ export class AdminGovernanceService {
           this.env.smtpHost.trim().length > 0 ? 'Configured' : 'Unavailable',
       },
       {
-        title: 'OCR service',
-        subtitle: this.env.ocrEnabled
+        title: 'Prescription AI service',
+        subtitle: this.env.prescriptionAiUrl
           ? this.env.prescriptionAiUrl
-          : 'OCR is disabled by configuration',
+          : 'Prescription AI service not configured',
         meta: 'Derived from backend environment',
-        status: this.env.ocrEnabled ? 'Configured' : 'Unavailable',
+        status: this.env.prescriptionAiUrl.trim().length > 0 ? 'Configured' : 'Unavailable',
       },
     ];
   }

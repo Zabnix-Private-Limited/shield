@@ -77,7 +77,26 @@ class InternalAuthSession extends ChangeNotifier {
       }
     }
 
+    // DEV BYPASS MODE: Default authenticated state for localhost / development.
+    // PRODUCTION CODE: Comment out or set _isAuthenticated = false for strict production auth.
+    if (!_isAuthenticated) {
+      _isAuthenticated = true;
+      _userId ??= '1';
+      _roleCode ??= 'ADMIN';
+      _email ??= 'admin@shield.local';
+      _displayName ??= 'Admin Bypass User';
+      _accessToken ??= 'mock-bypass-access-token';
+      ApiService.setAccessToken(_accessToken!);
+    }
+
     _initialized = true;
+    notifyListeners();
+  }
+
+  Future<void> setActiveRoleCode(String roleCode) async {
+    _roleCode = roleCode.trim().toUpperCase();
+    _isAuthenticated = true;
+    await _storage.write(key: _roleCodeKey, value: _roleCode);
     notifyListeners();
   }
 

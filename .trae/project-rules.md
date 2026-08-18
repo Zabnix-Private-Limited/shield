@@ -34,6 +34,9 @@
    - End sessions only on intentional sign-out, explicit revocation, or security-driven reset.
 14. **Mandatory Log Updates**:
    - ALWAYS append a detailed entry to `log.md` after completing features, bug fixes, or code changes before completing the task.
+15. **Production Code Preservation**:
+   - When implementing auth bypasses, temporary dev modes, or disabling features/roles for local development, **NEVER delete production-ready code, guards, assertions, or route logic**.
+   - Always comment out production code blocks with clear tags (`// PRODUCTION CODE (UNCOMMENT FOR PROD)` / `// DEV BYPASS MODE:`) so production security and functionality can be restored cleanly without re-writing logic.
 
 ## Technology Stack Rules
 ### Frontend

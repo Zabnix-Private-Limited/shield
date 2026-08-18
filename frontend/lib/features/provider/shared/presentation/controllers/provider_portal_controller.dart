@@ -641,8 +641,11 @@ class ProviderPortalController extends ChangeNotifier {
     }
 
     final accessToken = ApiService.currentAccessToken;
-    if (accessToken == null || accessToken.isEmpty) {
-      _trace('realtime attach skipped token missing');
+    if (accessToken == null ||
+        accessToken.isEmpty ||
+        accessToken == 'mock-bypass-access-token' ||
+        accessToken.startsWith('mock-')) {
+      _trace('Provider realtime skipped: development auth bypass has no real access token.');
       return;
     }
 

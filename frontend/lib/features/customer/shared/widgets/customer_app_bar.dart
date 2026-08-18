@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/theme/app_colors.dart';
 import '../../../../app/theme/app_typography.dart';
 import '../../../../shared/utils/app_display_formatters.dart';
+import '../../../../shared/widgets/global_role_dropdown.dart';
 import '../../dashboard/presentation/controllers/dashboard_controller.dart';
 import '../../../portal/presentation/portal_role_data.dart';
 import '../theme/customer_design_tokens.dart';
@@ -40,7 +41,11 @@ class _CustomerAppBarState extends State<CustomerAppBar> {
   void initState() {
     super.initState();
     _dashboardController = DashboardController.instance;
-    _dashboardController.load();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _dashboardController.load();
+      }
+    });
   }
 
   @override
@@ -198,6 +203,8 @@ class _CustomerMainHeader extends StatelessWidget {
                 foregroundColor: AppColors.shieldNavy,
               ),
             ),
+            const SizedBox(width: 8),
+            const GlobalRoleDropdown(compact: false),
 
             const Spacer(),
             _HeaderBalanceChip(

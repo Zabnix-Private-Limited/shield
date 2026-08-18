@@ -252,20 +252,56 @@ PortalRoleData portalDataForProviderWorkspaceMeta(
       .where((section) => section.key.trim().isNotEmpty)
       .toList();
 
+  final workflowCode = (workflowProfile['code'] ?? '').toString().toUpperCase();
+  final providerType =
+      (providerContext['providerType'] ?? '').toString().toUpperCase();
+  final isPharmacyWorkflow =
+      workflowCode == 'PHARMACY' || providerType == 'PHARMACY';
+
+  final defaultPharmacyRoleData = portalDataForRole(SHIELDRole.pharmacyStaff);
+  final defaultProviderRoleData = portalDataForRole(SHIELDRole.provider);
+
+  final fallbackSections = isPharmacyWorkflow
+      ? defaultPharmacyRoleData.sections
+      : defaultProviderRoleData.sections;
+
+  const genericDoctorSectionKeys = {
+    'queue',
+    'patients',
+    'appointments',
+    'documents',
+    'prescriptions',
+  };
+
+  final hasGenericDoctorSections = isPharmacyWorkflow &&
+      sections.any((s) => genericDoctorSectionKeys.contains(s.key));
+
+  final effectiveSections = (sections.isEmpty || hasGenericDoctorSections)
+      ? fallbackSections
+      : sections;
+
   return PortalRoleData(
-    role: SHIELDRole.provider,
+    role: isPharmacyWorkflow ? SHIELDRole.pharmacyStaff : SHIELDRole.provider,
     operatorName:
-        providerContext['workspaceTitle']?.toString() ?? 'Provider Care Hub',
+        providerContext['workspaceTitle']?.toString() ??
+        (isPharmacyWorkflow
+            ? 'Pharmacy Fulfillment Center'
+            : 'Provider Care Hub'),
     headline:
         providerContext['headline']?.toString() ??
-        'Patients, appointments, records, and payments in one place',
+        (isPharmacyWorkflow
+            ? 'Orders, payments and pharmacy operations in one place.'
+            : 'Patients, appointments, records, and payments in one place'),
     regionLabel:
-        workflowProfile['title']?.toString() ?? 'Unified provider care portal',
-    icon: Icons.local_hospital_outlined,
+        workflowProfile['title']?.toString() ??
+        (isPharmacyWorkflow
+            ? 'Mobile-first Pharmacy Fulfillment Hub'
+            : 'Unified provider care portal'),
+    icon: isPharmacyWorkflow
+        ? Icons.local_pharmacy_outlined
+        : Icons.local_hospital_outlined,
     accentColor: AppColors.shieldGreen,
-    sections: sections.isEmpty
-        ? portalDataForRole(SHIELDRole.provider).sections
-        : sections,
+    sections: effectiveSections,
   );
 }
 
@@ -349,19 +385,37 @@ PortalRoleData portalDataForRole(SHIELDRole role) {
     case SHIELDRole.pharmacyStaff:
       return PortalRoleData(
         role: role,
-        operatorName: 'Pharmacy Operations',
-        headline: 'Live pharmacy operations across customers and documents',
-        regionLabel: 'Provider-side fulfillment center',
+        operatorName: 'Pharmacy Fulfillment Center',
+        headline: 'Orders, payments and pharmacy operations in one place.',
+        regionLabel: 'Mobile-first Pharmacy Fulfillment Hub',
         icon: Icons.local_pharmacy_outlined,
         accentColor: AppColors.shieldGreen,
         sections: [
-          _section('dashboard'),
-          _section('customers'),
-          _section('verification'),
-          _section('bills'),
-          _section('prescriptions'),
-          _section('qr-scan'),
-          _section('history'),
+          _section(
+            'dashboard',
+            title: 'Dashboard',
+            summary: 'Pharmacy operations overview and metrics.',
+          ),
+          _section(
+            'orders',
+            title: 'Orders',
+            summary: 'Pharmacy order fulfillment queue.',
+          ),
+          _section(
+            'payments',
+            title: 'Payments',
+            summary: 'Customer payments and recharge verification.',
+          ),
+          _section(
+            'payment-details',
+            title: 'Payment Details',
+            summary: 'Pharmacy bank, UPI, and QR details.',
+          ),
+          _section(
+            'history',
+            title: 'Order History',
+            summary: 'Completed and historical orders.',
+          ),
         ],
       );
     case SHIELDRole.clinicStaff:

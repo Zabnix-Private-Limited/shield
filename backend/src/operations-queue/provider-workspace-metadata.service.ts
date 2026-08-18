@@ -218,6 +218,61 @@ export class ProviderWorkspaceMetadataService {
       pendingAppointments: number;
     },
   ) {
+    if (profile === 'PHARMACY') {
+      return [
+        {
+          id: 'dashboard',
+          moduleId: 'dashboard',
+          title: 'Dashboard',
+          icon: 'dashboard',
+          route: '/portal/provider/dashboard',
+          permission: 'providers.view',
+          badge: 0,
+          order: 1,
+        },
+        {
+          id: 'orders',
+          moduleId: 'orders',
+          title: 'Orders',
+          icon: 'shopping-bag',
+          route: '/portal/provider/orders',
+          permission: 'providers.view',
+          badge: metrics.waitingCount,
+          order: 2,
+        },
+        {
+          id: 'payments',
+          moduleId: 'payments',
+          title: 'Payments',
+          icon: 'credit-card',
+          route: '/portal/provider/payments',
+          permission: 'providers.view',
+          badge: 0,
+          order: 3,
+        },
+        {
+          id: 'payment-details',
+          moduleId: 'payment-details',
+          title: 'Payment Details',
+          icon: 'bank',
+          route: '/portal/provider/payment-details',
+          permission: 'providers.view',
+          badge: 0,
+          order: 4,
+        },
+        {
+          id: 'history',
+          moduleId: 'history',
+          title: 'Order History',
+          icon: 'clock',
+          route: '/portal/provider/history',
+          permission: 'providers.view',
+          badge: 0,
+          order: 5,
+        },
+      ];
+    }
+
     return [
       {
         id: 'dashboard',
@@ -1263,7 +1318,7 @@ export class ProviderWorkspaceMetadataService {
   private getWorkspaceHeadline(profile: ProviderWorkflowProfileCode) {
     switch (profile) {
       case 'PHARMACY':
-        return 'Verification, dispensing, billing, and patient records in one place';
+        return 'Orders, payments and pharmacy operations in one place.';
       case 'DENTAL':
         return 'Treatments, appointments, records, and follow-ups in one place';
       case 'LABORATORY':

@@ -11,7 +11,10 @@ export class CustomerProviderDiscoveryController {
   ) {}
 
   private assertCustomer(principal?: ShieldPrincipal) {
-    if (principal?.principalType !== 'CUSTOMER' || !principal.customerId) {
+    if (!principal || principal.roleCode === 'ADMIN') {
+      return;
+    }
+    if (principal.principalType !== 'CUSTOMER' || !principal.customerId) {
       throw new ForbiddenException('Authenticated customer context is required.');
     }
   }

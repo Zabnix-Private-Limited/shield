@@ -697,7 +697,8 @@ CREATE TABLE "purchases" (
 	"payment_status" varchar(50) DEFAULT 'PENDING',
 	"payment_summary" jsonb,
 	"billing_snapshot" jsonb,
-	"order_status" varchar(50) DEFAULT 'PLACED' NOT NULL
+	"order_status" varchar(50) DEFAULT 'PLACED' NOT NULL,
+	"order_status_updated_at" timestamp with time zone
 );
 CREATE TABLE "referral_reward_events" (
 	"id" bigserial PRIMARY KEY,
@@ -792,6 +793,29 @@ CREATE TABLE "service_benefit_rules" (
 	"wallets_allowed" varchar(120) DEFAULT 'CASH',
 	"allow_external_payment" boolean DEFAULT true NOT NULL
 );
+CREATE TABLE "service_provider_payment_methods" (
+	"id" bigserial PRIMARY KEY,
+	"uuid" uuid DEFAULT gen_random_uuid() NOT NULL CONSTRAINT "service_provider_payment_methods_uuid_key" UNIQUE,
+	"provider_id" bigint NOT NULL,
+	"method_type" varchar(30) NOT NULL,
+	"display_label" varchar(100),
+	"account_holder_name" varchar(255),
+	"bank_name" varchar(255),
+	"account_number" varchar(50),
+	"ifsc_code" varchar(20),
+	"branch_name" varchar(255),
+	"upi_id" varchar(120),
+	"qr_storage_path" text,
+	"qr_file_name" varchar(255),
+	"qr_mime_type" varchar(50),
+	"is_active" boolean DEFAULT true NOT NULL,
+	"is_primary" boolean DEFAULT false NOT NULL,
+	"created_at" timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+	"updated_at" timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+	"deleted_at" timestamp with time zone,
+	CONSTRAINT "chk_sp_payment_methods_primary_active" CHECK (((NOT is_primary) OR is_active)),
+	CONSTRAINT "chk_sp_payment_methods_type" CHECK (((method_type)::text = ANY (ARRAY[('BANK_ACCOUNT'::character varying)::text, ('UPI'::character varying)::text])))
+);
 CREATE TABLE "service_providers" (
 	"id" bigserial PRIMARY KEY,
 	"uuid" uuid,
@@ -876,6 +900,15 @@ CREATE TABLE "wallet_recharge_intents" (
 	"failed_at" timestamp with time zone,
 	"created_at" timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+	"provider_id" bigint,
+	"payment_method_id" bigint,
+	"payment_channel" varchar(50) DEFAULT 'BANK_TRANSFER',
+	"reference_number" varchar(120),
+	"proof_storage_path" text,
+	"reviewed_by" bigint,
+	"reviewed_at" timestamp with time zone,
+	"rejection_reason" text,
+	"destination_snapshot" jsonb,
 	CONSTRAINT "wallet_recharge_intents_amount_positive" CHECK ((amount > (0)::numeric))
 );
 CREATE TABLE "wallet_transactions" (
@@ -1106,6 +1139,10 @@ CREATE UNIQUE INDEX "roles_uuid_key" ON "roles" ("uuid");
 CREATE UNIQUE INDEX "service_benefit_rules_pkey" ON "service_benefit_rules" ("id");
 CREATE UNIQUE INDEX "service_benefit_rules_service_type_key" ON "service_benefit_rules" ("service_type");
 CREATE UNIQUE INDEX "service_benefit_rules_uuid_key" ON "service_benefit_rules" ("uuid");
+CREATE INDEX "idx_sp_payment_methods_provider_active" ON "service_provider_payment_methods" ("provider_id","is_active","deleted_at");
+CREATE UNIQUE INDEX "service_provider_payment_methods_pkey" ON "service_provider_payment_methods" ("id");
+CREATE UNIQUE INDEX "service_provider_payment_methods_uuid_key" ON "service_provider_payment_methods" ("uuid");
+CREATE UNIQUE INDEX "uq_sp_payment_methods_primary_bank" ON "service_provider_payment_methods" ("provider_id","method_type");
 CREATE UNIQUE INDEX "service_providers_pkey" ON "service_providers" ("id");
 CREATE UNIQUE INDEX "service_providers_uuid_key" ON "service_providers" ("uuid");
 CREATE UNIQUE INDEX "shield_cards_card_number_key" ON "shield_cards" ("card_number");
@@ -1130,6 +1167,7 @@ CREATE UNIQUE INDEX "users_mobile_key" ON "users" ("mobile");
 CREATE UNIQUE INDEX "users_pkey" ON "users" ("id");
 CREATE UNIQUE INDEX "users_uuid_key" ON "users" ("uuid");
 CREATE INDEX "idx_wallet_recharge_intents_customer_status" ON "wallet_recharge_intents" ("customer_id","status","created_at");
+CREATE INDEX "idx_wallet_recharge_intents_provider_status" ON "wallet_recharge_intents" ("provider_id","status","created_at");
 CREATE INDEX "idx_wallet_recharge_intents_wallet_status" ON "wallet_recharge_intents" ("wallet_id","status");
 CREATE UNIQUE INDEX "wallet_recharge_intents_idempotency_key_key" ON "wallet_recharge_intents" ("idempotency_key");
 CREATE UNIQUE INDEX "wallet_recharge_intents_pkey" ON "wallet_recharge_intents" ("id");
@@ -1138,6 +1176,7 @@ CREATE UNIQUE INDEX "wallet_recharge_intents_uuid_key" ON "wallet_recharge_inten
 CREATE INDEX "idx_wallet_transaction_date" ON "wallet_transactions" ("created_at");
 CREATE INDEX "idx_wallet_transaction_type" ON "wallet_transactions" ("transaction_type");
 CREATE INDEX "idx_wallet_transaction_wallet" ON "wallet_transactions" ("wallet_id");
+CREATE UNIQUE INDEX "idx_wallet_transactions_manual_recharge_unique" ON "wallet_transactions" ("reference_type","reference_id");
 CREATE UNIQUE INDEX "wallet_transactions_pkey" ON "wallet_transactions" ("id");
 CREATE UNIQUE INDEX "wallet_transactions_uuid_key" ON "wallet_transactions" ("uuid");
 CREATE UNIQUE INDEX "wallets_customer_id_key" ON "wallets" ("customer_id");
@@ -1237,6 +1276,7 @@ ALTER TABLE "reward_point_transactions" ADD CONSTRAINT "reward_point_transaction
 ALTER TABLE "reward_point_transactions" ADD CONSTRAINT "reward_point_transactions_wallet_id_fkey" FOREIGN KEY ("wallet_id") REFERENCES "wallets"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 ALTER TABLE "role_permissions" ADD CONSTRAINT "role_permissions_permission_id_fkey" FOREIGN KEY ("permission_id") REFERENCES "permissions"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 ALTER TABLE "role_permissions" ADD CONSTRAINT "role_permissions_role_id_fkey" FOREIGN KEY ("role_id") REFERENCES "roles"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "service_provider_payment_methods" ADD CONSTRAINT "sp_payment_methods_provider_id_fkey" FOREIGN KEY ("provider_id") REFERENCES "service_providers"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 ALTER TABLE "service_providers" ADD CONSTRAINT "service_providers_business_id_fkey" FOREIGN KEY ("business_id") REFERENCES "businesses"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 ALTER TABLE "shield_cards" ADD CONSTRAINT "shield_cards_customer_id_fkey" FOREIGN KEY ("customer_id") REFERENCES "customers"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 ALTER TABLE "shield_cards" ADD CONSTRAINT "shield_cards_issued_business_id_fkey" FOREIGN KEY ("issued_business_id") REFERENCES "businesses"("id") ON DELETE SET NULL ON UPDATE CASCADE;
@@ -1248,6 +1288,9 @@ ALTER TABLE "subscription_monthly_allocations" ADD CONSTRAINT "subscription_mont
 ALTER TABLE "users" ADD CONSTRAINT "users_department_id_fkey" FOREIGN KEY ("department_id") REFERENCES "departments"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 ALTER TABLE "users" ADD CONSTRAINT "users_role_id_fkey" FOREIGN KEY ("role_id") REFERENCES "roles"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 ALTER TABLE "wallet_recharge_intents" ADD CONSTRAINT "wallet_recharge_intents_customer_id_fkey" FOREIGN KEY ("customer_id") REFERENCES "customers"("id") ON DELETE CASCADE;
+ALTER TABLE "wallet_recharge_intents" ADD CONSTRAINT "wallet_recharge_intents_payment_method_id_fkey" FOREIGN KEY ("payment_method_id") REFERENCES "service_provider_payment_methods"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "wallet_recharge_intents" ADD CONSTRAINT "wallet_recharge_intents_provider_id_fkey" FOREIGN KEY ("provider_id") REFERENCES "service_providers"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "wallet_recharge_intents" ADD CONSTRAINT "wallet_recharge_intents_reviewed_by_fkey" FOREIGN KEY ("reviewed_by") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 ALTER TABLE "wallet_recharge_intents" ADD CONSTRAINT "wallet_recharge_intents_wallet_id_fkey" FOREIGN KEY ("wallet_id") REFERENCES "wallets"("id") ON DELETE RESTRICT;
 ALTER TABLE "wallet_transactions" ADD CONSTRAINT "wallet_transactions_created_by_fkey" FOREIGN KEY ("created_by") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 ALTER TABLE "wallet_transactions" ADD CONSTRAINT "wallet_transactions_wallet_id_fkey" FOREIGN KEY ("wallet_id") REFERENCES "wallets"("id") ON DELETE SET NULL ON UPDATE CASCADE;

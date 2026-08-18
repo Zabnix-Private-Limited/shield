@@ -9,6 +9,7 @@ import '../../../../../shared/widgets/app_card.dart';
 import '../../../../customer/shared/widgets/error_card.dart';
 import '../../data/customer_orders_repository.dart';
 import '../../domain/customer_order_summary.dart';
+import '../widgets/customer_create_order_sheet.dart';
 
 class CustomerOrdersScreen extends StatefulWidget {
   const CustomerOrdersScreen({super.key, this.loadOrders, this.repository});
@@ -55,6 +56,19 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
     }
   }
 
+  Future<void> _openCreateOrderSheet() async {
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => CustomerCreateOrderSheet(
+        onOrderCreated: () {
+          if (mounted) setState(_loadOrders);
+        },
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<List<CustomerOrderSummary>>(
@@ -80,7 +94,7 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
           child: orders.isEmpty
               ? ListView(
                   physics: const AlwaysScrollableScrollPhysics(),
-                  children: const [_OrdersEmptyState()],
+                  children: [_OrdersEmptyState(onCreateOrder: _openCreateOrderSheet)],
                 )
               : ListView.separated(
                   physics: const AlwaysScrollableScrollPhysics(),
@@ -88,7 +102,7 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
                   padding: EdgeInsets.zero,
                   separatorBuilder: (_, __) => const SizedBox(height: 12),
                   itemBuilder: (context, index) {
-                    if (index == 0) return const _OrdersIntro();
+                    if (index == 0) return _OrdersIntro(onCreateOrder: _openCreateOrderSheet);
                     return _OrderCard(
                       order: orders[index - 1],
                       onTap: () => _showOrderDetails(orders[index - 1]),
@@ -102,43 +116,77 @@ class _CustomerOrdersScreenState extends State<CustomerOrdersScreen> {
 }
 
 class _OrdersIntro extends StatelessWidget {
-  const _OrdersIntro();
+  const _OrdersIntro({this.onCreateOrder});
+
+  final VoidCallback? onCreateOrder;
 
   @override
-  Widget build(BuildContext context) => const Padding(
-    padding: EdgeInsets.only(bottom: 4),
-    child: Column(
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(bottom: 4),
+    child: Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('My orders', style: AppTypography.h3),
-        SizedBox(height: 6),
-        Text(
-          'Completed pharmacy purchases linked to your SHIELD account.',
-          style: AppTypography.small,
+        const Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('My orders', style: AppTypography.h3),
+              SizedBox(height: 6),
+              Text(
+                'Pharmacy orders and purchases linked to your SHIELD account.',
+                style: AppTypography.small,
+              ),
+            ],
+          ),
         ),
+        if (onCreateOrder != null)
+          ElevatedButton.icon(
+            onPressed: onCreateOrder,
+            icon: const Icon(Icons.add, size: 18),
+            label: const Text('New Order'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.shieldNavy,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            ),
+          ),
       ],
     ),
   );
 }
 
 class _OrdersEmptyState extends StatelessWidget {
-  const _OrdersEmptyState();
+  const _OrdersEmptyState({this.onCreateOrder});
+
+  final VoidCallback? onCreateOrder;
 
   @override
-  Widget build(BuildContext context) => const Padding(
-    padding: EdgeInsets.only(top: 64),
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(top: 64),
     child: AppCard(
       child: Column(
         children: [
-          Icon(Icons.receipt_long_outlined, size: 42, color: AppColors.gray),
-          SizedBox(height: 12),
-          Text('No orders yet', style: AppTypography.h4),
-          SizedBox(height: 6),
-          Text(
-            'Your pharmacy purchases will appear here after they are recorded.',
+          const Icon(Icons.receipt_long_outlined, size: 42, color: AppColors.gray),
+          const SizedBox(height: 12),
+          const Text('No orders yet', style: AppTypography.h4),
+          const SizedBox(height: 6),
+          const Text(
+            'Your pharmacy purchases and orders will appear here.',
             textAlign: TextAlign.center,
             style: AppTypography.small,
           ),
+          if (onCreateOrder != null) ...[
+            const SizedBox(height: 16),
+            ElevatedButton.icon(
+              onPressed: onCreateOrder,
+              icon: const Icon(Icons.add, size: 18),
+              label: const Text('Create New Pharmacy Order'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.shieldNavy,
+                foregroundColor: Colors.white,
+              ),
+            ),
+          ],
         ],
       ),
     ),

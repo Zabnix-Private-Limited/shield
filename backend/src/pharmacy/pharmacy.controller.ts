@@ -2,24 +2,39 @@ import {
   Body,
   BadRequestException,
   Controller,
+  Delete,
   ForbiddenException,
   Get,
   Param,
   Patch,
   Post,
   Query,
+  UploadedFile,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { CurrentPrincipal } from '../auth/current-principal.decorator';
 import { Public } from '../auth/public.decorator';
 import { RequirePermissions } from '../auth/permissions.decorator';
 import type { ShieldPrincipal } from '../auth/auth.types';
 import { ProviderScopeService } from '../auth/provider-scope.service';
 import { PharmacyService } from './pharmacy.service';
+import { PharmacyPaymentDetailsService } from './pharmacy-payment-details.service';
+import { PharmacyPaymentsService } from './pharmacy-payments.service';
+import {
+  CreateBankAccountDto,
+  CreateUpiDto,
+  UpdateBankAccountDto,
+  UpdateUpiDto,
+} from './dto/pharmacy-payment-details.dto';
+import { RejectPaymentDto, SubmitManualPaymentDto } from './dto/pharmacy-payments.dto';
 
 @Controller()
 export class PharmacyController {
   constructor(
     private pharmacyService: PharmacyService,
+    private paymentDetailsService: PharmacyPaymentDetailsService,
+    private paymentsService: PharmacyPaymentsService,
     private readonly providerScopeService: ProviderScopeService,
   ) {}
 
@@ -296,10 +311,26 @@ export class PharmacyController {
     @CurrentPrincipal() principal?: ShieldPrincipal,
   ) {
     const customerId = this.requireCustomer(principal);
+    const orderSource = body.order_source || body.request_type || body.source;
+    const documentId = body.document_id ? this.parseId(body.document_id, 'Prescription document ID') : undefined;
+    const providerId = this.parseId(body.provider_id || body.pharmacy_id, 'Pharmacy provider ID');
+
+    const itemsMapped = Array.isArray(body.items)
+      ? body.items.map((i: any) => ({
+          productId: i.product_id ? BigInt(i.product_id) : undefined,
+          name: i.name || i.product_name,
+          quantity: Number(i.quantity || 1),
+          notes: i.notes,
+        }))
+      : undefined;
+
     const order = await this.pharmacyService.createCustomerOrder({
       customerId,
-      providerId: this.parseId(body.provider_id, 'Pharmacy provider ID'),
-      items: body.items,
+      providerId,
+      orderSource,
+      documentId,
+      items: itemsMapped,
+      fulfillmentPreference: body.fulfillment_preference,
       deliveryAddress: body.delivery_address,
       customerNotes: body.customer_notes,
       idempotencyKey: body.idempotency_key,
@@ -312,12 +343,54 @@ export class PharmacyController {
   }
 
   @RequirePermissions('providers.view')
+  @Get('pharmacy/orders/summary')
+  async getPharmacyOrdersSummary(
+    @CurrentPrincipal() principal?: ShieldPrincipal,
+  ) {
+    return {
+      success: true,
+      message: 'Pharmacy orders summary retrieved.',
+      data: await this.pharmacyService.getPharmacyOrdersSummary(principal),
+    };
+  }
+
+  @RequirePermissions('providers.view')
   @Get('pharmacy/orders')
-  async listPharmacyOrders(@CurrentPrincipal() principal?: ShieldPrincipal) {
+  async listPharmacyOrders(
+    @Query('status') status?: string,
+    @Query('source') source?: string,
+    @Query('query') query?: string,
+    @Query('page') page?: string,
+    @Query('pageSize') pageSize?: string,
+    @CurrentPrincipal() principal?: ShieldPrincipal,
+  ) {
     return {
       success: true,
       message: 'Pharmacy order queue retrieved.',
-      data: await this.pharmacyService.listPharmacyOrders(principal),
+      data: await this.pharmacyService.listPharmacyOrders({
+        status,
+        source,
+        query,
+        page,
+        pageSize,
+        principal,
+      }),
+    };
+  }
+
+  @RequirePermissions('providers.view')
+  @Get('pharmacy/orders/:id')
+  async getPharmacyOrderDetail(
+    @Param('id') id: string,
+    @CurrentPrincipal() principal?: ShieldPrincipal,
+  ) {
+    return {
+      success: true,
+      message: 'Pharmacy order detail retrieved.',
+      data: await this.pharmacyService.getPharmacyOrderDetail(
+        this.parseId(id, 'Order ID'),
+        principal,
+      ),
     };
   }
 
@@ -325,7 +398,7 @@ export class PharmacyController {
   @Patch('pharmacy/orders/:id/status')
   async updateOrderStatus(
     @Param('id') id: string,
-    @Body() body: { status: string },
+    @Body() body: { status: string; cancellationReason?: string },
     @CurrentPrincipal() principal?: ShieldPrincipal,
   ) {
     if (!body.status?.trim()) {
@@ -337,6 +410,307 @@ export class PharmacyController {
       data: await this.pharmacyService.updateOrderStatus(
         this.parseId(id, 'Order ID'),
         body.status,
+        body.cancellationReason,
+        principal,
+      ),
+    };
+  }
+
+  // ==========================================
+  // PHASE 2: PHARMACY PAYMENT DETAILS APIs
+  // ==========================================
+
+  @RequirePermissions('providers.view')
+  @Get('pharmacy/payment-details')
+  async listPaymentDetails(@CurrentPrincipal() principal?: ShieldPrincipal) {
+    return {
+      success: true,
+      message: 'Pharmacy payment details retrieved.',
+      data: await this.paymentDetailsService.listPaymentMethods(principal),
+    };
+  }
+
+  @RequirePermissions('providers.update')
+  @Post('pharmacy/payment-details/bank-accounts')
+  async createBankAccount(
+    @Body() dto: CreateBankAccountDto,
+    @CurrentPrincipal() principal?: ShieldPrincipal,
+  ) {
+    return {
+      success: true,
+      message: 'Bank account added successfully.',
+      data: await this.paymentDetailsService.createBankAccount(dto, principal),
+    };
+  }
+
+  @RequirePermissions('providers.update')
+  @Patch('pharmacy/payment-details/bank-accounts/:id')
+  async updateBankAccount(
+    @Param('id') id: string,
+    @Body() dto: UpdateBankAccountDto,
+    @CurrentPrincipal() principal?: ShieldPrincipal,
+  ) {
+    return {
+      success: true,
+      message: 'Bank account updated successfully.',
+      data: await this.paymentDetailsService.updateBankAccount(
+        this.parseId(id, 'Bank Account ID'),
+        dto,
+        principal,
+      ),
+    };
+  }
+
+  @RequirePermissions('providers.update')
+  @Post('pharmacy/payment-details/upi')
+  async createUpi(
+    @Body() dto: CreateUpiDto,
+    @CurrentPrincipal() principal?: ShieldPrincipal,
+  ) {
+    return {
+      success: true,
+      message: 'UPI payment method added successfully.',
+      data: await this.paymentDetailsService.createUpi(dto, principal),
+    };
+  }
+
+  @RequirePermissions('providers.update')
+  @Patch('pharmacy/payment-details/upi/:id')
+  async updateUpi(
+    @Param('id') id: string,
+    @Body() dto: UpdateUpiDto,
+    @CurrentPrincipal() principal?: ShieldPrincipal,
+  ) {
+    return {
+      success: true,
+      message: 'UPI payment method updated successfully.',
+      data: await this.paymentDetailsService.updateUpi(
+        this.parseId(id, 'UPI ID'),
+        dto,
+        principal,
+      ),
+    };
+  }
+
+  @RequirePermissions('providers.update')
+  @Post('pharmacy/payment-details/upi/:id/qr')
+  @UseInterceptors(FileInterceptor('file'))
+  async uploadUpiQr(
+    @Param('id') id: string,
+    @UploadedFile() file: Express.Multer.File,
+    @CurrentPrincipal() principal?: ShieldPrincipal,
+  ) {
+    return {
+      success: true,
+      message: 'UPI QR image uploaded successfully.',
+      data: await this.paymentDetailsService.uploadUpiQr(
+        this.parseId(id, 'UPI ID'),
+        file,
+        principal,
+      ),
+    };
+  }
+
+  @RequirePermissions('providers.update')
+  @Delete('pharmacy/payment-details/upi/:id/qr')
+  async removeUpiQr(
+    @Param('id') id: string,
+    @CurrentPrincipal() principal?: ShieldPrincipal,
+  ) {
+    return {
+      success: true,
+      message: 'UPI QR image removed successfully.',
+      data: await this.paymentDetailsService.removeUpiQr(
+        this.parseId(id, 'UPI ID'),
+        principal,
+      ),
+    };
+  }
+
+  @RequirePermissions('providers.update')
+  @Patch('pharmacy/payment-details/:id/primary')
+  async setPrimaryMethod(
+    @Param('id') id: string,
+    @CurrentPrincipal() principal?: ShieldPrincipal,
+  ) {
+    return {
+      success: true,
+      message: 'Primary payment method updated.',
+      data: await this.paymentDetailsService.setPrimaryMethod(
+        this.parseId(id, 'Payment Method ID'),
+        principal,
+      ),
+    };
+  }
+
+  @RequirePermissions('providers.update')
+  @Patch('pharmacy/payment-details/:id/toggle-active')
+  async toggleActiveMethod(
+    @Param('id') id: string,
+    @Body() body: { isActive: boolean },
+    @CurrentPrincipal() principal?: ShieldPrincipal,
+  ) {
+    return {
+      success: true,
+      message: 'Payment method status updated.',
+      data: await this.paymentDetailsService.toggleActiveMethod(
+        this.parseId(id, 'Payment Method ID'),
+        body.isActive,
+        principal,
+      ),
+    };
+  }
+
+  @Public()
+  @Get('customer/pharmacies/:providerId/payment-details')
+  async getCustomerSafePaymentDetails(@Param('providerId') providerId: string) {
+    return {
+      success: true,
+      message: 'Active pharmacy payment details retrieved.',
+      data: await this.paymentDetailsService.getCustomerSafePaymentDetails(
+        this.parseId(providerId, 'Provider ID'),
+      ),
+    };
+  }
+
+  // -------------------------------------------------------------
+  // PHARMACY DASHBOARD & PHASE 3 MANUAL PAYMENTS
+  // -------------------------------------------------------------
+
+  @RequirePermissions('providers.read')
+  @Get('pharmacy/dashboard')
+  async getPharmacyDashboard(@CurrentPrincipal() principal?: ShieldPrincipal) {
+    return {
+      success: true,
+      message: 'Pharmacy dashboard metrics retrieved successfully.',
+      data: await this.paymentsService.getPharmacyDashboard(principal),
+    };
+  }
+
+  @RequirePermissions('providers.read')
+  @Get('pharmacy/payments')
+  async listPayments(
+    @CurrentPrincipal() principal?: ShieldPrincipal,
+    @Query('status') status?: string,
+    @Query('search') search?: string,
+  ) {
+    return {
+      success: true,
+      message: 'Pharmacy payments retrieved.',
+      data: await this.paymentsService.listPayments(principal, { status, search }),
+    };
+  }
+
+  @RequirePermissions('providers.read')
+  @Get('pharmacy/payments/:id')
+  async getPaymentDetail(
+    @Param('id') id: string,
+    @CurrentPrincipal() principal?: ShieldPrincipal,
+  ) {
+    return {
+      success: true,
+      message: 'Payment detail retrieved.',
+      data: await this.paymentsService.getPaymentDetail(
+        this.parseId(id, 'Payment ID'),
+        principal,
+      ),
+    };
+  }
+
+  @RequirePermissions('providers.update')
+  @Post('pharmacy/payments/submit')
+  async submitManualPayment(
+    @Body() dto: SubmitManualPaymentDto,
+    @CurrentPrincipal() principal?: ShieldPrincipal,
+  ) {
+    return {
+      success: true,
+      message: 'Manual payment intent submitted.',
+      data: await this.paymentsService.submitManualPayment(dto, principal),
+    };
+  }
+
+  @RequirePermissions('providers.update')
+  @Post('pharmacy/payments/:id/approve')
+  async approvePayment(
+    @Param('id') id: string,
+    @CurrentPrincipal() principal?: ShieldPrincipal,
+  ) {
+    return {
+      success: true,
+      message: 'Payment approved and customer wallet credited.',
+      data: await this.paymentsService.approvePayment(
+        this.parseId(id, 'Payment ID'),
+        principal,
+      ),
+    };
+  }
+
+  @RequirePermissions('providers.update')
+  @Post('pharmacy/payments/:id/reject')
+  async rejectPayment(
+    @Param('id') id: string,
+    @Body() dto: RejectPaymentDto,
+    @CurrentPrincipal() principal?: ShieldPrincipal,
+  ) {
+    return {
+      success: true,
+      message: 'Payment request rejected.',
+      data: await this.paymentsService.rejectPayment(
+        this.parseId(id, 'Payment ID'),
+        dto,
+        principal,
+      ),
+    };
+  }
+
+  // -------------------------------------------------------------
+  // PHASE 4 PHARMACY ORDER HISTORY
+  // -------------------------------------------------------------
+
+  @RequirePermissions('providers.read')
+  @Get('pharmacy/orders/history')
+  async listPharmacyOrderHistory(
+    @CurrentPrincipal() principal?: ShieldPrincipal,
+    @Query('status') status?: string,
+    @Query('source') source?: string,
+    @Query('fulfillment') fulfillment?: string,
+    @Query('search') search?: string,
+    @Query('from') from?: string,
+    @Query('to') to?: string,
+    @Query('page') page?: string,
+    @Query('pageSize') pageSize?: string,
+  ) {
+    return {
+      success: true,
+      message: 'Pharmacy order history retrieved successfully.',
+      data: await this.pharmacyService.listPharmacyOrderHistory(
+        {
+          status,
+          source,
+          fulfillment,
+          search,
+          from,
+          to,
+          page: page ? Number(page) : undefined,
+          pageSize: pageSize ? Number(pageSize) : undefined,
+        },
+        principal,
+      ),
+    };
+  }
+
+  @RequirePermissions('providers.read')
+  @Get('pharmacy/orders/history/:id')
+  async getPharmacyOrderHistoryDetail(
+    @Param('id') id: string,
+    @CurrentPrincipal() principal?: ShieldPrincipal,
+  ) {
+    return {
+      success: true,
+      message: 'Pharmacy order history detail retrieved successfully.',
+      data: await this.pharmacyService.getPharmacyOrderHistoryDetail(
+        this.parseId(id, 'Order ID'),
         principal,
       ),
     };

@@ -49,9 +49,25 @@ describe('PharmacyService customer wellness catalogue', () => {
     const service = new PharmacyService(prisma as any, {} as any, {} as any, {} as any, {} as any);
 
     await expect(service.listCustomerOrders(BigInt(7))).resolves.toEqual([{
-      id: '9', invoiceNumber: 'INV-9', orderStatus: 'PLACED', paymentStatus: 'PENDING',
-      totalAmount: 100, payableAmount: 90, purchaseDate: new Date('2026-08-08T10:00:00Z'),
+      id: '9',
+      uuid: undefined,
+      invoiceNumber: 'INV-9',
+      orderStatus: 'PLACED',
+      paymentStatus: 'PENDING',
+      orderSource: 'MANUAL_ITEMS',
+      fulfillmentPreference: 'COLLECT_FROM_PHARMACY',
+      deliveryAddress: null,
+      customerNotes: null,
+      totalAmount: 100,
+      payableAmount: 90,
+      purchaseDate: new Date('2026-08-08T10:00:00Z'),
       providerName: 'Safe Business',
+      pharmacy: {
+        id: null,
+        name: 'Safe Pharmacy',
+        businessName: 'Safe Business',
+      },
+      prescriptionDocument: null,
       items: [{ id: '4', productId: '3', name: 'Vitamin A', quantity: 2, unitPrice: 45, lineTotal: 90 }],
     }]);
     expect(prisma.purchase.findMany).toHaveBeenCalledWith(expect.objectContaining({
@@ -67,5 +83,29 @@ describe('PharmacyService customer wellness catalogue', () => {
     expect(prisma.purchase.findFirst).toHaveBeenCalledWith(expect.objectContaining({
       where: { id: BigInt(9), customerId: BigInt(7) },
     }));
+  });
+
+  it('prevents reopening a terminal COMPLETED order', async () => {
+    const prisma = {
+      purchase: {
+        findUnique: jest.fn().mockResolvedValue({ id: 10n, orderStatus: 'COMPLETED' }),
+      },
+    };
+    const providerScope = { assertProviderCanAccessPurchase: jest.fn() };
+    const service = new PharmacyService(prisma as any, providerScope as any, {} as any, {} as any, {} as any);
+
+    await expect(service.updateOrderStatus(10n, 'PREPARING')).rejects.toThrow('Terminal order in status COMPLETED cannot be reopened');
+  });
+
+  it('requires cancellation reason when status is CANCELLED or REJECTED', async () => {
+    const prisma = {
+      purchase: {
+        findUnique: jest.fn().mockResolvedValue({ id: 11n, orderStatus: 'PREPARING', billingSnapshot: {} }),
+      },
+    };
+    const providerScope = { assertProviderCanAccessPurchase: jest.fn() };
+    const service = new PharmacyService(prisma as any, providerScope as any, {} as any, {} as any, {} as any);
+
+    await expect(service.updateOrderStatus(11n, 'CANCELLED')).rejects.toThrow('Cancellation or rejection reason is required.');
   });
 });

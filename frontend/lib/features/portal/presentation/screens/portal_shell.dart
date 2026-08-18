@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
 import 'package:go_router/go_router.dart';
@@ -32,7 +33,11 @@ import '../../../customer/wallet/presentation/screens/wallet_screen.dart';
 import '../../../customer/wallet/presentation/screens/reward_points_screen.dart';
 import '../../../crm/complaints/presentation/screens/crm_complaints_screen.dart';
 import '../../../provider/customers/presentation/screens/provider_customers_screen.dart';
-import '../../../provider/dashboard/presentation/screens/provider_dashboard_screen.dart';
+import '../../../provider/dashboard/presentation/screens/pharmacy_dashboard_view.dart';
+import '../../../provider/pharmacy/presentation/screens/pharmacy_orders_screen.dart';
+import 'package:shield/features/provider/pharmacy/presentation/screens/pharmacy_payment_details_screen.dart';
+import 'package:shield/features/provider/pharmacy/presentation/screens/pharmacy_payments_screen.dart';
+import 'package:shield/features/provider/pharmacy/presentation/screens/pharmacy_order_history_screen.dart';
 import '../../../provider/profile/presentation/screens/provider_profile_screen.dart';
 import '../../../provider/queue/presentation/screens/provider_queue_screen.dart';
 import '../../../provider/settings/presentation/screens/provider_settings_screen.dart';
@@ -48,6 +53,7 @@ import '../../../../shared/models/notification.dart';
 import '../../../../shared/models/shield_role.dart';
 import '../../../../shared/widgets/app_button.dart';
 import '../../../../shared/widgets/app_card.dart';
+import '../../../../shared/widgets/global_role_dropdown.dart';
 import '../../../../shared/widgets/app_page_frame.dart';
 import '../../../../shared/widgets/app_responsive.dart';
 import '../../../../shared/widgets/app_skeleton.dart';
@@ -127,17 +133,21 @@ class _PortalShellState extends State<PortalShell> {
 
     try {
       final sectionKey = widget.sectionKey ?? 'dashboard';
-      late final PortalRoleData portal;
-      late final PortalSectionData data;
+      PortalRoleData portal;
+      PortalSectionData data;
 
       if (widget.role == SHIELDRole.customer) {
         portal = portalDataForRole(widget.role);
         data = portal.sectionFor(sectionKey);
-      } else if (widget.role == SHIELDRole.provider) {
+      } else if (widget.role == SHIELDRole.provider ||
+          widget.role == SHIELDRole.pharmacyStaff) {
         final authSession = InternalAuthSession.instance;
         if (!authSession.isInitialized) {
           await authSession.initialize();
         }
+        final isPharmacyRole = authSession.roleCode == 'PHARMACY_PROVIDER' ||
+            authSession.homeRole == SHIELDRole.pharmacyStaff ||
+            widget.role == SHIELDRole.pharmacyStaff;
         try {
           final workspace =
               await ApiService.getProviderPlatformWorkspace() ??
@@ -146,9 +156,24 @@ class _PortalShellState extends State<PortalShell> {
               workspace['workspaceMeta'] as Map<String, dynamic>? ??
               const <String, dynamic>{};
           portal = portalDataForProviderWorkspaceMeta(workspaceMeta);
+          // If auth session is Pharmacy role, ensure portal data does not erroneously leak generic provider sections
+          if (isPharmacyRole &&
+              (portal.sections.isEmpty ||
+                  portal.sections.any(
+                    (s) => s.key == 'patients' || s.key == 'queue',
+                  ))) {
+            portal = portalDataForRole(SHIELDRole.pharmacyStaff);
+          }
           data = portal.sectionFor(sectionKey);
-        } catch (_) {
-          portal = portalDataForRole(widget.role);
+        } catch (error) {
+          if (kDebugMode) {
+            debugPrint(
+              '[PortalShell] Workspace metadata load error for role ${authSession.roleCode ?? widget.role}: $error. Falling back to role navigation.',
+            );
+          }
+          portal = portalDataForRole(
+            isPharmacyRole ? SHIELDRole.pharmacyStaff : widget.role,
+          );
           data = portal.sectionFor(sectionKey);
         }
       } else {
@@ -206,7 +231,7 @@ class _PortalShellState extends State<PortalShell> {
           ),
         );
       }
-      return const AppPageSkeleton(showSidebar: false);
+      return const AppPortalSectionSkeleton();
     }
 
     if (_error != null || _sectionData == null) {
@@ -596,6 +621,9 @@ class _RoleContent extends StatelessWidget {
     final isCustomerStoreChange =
         portal.role == SHIELDRole.customer && section.key == 'store-change';
     final isAgentRole = portal.role == SHIELDRole.agent;
+    final isPharmacyRole = portal.role == SHIELDRole.pharmacyStaff ||
+        (portal.role == SHIELDRole.provider &&
+            portal.sections.any((s) => s.key == 'orders' || s.key == 'payments'));
     final isProviderRole = portal.role == SHIELDRole.provider;
     final isAdminRole = portal.role == SHIELDRole.superAdmin;
     final isCardUtilization =
@@ -676,6 +704,8 @@ class _RoleContent extends StatelessWidget {
       content = const CustomerStoreChangeScreen();
     } else if (isAgentRole) {
       content = _buildAgentModuleContent(section);
+    } else if (isPharmacyRole) {
+      content = _buildPharmacyModuleContent(section);
     } else if (isProviderRole) {
       content = _buildProviderModuleContent(section);
     } else if (isCardUtilization) {
@@ -772,11 +802,46 @@ class _RoleContent extends StatelessWidget {
     );
   }
 
+  Widget _buildPharmacyModuleContent(PortalSectionData section) {
+    switch (section.rendererKey ?? section.moduleId ?? section.key) {
+      case 'orders':
+        return const PharmacyOrdersScreen();
+      case 'payment-details':
+        return const PharmacyPaymentDetailsScreen();
+      case 'payments':
+        return const PharmacyPaymentsScreen();
+      case 'history':
+        return const PharmacyOrderHistoryScreen();
+      case 'dashboard':
+        return const PharmacyDashboardView();
+      case 'queue':
+        return const PharmacyOrdersScreen();
+      case 'profile':
+        return const ProviderProfileScreen();
+      case 'settings':
+        return const ProviderSettingsScreen();
+      default:
+        return const PharmacyDashboardView();
+    }
+  }
+
   Widget _buildProviderModuleContent(PortalSectionData section) {
     switch (section.rendererKey ?? section.moduleId ?? section.key) {
+      case 'orders':
+        return const PharmacyOrdersScreen();
+      case 'payment-details':
+        return const PharmacyPaymentDetailsScreen();
+      case 'payments':
+        return const PharmacyPaymentsScreen();
+      case 'history':
+        return const PharmacyOrderHistoryScreen();
       case 'dashboard':
-        return const ProviderDashboardScreen();
+        return const PharmacyDashboardView();
       case 'queue':
+        if (portal.sections.any((s) => s.key == 'orders') &&
+            !portal.sections.any((s) => s.key == 'queue')) {
+          return const PharmacyOrdersScreen();
+        }
         return const ProviderQueueScreen();
       case 'patient-workspace':
         return const ProviderCustomersScreen();
@@ -1110,6 +1175,8 @@ class _PortalHeader extends StatelessWidget {
             ],
           ),
         ),
+        const SizedBox(width: 12),
+        const GlobalRoleDropdown(compact: false),
       ],
     );
   }
@@ -7638,14 +7705,11 @@ class _CustomerServicesViewState extends State<_CustomerServicesView> {
                   ),
                   const SizedBox(width: 8),
                   _buildTabButton('LAB', 'Laboratory', Icons.biotech_outlined),
-                  const SizedBox(width: 8),
-                  _buildTabButton('HOMECARE', 'Home Care', Icons.home_outlined),
-                  const SizedBox(width: 8),
-                  _buildTabButton(
-                    'CONSULTATION',
-                    'Consultations',
-                    Icons.people_outline,
-                  ),
+                  // PRODUCTION CODE (UNCOMMENT FOR FULL PROD RELEASE):
+                  // const SizedBox(width: 8),
+                  // _buildTabButton('HOMECARE', 'Home Care', Icons.home_outlined),
+                  // const SizedBox(width: 8),
+                  // _buildTabButton('CONSULTATION', 'Consultations', Icons.people_outline),
                 ],
               ),
             ),

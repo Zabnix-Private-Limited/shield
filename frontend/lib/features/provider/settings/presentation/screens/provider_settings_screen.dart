@@ -176,104 +176,122 @@ class _ProviderSettingsScreenState extends State<ProviderSettingsScreen> {
                       ),
                     ),
                     const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: DropdownButtonFormField<String>(
-                            initialValue: _theme,
-                            decoration: const InputDecoration(
-                              labelText: 'Theme',
-                            ),
-                            items: const [
-                              DropdownMenuItem(
-                                value: 'system',
-                                child: Text('Use device setting'),
-                              ),
-                              DropdownMenuItem(
-                                value: 'light',
-                                child: Text('Light'),
-                              ),
-                              DropdownMenuItem(
-                                value: 'dark',
-                                child: Text('Dark'),
-                              ),
-                            ],
-                            onChanged: controller.isProviderProfileSaving
-                                ? null
-                                : (value) => setState(
-                                    () => _theme = value ?? 'system',
+                    LayoutBuilder(
+                      builder: (context, constraints) {
+                        final isNarrow = constraints.maxWidth < 600;
+                        return Column(
+                          children: [
+                            Flex(
+                              direction: isNarrow ? Axis.vertical : Axis.horizontal,
+                              children: [
+                                Expanded(
+                                  flex: isNarrow ? 0 : 1,
+                                  child: DropdownButtonFormField<String>(
+                                    isExpanded: true,
+                                    initialValue: _theme,
+                                    decoration: const InputDecoration(
+                                      labelText: 'Theme',
+                                    ),
+                                    items: const [
+                                      DropdownMenuItem(
+                                        value: 'system',
+                                        child: Text('Use device setting'),
+                                      ),
+                                      DropdownMenuItem(
+                                        value: 'light',
+                                        child: Text('Light'),
+                                      ),
+                                      DropdownMenuItem(
+                                        value: 'dark',
+                                        child: Text('Dark'),
+                                      ),
+                                    ],
+                                    onChanged: controller.isProviderProfileSaving
+                                        ? null
+                                        : (value) => setState(
+                                            () => _theme = value ?? 'system',
+                                          ),
                                   ),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: DropdownButtonFormField<String>(
-                            initialValue: _language,
-                            decoration: const InputDecoration(
-                              labelText: 'Language',
-                            ),
-                            items: const [
-                              DropdownMenuItem(
-                                value: 'en',
-                                child: Text('English'),
-                              ),
-                              DropdownMenuItem(
-                                value: 'ml',
-                                child: Text('Malayalam'),
-                              ),
-                              DropdownMenuItem(
-                                value: 'hi',
-                                child: Text('Hindi'),
-                              ),
-                            ],
-                            onChanged: controller.isProviderProfileSaving
-                                ? null
-                                : (value) =>
-                                      setState(() => _language = value ?? 'en'),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: DropdownButtonFormField<String>(
-                            initialValue: _timezone,
-                            decoration: const InputDecoration(
-                              labelText: 'Timezone',
-                            ),
-                            items: const [
-                              DropdownMenuItem(
-                                value: 'Asia/Calcutta',
-                                child: Text('India Standard Time'),
-                              ),
-                              DropdownMenuItem(
-                                value: 'Asia/Dubai',
-                                child: Text('Gulf Standard Time'),
-                              ),
-                              DropdownMenuItem(
-                                value: 'UTC',
-                                child: Text('UTC'),
-                              ),
-                            ],
-                            onChanged: controller.isProviderProfileSaving
-                                ? null
-                                : (value) => setState(
-                                    () => _timezone = value ?? 'Asia/Calcutta',
+                                ),
+                                SizedBox(width: isNarrow ? 0 : 12, height: isNarrow ? 12 : 0),
+                                Expanded(
+                                  flex: isNarrow ? 0 : 1,
+                                  child: DropdownButtonFormField<String>(
+                                    isExpanded: true,
+                                    initialValue: _language,
+                                    decoration: const InputDecoration(
+                                      labelText: 'Language',
+                                    ),
+                                    items: const [
+                                      DropdownMenuItem(
+                                        value: 'en',
+                                        child: Text('English'),
+                                      ),
+                                      DropdownMenuItem(
+                                        value: 'ml',
+                                        child: Text('Malayalam'),
+                                      ),
+                                      DropdownMenuItem(
+                                        value: 'hi',
+                                        child: Text('Hindi'),
+                                      ),
+                                    ],
+                                    onChanged: controller.isProviderProfileSaving
+                                        ? null
+                                        : (value) =>
+                                              setState(() => _language = value ?? 'en'),
                                   ),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: TextFormField(
-                            controller: _defaultPrinterController,
-                            decoration: const InputDecoration(
-                              labelText: 'Default printer',
+                                ),
+                              ],
                             ),
-                          ),
-                        ),
-                      ],
+                            const SizedBox(height: 12),
+                            Flex(
+                              direction: isNarrow ? Axis.vertical : Axis.horizontal,
+                              children: [
+                                Expanded(
+                                  flex: isNarrow ? 0 : 1,
+                                  child: DropdownButtonFormField<String>(
+                                    isExpanded: true,
+                                    initialValue: _timezone,
+                                    decoration: const InputDecoration(
+                                      labelText: 'Timezone',
+                                    ),
+                                    items: const [
+                                      DropdownMenuItem(
+                                        value: 'Asia/Calcutta',
+                                        child: Text('India Standard Time'),
+                                      ),
+                                      DropdownMenuItem(
+                                        value: 'Asia/Dubai',
+                                        child: Text('Gulf Standard Time'),
+                                      ),
+                                      DropdownMenuItem(
+                                        value: 'UTC',
+                                        child: Text('UTC'),
+                                      ),
+                                    ],
+                                    onChanged: controller.isProviderProfileSaving
+                                        ? null
+                                        : (value) => setState(
+                                            () => _timezone = value ?? 'Asia/Calcutta',
+                                          ),
+                                  ),
+                                ),
+                                SizedBox(width: isNarrow ? 0 : 12, height: isNarrow ? 12 : 0),
+                                Expanded(
+                                  flex: isNarrow ? 0 : 1,
+                                  child: TextFormField(
+                                    controller: _defaultPrinterController,
+                                    decoration: const InputDecoration(
+                                      labelText: 'Default printer',
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        );
+                      },
                     ),
                     const SizedBox(height: 12),
                     SwitchListTile(
@@ -294,6 +312,7 @@ class _ProviderSettingsScreenState extends State<ProviderSettingsScreen> {
                       ),
                     ),
                     DropdownButtonFormField<String>(
+                      isExpanded: true,
                       initialValue: _paperSize,
                       decoration: const InputDecoration(
                         labelText: 'Paper size',

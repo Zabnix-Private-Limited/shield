@@ -9,11 +9,16 @@ describe('AdminGovernanceController', () => {
     executeCustomerWorkspaceBulkAction: jest.fn(),
   } as any;
 
+  const customerService = {} as any;
+
   let controller: AdminGovernanceController;
 
   beforeEach(() => {
     jest.clearAllMocks();
-    controller = new AdminGovernanceController(adminGovernanceService);
+    controller = new AdminGovernanceController(
+      adminGovernanceService,
+      customerService,
+    );
   });
 
   it('returns the admin dashboard workspace envelope', async () => {

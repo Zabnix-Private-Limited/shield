@@ -8,6 +8,11 @@ class CustomerOrderSummary {
     required this.purchaseDate,
     required this.itemCount,
     required this.providerName,
+    this.orderSource = 'MANUAL_ITEMS',
+    this.fulfillmentPreference = 'COLLECT_FROM_PHARMACY',
+    this.deliveryAddress,
+    this.customerNotes,
+    this.prescriptionDocument,
   });
 
   final String id;
@@ -18,10 +23,17 @@ class CustomerOrderSummary {
   final DateTime? purchaseDate;
   final int itemCount;
   final String providerName;
+  final String orderSource;
+  final String fulfillmentPreference;
+  final String? deliveryAddress;
+  final String? customerNotes;
+  final Map<String, dynamic>? prescriptionDocument;
 
   factory CustomerOrderSummary.fromJson(Map<String, dynamic> json) {
     final provider = json['provider'] is Map
         ? Map<String, dynamic>.from(json['provider'] as Map)
+        : json['pharmacy'] is Map
+        ? Map<String, dynamic>.from(json['pharmacy'] as Map)
         : const <String, dynamic>{};
     final items = json['items'] is List
         ? json['items'] as List
@@ -45,6 +57,14 @@ class CustomerOrderSummary {
           provider['providerName']?.toString().trim() ??
           provider['name']?.toString().trim() ??
           '',
+      orderSource: json['orderSource']?.toString().trim() ?? 'MANUAL_ITEMS',
+      fulfillmentPreference:
+          json['fulfillmentPreference']?.toString().trim() ?? 'COLLECT_FROM_PHARMACY',
+      deliveryAddress: json['deliveryAddress']?.toString().trim(),
+      customerNotes: json['customerNotes']?.toString().trim(),
+      prescriptionDocument: json['prescriptionDocument'] is Map
+          ? Map<String, dynamic>.from(json['prescriptionDocument'] as Map)
+          : null,
     );
   }
 }
@@ -81,6 +101,11 @@ class CustomerOrderDetails extends CustomerOrderSummary {
     required super.purchaseDate,
     required super.itemCount,
     required super.providerName,
+    super.orderSource,
+    super.fulfillmentPreference,
+    super.deliveryAddress,
+    super.customerNotes,
+    super.prescriptionDocument,
     required this.items,
   });
 
@@ -100,6 +125,11 @@ class CustomerOrderDetails extends CustomerOrderSummary {
       purchaseDate: summary.purchaseDate,
       itemCount: summary.itemCount,
       providerName: summary.providerName,
+      orderSource: summary.orderSource,
+      fulfillmentPreference: summary.fulfillmentPreference,
+      deliveryAddress: summary.deliveryAddress,
+      customerNotes: summary.customerNotes,
+      prescriptionDocument: summary.prescriptionDocument,
       items: rawItems
           .whereType<Map>()
           .map(

@@ -36,8 +36,6 @@ export type ShieldAppEnv = {
   turnstileSiteKey: string;
   turnstileSecretKey: string;
   prescriptionAiUrl: string;
-  ocrEnabled: boolean;
-  ocrTimeoutMs: number;
 };
 
 const defaultCorsOrigins = [
@@ -144,7 +142,5 @@ export function getAppEnv(): ShieldAppEnv {
       'PRESCRIPTION_AI_URL',
       'http://127.0.0.1:8010',
     ).replace(/\/+$/, ''),
-    ocrEnabled: readBoolean('OCR_ENABLED', false),
-    ocrTimeoutMs: readNumber('OCR_TIMEOUT_MS', 120000),
   };
 }

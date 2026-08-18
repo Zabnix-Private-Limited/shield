@@ -14,8 +14,6 @@ describe('app env helpers', () => {
     delete process.env.PORT;
     delete process.env.CORS_ORIGIN;
     delete process.env.PRESCRIPTION_AI_URL;
-    delete process.env.OCR_ENABLED;
-    delete process.env.OCR_TIMEOUT_MS;
 
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { getAppEnv } = require('./app-env');
@@ -30,16 +28,12 @@ describe('app env helpers', () => {
       'https://shield-zabnix.vercel.app',
     ]);
     expect(env.prescriptionAiUrl).toBe('http://127.0.0.1:8010');
-    expect(env.ocrEnabled).toBe(false);
-    expect(env.ocrTimeoutMs).toBe(120000);
   });
 
-  it('parses configured values for core, cors, and OCR settings', async () => {
+  it('parses configured values for core, cors, and prescription AI settings', async () => {
     process.env.PORT = '4200';
     process.env.CORS_ORIGIN = 'https://shield.example.com, https://portal.example.com';
-    process.env.PRESCRIPTION_AI_URL = 'https://ocr.example.com/';
-    process.env.OCR_ENABLED = 'true';
-    process.env.OCR_TIMEOUT_MS = '90000';
+    process.env.PRESCRIPTION_AI_URL = 'https://ai.example.com/';
 
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { getAppEnv } = require('./app-env');
@@ -55,8 +49,6 @@ describe('app env helpers', () => {
       'https://shield.example.com',
       'https://portal.example.com',
     ]);
-    expect(env.prescriptionAiUrl).toBe('https://ocr.example.com');
-    expect(env.ocrEnabled).toBe(true);
-    expect(env.ocrTimeoutMs).toBe(90000);
+    expect(env.prescriptionAiUrl).toBe('https://ai.example.com');
   });
 });

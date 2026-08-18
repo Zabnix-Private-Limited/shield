@@ -10,6 +10,17 @@ import { RequirePermissions } from '../auth/permissions.decorator';
 import type { ShieldPrincipal } from '../auth/auth.types';
 import { DashboardService } from './dashboard.service';
 
+function parseBigIntSafe(val?: string | null): bigint | undefined {
+  if (!val) return undefined;
+  const trimmed = val.trim();
+  if (!/^\d+$/.test(trimmed)) return undefined;
+  try {
+    return BigInt(trimmed);
+  } catch {
+    return undefined;
+  }
+}
+
 @Controller('dashboard')
 export class DashboardController {
   constructor(private dashboardService: DashboardService) {}
@@ -18,11 +29,12 @@ export class DashboardController {
     customerId?: string,
     principal?: ShieldPrincipal,
   ): bigint {
-    if (principal?.principalType === 'CUSTOMER' && principal.customerId) {
-      return BigInt(principal.customerId);
-    }
-    if (customerId?.trim()) {
-      return BigInt(customerId);
+    const parsed =
+      parseBigIntSafe(principal?.principalType === 'CUSTOMER' ? principal.customerId : null) ??
+      parseBigIntSafe(customerId);
+
+    if (parsed != null) {
+      return parsed;
     }
     throw new BadRequestException('Authenticated customer context is required.');
   }
@@ -83,14 +95,13 @@ export class DashboardController {
     @Query('customer_id') customerId?: string,
     @CurrentPrincipal() principal?: ShieldPrincipal,
   ) {
+    const targetCustomerId =
+      parseBigIntSafe(principal?.customerId) ?? parseBigIntSafe(customerId);
+
     const data = await this.dashboardService.getRoleSectionDashboard(
       role,
       section,
-      principal?.principalType === 'CUSTOMER' && principal.customerId
-        ? BigInt(principal.customerId)
-        : customerId?.trim()
-          ? BigInt(customerId)
-          : undefined,
+      targetCustomerId,
     );
     return {
       success: true,

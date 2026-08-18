@@ -75,8 +75,9 @@ describe('ServiceProviderService customer directory projection', () => {
       expect.arrayContaining([
         { code: 'PHARMACY', label: 'Pharmacy', providerCount: 0 },
         { code: 'LAB', label: 'Lab', providerCount: 0 },
-        { code: 'DOCTOR', label: 'Doctor', providerCount: 0 },
-        { code: 'HOMECARE', label: 'Homecare', providerCount: 0 },
+        // PRODUCTION CODE (UNCOMMENT WHEN DOCTOR & HOMECARE ARE RE-ENABLED):
+        // { code: 'DOCTOR', label: 'Doctor', providerCount: 0 },
+        // { code: 'HOMECARE', label: 'Homecare', providerCount: 0 },
       ]),
     );
   });

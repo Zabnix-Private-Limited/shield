@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import '../models/shield_role.dart';
 import 'customer_auth_session.dart';
 import 'internal_auth_session.dart';
@@ -17,11 +18,6 @@ class PortalResolver {
   const PortalResolver._();
 
   static PortalResolution? get current {
-    final internalSession = InternalAuthSession.instance;
-    if (internalSession.isAuthenticated) {
-      return PortalResolution(role: internalSession.homeRole, isInternal: true);
-    }
-
     if (CustomerAuthSession.instance.isAuthenticated) {
       return const PortalResolution(
         role: SHIELDRole.customer,
@@ -29,23 +25,34 @@ class PortalResolver {
       );
     }
 
+    final internalSession = InternalAuthSession.instance;
+    if (internalSession.isAuthenticated) {
+      return PortalResolution(role: internalSession.homeRole, isInternal: true);
+    }
+
     return null;
   }
+
+  static bool get isDevBypassActive => kDebugMode;
 
   static String? guardPortalRoute({
     required String requestedRoleKey,
     required String sectionKey,
   }) {
+    if (isDevBypassActive) {
+      return null;
+    }
+
     final resolution = current;
     if (resolution == null) {
       return null;
     }
-
     final requestedRole = SHIELDRole.fromRouteKey(requestedRoleKey);
-    if (requestedRole == resolution.role) {
+    if (requestedRole == resolution.role ||
+        (requestedRole == SHIELDRole.provider &&
+            resolution.role == SHIELDRole.pharmacyStaff)) {
       return null;
     }
-
     return resolution.routeForSection(sectionKey);
   }
 
@@ -110,6 +117,13 @@ class PortalResolver {
       case 'settings':
       case 'notifications':
         return true;
+      case 'orders':
+      case 'payments':
+      case 'payment-details':
+      case 'history':
+        return role == SHIELDRole.customer ||
+            role == SHIELDRole.provider ||
+            role == SHIELDRole.pharmacyStaff;
       case 'appointments':
       case 'documents':
         return role == SHIELDRole.customer ||
@@ -121,7 +135,6 @@ class PortalResolver {
       case 'membership-benefits':
       case 'services':
       case 'wallet':
-      case 'orders':
       case 'prescriptions':
       case 'activity':
         return role == SHIELDRole.customer;

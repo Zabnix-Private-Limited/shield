@@ -182,12 +182,15 @@ export class NotificationService {
   }
 
   async registerDeviceToken(input: RegisterTokenInput) {
-    const session = input.sessionId
-      ? await this.prisma.authSession.findUnique({
-          where: { sessionId: input.sessionId },
-          select: { authDeviceId: true },
-        })
-      : null;
+    const isUuid =
+      /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
+    const session =
+      input.sessionId && isUuid.test(input.sessionId)
+        ? await this.prisma.authSession.findUnique({
+            where: { sessionId: input.sessionId },
+            select: { authDeviceId: true },
+          })
+        : null;
 
     return this.prisma.devicePushToken.upsert({
       where: { token: input.token },

@@ -16,6 +16,7 @@ import '../models/wallet.dart';
 import 'customer_auth_session.dart';
 
 class ApiService {
+  static Dio get dio => _dio;
   static const String _productionBackendBaseUrl =
       'https://shield-backend.vercel.app';
   static String? _accessToken;
@@ -710,6 +711,31 @@ class ApiService {
   static Future<Map<String, dynamic>> getCustomerOrder(String orderId) async {
     _requireCustomerId();
     return _readEnvelope(await _dio.get('/customer/orders/$orderId'));
+  }
+
+  static Future<Map<String, dynamic>> createCustomerOrder({
+    required String providerId,
+    String? orderSource,
+    String? documentId,
+    List<Map<String, dynamic>>? items,
+    String? fulfillmentPreference,
+    String? deliveryAddress,
+    String? customerNotes,
+    String? idempotencyKey,
+  }) async {
+    _requireCustomerId();
+    final payload = <String, dynamic>{
+      'provider_id': providerId,
+      if (orderSource != null) 'order_source': orderSource,
+      if (documentId != null) 'document_id': documentId,
+      if (items != null) 'items': items,
+      if (fulfillmentPreference != null)
+        'fulfillment_preference': fulfillmentPreference,
+      if (deliveryAddress != null) 'delivery_address': deliveryAddress,
+      if (customerNotes != null) 'customer_notes': customerNotes,
+      if (idempotencyKey != null) 'idempotency_key': idempotencyKey,
+    };
+    return _readEnvelope(await _dio.post('/customer/orders', data: payload));
   }
 
   static Future<List<NotificationModel>> getNotifications(

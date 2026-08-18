@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
 
+import '../../../../../shared/widgets/app_skeleton.dart';
 import '../../../../../app/theme/app_colors.dart';
 import '../../../../../app/theme/app_typography.dart';
 import '../controllers/provider_portal_controller.dart';
@@ -45,7 +46,7 @@ class _ProviderWorkspaceScaffoldState
   Widget build(BuildContext context) {
     final controller = ref.watch(providerPortalControllerProvider);
     if (controller.isLoading && !controller.isWorkspaceLoaded) {
-      return const Center(child: CircularProgressIndicator());
+      return const AppPortalSectionSkeleton();
     }
 
     if (controller.error != null && !controller.isWorkspaceLoaded) {

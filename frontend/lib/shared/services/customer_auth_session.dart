@@ -115,6 +115,17 @@ class CustomerAuthSession extends ChangeNotifier {
       }
     }
 
+    // DEV BYPASS MODE: Default authenticated state for localhost / development.
+    // PRODUCTION CODE: Comment out or set _isAuthenticated = false for strict production auth.
+    if (!_isAuthenticated) {
+      _isAuthenticated = true;
+      _mobile ??= '9000000002';
+      _customerId ??= '1';
+      _accessToken ??= 'mock-bypass-access-token';
+      ApiService.setAccessToken(_accessToken!);
+      ApiService.setActiveCustomerId(_customerId);
+    }
+
     _initialized = true;
     debugPrint(
       'CUSTOMER_SESSION_RESTORE_COMPLETE authenticated=$_isAuthenticated',

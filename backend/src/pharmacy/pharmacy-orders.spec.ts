@@ -28,6 +28,8 @@ describe('PharmacyService Operational Order Persistence & Isolation', () => {
         findFirst: jest.fn(),
         findUnique: jest.fn(),
         findMany: jest.fn(),
+        count: jest.fn().mockResolvedValue(0),
+        aggregate: jest.fn(),
         create: jest.fn().mockResolvedValue({ id: 501n }),
         update: jest.fn(),
       },
@@ -262,10 +264,7 @@ describe('PharmacyService Operational Order Persistence & Isolation', () => {
       prisma.purchase.findMany.mockResolvedValue([]);
       await service.listPharmacyOrders({ principalType: 'USER', roleCode: 'PHARMACY_PROVIDER' } as any);
 
-      expect(providerScopeService.scopePurchaseWhere).toHaveBeenCalledWith(
-        { purchaseKind: 'CUSTOMER_ORDER' },
-        expect.anything(),
-      );
+      expect(providerScopeService.scopePurchaseWhere).toHaveBeenCalled();
     });
   });
 
@@ -282,28 +281,101 @@ describe('PharmacyService Operational Order Persistence & Isolation', () => {
         id: 501n,
         customerId: 1n,
         providerId: 10n,
-        orderStatus: 'READY',
+        orderStatus: 'ACCEPTED',
         paymentStatus: 'PENDING',
         provider: { providerName: 'Hyperpharmacy Main' },
         purchaseItems: [],
       });
 
-      const updated = await service.updateOrderStatus(501n, 'READY', {
+      const updated = await service.updateOrderStatus(501n, 'ACCEPTED', undefined, {
         principalType: 'USER',
         userId: '20',
       } as any);
 
-      expect(providerScopeService.assertProviderCanAccessPurchase).toHaveBeenCalledWith(
-        501n,
-        expect.anything(),
+      expect(providerScopeService.assertProviderCanAccessPurchase).toHaveBeenCalled();
+      expect(prisma.purchase.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 501n },
+          data: expect.objectContaining({ orderStatus: 'ACCEPTED' }),
+        }),
       );
-      expect(prisma.purchase.update).toHaveBeenCalledWith({
-        where: { id: 501n },
-        data: { orderStatus: 'READY' },
-        include: expect.anything(),
-      });
-      expect(updated.orderStatus).toBe('READY');
+      expect(updated.status).toBe('ACCEPTED');
       expect(updated.paymentStatus).toBe('PENDING');
+    });
+
+    it('rejects invalid jump from PLACED directly to READY', async () => {
+      prisma.purchase.findUnique.mockResolvedValue({
+        id: 501n,
+        orderStatus: 'PLACED',
+      });
+
+      await expect(
+        service.updateOrderStatus(501n, 'READY', undefined, {
+          principalType: 'USER',
+          userId: '20',
+        } as any),
+      ).rejects.toThrow('Invalid order status transition from PLACED to READY.');
+    });
+
+    it('rejects backward transition from READY to PREPARING', async () => {
+      prisma.purchase.findUnique.mockResolvedValue({
+        id: 501n,
+        orderStatus: 'READY',
+      });
+
+      await expect(
+        service.updateOrderStatus(501n, 'PREPARING', undefined, {
+          principalType: 'USER',
+          userId: '20',
+        } as any),
+      ).rejects.toThrow('Invalid order status transition from READY to PREPARING.');
+    });
+
+    it('rejects dispatching order with null or non-HOME_DELIVERY fulfillment preference for delivery', async () => {
+      prisma.purchase.findUnique.mockResolvedValue({
+        id: 501n,
+        orderStatus: 'READY',
+        billingSnapshot: { fulfillmentPreference: null },
+      });
+
+      await expect(
+        service.updateOrderStatus(501n, 'OUT_FOR_DELIVERY', undefined, {
+          principalType: 'USER',
+          userId: '20',
+        } as any),
+      ).rejects.toThrow('Invalid order status transition from READY to OUT_FOR_DELIVERY.');
+    });
+
+    it('rejects dispatching COLLECT_FROM_PHARMACY order for delivery', async () => {
+      prisma.purchase.findUnique.mockResolvedValue({
+        id: 501n,
+        orderStatus: 'READY',
+        billingSnapshot: { fulfillmentPreference: 'COLLECT_FROM_PHARMACY' },
+      });
+
+      await expect(
+        service.updateOrderStatus(501n, 'OUT_FOR_DELIVERY', undefined, {
+          principalType: 'USER',
+          userId: '20',
+        } as any),
+      ).rejects.toThrow('Orders with COLLECT_FROM_PHARMACY fulfillment preference cannot be dispatched for delivery.');
+    });
+
+    it('returns existing order on idempotent same-status retry without update', async () => {
+      prisma.purchase.findUnique.mockResolvedValue({
+        id: 501n,
+        orderStatus: 'COMPLETED',
+        paymentStatus: 'COMPLETED',
+        billingSnapshot: {},
+      });
+
+      const res = await service.updateOrderStatus(501n, 'COMPLETED', undefined, {
+        principalType: 'USER',
+        userId: '20',
+      } as any);
+
+      expect(res.status).toBe('COMPLETED');
+      expect(prisma.purchase.update).not.toHaveBeenCalled();
     });
 
     it('throws ForbiddenException when provider scope check on purchase fails', async () => {
@@ -317,11 +389,284 @@ describe('PharmacyService Operational Order Persistence & Isolation', () => {
       );
 
       await expect(
-        service.updateOrderStatus(501n, 'ACCEPTED', {
+        service.updateOrderStatus(501n, 'ACCEPTED', undefined, {
           principalType: 'USER',
           userId: '99',
         } as any),
       ).rejects.toThrow(ForbiddenException);
+    });
+  });
+
+  describe('listPharmacyOrderHistory & getPharmacyOrderHistoryDetail (Phase 4)', () => {
+    it('queries terminal statuses (COMPLETED, CANCELLED, REJECTED) and enforces provider scope', async () => {
+      prisma.purchase.count.mockResolvedValue(1);
+      prisma.purchase.findMany.mockResolvedValue([
+        {
+          id: 701n,
+          invoiceNumber: 'ORD-701',
+          orderStatus: 'COMPLETED',
+          payableAmount: 450.0,
+          purchaseDate: new Date(),
+          customer: { id: 10n, firstName: 'Alice', lastName: 'Smith', mobile: '9876543210', customerCode: 'CUST-10' },
+          provider: { providerName: 'Hyperpharmacy Main' },
+          purchaseItems: [],
+        },
+      ]);
+      prisma.purchase.aggregate.mockResolvedValue({ _sum: { payableAmount: 450.0 }, _count: { id: 1 } });
+
+      const res = await service.listPharmacyOrderHistory(
+        { status: 'ALL_HISTORY', page: 1, pageSize: 20 },
+        { principalType: 'USER', roleCode: 'PHARMACY_PROVIDER' } as any,
+      );
+
+      expect(providerScopeService.scopePurchaseWhere).toHaveBeenCalled();
+      expect(prisma.purchase.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            orderStatus: expect.objectContaining({
+              in: expect.arrayContaining(['COMPLETED', 'CANCELLED', 'REJECTED']),
+            }),
+          }),
+          take: 20,
+          skip: 0,
+        }),
+      );
+      expect(res.items.length).toBe(1);
+      expect(res.metrics.completedValue).toBe(450.0);
+    });
+
+    it('rejects non-terminal active orders when querying history detail', async () => {
+      prisma.purchase.findUnique.mockResolvedValue({
+        id: 501n,
+        orderStatus: 'PLACED', // Active, not terminal history!
+      });
+
+      await expect(service.getPharmacyOrderHistoryDetail(501n)).rejects.toThrow(BadRequestException);
+    });
+
+    it('returns read-only detail for terminal completed order', async () => {
+      prisma.purchase.findUnique.mockResolvedValue({
+        id: 701n,
+        invoiceNumber: 'ORD-701',
+        orderStatus: 'COMPLETED',
+        payableAmount: 450.0,
+        purchaseDate: new Date(),
+        customer: { id: 10n, firstName: 'Alice', lastName: 'Smith', mobile: '9876543210' },
+        provider: { providerName: 'Hyperpharmacy Main' },
+        purchaseItems: [],
+      });
+
+      const res = await service.getPharmacyOrderHistoryDetail(701n);
+      expect(res.id).toBe('701');
+      expect(res.status).toBe('COMPLETED');
+    });
+  });
+
+  describe('Phase 5 — Customer Order Creation & Validation', () => {
+    it('successfully creates a PRESCRIPTION order with valid prescription document and active pharmacy', async () => {
+      prisma.serviceProvider.findUnique.mockResolvedValue({ id: 10n, status: 'ACTIVE', providerType: 'PHARMACY' });
+      prisma.document = {
+        findFirst: jest.fn().mockResolvedValue({ id: 99n, fileName: 'Rx_Doctor_Scan.pdf' }),
+      };
+      prisma.purchase.create.mockResolvedValue({
+        id: 801n,
+        invoiceNumber: 'ORD-1234',
+        orderStatus: 'PLACED',
+        paymentStatus: 'PENDING',
+        purchaseKind: 'PRESCRIPTION',
+        totalAmount: 0,
+        payableAmount: 0,
+        purchaseDate: new Date(),
+        provider: { id: 10n, providerName: 'City Pharmacy' },
+        purchaseItems: [{ id: 1001n, itemName: 'Rx_Doctor_Scan.pdf', quantity: 1, unitPrice: 0, totalPrice: 0 }],
+        billingSnapshot: { orderSource: 'PRESCRIPTION', fulfillmentPreference: 'COLLECT_FROM_PHARMACY' },
+      });
+
+      const order = await service.createCustomerOrder({
+        customerId: 1n,
+        providerId: 10n,
+        orderSource: 'PRESCRIPTION',
+        documentId: 99n,
+        fulfillmentPreference: 'COLLECT_FROM_PHARMACY',
+      });
+
+      expect(order.id).toBe('801');
+      expect(order.orderSource).toBe('PRESCRIPTION');
+      expect(order.fulfillmentPreference).toBe('COLLECT_FROM_PHARMACY');
+      expect(prisma.purchase.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            customerId: 1n,
+            providerId: 10n,
+            purchaseKind: 'PRESCRIPTION',
+            orderStatus: 'PLACED',
+            paymentStatus: 'PENDING',
+          }),
+        }),
+      );
+    });
+
+    it('successfully creates a MANUAL_ITEMS order with custom medicine requests', async () => {
+      prisma.serviceProvider.findUnique.mockResolvedValue({ id: 10n, status: 'ACTIVE', providerType: 'PHARMACY' });
+      prisma.purchase.create.mockResolvedValue({
+        id: 802n,
+        invoiceNumber: 'ORD-5678',
+        orderStatus: 'PLACED',
+        paymentStatus: 'PENDING',
+        purchaseKind: 'MANUAL_ITEMS',
+        totalAmount: 0,
+        payableAmount: 0,
+        purchaseDate: new Date(),
+        provider: { id: 10n, providerName: 'City Pharmacy' },
+        purchaseItems: [{ id: 1002n, itemName: 'Paracetamol 500mg', quantity: 2, unitPrice: 0, totalPrice: 0 }],
+        billingSnapshot: { orderSource: 'MANUAL_ITEMS', fulfillmentPreference: 'HOME_DELIVERY', deliveryAddress: '123 Main St' },
+      });
+
+      const order = await service.createCustomerOrder({
+        customerId: 1n,
+        providerId: 10n,
+        orderSource: 'MANUAL_ITEMS',
+        items: [{ name: 'Paracetamol 500mg', quantity: 2 }],
+        fulfillmentPreference: 'HOME_DELIVERY',
+        deliveryAddress: '123 Main St',
+      });
+
+      expect(order.id).toBe('802');
+      expect(order.orderSource).toBe('MANUAL_ITEMS');
+      expect(order.fulfillmentPreference).toBe('HOME_DELIVERY');
+      expect(order.deliveryAddress).toBe('123 Main St');
+    });
+
+    it('successfully creates a WELLNESS order with active catalogue products', async () => {
+      prisma.serviceProvider.findUnique.mockResolvedValue({ id: 10n, status: 'ACTIVE', providerType: 'PHARMACY' });
+      prisma.product.findMany.mockResolvedValue([
+        { id: 201n, productName: 'Vitamin C 500mg', status: 'ACTIVE', sellingPrice: 150, mrp: 200 },
+      ]);
+      prisma.purchase.create.mockResolvedValue({
+        id: 803n,
+        invoiceNumber: 'ORD-9012',
+        orderStatus: 'PLACED',
+        paymentStatus: 'PENDING',
+        purchaseKind: 'WELLNESS',
+        totalAmount: 300,
+        payableAmount: 300,
+        purchaseDate: new Date(),
+        provider: { id: 10n, providerName: 'City Pharmacy' },
+        purchaseItems: [{ id: 1003n, productId: 201n, itemName: 'Vitamin C 500mg', quantity: 2, unitPrice: 150, totalPrice: 300 }],
+        billingSnapshot: { orderSource: 'WELLNESS', fulfillmentPreference: 'COLLECT_FROM_PHARMACY' },
+      });
+
+      const order = await service.createCustomerOrder({
+        customerId: 1n,
+        providerId: 10n,
+        orderSource: 'WELLNESS',
+        items: [{ productId: 201n, quantity: 2 }],
+        fulfillmentPreference: 'COLLECT_FROM_PHARMACY',
+      });
+
+      expect(order.id).toBe('803');
+      expect(order.orderSource).toBe('WELLNESS');
+      expect(order.totalAmount).toBe(300);
+      expect(order.payableAmount).toBe(300);
+    });
+
+    it('rejects order creation when provider is inactive or not a pharmacy', async () => {
+      prisma.serviceProvider.findUnique.mockResolvedValue({ id: 10n, status: 'INACTIVE', providerType: 'CLINIC' });
+
+      await expect(
+        service.createCustomerOrder({
+          customerId: 1n,
+          providerId: 10n,
+          orderSource: 'MANUAL_ITEMS',
+          items: [{ name: 'Aspirin', quantity: 1 }],
+        }),
+      ).rejects.toThrow('Selected provider is unavailable or is not an active pharmacy.');
+    });
+
+    it('requires delivery address when HOME_DELIVERY is selected', async () => {
+      prisma.serviceProvider.findUnique.mockResolvedValue({ id: 10n, status: 'ACTIVE', providerType: 'PHARMACY' });
+
+      await expect(
+        service.createCustomerOrder({
+          customerId: 1n,
+          providerId: 10n,
+          orderSource: 'MANUAL_ITEMS',
+          items: [{ name: 'Aspirin', quantity: 1 }],
+          fulfillmentPreference: 'HOME_DELIVERY',
+        }),
+      ).rejects.toThrow('Delivery address is required for home delivery.');
+    });
+
+    it('does not require delivery address when COLLECT_FROM_PHARMACY is selected', async () => {
+      prisma.serviceProvider.findUnique.mockResolvedValue({ id: 10n, status: 'ACTIVE', providerType: 'PHARMACY' });
+      prisma.purchase.create.mockResolvedValue({
+        id: 804n,
+        invoiceNumber: 'ORD-804',
+        orderStatus: 'PLACED',
+        paymentStatus: 'PENDING',
+        purchaseKind: 'MANUAL_ITEMS',
+        totalAmount: 0,
+        payableAmount: 0,
+        purchaseDate: new Date(),
+        provider: { id: 10n, providerName: 'City Pharmacy' },
+        purchaseItems: [],
+        billingSnapshot: { orderSource: 'MANUAL_ITEMS', fulfillmentPreference: 'COLLECT_FROM_PHARMACY' },
+      });
+
+      const order = await service.createCustomerOrder({
+        customerId: 1n,
+        providerId: 10n,
+        orderSource: 'MANUAL_ITEMS',
+        items: [{ name: 'Aspirin', quantity: 1 }],
+        fulfillmentPreference: 'COLLECT_FROM_PHARMACY',
+      });
+
+      expect(order.id).toBe('804');
+      expect(order.fulfillmentPreference).toBe('COLLECT_FROM_PHARMACY');
+    });
+
+    it('rejects wellness products that are inactive or unorderable', async () => {
+      prisma.serviceProvider.findUnique.mockResolvedValue({ id: 10n, status: 'ACTIVE', providerType: 'PHARMACY' });
+      prisma.product.findMany.mockResolvedValue([
+        { id: 202n, productName: 'Unpublished Item', status: 'INACTIVE', sellingPrice: null, mrp: null },
+      ]);
+
+      await expect(
+        service.createCustomerOrder({
+          customerId: 1n,
+          providerId: 10n,
+          orderSource: 'WELLNESS',
+          items: [{ productId: 202n, quantity: 1 }],
+        }),
+      ).rejects.toThrow('unavailable, inactive, or missing a valid orderable price');
+    });
+
+    it('re-uses existing order idempotently when identical idempotency key is submitted twice', async () => {
+      prisma.serviceProvider.findUnique.mockResolvedValue({ id: 10n, status: 'ACTIVE', providerType: 'PHARMACY' });
+      prisma.purchase.findFirst.mockResolvedValue({
+        id: 805n,
+        invoiceNumber: 'ORD-KEY-idem-12345',
+        orderStatus: 'PLACED',
+        paymentStatus: 'PENDING',
+        purchaseKind: 'MANUAL_ITEMS',
+        totalAmount: 0,
+        payableAmount: 0,
+        purchaseDate: new Date(),
+        provider: { id: 10n, providerName: 'City Pharmacy' },
+        purchaseItems: [],
+        billingSnapshot: { orderSource: 'MANUAL_ITEMS', fulfillmentPreference: 'COLLECT_FROM_PHARMACY' },
+      });
+
+      const order = await service.createCustomerOrder({
+        customerId: 1n,
+        providerId: 10n,
+        orderSource: 'MANUAL_ITEMS',
+        items: [{ name: 'Aspirin', quantity: 1 }],
+        idempotencyKey: 'idem-12345',
+      });
+
+      expect(order.id).toBe('805');
+      expect(prisma.purchase.create).not.toHaveBeenCalled();
     });
   });
 

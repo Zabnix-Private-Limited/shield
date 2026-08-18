@@ -1,4 +1,5 @@
 import {
+  ForbiddenException,
   Injectable,
   Logger,
   ServiceUnavailableException,
@@ -20,7 +21,7 @@ import {
   USER_TYPES,
 } from './auth.types';
 import { FirebaseAdminService } from '../notification/firebase-admin.service';
-import { getRolePermissions } from './rbac-catalog';
+import { getRolePermissions, isRoleActive } from './rbac-catalog';
 
 type SessionRecord = {
   id: bigint;
@@ -283,6 +284,12 @@ export class AuthService {
     if (!user.role?.code) {
       throw new UnauthorizedException(
         'Provisioned user does not have an assigned SHIELD role.',
+      );
+    }
+
+    if (!isRoleActive(user.role.code)) {
+      throw new ForbiddenException(
+        `Role ${user.role.code} is currently disabled.`,
       );
     }
 
@@ -1116,6 +1123,12 @@ export class AuthService {
       if (!user.role?.code) {
         throw new UnauthorizedException(
           'Provisioned user does not have an assigned SHIELD role.',
+        );
+      }
+
+      if (!isRoleActive(user.role.code)) {
+        throw new ForbiddenException(
+          `Role ${user.role.code} is currently disabled.`,
         );
       }
 

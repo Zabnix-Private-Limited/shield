@@ -444,11 +444,33 @@ export class PharmacyService {
   }
 
   private customerOrderProjection(purchase: any) {
+    const snapshot = (purchase.billingSnapshot as Record<string, any>) || {};
+    let orderSource = 'MANUAL_ITEMS';
+    if (purchase.purchaseKind === 'WELLNESS' || snapshot.orderSource === 'WELLNESS') {
+      orderSource = 'WELLNESS';
+    } else if (
+      purchase.purchaseKind === 'PRESCRIPTION' ||
+      snapshot.orderSource === 'PRESCRIPTION' ||
+      snapshot.prescriptionDocumentId != null
+    ) {
+      orderSource = 'PRESCRIPTION';
+    } else if (
+      purchase.purchaseKind === 'MANUAL_ITEMS' ||
+      snapshot.orderSource === 'MANUAL_ITEMS'
+    ) {
+      orderSource = 'MANUAL_ITEMS';
+    }
+
     return {
       id: purchase.id.toString(),
+      uuid: purchase.uuid,
       invoiceNumber: purchase.invoiceNumber ?? null,
       orderStatus: purchase.orderStatus,
       paymentStatus: purchase.paymentStatus ?? null,
+      orderSource,
+      fulfillmentPreference: snapshot.fulfillmentPreference ?? 'COLLECT_FROM_PHARMACY',
+      deliveryAddress: snapshot.deliveryAddress ?? null,
+      customerNotes: snapshot.customerNotes ?? null,
       totalAmount:
         purchase.totalAmount == null ? null : Number(purchase.totalAmount),
       payableAmount:
@@ -458,6 +480,14 @@ export class PharmacyService {
         purchase.provider?.business?.name ??
         purchase.provider?.providerName ??
         null,
+      pharmacy: purchase.provider
+        ? {
+            id: purchase.provider.id != null ? purchase.provider.id.toString() : null,
+            name: purchase.provider.providerName ?? null,
+            businessName: purchase.provider.business?.name ?? null,
+          }
+        : null,
+      prescriptionDocument: snapshot.prescriptionDocument ?? null,
       items: (purchase.purchaseItems ?? []).map((item: any) => ({
         id: item.id.toString(),
         productId: item.productId == null ? null : item.productId.toString(),
@@ -505,21 +535,41 @@ export class PharmacyService {
   async createCustomerOrder(data: {
     customerId: bigint;
     providerId: bigint;
-    items: Array<{ productId: bigint; quantity: number }>;
+    orderSource?: 'PRESCRIPTION' | 'MANUAL_ITEMS' | 'WELLNESS' | string;
+    documentId?: bigint;
+    items?: Array<{ productId?: bigint; name?: string; quantity: number; notes?: string }>;
+    fulfillmentPreference?: 'HOME_DELIVERY' | 'COLLECT_FROM_PHARMACY' | string;
     deliveryAddress?: string;
     customerNotes?: string;
     idempotencyKey?: string;
   }) {
-    if (!data.items || data.items.length === 0) {
-      throw new BadRequestException('Order items must not be empty.');
-    }
-
     const provider = await this.prisma.serviceProvider.findUnique({
       where: { id: data.providerId },
     });
 
     if (!provider || provider.status !== 'ACTIVE' || provider.providerType !== 'PHARMACY') {
       throw new BadRequestException('Selected provider is unavailable or is not an active pharmacy.');
+    }
+
+    const fulfillmentPreference =
+      data.fulfillmentPreference === 'HOME_DELIVERY' ? 'HOME_DELIVERY' : 'COLLECT_FROM_PHARMACY';
+    const deliveryAddress = String(data.deliveryAddress ?? '').trim() || undefined;
+
+    if (fulfillmentPreference === 'HOME_DELIVERY' && !deliveryAddress) {
+      throw new BadRequestException('Delivery address is required for home delivery.');
+    }
+
+    const customerNotes = String(data.customerNotes ?? '').trim() || undefined;
+
+    let source = (data.orderSource ?? '').trim().toUpperCase();
+    if (!source) {
+      if (data.documentId) {
+        source = 'PRESCRIPTION';
+      } else if (data.items && data.items.some((i) => i.productId != null)) {
+        source = 'WELLNESS';
+      } else {
+        source = 'MANUAL_ITEMS';
+      }
     }
 
     const idempotencyKey = (data.idempotencyKey ?? '').trim();
@@ -547,45 +597,124 @@ export class PharmacyService {
         }
       }
 
-      const productIds = data.items.map((i) => BigInt(i.productId));
-      const products = await this.prisma.product.findMany({
-        where: {
-          id: { in: productIds },
-          ...this.customerWellnessWhere(),
-        },
-      });
-      const productMap = new Map(products.map((p) => [p.id.toString(), p]));
-
       let calculatedTotal = 0;
-      const itemsMapped = data.items.map((item) => {
-        const prod = productMap.get(item.productId.toString());
-        if (!prod || !this.isCustomerOrderable(prod)) {
-          throw new BadRequestException(
-            `Product ID ${item.productId} is unavailable, inactive, or missing a valid orderable price.`,
-          );
-        }
-        const rawQty = Number(item.quantity);
-        if (
-          !Number.isFinite(rawQty) ||
-          rawQty <= 0 ||
-          !Number.isInteger(rawQty) ||
-          rawQty > 1000
-        ) {
-          throw new BadRequestException(
-            `Invalid item quantity for product ID ${item.productId}.`,
-          );
-        }
-        const unitPrice = this.getAuthoritativeUnitPrice(prod)!;
-        calculatedTotal += unitPrice * rawQty;
-        return {
-          productId: prod.id,
-          quantity: rawQty,
-          unitPrice,
-        };
-      });
+      let purchaseKind = 'MANUAL_ITEMS';
+      let snapshotExtra: Record<string, any> = {};
+      let itemsMapped: Array<{
+        productId?: bigint;
+        itemName: string;
+        quantity: number;
+        unitPrice: number;
+        totalPrice: number;
+        itemType?: string;
+        metadata?: any;
+      }> = [];
 
-      const deliveryAddress = String(data.deliveryAddress ?? '').trim() || undefined;
-      const customerNotes = String(data.customerNotes ?? '').trim() || undefined;
+      if (source === 'PRESCRIPTION') {
+        if (!data.documentId) {
+          throw new BadRequestException('Prescription document ID is required for prescription orders.');
+        }
+        const document = await this.prisma.document.findFirst({
+          where: {
+            id: data.documentId,
+            customerId: data.customerId,
+            documentType: { equals: 'PRESCRIPTION', mode: 'insensitive' },
+            status: { not: 'DELETED' },
+          },
+        });
+        if (!document) {
+          throw new NotFoundException('Prescription document not found.');
+        }
+        purchaseKind = 'PRESCRIPTION';
+        snapshotExtra = {
+          prescriptionDocumentId: document.id.toString(),
+          prescriptionDocument: {
+            id: document.id.toString(),
+            title: document.fileName ?? 'Prescription Document',
+            fileName: document.fileName ?? 'Prescription',
+          },
+        };
+        itemsMapped = [
+          {
+            itemName: document.fileName || 'Prescription Document',
+            quantity: 1,
+            unitPrice: 0,
+            totalPrice: 0,
+            itemType: 'PRESCRIPTION',
+            metadata: { documentId: document.id.toString() },
+          },
+        ];
+      } else if (source === 'MANUAL_ITEMS') {
+        if (!data.items || data.items.length === 0) {
+          throw new BadRequestException('At least one item request is required for manual item orders.');
+        }
+        purchaseKind = 'MANUAL_ITEMS';
+        itemsMapped = data.items.map((item, idx) => {
+          const name = String(item.name ?? '').trim();
+          if (!name) {
+            throw new BadRequestException(`Item #${idx + 1} must have a product or request name.`);
+          }
+          const rawQty = Number(item.quantity);
+          if (!Number.isFinite(rawQty) || rawQty <= 0 || !Number.isInteger(rawQty) || rawQty > 1000) {
+            throw new BadRequestException(`Item #${idx + 1} must have a valid positive integer quantity.`);
+          }
+          return {
+            itemName: name.slice(0, 255),
+            quantity: rawQty,
+            unitPrice: 0,
+            totalPrice: 0,
+            itemType: 'MANUAL_REQUEST',
+            metadata: item.notes ? { notes: String(item.notes).trim() } : undefined,
+          };
+        });
+      } else {
+        // WELLNESS
+        if (!data.items || data.items.length === 0) {
+          throw new BadRequestException('Order items must not be empty for wellness orders.');
+        }
+        purchaseKind = 'WELLNESS';
+        const productIds = data.items
+          .map((i) => (i.productId != null ? BigInt(i.productId) : null))
+          .filter((id): id is bigint => id != null);
+
+        if (productIds.length === 0) {
+          throw new BadRequestException('Valid product IDs are required for wellness orders.');
+        }
+
+        const products = await this.prisma.product.findMany({
+          where: {
+            id: { in: productIds },
+            ...this.customerWellnessWhere(),
+          },
+        });
+        const productMap = new Map(products.map((p) => [p.id.toString(), p]));
+
+        itemsMapped = data.items.map((item) => {
+          if (!item.productId) {
+            throw new BadRequestException('Product ID is required for wellness items.');
+          }
+          const prod = productMap.get(item.productId.toString());
+          if (!prod || !this.isCustomerOrderable(prod)) {
+            throw new BadRequestException(
+              `Product ID ${item.productId} is unavailable, inactive, or missing a valid orderable price.`,
+            );
+          }
+          const rawQty = Number(item.quantity);
+          if (!Number.isFinite(rawQty) || rawQty <= 0 || !Number.isInteger(rawQty) || rawQty > 1000) {
+            throw new BadRequestException(`Invalid item quantity for product ID ${item.productId}.`);
+          }
+          const unitPrice = this.getAuthoritativeUnitPrice(prod)!;
+          calculatedTotal += unitPrice * rawQty;
+          return {
+            productId: prod.id,
+            itemName: prod.productName ?? 'Product',
+            quantity: rawQty,
+            unitPrice,
+            totalPrice: unitPrice * rawQty,
+            itemType: 'WELLNESS_PRODUCT',
+          };
+        });
+      }
 
       try {
         const purchase = await this.prisma.purchase.create({
@@ -594,7 +723,7 @@ export class PharmacyService {
             customerId: data.customerId,
             providerId: data.providerId,
             invoiceNumber,
-            purchaseKind: 'CUSTOMER_ORDER',
+            purchaseKind,
             orderStatus: 'PLACED',
             paymentStatus: 'PENDING',
             totalAmount: calculatedTotal,
@@ -602,16 +731,22 @@ export class PharmacyService {
             payableAmount: calculatedTotal,
             purchaseDate: new Date(),
             billingSnapshot: {
+              orderSource: source,
+              fulfillmentPreference,
               deliveryAddress,
               customerNotes,
               idempotencyKey: idempotencyKey || null,
+              ...snapshotExtra,
             },
             purchaseItems: {
               create: itemsMapped.map((item) => ({
                 productId: item.productId,
+                itemName: item.itemName,
                 quantity: item.quantity,
                 unitPrice: item.unitPrice,
-                totalPrice: item.quantity * item.unitPrice,
+                totalPrice: item.totalPrice,
+                itemType: item.itemType,
+                metadata: item.metadata,
               })),
             },
           },
@@ -651,27 +786,287 @@ export class PharmacyService {
     return orderPromise;
   }
 
-  async listPharmacyOrders(principal?: ShieldPrincipal) {
-    const whereClause = this.providerScopeService.scopePurchaseWhere(
-      { purchaseKind: 'CUSTOMER_ORDER' },
+  public static readonly ACTIVE_ORDER_STATUSES = [
+    'PLACED',
+    'SUBMITTED',
+    'REQUESTED',
+    'NEW',
+    'ACCEPTED',
+    'REVIEWING',
+    'PREPARING',
+    'PROCESSING',
+    'READY',
+    'READY_FOR_PICKUP',
+    'OUT_FOR_DELIVERY',
+    'DELIVERY',
+    'DISPATCHED',
+  ];
+
+  public static readonly TERMINAL_ORDER_STATUSES = [
+    'COMPLETED',
+    'DELIVERED',
+    'COLLECTED',
+    'CANCELLED',
+    'REJECTED',
+  ];
+
+  private getPharmacyOrderDomainWhere() {
+    return {
+      purchaseKind: {
+        in: [
+          'PRESCRIPTION',
+          'MANUAL_ITEMS',
+          'WELLNESS',
+          'CUSTOMER_ORDER',
+          'PHARMACY',
+        ],
+      },
+    };
+  }
+
+  private isTerminalStatus(status?: string | null): boolean {
+    if (!status) return false;
+    return PharmacyService.TERMINAL_ORDER_STATUSES.includes(
+      status.trim().toUpperCase(),
+    );
+  }
+
+  private pharmacyFulfillmentProjection(purchase: any) {
+    const snapshot = (purchase.billingSnapshot as Record<string, any>) || {};
+    const items = (purchase.purchaseItems ?? []).map((item: any) => ({
+      id: item.id.toString(),
+      productId: item.productId == null ? null : item.productId.toString(),
+      name: item.itemName ?? item.product?.productName ?? 'Product',
+      quantity: item.quantity == null ? 1 : Number(item.quantity),
+      unitPrice: item.unitPrice == null ? 0 : Number(item.unitPrice),
+      lineTotal: item.totalPrice == null ? 0 : Number(item.totalPrice),
+    }));
+
+    let source = 'MANUAL_ITEMS';
+    if (purchase.purchaseKind === 'WELLNESS') {
+      source = 'WELLNESS';
+    } else if (
+      purchase.purchaseKind === 'PRESCRIPTION' ||
+      snapshot.prescriptionDocumentId != null
+    ) {
+      source = 'PRESCRIPTION';
+    }
+
+    const fulfillmentPreference = snapshot.fulfillmentPreference
+      ? String(snapshot.fulfillmentPreference)
+      : null;
+
+    return {
+      id: purchase.id.toString(),
+      uuid: purchase.uuid,
+      orderNumber: purchase.invoiceNumber ?? `ORD-${purchase.id}`,
+      status: purchase.orderStatus ?? 'PLACED',
+      paymentStatus: purchase.paymentStatus ?? 'PENDING',
+      orderSource: source,
+      fulfillmentPreference,
+      customer: purchase.customer
+        ? {
+            id: purchase.customer.id.toString(),
+            customerCode: purchase.customer.customerCode,
+            fullName:
+              `${purchase.customer.firstName ?? ''} ${purchase.customer.lastName ?? ''}`.trim() ||
+              'Customer',
+            mobile: purchase.customer.mobile,
+            email: purchase.customer.email,
+          }
+        : null,
+      deliveryAddress: snapshot.deliveryAddress ?? null,
+      customerNotes: snapshot.customerNotes ?? null,
+      cancellationReason: snapshot.cancellationReason ?? null,
+      totalAmount:
+        purchase.totalAmount == null ? 0 : Number(purchase.totalAmount),
+      payableAmount:
+        purchase.payableAmount == null ? 0 : Number(purchase.payableAmount),
+      submittedAt: purchase.purchaseDate ?? purchase.createdAt ?? new Date(),
+      statusUpdatedAt: purchase.orderStatusUpdatedAt ?? null,
+      items,
+      prescriptionDocument: snapshot.prescriptionDocument ?? null,
+    };
+  }
+
+  async listPharmacyOrders(options?: {
+    status?: string;
+    source?: string;
+    query?: string;
+    page?: string;
+    pageSize?: string;
+    principal?: ShieldPrincipal;
+  }) {
+    const page = Math.max(1, Number(options?.page || 1));
+    const pageSize = Math.min(
+      100,
+      Math.max(1, Number(options?.pageSize || 25)),
+    );
+
+    const scopeWhere = await this.providerScopeService.scopePurchaseWhere(
+      {},
+      options?.principal,
+    );
+
+    const where: any = {
+      ...scopeWhere,
+      ...this.getPharmacyOrderDomainWhere(),
+    };
+
+    const targetStatus = options?.status?.trim().toUpperCase();
+    if (
+      !targetStatus ||
+      targetStatus === 'ALL' ||
+      targetStatus === 'ALL_ACTIVE'
+    ) {
+      where.orderStatus = { in: PharmacyService.ACTIVE_ORDER_STATUSES };
+    } else if (targetStatus === 'NEW') {
+      where.orderStatus = { in: ['PLACED', 'SUBMITTED', 'REQUESTED', 'NEW'] };
+    } else if (targetStatus === 'ACCEPTED') {
+      where.orderStatus = { in: ['ACCEPTED', 'REVIEWING'] };
+    } else if (targetStatus === 'PREPARING') {
+      where.orderStatus = { in: ['PREPARING', 'PROCESSING'] };
+    } else if (targetStatus === 'READY') {
+      where.orderStatus = { in: ['READY', 'READY_FOR_PICKUP'] };
+    } else if (targetStatus === 'DELIVERY') {
+      where.orderStatus = {
+        in: ['OUT_FOR_DELIVERY', 'DELIVERY', 'DISPATCHED'],
+      };
+    } else {
+      where.orderStatus = targetStatus;
+    }
+
+    if (options?.source && options.source.trim().toUpperCase() !== 'ALL') {
+      const src = options.source.trim().toUpperCase();
+      if (['PRESCRIPTION', 'WELLNESS', 'MANUAL_ITEMS'].includes(src)) {
+        where.purchaseKind = src;
+      }
+    }
+
+    if (options?.query?.trim()) {
+      const q = options.query.trim();
+      where.OR = [
+        { invoiceNumber: { contains: q, mode: 'insensitive' } },
+        { customer: { firstName: { contains: q, mode: 'insensitive' } } },
+        { customer: { lastName: { contains: q, mode: 'insensitive' } } },
+        { customer: { mobile: { contains: q, mode: 'insensitive' } } },
+        { customer: { customerCode: { contains: q, mode: 'insensitive' } } },
+      ];
+    }
+
+    const [total, purchases] = await Promise.all([
+      this.prisma.purchase.count({ where }),
+      this.prisma.purchase.findMany({
+        where,
+        include: {
+          customer: true,
+          provider: { include: { business: true } },
+          purchaseItems: { include: { product: true } },
+        },
+        orderBy: [{ purchaseDate: 'desc' }, { id: 'desc' }],
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+      }),
+    ]);
+
+    return {
+      items: purchases.map((p) => this.pharmacyFulfillmentProjection(p)),
+      pagination: {
+        page,
+        pageSize,
+        total,
+        totalPages: Math.ceil(total / pageSize),
+      },
+    };
+  }
+
+  async getPharmacyOrdersSummary(principal?: ShieldPrincipal) {
+    const scopeWhere = await this.providerScopeService.scopePurchaseWhere(
+      {},
       principal,
     );
-    const purchases = await this.prisma.purchase.findMany({
-      where: whereClause,
-      include: this.customerOrderInclude(),
-      orderBy: [{ purchaseDate: 'desc' }, { id: 'desc' }],
-      take: 50,
+
+    const where: any = {
+      ...scopeWhere,
+      ...this.getPharmacyOrderDomainWhere(),
+    };
+
+    const grouped = await this.prisma.purchase.groupBy({
+      by: ['orderStatus'],
+      where,
+      _count: { _all: true },
     });
-    return purchases.map((purchase) => this.customerOrderProjection(purchase));
+
+    const summary = {
+      newCount: 0,
+      acceptedCount: 0,
+      preparingCount: 0,
+      readyCount: 0,
+      deliveryCount: 0,
+      completedCount: 0,
+      cancelledCount: 0,
+      totalCount: 0,
+    };
+
+    for (const g of grouped) {
+      const st = (g.orderStatus ?? 'PLACED').toUpperCase();
+      const cnt = g._count._all;
+      summary.totalCount += cnt;
+
+      if (['PLACED', 'SUBMITTED', 'REQUESTED', 'NEW'].includes(st)) {
+        summary.newCount += cnt;
+      } else if (['ACCEPTED', 'REVIEWING'].includes(st)) {
+        summary.acceptedCount += cnt;
+      } else if (['PREPARING', 'PROCESSING'].includes(st)) {
+        summary.preparingCount += cnt;
+      } else if (['READY', 'READY_FOR_PICKUP'].includes(st)) {
+        summary.readyCount += cnt;
+      } else if (['OUT_FOR_DELIVERY', 'DELIVERY', 'DISPATCHED'].includes(st)) {
+        summary.deliveryCount += cnt;
+      } else if (['COMPLETED', 'DELIVERED', 'COLLECTED'].includes(st)) {
+        summary.completedCount += cnt;
+      } else if (['CANCELLED', 'REJECTED'].includes(st)) {
+        summary.cancelledCount += cnt;
+      }
+    }
+
+    return summary;
+  }
+
+  async getPharmacyOrderDetail(orderId: bigint, principal?: ShieldPrincipal) {
+    await this.providerScopeService.assertProviderCanAccessPurchase(
+      orderId,
+      principal,
+    );
+    const purchase = await this.prisma.purchase.findUnique({
+      where: { id: orderId },
+      include: {
+        customer: true,
+        provider: { include: { business: true } },
+        purchaseItems: { include: { product: true } },
+      },
+    });
+
+    if (!purchase) {
+      throw new NotFoundException(`Order with ID ${orderId} not found.`);
+    }
+
+    return this.pharmacyFulfillmentProjection(purchase);
   }
 
   async updateOrderStatus(
     orderId: bigint,
     status: string,
+    cancellationReason?: string,
     principal?: ShieldPrincipal,
   ) {
     const purchase = await this.prisma.purchase.findUnique({
       where: { id: orderId },
+      include: {
+        customer: true,
+        provider: { include: { business: true } },
+        purchaseItems: { include: { product: true } },
+      },
     });
     if (!purchase) throw new NotFoundException('Order not found.');
 
@@ -682,10 +1077,18 @@ export class PharmacyService {
 
     const allowedStatuses = [
       'PLACED',
+      'SUBMITTED',
       'REQUESTED',
+      'NEW',
       'ACCEPTED',
+      'REVIEWING',
+      'PREPARING',
       'PROCESSING',
       'READY',
+      'READY_FOR_PICKUP',
+      'OUT_FOR_DELIVERY',
+      'DELIVERY',
+      'DISPATCHED',
       'COMPLETED',
       'REJECTED',
       'CANCELLED',
@@ -695,14 +1098,277 @@ export class PharmacyService {
       throw new BadRequestException(`Invalid order status ${status}.`);
     }
 
+    const currentStatusUpper = (purchase.orderStatus || '').toUpperCase();
+
+    // Idempotent same-status no-op
+    if (currentStatusUpper === normalizedStatus) {
+      return this.pharmacyFulfillmentProjection(purchase);
+    }
+
+    // Terminal order status invariant: terminal orders cannot transition to a different status
+    if (this.isTerminalStatus(currentStatusUpper)) {
+      throw new BadRequestException(
+        `Terminal order in status ${purchase.orderStatus} cannot be reopened or changed to ${normalizedStatus}.`,
+      );
+    }
+
+    const snapshot = (purchase.billingSnapshot as Record<string, any>) || {};
+    const fulfillmentPref = snapshot.fulfillmentPreference
+      ? String(snapshot.fulfillmentPreference).toUpperCase()
+      : null;
+
+    // Fulfillment-specific restriction: pickup orders cannot transition to delivery
+    if (
+      fulfillmentPref === 'COLLECT_FROM_PHARMACY' &&
+      ['OUT_FOR_DELIVERY', 'DELIVERY', 'DISPATCHED'].includes(normalizedStatus)
+    ) {
+      throw new BadRequestException(
+        'Orders with COLLECT_FROM_PHARMACY fulfillment preference cannot be dispatched for delivery.',
+      );
+    }
+
+    // Server-authoritative progression rules
+    if (
+      ['PLACED', 'SUBMITTED', 'REQUESTED', 'NEW'].includes(currentStatusUpper)
+    ) {
+      if (
+        !['ACCEPTED', 'REVIEWING', 'PREPARING', 'PROCESSING', 'CANCELLED', 'REJECTED'].includes(
+          normalizedStatus,
+        )
+      ) {
+        throw new BadRequestException(
+          `Invalid order status transition from ${purchase.orderStatus} to ${normalizedStatus}.`,
+        );
+      }
+    } else if (['ACCEPTED', 'REVIEWING'].includes(currentStatusUpper)) {
+      if (
+        !['PREPARING', 'PROCESSING', 'READY', 'READY_FOR_PICKUP', 'CANCELLED', 'REJECTED'].includes(
+          normalizedStatus,
+        )
+      ) {
+        throw new BadRequestException(
+          `Invalid order status transition from ${purchase.orderStatus} to ${normalizedStatus}.`,
+        );
+      }
+    } else if (['PREPARING', 'PROCESSING'].includes(currentStatusUpper)) {
+      if (
+        !['READY', 'READY_FOR_PICKUP', 'CANCELLED', 'REJECTED'].includes(
+          normalizedStatus,
+        )
+      ) {
+        throw new BadRequestException(
+          `Invalid order status transition from ${purchase.orderStatus} to ${normalizedStatus}.`,
+        );
+      }
+    } else if (['READY', 'READY_FOR_PICKUP'].includes(currentStatusUpper)) {
+      const allowedNext = [
+        'COMPLETED',
+        'CANCELLED',
+        'REJECTED',
+        ...(fulfillmentPref === 'HOME_DELIVERY'
+          ? ['OUT_FOR_DELIVERY', 'DELIVERY', 'DISPATCHED']
+          : []),
+      ];
+      if (!allowedNext.includes(normalizedStatus)) {
+        throw new BadRequestException(
+          `Invalid order status transition from ${purchase.orderStatus} to ${normalizedStatus}.`,
+        );
+      }
+    } else if (
+      ['OUT_FOR_DELIVERY', 'DELIVERY', 'DISPATCHED'].includes(currentStatusUpper)
+    ) {
+      if (!['COMPLETED', 'CANCELLED', 'REJECTED'].includes(normalizedStatus)) {
+        throw new BadRequestException(
+          `Invalid order status transition from ${purchase.orderStatus} to ${normalizedStatus}.`,
+        );
+      }
+    }
+
+    const cleanReason =
+      typeof cancellationReason === 'string'
+        ? cancellationReason.trim()
+        : undefined;
+
+    if (
+      (normalizedStatus === 'CANCELLED' || normalizedStatus === 'REJECTED') &&
+      !cleanReason &&
+      !snapshot.cancellationReason
+    ) {
+      throw new BadRequestException(
+        'Cancellation or rejection reason is required.',
+      );
+    }
+
+    const updatedSnapshot = {
+      ...snapshot,
+      ...(cleanReason ? { cancellationReason: cleanReason } : {}),
+      lastStatusUpdateAt: new Date().toISOString(),
+    };
+
     const updated = await this.prisma.purchase.update({
       where: { id: orderId },
       data: {
         orderStatus: normalizedStatus,
+        orderStatusUpdatedAt: new Date(),
+        billingSnapshot: updatedSnapshot,
       },
-      include: this.customerOrderInclude(),
+      include: {
+        customer: true,
+        provider: { include: { business: true } },
+        purchaseItems: { include: { product: true } },
+      },
     });
 
-    return this.customerOrderProjection(updated);
+    return this.pharmacyFulfillmentProjection(updated);
+  }
+
+  // -------------------------------------------------------------
+  // PHASE 4 PHARMACY ORDER HISTORY
+  // -------------------------------------------------------------
+
+  async listPharmacyOrderHistory(
+    query?: {
+      status?: string;
+      source?: string;
+      fulfillment?: string;
+      search?: string;
+      from?: string;
+      to?: string;
+      page?: number;
+      pageSize?: number;
+    },
+    principal?: ShieldPrincipal,
+  ) {
+    const scopeWhere = await this.providerScopeService.scopePurchaseWhere(
+      {},
+      principal,
+    );
+
+    let statusFilter: any = { in: PharmacyService.TERMINAL_ORDER_STATUSES };
+
+    if (query?.status && query.status.toUpperCase() !== 'ALL_HISTORY') {
+      const selected = query.status.trim().toUpperCase();
+      if (PharmacyService.TERMINAL_ORDER_STATUSES.includes(selected)) {
+        statusFilter = selected;
+      }
+    }
+
+    const where: any = {
+      ...scopeWhere,
+      ...this.getPharmacyOrderDomainWhere(),
+      orderStatus: statusFilter,
+    };
+
+    if (query?.source && query.source.trim().toUpperCase() !== 'ALL') {
+      const src = query.source.trim().toUpperCase();
+      if (['PRESCRIPTION', 'WELLNESS', 'MANUAL_ITEMS'].includes(src)) {
+        where.purchaseKind = src;
+      }
+    }
+
+    if (query?.search?.trim()) {
+      const search = query.search.trim();
+      where.OR = [
+        { invoiceNumber: { contains: search, mode: 'insensitive' } },
+        { customer: { firstName: { contains: search, mode: 'insensitive' } } },
+        { customer: { lastName: { contains: search, mode: 'insensitive' } } },
+        { customer: { mobile: { contains: search, mode: 'insensitive' } } },
+        { customer: { customerCode: { contains: search, mode: 'insensitive' } } },
+      ];
+    }
+
+    if (query?.from || query?.to) {
+      const fromDate = query.from ? new Date(query.from) : null;
+      const toDate = query.to ? new Date(query.to) : null;
+
+      const dateGte =
+        fromDate && !isNaN(fromDate.getTime()) ? fromDate : undefined;
+      const dateLte =
+        toDate && !isNaN(toDate.getTime()) ? toDate : undefined;
+
+      if (dateGte || dateLte) {
+        where.orderStatusUpdatedAt = {
+          ...(dateGte ? { gte: dateGte } : {}),
+          ...(dateLte ? { lte: dateLte } : {}),
+        };
+      }
+    }
+
+    const page = Math.max(1, Number(query?.page) || 1);
+    const pageSize = Math.min(100, Math.max(1, Number(query?.pageSize) || 20));
+    const skip = (page - 1) * pageSize;
+
+    const [total, purchases, completedSum, cancelledCount, rejectedCount] = await Promise.all([
+      this.prisma.purchase.count({ where }),
+      this.prisma.purchase.findMany({
+        where,
+        orderBy: [{ orderStatusUpdatedAt: 'desc' }, { purchaseDate: 'desc' }, { id: 'desc' }],
+        skip,
+        take: pageSize,
+        include: {
+          customer: true,
+          provider: { include: { business: true } },
+          purchaseItems: { include: { product: true } },
+        },
+      }),
+      this.prisma.purchase.aggregate({
+        where: { ...where, orderStatus: 'COMPLETED' },
+        _sum: { payableAmount: true },
+        _count: { id: true },
+      }),
+      this.prisma.purchase.count({
+        where: { ...where, orderStatus: 'CANCELLED' },
+      }),
+      this.prisma.purchase.count({
+        where: { ...where, orderStatus: 'REJECTED' },
+      }),
+    ]);
+
+    return {
+      items: purchases.map((p) => this.pharmacyFulfillmentProjection(p)),
+      pagination: {
+        page,
+        pageSize,
+        total,
+        totalPages: Math.ceil(total / pageSize),
+      },
+      metrics: {
+        completedCount: completedSum._count?.id || 0,
+        completedValue: Number(completedSum._sum?.payableAmount || 0),
+        cancelledCount,
+        rejectedCount,
+      },
+    };
+  }
+
+  async getPharmacyOrderHistoryDetail(
+    orderId: bigint,
+    principal?: ShieldPrincipal,
+  ) {
+    await this.providerScopeService.assertProviderCanAccessPurchase(
+      orderId,
+      principal,
+    );
+
+    const purchase = await this.prisma.purchase.findUnique({
+      where: { id: orderId },
+      include: {
+        customer: true,
+        provider: { include: { business: true } },
+        purchaseItems: { include: { product: true } },
+      },
+    });
+
+    if (!purchase) {
+      throw new NotFoundException(`Order with ID ${orderId} not found.`);
+    }
+
+    if (!this.isTerminalStatus(purchase.orderStatus)) {
+      throw new BadRequestException(
+        `Order ${orderId} is an active order (${purchase.orderStatus}) and not in history.`,
+      );
+    }
+
+    return this.pharmacyFulfillmentProjection(purchase);
   }
 }

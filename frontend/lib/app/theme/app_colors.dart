@@ -12,6 +12,8 @@ class AppColors {
   static const Color lightGray = Color(0xFFF8FAFC);
   static const Color gray = Color(0xFF64748B);
   static const Color darkGray = Color(0xFF334155);
+  static const Color charcoal = Color(0xFF334155);
+  static const Color mintGreen = Color(0xFFD1FAE5);
   static const Color divider = Color(0xFFE2E8F0);
 
   // Semantic

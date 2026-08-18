@@ -151,25 +151,30 @@ final GoRouter router = GoRouter(
       return PortalResolver.resolvedHomeRoute();
     }
 
-    if (isCustomerAuthenticated &&
-        location.startsWith('/portal/') &&
-        !location.startsWith('/portal/customer')) {
-      final segments = state.uri.pathSegments;
-      final sectionKey = segments.length >= 3 ? segments[2] : 'dashboard';
-      _traceRouter(
-        'customer session blocked from non-customer portal route=$location section=$sectionKey',
-      );
-      return PortalResolver.routeForResolvedSection(sectionKey);
+    // DEV MODE: Allow navigation to any requested portal route on localhost.
+    if (location.startsWith('/portal/')) {
+      return null;
     }
 
-    if (isInternalAuthenticated &&
-        (location.startsWith('/customer/') ||
-            location.startsWith('/portal/customer'))) {
-      _traceRouter(
-        'internal session blocked from customer route; redirecting home',
-      );
-      return PortalResolver.resolvedHomeRoute();
-    }
+    // PRODUCTION CODE (UNCOMMENT FOR FULL PROD RELEASE):
+    // if (isCustomerAuthenticated &&
+    //     location.startsWith('/portal/') &&
+    //     !location.startsWith('/portal/customer')) {
+    //   final segments = state.uri.pathSegments;
+    //   final sectionKey = segments.length >= 3 ? segments[2] : 'dashboard';
+    //   _traceRouter(
+    //     'customer session blocked from non-customer portal route=$location section=$sectionKey',
+    //   );
+    //   return PortalResolver.routeForResolvedSection(sectionKey);
+    // }
+    // if (isInternalAuthenticated &&
+    //     (location.startsWith('/customer/') ||
+    //         location.startsWith('/portal/customer'))) {
+    //   _traceRouter(
+    //     'internal session blocked from customer route; redirecting home',
+    //   );
+    //   return PortalResolver.resolvedHomeRoute();
+    // }
 
     if (isAuthenticated && location.startsWith('/portal/')) {
       final segments = state.uri.pathSegments;
@@ -319,7 +324,10 @@ final GoRouter router = GoRouter(
         final requestedRole = SHIELDRole.fromRouteKey(
           state.pathParameters['role'],
         );
-        final resolvedRole = PortalResolver.current?.role ?? requestedRole;
+        // DEV BYPASS MODE: Render requestedRole directly so dropdown switching transitions workspace.
+        // PRODUCTION CODE (UNCOMMENT FOR STRICT PROD AUTH):
+        // final resolvedRole = PortalResolver.current?.role ?? requestedRole;
+        final resolvedRole = requestedRole;
         final section = state.pathParameters['section'];
         return _buildFadeTransitionPage(
           key: ValueKey('${resolvedRole.routeKey}-$section'),

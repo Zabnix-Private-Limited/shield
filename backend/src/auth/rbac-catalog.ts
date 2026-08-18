@@ -427,8 +427,23 @@ export const RBAC_ROLES: RoleDefinition[] = [
   },
 ];
 
+export const DISABLED_ROLES: ReadonlySet<string> = new Set([
+  'CRM_EXECUTIVE',
+  'DOCTOR',
+  'HOMECARE_PROVIDER',
+  'DENTAL_PROVIDER',
+  'COSMETIC_PROVIDER',
+  'DIETITIAN',
+]);
+
+export function isRoleActive(roleCode: string | null | undefined): boolean {
+  if (!roleCode) return false;
+  return !DISABLED_ROLES.has(roleCode.trim().toUpperCase());
+}
+
 export function getRolePermissions(roleCode: string) {
   return (
     RBAC_ROLES.find((role) => role.code === roleCode)?.permissions.slice() ?? []
   );
 }
+

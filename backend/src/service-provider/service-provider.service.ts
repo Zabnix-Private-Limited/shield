@@ -79,16 +79,19 @@ export class ServiceProviderService {
     // This is a directory taxonomy, not an availability claim. Returning the
     // supported healthcare categories with a zero count lets the customer
     // app explain an empty directory rather than rendering an empty surface.
-    const supportedCategories = [
-      'PHARMACY',
-      'LAB',
-      'DOCTOR',
-      'CLINIC',
-      'HOMECARE',
-      'DENTAL',
-      'DIETITIAN',
-      'COSMETIC',
-    ];
+    // DEV MODE: Active provider categories for current release.
+    // PRODUCTION CODE (UNCOMMENT FOR FULL PROD RELEASE):
+    // const supportedCategories = [
+    //   'PHARMACY',
+    //   'LAB',
+    //   'DOCTOR',
+    //   'CLINIC',
+    //   'HOMECARE',
+    //   'DENTAL',
+    //   'DIETITIAN',
+    //   'COSMETIC',
+    // ];
+    const supportedCategories = ['PHARMACY', 'LAB'];
     return supportedCategories.map((code) => ({
       code,
       label: this.customerProviderTypeLabel(code),

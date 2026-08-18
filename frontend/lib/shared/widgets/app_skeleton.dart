@@ -40,6 +40,10 @@ class AppPageSkeleton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (!showSidebar) {
+      return const AppPortalSectionSkeleton();
+    }
+
     final gridCount = AppResponsive.adaptiveGridCount(
       context,
       phoneCount: 1,
@@ -52,31 +56,30 @@ class AppPageSkeleton extends StatelessWidget {
       body: SafeArea(
         child: Row(
           children: [
-            if (showSidebar)
-              Container(
-                width: 280,
-                padding: const EdgeInsets.all(18),
-                decoration: const BoxDecoration(
-                  color: AppColors.white,
-                  border: Border(right: BorderSide(color: AppColors.divider)),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: const [
-                    AppSkeletonBlock(height: 30, width: 120),
-                    SizedBox(height: 10),
-                    AppSkeletonBlock(height: 18, width: 140),
-                    SizedBox(height: 24),
-                    AppSkeletonBlock(height: 60),
-                    SizedBox(height: 10),
-                    AppSkeletonBlock(height: 60),
-                    SizedBox(height: 10),
-                    AppSkeletonBlock(height: 60),
-                    SizedBox(height: 10),
-                    AppSkeletonBlock(height: 60),
-                  ],
-                ),
+            Container(
+              width: 280,
+              padding: const EdgeInsets.all(18),
+              decoration: const BoxDecoration(
+                color: AppColors.white,
+                border: Border(right: BorderSide(color: AppColors.divider)),
               ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: const [
+                  AppSkeletonBlock(height: 30, width: 120),
+                  SizedBox(height: 10),
+                  AppSkeletonBlock(height: 18, width: 140),
+                  SizedBox(height: 24),
+                  AppSkeletonBlock(height: 60),
+                  SizedBox(height: 10),
+                  AppSkeletonBlock(height: 60),
+                  SizedBox(height: 10),
+                  AppSkeletonBlock(height: 60),
+                  SizedBox(height: 10),
+                  AppSkeletonBlock(height: 60),
+                ],
+              ),
+            ),
             Expanded(
               child: SingleChildScrollView(
                 child: AppPageFrame(
@@ -157,57 +160,54 @@ class AppCustomerSectionSkeleton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      physics: const NeverScrollableScrollPhysics(),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const AppSkeletonBlock(height: 28, width: 170),
-          const SizedBox(height: 8),
-          const AppSkeletonBlock(height: 16, width: 220),
-          const SizedBox(height: 18),
-          if (showHero) ...[
-            const AppSkeletonBlock(height: 120),
-            const SizedBox(height: 14),
-          ],
-          if (statCards > 0) ...[
-            GridView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: statCards,
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                crossAxisSpacing: 12,
-                mainAxisSpacing: 12,
-                childAspectRatio: 1.7,
-              ),
-              itemBuilder: (context, index) =>
-                  const AppSkeletonBlock(height: 96),
-            ),
-            const SizedBox(height: 14),
-          ],
-          if (showActionRow) ...[
-            const Row(
-              children: [
-                Expanded(child: AppSkeletonBlock(height: 42)),
-                SizedBox(width: 12),
-                Expanded(child: AppSkeletonBlock(height: 42)),
-              ],
-            ),
-            const SizedBox(height: 18),
-          ],
-          const AppSkeletonBlock(height: 22, width: 150),
-          const SizedBox(height: 12),
-          ...List.generate(
-            listItems,
-            (index) => const Padding(
-              padding: EdgeInsets.only(bottom: 12),
-              child: AppSkeletonBlock(height: 82),
-            ),
-          ),
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const AppSkeletonBlock(height: 28, width: 170),
+        const SizedBox(height: 8),
+        const AppSkeletonBlock(height: 16, width: 220),
+        const SizedBox(height: 18),
+        if (showHero) ...[
+          const AppSkeletonBlock(height: 120),
+          const SizedBox(height: 14),
         ],
-      ),
+        if (statCards > 0) ...[
+          GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: statCards,
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              crossAxisSpacing: 12,
+              mainAxisSpacing: 12,
+              childAspectRatio: 1.7,
+            ),
+            itemBuilder: (context, index) =>
+                const AppSkeletonBlock(height: 96),
+          ),
+          const SizedBox(height: 14),
+        ],
+        if (showActionRow) ...[
+          const Row(
+            children: [
+              Expanded(child: AppSkeletonBlock(height: 42)),
+              SizedBox(width: 12),
+              Expanded(child: AppSkeletonBlock(height: 42)),
+            ],
+          ),
+          const SizedBox(height: 18),
+        ],
+        const AppSkeletonBlock(height: 22, width: 150),
+        const SizedBox(height: 12),
+        ...List.generate(
+          listItems,
+          (index) => const Padding(
+            padding: EdgeInsets.only(bottom: 12),
+            child: AppSkeletonBlock(height: 82),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -233,15 +233,15 @@ class AppPortalSectionSkeleton extends StatelessWidget {
       desktopCount: 2,
     );
 
-    return SingleChildScrollView(
-      physics: const NeverScrollableScrollPhysics(),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (showHero) ...[
-            const AppSkeletonBlock(height: 172),
-            const SizedBox(height: 20),
-          ],
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (showHero) ...[
+          const AppSkeletonBlock(height: 172),
+          const SizedBox(height: 20),
+        ],
+        if (statCards > 0) ...[
           GridView.builder(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
@@ -255,17 +255,17 @@ class AppPortalSectionSkeleton extends StatelessWidget {
             itemBuilder: (context, index) => const AppSkeletonBlock(height: 88),
           ),
           const SizedBox(height: 20),
-          const AppSkeletonBlock(height: 24, width: 180),
-          const SizedBox(height: 12),
-          ...List.generate(
-            listItems,
-            (index) => const Padding(
-              padding: EdgeInsets.only(bottom: 10),
-              child: AppSkeletonBlock(height: 76),
-            ),
-          ),
         ],
-      ),
+        const AppSkeletonBlock(height: 24, width: 180),
+        const SizedBox(height: 12),
+        ...List.generate(
+          listItems,
+          (index) => const Padding(
+            padding: EdgeInsets.only(bottom: 10),
+            child: AppSkeletonBlock(height: 76),
+          ),
+        ),
+      ],
     );
   }
 }
