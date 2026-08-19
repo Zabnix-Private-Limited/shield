@@ -33,6 +33,7 @@ import '../../../customer/wallet/presentation/screens/wallet_screen.dart';
 import '../../../customer/wallet/presentation/screens/reward_points_screen.dart';
 import '../../../crm/complaints/presentation/screens/crm_complaints_screen.dart';
 import '../../../provider/customers/presentation/screens/provider_customers_screen.dart';
+import '../../../provider/pharmacy/design/pharmacy_colors.dart';
 import '../../../provider/dashboard/presentation/screens/pharmacy_dashboard_view.dart';
 import '../../../provider/pharmacy/presentation/screens/pharmacy_orders_screen.dart';
 import 'package:shield/features/provider/pharmacy/presentation/screens/pharmacy_payment_details_screen.dart';
@@ -513,9 +514,9 @@ class _PharmacyPortalResponsiveShell extends StatelessWidget {
             selectedIndex: selectedRailIndex,
             backgroundColor: AppColors.white,
             selectedIconTheme:
-                const IconThemeData(color: AppColors.shieldTeal),
+                IconThemeData(color: PharmacyColors.primary),
             selectedLabelTextStyle: const TextStyle(
-              color: AppColors.shieldTeal,
+              color: PharmacyColors.primary,
               fontWeight: FontWeight.bold,
               fontSize: 12,
             ),
@@ -593,7 +594,7 @@ class _PharmacyPortalResponsiveShell extends StatelessWidget {
           currentIndex: selectedNavIndex,
           type: BottomNavigationBarType.fixed,
           backgroundColor: AppColors.white,
-          selectedItemColor: AppColors.shieldTeal,
+          selectedItemColor: PharmacyColors.primary,
           unselectedItemColor: AppColors.shieldNavy,
           selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold),
           elevation: 8,
@@ -658,7 +659,6 @@ class _PharmacyPortalResponsiveShell extends StatelessWidget {
       ),
     );
   }
-}
 }
 
 class _EditablePrescriptionItem {

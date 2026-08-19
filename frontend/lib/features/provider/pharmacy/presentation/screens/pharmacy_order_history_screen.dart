@@ -91,19 +91,21 @@ class _PharmacyOrderHistoryScreenState
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Order History Log',
-                        style: PharmacyTypography.h2,
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Terminal historical records of completed, cancelled, and rejected pharmacy orders.',
-                        style: PharmacyTypography.caption,
-                      ),
-                    ],
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Order History Log',
+                          style: PharmacyTypography.h2,
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Terminal historical records of completed, cancelled, and rejected pharmacy orders.',
+                          style: PharmacyTypography.caption,
+                        ),
+                      ],
+                    ),
                   ),
                   IconButton(
                     icon: const Icon(Icons.refresh_rounded, color: PharmacyColors.navy),

@@ -86,19 +86,21 @@ class _PharmacyPaymentsScreenState extends State<PharmacyPaymentsScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Manual Payment Verification',
-                        style: PharmacyTypography.h2,
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Review customer bank transfers and UPI receipts. Verification credits customer wallet balance.',
-                        style: PharmacyTypography.caption,
-                      ),
-                    ],
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Manual Payment Verification',
+                          style: PharmacyTypography.h2,
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Review customer bank transfers and UPI receipts. Verification credits customer wallet balance.',
+                          style: PharmacyTypography.caption,
+                        ),
+                      ],
+                    ),
                   ),
                   IconButton(
                     icon: const Icon(Icons.refresh_rounded, color: PharmacyColors.navy),

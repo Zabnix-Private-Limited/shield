@@ -46,6 +46,8 @@ class InternalAuthSession extends ChangeNotifier {
   String? get branchBusinessId => _branchBusinessId;
   SHIELDRole get homeRole => SHIELDRole.fromBackendRoleCode(_roleCode);
 
+  Future<void> clearSession() => _clearSessionStorage();
+
   Future<void> initialize() async {
     if (_initialized) {
       return;
