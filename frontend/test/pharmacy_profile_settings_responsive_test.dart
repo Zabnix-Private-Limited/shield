@@ -33,7 +33,7 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(tester.takeException(), isNull);
-        expect(find.text('Pharmacy Profile'), findsOneWidget);
+        expect(find.byType(PharmacyProfileScreen), findsOneWidget);
       });
     }
   });

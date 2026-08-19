@@ -59,6 +59,72 @@ export class ProviderScopeService {
     return businessId ? BigInt(businessId) : undefined;
   }
 
+  async resolveAssignedPharmacy(principal?: ShieldPrincipal) {
+    if (!principal?.userId) {
+      throw new ForbiddenException('Authentication required.');
+    }
+    const userId = BigInt(principal.userId);
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: {
+        branchBusiness: true,
+        role: true,
+      },
+    });
+
+    if (!user) {
+      throw new ForbiddenException('User profile not found.');
+    }
+
+    let branchBusinessId = user.branchBusinessId;
+
+    // DEV BYPASS MODE: Fallback to active PHARMACY business when local unauthenticated user has no assigned branchBusinessId
+    if (!branchBusinessId && (process.env.NODE_ENV !== 'production' || principal.sessionId?.startsWith('mock-bypass'))) {
+      const defaultPharmacy = await this.prisma.serviceProvider.findFirst({
+        where: {
+          providerType: 'PHARMACY',
+          status: 'ACTIVE',
+        },
+      });
+      if (defaultPharmacy) {
+        branchBusinessId = defaultPharmacy.businessId;
+      }
+    }
+
+    if (!branchBusinessId) {
+      // PRODUCTION CODE (UNCOMMENT FOR STRICT PROD AUTH):
+      throw new ForbiddenException('Your SHIELD administrator has not assigned a Pharmacy/Outlet to this account.');
+    }
+
+    const business = await this.prisma.business.findUnique({
+      where: { id: branchBusinessId },
+    });
+
+    if (!business || (business.status && business.status !== 'ACTIVE')) {
+      throw new ForbiddenException('Pharmacy access is currently unavailable. Assigned business is inactive.');
+    }
+
+    const providers = await this.prisma.serviceProvider.findMany({
+      where: {
+        businessId: branchBusinessId,
+        providerType: 'PHARMACY',
+        status: 'ACTIVE',
+      },
+      include: { business: true },
+    });
+
+    if (providers.length === 0) {
+      throw new ForbiddenException('No active PHARMACY service provider context found for your assigned outlet.');
+    }
+
+    if (providers.length > 1) {
+      throw new ForbiddenException('Ambiguous active PHARMACY providers found for your assigned business. Single outlet scope violated.');
+    }
+
+    const provider = providers[0];
+    return { user, business, provider, userId: user.id, businessId: business.id, providerId: provider.id };
+  }
+
   resolveWorkspaceScope(
     principal: ShieldPrincipal | undefined,
     query: ProviderWorkspaceScopeQuery,

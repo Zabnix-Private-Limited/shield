@@ -273,7 +273,7 @@ class _PharmacySettingsScreenState extends State<PharmacySettingsScreen> {
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
-                                    'Configure workflow, notifications, and app behavior to match your pharmacy operations.',
+                                    'These settings apply to your assigned Pharmacy.',
                                     style: PharmacyTypography.caption.copyWith(color: PharmacyColors.textSecondary),
                                     overflow: TextOverflow.ellipsis,
                                   ),

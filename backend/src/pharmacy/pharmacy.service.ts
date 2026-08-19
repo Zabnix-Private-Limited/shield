@@ -1877,38 +1877,7 @@ export class PharmacyService {
   // -------------------------------------------------------------
 
   async resolvePharmacyProvider(principal?: ShieldPrincipal) {
-    if (!principal?.userId) {
-      throw new ForbiddenException('Authentication required.');
-    }
-    const userId = BigInt(principal.userId);
-    const user = await this.prisma.user.findUnique({
-      where: { id: userId },
-      include: {
-        branchBusiness: true,
-        role: true,
-      },
-    });
-    if (!user) throw new NotFoundException('User profile not found.');
-
-    // User.branchBusinessId references Business.id, NOT ServiceProvider.id.
-    // Resolve ServiceProvider where businessId == user.branchBusinessId AND providerType == 'PHARMACY' AND status == 'ACTIVE'
-    let provider = null;
-    if (user.branchBusinessId) {
-      provider = await this.prisma.serviceProvider.findFirst({
-        where: {
-          businessId: user.branchBusinessId,
-          providerType: 'PHARMACY',
-          status: 'ACTIVE',
-        },
-        include: { business: true },
-      });
-    }
-
-    if (!provider) {
-      throw new ForbiddenException('No active PHARMACY service provider context found for this user.');
-    }
-
-    return { user, provider };
+    return this.providerScopeService.resolveAssignedPharmacy(principal);
   }
 
   async getPharmacyProfile(principal?: ShieldPrincipal) {

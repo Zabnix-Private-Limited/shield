@@ -116,4 +116,21 @@
 - **Blocks Pharmacy MVP**: `NO` (Pharmacy Portal generates, uploads, and dispatches invoice metadata independently).
 - **Suggested Future Phase**: Customer Portal Phase 3.
 
+---
+
+## 5. Super Admin Portal — Pharmacy Staff Outlet Assignment
+- **Affected Portal**: SHIELD Super Admin (`frontend/lib/features/admin/`)
+- **Affected Pages/Components**:
+  - `StaffUserManagementScreen`
+  - `PharmacyBranchAssignmentModal`
+- **Required Change**:
+  1. Super Admin selects exactly one Business / outlet for a Pharmacy Staff user.
+  2. Persist to `users.branch_business_id`.
+  3. Changing assignment immediately changes the provider scope after the appropriate session refresh / re-login.
+  4. Pharmacy Staff cannot self-assign or switch.
+- **Priority**: `HIGH`
+- **Blocks Pharmacy MVP**: `NO` (Owner can assign through existing admin / database tooling).
+- **Suggested Future Phase**: Admin Portal Phase 1.
+
+
 

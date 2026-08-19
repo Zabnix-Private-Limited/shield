@@ -23,9 +23,13 @@ describe('PharmacyService Operational Order Persistence & Isolation', () => {
       customer: {
         findUnique: jest.fn().mockResolvedValue({ id: 1n, membership: null, wallet: { id: 10n } }),
       },
+      business: {
+        findUnique: jest.fn(),
+      },
       serviceProvider: {
         findUnique: jest.fn(),
         findFirst: jest.fn(),
+        findMany: jest.fn(),
       },
       product: {
         findMany: jest.fn(),
@@ -53,6 +57,10 @@ describe('PharmacyService Operational Order Persistence & Isolation', () => {
       assertProviderCanAccessPurchase: jest.fn(),
       scopePurchaseWhere: jest.fn().mockImplementation((where) => where),
       isProviderPrincipal: jest.fn().mockReturnValue(false),
+      resolveAssignedPharmacy: jest.fn().mockImplementation(async (principal) => {
+        const scopeSvc = new ProviderScopeService(prisma);
+        return scopeSvc.resolveAssignedPharmacy(principal);
+      }),
     } as any;
 
     pricingService = {
@@ -741,30 +749,75 @@ describe('PharmacyService Operational Order Persistence & Isolation', () => {
         lastLoginAt: null,
       });
 
-      prisma.serviceProvider.findFirst.mockResolvedValue({
-        id: 105n,
-        businessId: 20n,
-        providerType: 'PHARMACY',
+      prisma.business.findUnique.mockResolvedValue({
+        id: 20n,
+        code: 'PHARM-20',
+        name: 'Shield Health',
         status: 'ACTIVE',
-        providerName: 'Shield Health Pharmacy',
-        business: { id: 20n, code: 'PHARM-20', name: 'Shield Health' },
       });
+
+      prisma.serviceProvider.findMany.mockResolvedValue([
+        {
+          id: 105n,
+          businessId: 20n,
+          providerType: 'PHARMACY',
+          status: 'ACTIVE',
+          providerName: 'Shield Health Pharmacy',
+          business: { id: 20n, code: 'PHARM-20', name: 'Shield Health' },
+        },
+      ]);
 
       const principal = { principalType: 'USER', userId: '10', roleCode: 'PHARMACY_PROVIDER' } as any;
       const profile = await service.getPharmacyProfile(principal);
 
-      expect(prisma.serviceProvider.findFirst).toHaveBeenCalledWith({
-        where: {
-          businessId: 20n,
-          providerType: 'PHARMACY',
-          status: 'ACTIVE',
-        },
-        include: { business: true },
-      });
-
       expect(profile.pharmacyName).toBe('Shield Health Pharmacy');
       expect(profile.businessCode).toBe('PHARM-20');
       expect(profile.lastLoginAt).toBeNull();
+    });
+
+    it('fails closed when user.branchBusinessId is null (unassigned user)', async () => {
+      prisma.user.findUnique.mockResolvedValue({
+        id: 10n,
+        branchBusinessId: null,
+        status: 'ACTIVE',
+      });
+
+      const principal = { principalType: 'USER', userId: '10', roleCode: 'PHARMACY_PROVIDER' } as any;
+      await expect(service.getPharmacyProfile(principal)).rejects.toThrow(ForbiddenException);
+    });
+
+    it('fails closed when assigned business is inactive or non-existent', async () => {
+      prisma.user.findUnique.mockResolvedValue({
+        id: 10n,
+        branchBusinessId: 20n,
+        status: 'ACTIVE',
+      });
+      prisma.business.findUnique.mockResolvedValue({
+        id: 20n,
+        status: 'INACTIVE',
+      });
+
+      const principal = { principalType: 'USER', userId: '10', roleCode: 'PHARMACY_PROVIDER' } as any;
+      await expect(service.getPharmacyProfile(principal)).rejects.toThrow(ForbiddenException);
+    });
+
+    it('fails closed when multiple ambiguous active PHARMACY providers exist for the assigned business', async () => {
+      prisma.user.findUnique.mockResolvedValue({
+        id: 10n,
+        branchBusinessId: 20n,
+        status: 'ACTIVE',
+      });
+      prisma.business.findUnique.mockResolvedValue({
+        id: 20n,
+        status: 'ACTIVE',
+      });
+      prisma.serviceProvider.findMany.mockResolvedValue([
+        { id: 105n, businessId: 20n, providerType: 'PHARMACY', status: 'ACTIVE' },
+        { id: 106n, businessId: 20n, providerType: 'PHARMACY', status: 'ACTIVE' },
+      ]);
+
+      const principal = { principalType: 'USER', userId: '10', roleCode: 'PHARMACY_PROVIDER' } as any;
+      await expect(service.getPharmacyProfile(principal)).rejects.toThrow(ForbiddenException);
     });
 
     it('fails closed on invoice upload when assertProviderCanAccessPurchase throws ForbiddenException', async () => {

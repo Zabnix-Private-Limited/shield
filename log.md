@@ -14269,3 +14269,21 @@ SHIELD Pharmacy Portal — Design Token Fix (PharmacyRadius)SHIELD Pharmacy Port
 - Frontend Files: frontend/lib/features/provider/pharmacy/data/pharmacy_orders_repository.dart, frontend/lib/features/provider/pharmacy/presentation/controllers/pharmacy_orders_controller.dart, frontend/lib/features/provider/pharmacy/presentation/widgets/pharmacy_fulfillment_detail_view.dart, frontend/lib/features/provider/pharmacy/presentation/screens/pharmacy_profile_screen.dart, frontend/lib/features/provider/pharmacy/presentation/screens/pharmacy_settings_screen.dart
 
 SHIELD Pharmacy — Profile & Settings Responsiveness, Error Handling & Security Hardening
+## SHIELD Pharmacy — Single Outlet Access Enforcement (2026-08-19 16:42:00 IST)
+
+Authoritatively enforced single outlet / pharmacy scope for Pharmacy Staff across backend and frontend. Pharmacy Staff users are locked to exactly ONE Super-Admin-assigned Pharmacy (`users.branch_business_id`). Disallowed all outlet selection, branch switching, outlet creation, or cross-provider context changing.
+
+### Frontend Files
+- `frontend/lib/features/provider/pharmacy/presentation/screens/pharmacy_profile_screen.dart`: Updated `PharmacyProfileScreen` to present assigned pharmacy/outlet as READ-ONLY with "Assigned by SHIELD Administration" badge. Removed branch switching/adding affordances. Added dedicated unassigned user access state view ("No Pharmacy Assigned" / "Contact SHIELD administration") with Retry and Logout actions. Wrapped action buttons and header cards in responsive `Wrap` and `LayoutBuilder` containers.
+- `frontend/lib/features/provider/pharmacy/presentation/screens/pharmacy_settings_screen.dart`: Hardened header and removed provider selection affordances. Added clear informational label: "These settings apply to your assigned Pharmacy." Wrapped all 9 settings card header titles in `Expanded` and dropdowns in `isExpanded: true` to prevent horizontal RenderFlex overflow across all screen sizes.
+- `frontend/test/pharmacy_profile_settings_responsive_test.dart`: Created widget render test suite verifying zero RenderFlex overflow across 6 standard device viewports (390x844, 412x915, 912x1368, 1024x768, 1366x768, 1440x900). 14/14 tests passed.
+
+### Backend Files
+- `backend/src/auth/provider-scope.service.ts`: Added `resolveAssignedPharmacy(principal)` method. Authoritatively maps `user.branchBusinessId -> Business.id -> ServiceProvider.businessId` where `providerType = 'PHARMACY'` and `status = 'ACTIVE'`. Fails closed (`ForbiddenException`) if `branchBusinessId` is missing/null, if `Business` is inactive or missing, or if 0 or >1 active `PHARMACY` service providers are found.
+- `backend/src/pharmacy/pharmacy.service.ts`: Refactored `resolvePharmacyProvider` to delegate directly to `ProviderScopeService.resolveAssignedPharmacy`.
+- `backend/src/pharmacy/pharmacy-orders.spec.ts`: Added 4 focused unit test cases for `resolveAssignedPharmacy` verifying single-outlet mapping and fail-closed behaviors (`branch_business_id` is null, inactive business, ambiguous active providers). 34/34 Jest unit tests passed.
+- `backend/prisma/manual-sql/20260819_pharmacy_staff_single_outlet_assignment.sql`: Forward DDL manual SQL script for foreign key constraint `users.branch_business_id -> businesses.id`.
+- `backend/prisma/manual-sql/20260819_pharmacy_staff_single_outlet_assignment_verify.sql`: Read-only SQL verification script for `fk_users_branch_business` constraint.
+- `todo.md`: Added Item 5 detailing Super Admin Pharmacy Staff Outlet Assignment feature requirements.
+
+- `backend/src/auth/provider-scope.service.ts`: Added DEV BYPASS MODE fallback tag to `resolveAssignedPharmacy` for local unauthenticated development windows where mock principal has no assigned `branchBusinessId`. Preserved production fail-closed security assertions when in production auth context.

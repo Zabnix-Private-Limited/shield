@@ -17,6 +17,7 @@ class PharmacyProfileScreen extends StatefulWidget {
 class _PharmacyProfileScreenState extends State<PharmacyProfileScreen> {
   bool _isLoading = true;
   bool _isSaving = false;
+  String? _errorMessage;
   Map<String, dynamic>? _profileData;
   final PharmacyOrdersRepository _repository = PharmacyOrdersRepository();
 
@@ -39,7 +40,10 @@ class _PharmacyProfileScreenState extends State<PharmacyProfileScreen> {
   }
 
   Future<void> _loadProfile() async {
-    setState(() => _isLoading = true);
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
     try {
       final data = await _repository.fetchPharmacyProfile();
       if (!mounted) return;
@@ -52,7 +56,14 @@ class _PharmacyProfileScreenState extends State<PharmacyProfileScreen> {
       });
     } catch (e) {
       if (!mounted) return;
-      setState(() => _isLoading = false);
+      final errText = e.toString();
+      final msg = errText.contains('not assigned')
+          ? 'Your SHIELD administrator has not assigned a Pharmacy/Outlet to this account.'
+          : 'Pharmacy access is currently unavailable. Contact SHIELD administration.';
+      setState(() {
+        _errorMessage = msg;
+        _isLoading = false;
+      });
     }
   }
 
@@ -89,6 +100,43 @@ class _PharmacyProfileScreenState extends State<PharmacyProfileScreen> {
       return const SingleChildScrollView(
         padding: EdgeInsets.all(20),
         child: PharmacyProfileSkeleton(),
+      );
+    }
+
+    if (_errorMessage != null && _profileData == null) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: PharmacyCard(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.storefront_outlined, size: 56, color: PharmacyColors.warning),
+                const SizedBox(height: 16),
+                Text(
+                  'No Pharmacy Assigned',
+                  style: PharmacyTypography.h2.copyWith(fontWeight: FontWeight.bold),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  _errorMessage!,
+                  style: PharmacyTypography.body.copyWith(color: PharmacyColors.textSecondary),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  child: PharmacyPrimaryButton(
+                    label: 'Retry / Refresh Assignment',
+                    icon: Icons.refresh_rounded,
+                    onPressed: () => _loadProfile(),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       );
     }
 
@@ -295,23 +343,48 @@ class _PharmacyProfileScreenState extends State<PharmacyProfileScreen> {
           // Bottom Actions Row
           PharmacyCard(
             padding: const EdgeInsets.all(16),
-            child: Wrap(
-              alignment: WrapAlignment.end,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              spacing: 12,
-              runSpacing: 12,
-              children: [
-                PharmacySecondaryButton(
-                  label: 'Discard Changes',
-                  onPressed: _loadProfile,
-                ),
-                PharmacyPrimaryButton(
-                  label: 'Save Profile Changes',
-                  icon: Icons.check_circle_outline,
-                  isLoading: _isSaving,
-                  onPressed: _handleSave,
-                ),
-              ],
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final isCompact = constraints.maxWidth < 450;
+                return isCompact
+                    ? Column(
+                        children: [
+                          SizedBox(
+                            width: double.infinity,
+                            child: PharmacyPrimaryButton(
+                              label: 'Save Profile Changes',
+                              icon: Icons.check_circle_outline,
+                              isLoading: _isSaving,
+                              onPressed: _handleSave,
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          SizedBox(
+                            width: double.infinity,
+                            child: PharmacySecondaryButton(
+                              label: 'Discard Changes',
+                              onPressed: _loadProfile,
+                            ),
+                          ),
+                        ],
+                      )
+                    : Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          PharmacySecondaryButton(
+                            label: 'Discard Changes',
+                            onPressed: _loadProfile,
+                          ),
+                          const SizedBox(width: 12),
+                          PharmacyPrimaryButton(
+                            label: 'Save Profile Changes',
+                            icon: Icons.check_circle_outline,
+                            isLoading: _isSaving,
+                            onPressed: _handleSave,
+                          ),
+                        ],
+                      );
+              },
             ),
           ),
         ],
@@ -432,17 +505,16 @@ class _PharmacyProfileScreenState extends State<PharmacyProfileScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              Wrap(
+                alignment: WrapAlignment.spaceBetween,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                spacing: 8,
+                runSpacing: 8,
                 children: [
-                  Flexible(
-                    child: Text(
-                      'Pharmacy & Business Details',
-                      style: PharmacyTypography.subtitle.copyWith(fontWeight: FontWeight.bold),
-                      overflow: TextOverflow.ellipsis,
-                    ),
+                  Text(
+                    'Pharmacy & Business Details',
+                    style: PharmacyTypography.subtitle.copyWith(fontWeight: FontWeight.bold),
                   ),
-                  const SizedBox(width: 8),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
@@ -521,37 +593,65 @@ class _PharmacyProfileScreenState extends State<PharmacyProfileScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Assigned Branches & Outlets', style: PharmacyTypography.subtitle.copyWith(fontWeight: FontWeight.bold)),
+          Wrap(
+            alignment: WrapAlignment.spaceBetween,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              Text(
+                'Assigned Pharmacy / Outlet',
+                style: PharmacyTypography.subtitle.copyWith(fontWeight: FontWeight.bold),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: PharmacyColors.primarySoft,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  'Assigned by SHIELD Administration',
+                  style: PharmacyTypography.caption.copyWith(color: PharmacyColors.primary, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ],
+          ),
           const SizedBox(height: 12),
           Container(
+            width: double.infinity,
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               color: PharmacyColors.surfaceSubtle,
               borderRadius: BorderRadius.circular(PharmacyRadius.card),
               border: Border.all(color: PharmacyColors.border),
             ),
-            child: Row(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(Icons.location_on_rounded, color: PharmacyColors.primary),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(business, style: PharmacyTypography.subtitle.copyWith(fontWeight: FontWeight.bold), overflow: TextOverflow.ellipsis),
-                      const SizedBox(height: 2),
-                      Text('Primary Dispatch & Pickup Hub • Active Context', style: PharmacyTypography.caption.copyWith(color: PharmacyColors.textSecondary), overflow: TextOverflow.ellipsis),
-                    ],
-                  ),
+                Row(
+                  children: [
+                    const Icon(Icons.location_on_rounded, color: PharmacyColors.primary),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(business, style: PharmacyTypography.subtitle.copyWith(fontWeight: FontWeight.bold), overflow: TextOverflow.ellipsis),
+                          const SizedBox(height: 2),
+                          Text('Assigned Outlet • Read-Only Scope', style: PharmacyTypography.caption.copyWith(color: PharmacyColors.textSecondary), overflow: TextOverflow.ellipsis),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(height: 10),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
-                    color: PharmacyColors.primarySoft,
+                    color: PharmacyColors.navy.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Text('PRIMARY OUTLET', style: PharmacyTypography.caption.copyWith(color: PharmacyColors.primary, fontWeight: FontWeight.bold)),
+                  child: Text('READ-ONLY ASSIGNMENT', style: PharmacyTypography.caption.copyWith(color: PharmacyColors.navy, fontWeight: FontWeight.bold)),
                 ),
               ],
             ),
