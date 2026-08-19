@@ -1433,19 +1433,57 @@ export class PharmacyService {
 
     const approvedQty = payload.fulfillQuantity != null ? Number(payload.fulfillQuantity) : Number(item.quantity);
     const dispatchedQty = payload.dispatchedQuantity != null ? Number(payload.dispatchedQuantity) : 0;
+    const rejectedQty = payload.rejectedQuantity != null ? Number(payload.rejectedQuantity) : Math.max(0, Number(item.quantity) - approvedQty);
     const remainingQty = Math.max(0, approvedQty - dispatchedQty);
+    const stockStatus = payload.stockStatus ?? 'FULL_STOCK';
+    const decisionStatus = payload.decisionStatus ?? 'APPROVED';
+    const actorId = principal?.userId ? BigInt(principal.userId) : null;
+    const authPrice = payload.substituteUnitPrice != null ? Number(payload.substituteUnitPrice) : Number(item.unitPrice);
 
+    // 1. Transactionally write item fulfillment decision to purchase_item_fulfillments
+    await this.prisma.$executeRawUnsafe(
+      `INSERT INTO "purchase_item_fulfillments" ("purchase_item_id", "approved_quantity", "dispatched_quantity", "remaining_quantity", "rejected_quantity", "stock_status", "decision_status", "decision_reason", "decision_actor_id", "authoritative_price", "updated_at")
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, CURRENT_TIMESTAMP)`,
+      itemId,
+      approvedQty,
+      dispatchedQty,
+      remainingQty,
+      rejectedQty,
+      stockStatus,
+      decisionStatus,
+      payload.decisionReason || null,
+      actorId,
+      authPrice,
+    );
+
+    // 2. Transactionally write substitute detail to purchase_item_substitutions if substituted
+    if (decisionStatus === 'SUBSTITUTED' && payload.substituteName) {
+      await this.prisma.$executeRawUnsafe(
+        `INSERT INTO "purchase_item_substitutions" ("purchase_item_id", "substitute_product_id", "substitute_name", "substitute_unit_price", "substitute_quantity", "decision_reason", "proposed_by", "customer_confirmation_status")
+         VALUES ($1, $2, $3, $4, $5, $6, $7, 'PENDING')`,
+        itemId,
+        payload.substituteProductId ? BigInt(payload.substituteProductId) : null,
+        payload.substituteName,
+        authPrice,
+        approvedQty,
+        payload.decisionReason || null,
+        actorId,
+      );
+    }
+
+    // 3. Project updated item metadata snapshot for frontend API consumption
     const currentMeta = (item.metadata as Record<string, any>) || {};
     const updatedMeta = {
       ...currentMeta,
       fulfillQuantity: approvedQty,
       dispatchedQuantity: dispatchedQty,
       remainingQuantity: remainingQty,
-      stockStatus: payload.stockStatus ?? currentMeta.stockStatus ?? 'FULL_STOCK',
-      decisionStatus: payload.decisionStatus ?? currentMeta.decisionStatus ?? 'APPROVED',
+      rejectedQuantity: rejectedQty,
+      stockStatus,
+      decisionStatus,
       substituteProductId: payload.substituteProductId ?? currentMeta.substituteProductId,
       substituteName: payload.substituteName ?? currentMeta.substituteName,
-      substituteUnitPrice: payload.substituteUnitPrice ?? currentMeta.substituteUnitPrice,
+      substituteUnitPrice: authPrice,
       decisionReason: payload.decisionReason ?? currentMeta.decisionReason,
       updatedAt: new Date().toISOString(),
     };
@@ -1454,33 +1492,6 @@ export class PharmacyService {
       where: { id: itemId },
       data: { metadata: updatedMeta },
     });
-
-    // Write to normalized DB tables when manual SQL migration has been applied by owner
-    try {
-      await this.prisma.$executeRawUnsafe(
-        `INSERT INTO "purchase_item_fulfillments" ("purchase_item_id", "approved_quantity", "dispatched_quantity", "remaining_quantity", "stock_status", "decision_status", "updated_at")
-         VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP)`,
-        itemId,
-        approvedQty,
-        dispatchedQty,
-        remainingQty,
-        updatedMeta.stockStatus,
-        updatedMeta.decisionStatus,
-      );
-      if (updatedMeta.decisionStatus === 'SUBSTITUTED' && updatedMeta.substituteName) {
-        await this.prisma.$executeRawUnsafe(
-          `INSERT INTO "purchase_item_substitutions" ("purchase_item_id", "substitute_product_id", "substitute_name", "substitute_unit_price", "decision_reason")
-           VALUES ($1, $2, $3, $4, $5)`,
-          itemId,
-          updatedMeta.substituteProductId ? BigInt(updatedMeta.substituteProductId) : null,
-          updatedMeta.substituteName,
-          updatedMeta.substituteUnitPrice ? Number(updatedMeta.substituteUnitPrice) : 0,
-          updatedMeta.decisionReason || null,
-        );
-      }
-    } catch (_) {
-      // Graceful fallback if normalized table migration is pending owner execution
-    }
 
     return this.getPharmacyOrderDetail(orderId, principal);
   }
@@ -1497,6 +1508,19 @@ export class PharmacyService {
     if (!purchase) throw new NotFoundException('Order not found.');
 
     const interval = repeatIntervalDays ?? 30;
+    const actorId = principal?.userId ? BigInt(principal.userId) : null;
+
+    // 1. Transactionally write to order_chronic_refills table
+    await this.prisma.$executeRawUnsafe(
+      `INSERT INTO "order_chronic_refills" ("purchase_id", "is_chronic", "repeat_interval_days", "tagged_by")
+       VALUES ($1, $2, $3, $4)`,
+      orderId,
+      isChronic,
+      interval,
+      actorId,
+    );
+
+    // 2. Project chronic flag into billing snapshot
     const currentSnap = (purchase.billingSnapshot as Record<string, any>) || {};
     const updatedSnap = {
       ...currentSnap,
@@ -1509,17 +1533,6 @@ export class PharmacyService {
       where: { id: orderId },
       data: { billingSnapshot: updatedSnap },
     });
-
-    try {
-      await this.prisma.$executeRawUnsafe(
-        `INSERT INTO "order_chronic_refills" ("purchase_id", "is_chronic", "repeat_interval_days", "tagged_by")
-         VALUES ($1, $2, $3, $4)`,
-        orderId,
-        isChronic,
-        interval,
-        principal?.userId ? BigInt(principal.userId) : null,
-      );
-    } catch (_) {}
 
     return this.getPharmacyOrderDetail(orderId, principal);
   }
@@ -1534,6 +1547,18 @@ export class PharmacyService {
     });
     if (!purchase) throw new NotFoundException('Order not found.');
 
+    const authorId = principal?.userId ? BigInt(principal.userId) : null;
+
+    // 1. Transactionally write to order_pharmacist_notes timeline table
+    await this.prisma.$executeRawUnsafe(
+      `INSERT INTO "order_pharmacist_notes" ("purchase_id", "notes", "author_id", "visibility")
+       VALUES ($1, $2, $3, 'INTERNAL')`,
+      orderId,
+      notes,
+      authorId,
+    );
+
+    // 2. Project latest notes snapshot into billing snapshot
     const currentSnap = (purchase.billingSnapshot as Record<string, any>) || {};
     const updatedSnap = {
       ...currentSnap,
@@ -1545,16 +1570,6 @@ export class PharmacyService {
       where: { id: orderId },
       data: { billingSnapshot: updatedSnap },
     });
-
-    try {
-      await this.prisma.$executeRawUnsafe(
-        `INSERT INTO "order_pharmacist_notes" ("purchase_id", "notes", "author_id")
-         VALUES ($1, $2, $3)`,
-        orderId,
-        notes,
-        principal?.userId ? BigInt(principal.userId) : null,
-      );
-    } catch (_) {}
 
     return this.getPharmacyOrderDetail(orderId, principal);
   }
@@ -1570,6 +1585,18 @@ export class PharmacyService {
     if (!purchase) throw new NotFoundException('Order not found.');
 
     const confirmationReason = reason || 'Substitution or partial fulfillment confirmation required.';
+    const requesterId = principal?.userId ? BigInt(principal.userId) : null;
+
+    // 1. Transactionally write to order_customer_confirmations table
+    await this.prisma.$executeRawUnsafe(
+      `INSERT INTO "order_customer_confirmations" ("purchase_id", "confirmation_status", "reason", "requested_by")
+       VALUES ($1, 'PENDING', $2, $3)`,
+      orderId,
+      confirmationReason,
+      requesterId,
+    );
+
+    // 2. Project confirmation status into billing snapshot
     const currentSnap = (purchase.billingSnapshot as Record<string, any>) || {};
     const updatedSnap = {
       ...currentSnap,
@@ -1582,15 +1609,6 @@ export class PharmacyService {
       where: { id: orderId },
       data: { billingSnapshot: updatedSnap },
     });
-
-    try {
-      await this.prisma.$executeRawUnsafe(
-        `INSERT INTO "order_customer_confirmations" ("purchase_id", "confirmation_status", "reason")
-         VALUES ($1, 'PENDING', $2)`,
-        orderId,
-        confirmationReason,
-      );
-    } catch (_) {}
 
     return this.getPharmacyOrderDetail(orderId, principal);
   }
@@ -1607,6 +1625,19 @@ export class PharmacyService {
     if (!purchase) throw new NotFoundException('Order not found.');
 
     const fileName = invoiceFileName || 'Pharmacy_Invoice.pdf';
+    const uploaderId = principal?.userId ? BigInt(principal.userId) : null;
+
+    // 1. Transactionally write to order_invoices table
+    await this.prisma.$executeRawUnsafe(
+      `INSERT INTO "order_invoices" ("purchase_id", "storage_key", "file_name", "mime_type", "uploaded_by")
+       VALUES ($1, $2, $3, 'application/pdf', $4)`,
+      orderId,
+      invoiceUrl,
+      fileName,
+      uploaderId,
+    );
+
+    // 2. Project invoice URL snapshot into billing snapshot
     const currentSnap = (purchase.billingSnapshot as Record<string, any>) || {};
     const updatedSnap = {
       ...currentSnap,
@@ -1619,16 +1650,6 @@ export class PharmacyService {
       where: { id: orderId },
       data: { billingSnapshot: updatedSnap },
     });
-
-    try {
-      await this.prisma.$executeRawUnsafe(
-        `INSERT INTO "order_invoices" ("purchase_id", "storage_key", "file_name")
-         VALUES ($1, $2, $3)`,
-        orderId,
-        invoiceUrl,
-        fileName,
-      );
-    } catch (_) {}
 
     return this.getPharmacyOrderDetail(orderId, principal);
   }
@@ -1643,6 +1664,14 @@ export class PharmacyService {
     if (!purchase) throw new NotFoundException('Order not found.');
 
     const sentAt = new Date().toISOString();
+
+    // 1. Transactionally update order_invoices table
+    await this.prisma.$executeRawUnsafe(
+      `UPDATE "order_invoices" SET "sent_at" = CURRENT_TIMESTAMP WHERE "purchase_id" = $1`,
+      orderId,
+    );
+
+    // 2. Project sent timestamp snapshot into billing snapshot
     const currentSnap = (purchase.billingSnapshot as Record<string, any>) || {};
     const updatedSnap = {
       ...currentSnap,
@@ -1653,13 +1682,6 @@ export class PharmacyService {
       where: { id: orderId },
       data: { billingSnapshot: updatedSnap },
     });
-
-    try {
-      await this.prisma.$executeRawUnsafe(
-        `UPDATE "order_invoices" SET "sent_at" = CURRENT_TIMESTAMP WHERE "purchase_id" = $1`,
-        orderId,
-      );
-    } catch (_) {}
 
     return this.getPharmacyOrderDetail(orderId, principal);
   }
