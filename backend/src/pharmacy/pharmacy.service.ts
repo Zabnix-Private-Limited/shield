@@ -818,10 +818,13 @@ export class PharmacyService {
       purchaseKind: {
         in: [
           'PRESCRIPTION',
+          'PHARMACY_PRESCRIPTION',
           'MANUAL_ITEMS',
           'WELLNESS',
           'CUSTOMER_ORDER',
           'PHARMACY',
+          'GENERAL',
+          'REFILL',
         ],
       },
     };

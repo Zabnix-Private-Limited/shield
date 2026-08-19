@@ -86,7 +86,7 @@ export class PharmacyPaymentsService {
 
     const pharmacyDomainWhere = {
       providerId,
-      purchaseKind: { in: ['PRESCRIPTION', 'MANUAL_ITEMS', 'WELLNESS', 'CUSTOMER_ORDER', 'PHARMACY'] },
+      purchaseKind: { in: ['PRESCRIPTION', 'PHARMACY_PRESCRIPTION', 'MANUAL_ITEMS', 'WELLNESS', 'CUSTOMER_ORDER', 'PHARMACY', 'GENERAL', 'REFILL'] },
     };
 
     const [
