@@ -951,6 +951,11 @@ export class PharmacyService {
       where.orderStatus = {
         in: ['OUT_FOR_DELIVERY', 'DELIVERY', 'DISPATCHED'],
       };
+    } else if (targetStatus === 'CHRONIC') {
+      where.billingSnapshot = {
+        path: ['isChronic'],
+        equals: true,
+      };
     } else {
       where.orderStatus = targetStatus;
     }
@@ -1010,11 +1015,22 @@ export class PharmacyService {
       ...this.getPharmacyOrderDomainWhere(),
     };
 
-    const grouped = await this.prisma.purchase.groupBy({
-      by: ['orderStatus'],
-      where,
-      _count: { _all: true },
-    });
+    const [grouped, chronicCount] = await Promise.all([
+      this.prisma.purchase.groupBy({
+        by: ['orderStatus'],
+        where,
+        _count: { _all: true },
+      }),
+      this.prisma.purchase.count({
+        where: {
+          ...where,
+          billingSnapshot: {
+            path: ['isChronic'],
+            equals: true,
+          },
+        },
+      }),
+    ]);
 
     const summary = {
       newCount: 0,
@@ -1024,6 +1040,7 @@ export class PharmacyService {
       deliveryCount: 0,
       completedCount: 0,
       cancelledCount: 0,
+      chronicCount,
       totalCount: 0,
     };
 
