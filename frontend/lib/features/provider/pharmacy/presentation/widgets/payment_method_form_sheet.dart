@@ -304,13 +304,22 @@ class _PaymentMethodFormSheetState extends State<PaymentMethodFormSheet> {
                     ),
                   ),
                   child: _isSaving
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
-                          ),
+                      ? Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(Icons.sync_rounded, size: 16, color: Colors.white70),
+                            const SizedBox(width: 8),
+                            Flexible(
+                              child: Text(
+                                isEditing ? 'Saving Changes...' : 'Adding Destination...',
+                                overflow: TextOverflow.ellipsis,
+                                style: AppTypography.body1.copyWith(
+                                  color: Colors.white70,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ],
                         )
                       : Text(
                           isEditing ? 'Save Changes' : 'Add Payment Destination',

@@ -610,7 +610,27 @@ class _PharmacyFulfillmentDetailViewState
                   ],
                 ),
                 if (isUpdating)
-                  const CircularProgressIndicator()
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: PharmacyColors.primary.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.sync_rounded, size: 16, color: PharmacyColors.primary),
+                        const SizedBox(width: 6),
+                        Text(
+                          'Updating fulfillment state...',
+                          style: PharmacyTypography.caption.copyWith(
+                            color: PharmacyColors.primary,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
                 else
                   Wrap(
                     spacing: 10,

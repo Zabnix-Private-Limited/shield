@@ -8,6 +8,7 @@ import 'package:shield/features/provider/pharmacy/presentation/controllers/pharm
 import 'package:shield/features/provider/pharmacy/presentation/widgets/payment_review_sheet.dart';
 import 'package:shield/features/provider/pharmacy/presentation/widgets/pharmacy_components.dart';
 import 'package:shield/features/provider/pharmacy/presentation/widgets/pharmacy_status_chip.dart';
+import 'package:shield/features/provider/pharmacy/presentation/widgets/pharmacy_skeletons.dart';
 
 class PharmacyPaymentsScreen extends StatefulWidget {
   const PharmacyPaymentsScreen({super.key});
@@ -181,12 +182,7 @@ class _PharmacyPaymentsScreenState extends State<PharmacyPaymentsScreen> {
 
         // List Content
         if (isLoading && isEmpty) ...[
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 40),
-            child: Center(
-              child: CircularProgressIndicator(color: PharmacyColors.primary),
-            ),
-          ),
+          const PharmacyPaymentsSkeleton(),
         ] else if (error != null && isEmpty) ...[
           PharmacyCard(
             padding: const EdgeInsets.all(24),

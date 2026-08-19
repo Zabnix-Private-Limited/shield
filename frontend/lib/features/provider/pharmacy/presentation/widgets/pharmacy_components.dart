@@ -37,13 +37,29 @@ class PharmacyPrimaryButton extends StatelessWidget {
         elevation: 0,
       ),
       child: isLoading
-          ? const SizedBox(
-              width: 16,
-              height: 16,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                color: Colors.white,
-              ),
+          ? Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const SizedBox(
+                  width: 12,
+                  height: 12,
+                  child: Icon(Icons.sync_rounded, size: 14, color: Colors.white70),
+                ),
+                const SizedBox(width: 6),
+                Flexible(
+                  child: Text(
+                    label,
+                    overflow: TextOverflow.ellipsis,
+                    style: (compact
+                            ? PharmacyTypography.caption
+                            : PharmacyTypography.subtitle)
+                        .copyWith(
+                      color: Colors.white70,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
             )
           : Row(
               mainAxisSize: MainAxisSize.min,

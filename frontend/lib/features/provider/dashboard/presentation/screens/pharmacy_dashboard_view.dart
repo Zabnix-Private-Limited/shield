@@ -6,6 +6,7 @@ import 'package:shield/features/provider/pharmacy/presentation/controllers/pharm
 import 'package:shield/features/provider/pharmacy/presentation/widgets/pharmacy_components.dart';
 import 'package:shield/features/provider/pharmacy/presentation/widgets/pharmacy_metric_card.dart';
 import 'package:shield/features/provider/pharmacy/presentation/widgets/pharmacy_status_chip.dart';
+import 'package:shield/features/provider/pharmacy/presentation/widgets/pharmacy_skeletons.dart';
 
 class PharmacyDashboardView extends StatefulWidget {
   final Function(String sectionKey)? onNavigateToSection;
@@ -87,12 +88,7 @@ class _PharmacyDashboardViewState extends State<PharmacyDashboardView> {
         const SizedBox(height: 20),
 
         if (isLoading && data == null) ...[
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 24),
-            child: Center(
-              child: CircularProgressIndicator(color: PharmacyColors.primary),
-            ),
-          ),
+          const PharmacyDashboardSkeleton(),
         ] else if (error != null && data == null) ...[
           PharmacyCard(
             padding: const EdgeInsets.all(24),

@@ -8,6 +8,7 @@ import 'package:shield/features/provider/pharmacy/presentation/widgets/bank_acco
 import 'package:shield/features/provider/pharmacy/presentation/widgets/upi_payment_card.dart';
 import 'package:shield/features/provider/pharmacy/presentation/widgets/payment_method_form_sheet.dart';
 import 'package:shield/features/provider/pharmacy/presentation/widgets/pharmacy_components.dart';
+import 'package:shield/features/provider/pharmacy/presentation/widgets/pharmacy_skeletons.dart';
 
 class PharmacyPaymentDetailsScreen extends StatefulWidget {
   const PharmacyPaymentDetailsScreen({super.key});
@@ -171,12 +172,7 @@ class _PharmacyPaymentDetailsScreenState
         const SizedBox(height: 16),
 
         if (isLoading && isEmpty) ...[
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 40),
-            child: Center(
-              child: CircularProgressIndicator(color: PharmacyColors.primary),
-            ),
-          ),
+          const PharmacyPaymentDetailsSkeleton(),
         ] else if (error != null && isEmpty) ...[
           PharmacyCard(
             padding: const EdgeInsets.all(24),

@@ -268,7 +268,27 @@ class _PharmacyOrderDetailSheetState extends State<PharmacyOrderDetailSheet> {
             const SizedBox(height: 10),
 
             if (isUpdating) ...[
-              const Center(child: CircularProgressIndicator()),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                decoration: BoxDecoration(
+                  color: AppColors.shieldLightBlue.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.sync_rounded, size: 16, color: AppColors.shieldNavy),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Updating order status...',
+                      style: AppTypography.caption.copyWith(
+                        color: AppColors.shieldNavy,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ] else ...[
               Wrap(
                 spacing: 10,

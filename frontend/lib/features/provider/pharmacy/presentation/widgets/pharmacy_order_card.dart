@@ -277,13 +277,22 @@ class PharmacyOrderCard extends StatelessWidget {
                       elevation: 0,
                     ),
                     child: isActionLoading
-                        ? const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
-                            ),
+                        ? Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(Icons.sync_rounded, size: 14, color: Colors.white70),
+                              const SizedBox(width: 6),
+                              Flexible(
+                                child: Text(
+                                  primaryActionLabel!,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: AppTypography.body2.copyWith(
+                                    color: Colors.white70,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            ],
                           )
                         : Text(
                             primaryActionLabel!,

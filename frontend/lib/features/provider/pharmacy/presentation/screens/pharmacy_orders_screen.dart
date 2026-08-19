@@ -8,6 +8,7 @@ import 'package:shield/features/provider/pharmacy/presentation/controllers/pharm
 import 'package:shield/features/provider/pharmacy/presentation/widgets/pharmacy_components.dart';
 import 'package:shield/features/provider/pharmacy/presentation/widgets/pharmacy_status_chip.dart';
 import 'package:shield/features/provider/pharmacy/presentation/widgets/pharmacy_fulfillment_detail_view.dart';
+import 'package:shield/features/provider/pharmacy/presentation/widgets/pharmacy_skeletons.dart';
 
 class PharmacyOrdersScreen extends StatefulWidget {
   const PharmacyOrdersScreen({super.key});
@@ -215,12 +216,7 @@ class _PharmacyOrdersScreenState extends State<PharmacyOrdersScreen> {
         const SizedBox(height: 16),
 
         if (isLoading && orders.isEmpty) ...[
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 40),
-            child: Center(
-              child: CircularProgressIndicator(color: PharmacyColors.primary),
-            ),
-          ),
+          const PharmacyOrdersSkeleton(),
         ] else if (error != null && orders.isEmpty) ...[
           PharmacyCard(
             padding: const EdgeInsets.all(24),

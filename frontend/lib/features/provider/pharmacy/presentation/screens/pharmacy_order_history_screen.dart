@@ -8,6 +8,7 @@ import 'package:shield/features/provider/pharmacy/presentation/controllers/pharm
 import 'package:shield/features/provider/pharmacy/presentation/widgets/pharmacy_order_history_card.dart';
 import 'package:shield/features/provider/pharmacy/presentation/widgets/pharmacy_order_history_detail_sheet.dart';
 import 'package:shield/features/provider/pharmacy/presentation/widgets/pharmacy_components.dart';
+import 'package:shield/features/provider/pharmacy/presentation/widgets/pharmacy_skeletons.dart';
 
 class PharmacyOrderHistoryScreen extends StatefulWidget {
   const PharmacyOrderHistoryScreen({super.key});
@@ -273,12 +274,7 @@ class _PharmacyOrderHistoryScreenState
 
         // History Records List
         if (isLoading && isEmpty) ...[
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 40),
-            child: Center(
-              child: CircularProgressIndicator(color: PharmacyColors.primary),
-            ),
-          ),
+          const PharmacyOrderHistorySkeleton(),
         ] else if (error != null && isEmpty) ...[
           PharmacyCard(
             padding: const EdgeInsets.all(24),
@@ -320,8 +316,13 @@ class _PharmacyOrderHistoryScreenState
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   child: Center(
                     child: isLoadingMore
-                        ? const CircularProgressIndicator(
-                            color: PharmacyColors.primary)
+                        ? const Column(
+                            children: [
+                              PharmacySkeletonBlock(height: 72),
+                              SizedBox(height: 8),
+                              PharmacySkeletonBlock(height: 72),
+                            ],
+                          )
                         : PharmacySecondaryButton(
                             label: 'Load More Records',
                             icon: Icons.arrow_downward_rounded,
