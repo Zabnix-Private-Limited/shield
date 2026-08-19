@@ -196,21 +196,41 @@ class PharmacyOrdersController extends ChangeNotifier {
     }
   }
 
-  Future<bool> uploadOrderInvoice({
+  Future<bool> uploadOrderInvoiceFile({
     required String orderId,
-    required String invoiceUrl,
-    String? invoiceFileName,
+    required List<int> bytes,
+    required String fileName,
   }) async {
     if (_updatingOrderIds.contains(orderId)) return false;
     _updatingOrderIds.add(orderId);
     notifyListeners();
 
     try {
-      final updated = await _repository.uploadOrderInvoice(
+      final updated = await _repository.uploadOrderInvoiceFile(
         orderId: orderId,
-        invoiceUrl: invoiceUrl,
-        invoiceFileName: invoiceFileName,
+        bytes: bytes,
+        fileName: fileName,
       );
+      _updateLocalOrder(orderId, updated);
+      return true;
+    } catch (e) {
+      _error = e.toString();
+      return false;
+    } finally {
+      _updatingOrderIds.remove(orderId);
+      notifyListeners();
+    }
+  }
+
+  Future<bool> removeOrderInvoice({
+    required String orderId,
+  }) async {
+    if (_updatingOrderIds.contains(orderId)) return false;
+    _updatingOrderIds.add(orderId);
+    notifyListeners();
+
+    try {
+      final updated = await _repository.removeOrderInvoice(orderId: orderId);
       _updateLocalOrder(orderId, updated);
       return true;
     } catch (e) {

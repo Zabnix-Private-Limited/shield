@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:shield/features/provider/pharmacy/data/pharmacy_orders_repository.dart';
 import 'package:shield/features/provider/pharmacy/design/pharmacy_colors.dart';
 import 'package:shield/features/provider/pharmacy/design/pharmacy_radius.dart';
 import 'package:shield/features/provider/pharmacy/design/pharmacy_typography.dart';
 import 'package:shield/features/provider/pharmacy/presentation/widgets/pharmacy_components.dart';
+import 'package:shield/features/provider/pharmacy/presentation/widgets/pharmacy_skeletons.dart';
 import 'package:shield/shared/services/internal_auth_session.dart';
 
 class PharmacyProfileScreen extends StatefulWidget {
@@ -13,31 +15,100 @@ class PharmacyProfileScreen extends StatefulWidget {
 }
 
 class _PharmacyProfileScreenState extends State<PharmacyProfileScreen> {
+  bool _isLoading = true;
   bool _isSaving = false;
+  Map<String, dynamic>? _profileData;
+  final PharmacyOrdersRepository _repository = PharmacyOrdersRepository();
+
+  final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _phoneController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _loadProfile();
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _emailController.dispose();
+    _phoneController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadProfile() async {
+    setState(() => _isLoading = true);
+    try {
+      final data = await _repository.fetchPharmacyProfile();
+      if (!mounted) return;
+      setState(() {
+        _profileData = data;
+        _isLoading = false;
+        _nameController.text = data['displayName'] ?? '';
+        _emailController.text = data['email'] ?? '';
+        _phoneController.text = data['phone'] ?? '';
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+    }
+  }
 
   void _handleSave() async {
     setState(() => _isSaving = true);
-    await Future.delayed(const Duration(milliseconds: 600));
-    if (!mounted) return;
-    setState(() => _isSaving = false);
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Pharmacy Profile saved successfully.')),
-    );
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final payload = {
+        'displayName': _nameController.text.trim(),
+        'email': _emailController.text.trim(),
+        'phone': _phoneController.text.trim(),
+      };
+      final updated = await _repository.updatePharmacyProfile(payload);
+      if (!mounted) return;
+      setState(() {
+        _profileData = updated;
+        _isSaving = false;
+      });
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Pharmacy Profile updated and persisted successfully.')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isSaving = false);
+      messenger.showSnackBar(
+        SnackBar(content: Text('Failed to update profile: $e')),
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const SingleChildScrollView(
+        padding: EdgeInsets.all(20),
+        child: PharmacyProfileSkeleton(),
+      );
+    }
+
     final session = InternalAuthSession.instance;
-    final userName = (session.displayName != null && session.displayName!.isNotEmpty)
-        ? session.displayName!
-        : 'Pharmacy Staff';
-    final userEmail = (session.email != null && session.email!.isNotEmpty)
-        ? session.email!
-        : 'pharmacist@shieldhealth.org';
-    final userRole = (session.roleCode != null && session.roleCode!.isNotEmpty)
-        ? session.roleCode!
-        : 'PHARMACY_PROVIDER';
-    final businessName = 'Sahakar Pharmacy Outlet';
+    final userName = _nameController.text.isNotEmpty
+        ? _nameController.text
+        : (session.displayName ?? 'Pharmacy Staff');
+    final userEmail = _emailController.text.isNotEmpty
+        ? _emailController.text
+        : (session.email ?? '');
+    final userRole = _profileData?['roleCode'] ?? session.roleCode ?? 'PHARMACY_PROVIDER';
+    final businessName = _profileData?['pharmacyName'] ?? 'Sahakar Pharmacy Outlet';
+    final businessCode = _profileData?['businessCode'] ?? 'PHARM-SHIELD-001';
+    final drugLicence = _profileData?['drugLicenceNo'] ?? 'DL-PHARM-2026-8841';
+    final gstin = _profileData?['gstin'] ?? '29ABCDE1234F1Z5';
+    final address = _profileData?['address'] ?? 'Building 14, Health Park Road, Sector 4';
+    final cityStatePin = '${_profileData?['city'] ?? 'Bangalore'}, ${_profileData?['state'] ?? 'Karnataka'} — ${_profileData?['pin'] ?? '560001'}';
+    final operatingHours = _profileData?['operatingHours'] ?? '08:00 AM - 10:00 PM (Mon-Sat)';
+    final accountCreated = _profileData?['accountCreatedAt']?.toString().split('T').first ?? '2026-01-15';
+    final accountStatus = _profileData?['accountStatus'] ?? 'ACTIVE';
 
     final isWideDesktop = MediaQuery.of(context).size.width >= 1200;
     final isDesktop = MediaQuery.of(context).size.width >= 1024;
@@ -119,7 +190,7 @@ class _PharmacyProfileScreenState extends State<PharmacyProfileScreen> {
                 Expanded(
                   child: Column(
                     children: [
-                      _buildBusinessDetailsCard(businessName),
+                      _buildBusinessDetailsCard(businessName, businessCode, drugLicence, gstin, address, cityStatePin, operatingHours),
                       const SizedBox(height: 16),
                       _buildOutletsCard(businessName),
                     ],
@@ -136,7 +207,7 @@ class _PharmacyProfileScreenState extends State<PharmacyProfileScreen> {
                       const SizedBox(height: 16),
                       _buildQuickActionsCard(),
                       const SizedBox(height: 16),
-                      _buildAccountInfoCard(),
+                      _buildAccountInfoCard(accountCreated, accountStatus),
                     ],
                   ),
                 ),
@@ -146,7 +217,7 @@ class _PharmacyProfileScreenState extends State<PharmacyProfileScreen> {
             // Stacked Mobile / Tablet Layout
             _buildUserProfileCard(userName, userEmail, userRole, businessName),
             const SizedBox(height: 16),
-            _buildBusinessDetailsCard(businessName),
+            _buildBusinessDetailsCard(businessName, businessCode, drugLicence, gstin, address, cityStatePin, operatingHours),
             const SizedBox(height: 16),
             _buildOutletsCard(businessName),
             const SizedBox(height: 16),
@@ -156,7 +227,7 @@ class _PharmacyProfileScreenState extends State<PharmacyProfileScreen> {
             const SizedBox(height: 16),
             _buildQuickActionsCard(),
             const SizedBox(height: 16),
-            _buildAccountInfoCard(),
+            _buildAccountInfoCard(accountCreated, accountStatus),
           ],
 
           const SizedBox(height: 24),
@@ -168,7 +239,7 @@ class _PharmacyProfileScreenState extends State<PharmacyProfileScreen> {
               children: [
                 PharmacySecondaryButton(
                   label: 'Discard Changes',
-                  onPressed: () {},
+                  onPressed: _loadProfile,
                 ),
                 const SizedBox(width: 12),
                 PharmacyPrimaryButton(
@@ -224,9 +295,9 @@ class _PharmacyProfileScreenState extends State<PharmacyProfileScreen> {
             ],
           ),
           const Divider(height: 24),
-          _buildInfoRow(Icons.phone_outlined, 'Mobile Contact', '+91 98765 43210'),
+          _buildInfoRow(Icons.phone_outlined, 'Mobile Contact', _phoneController.text.isNotEmpty ? _phoneController.text : '+91 98765 43210'),
           const SizedBox(height: 8),
-          _buildInfoRow(Icons.email_outlined, 'Email Address', email),
+          _buildInfoRow(Icons.email_outlined, 'Email Address', email.isNotEmpty ? email : 'pharmacist@shieldhealth.org'),
           const SizedBox(height: 8),
           _buildInfoRow(Icons.business_rounded, 'Assigned Outlet', business),
           const SizedBox(height: 14),
@@ -236,7 +307,7 @@ class _PharmacyProfileScreenState extends State<PharmacyProfileScreen> {
               label: 'Edit User Profile',
               icon: Icons.edit_outlined,
               compact: true,
-              onPressed: () {},
+              onPressed: () => _showEditUserDialog(),
             ),
           ),
         ],
@@ -244,7 +315,48 @@ class _PharmacyProfileScreenState extends State<PharmacyProfileScreen> {
     );
   }
 
-  Widget _buildBusinessDetailsCard(String business) {
+  void _showEditUserDialog() {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Edit User Profile'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: _nameController,
+              decoration: const InputDecoration(labelText: 'Display Name'),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _emailController,
+              decoration: const InputDecoration(labelText: 'Email Address'),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _phoneController,
+              decoration: const InputDecoration(labelText: 'Mobile Contact'),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              _handleSave();
+            },
+            child: const Text('Save Profile'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBusinessDetailsCard(String business, String code, String licence, String gstin, String address, String cityStatePin, String hours) {
     return PharmacyCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -273,11 +385,11 @@ class _PharmacyProfileScreenState extends State<PharmacyProfileScreen> {
                   children: [
                     _buildDetailItem('Business Name', business),
                     const SizedBox(height: 12),
-                    _buildDetailItem('Business Code', 'PHARM-SHIELD-001'),
+                    _buildDetailItem('Business Code', code),
                     const SizedBox(height: 12),
-                    _buildDetailItem('Drug Licence No.', 'DL-PHARM-2026-8841'),
+                    _buildDetailItem('Drug Licence No.', licence),
                     const SizedBox(height: 12),
-                    _buildDetailItem('Operating Hours', '08:00 AM - 10:00 PM (Mon-Sat)'),
+                    _buildDetailItem('Operating Hours', hours),
                   ],
                 ),
               ),
@@ -286,27 +398,17 @@ class _PharmacyProfileScreenState extends State<PharmacyProfileScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _buildDetailItem('Registered Address', 'Building 14, Health Park Road, Sector 4'),
+                    _buildDetailItem('Registered Address', address),
                     const SizedBox(height: 12),
-                    _buildDetailItem('City / State / PIN', 'Bangalore, Karnataka — 560001'),
+                    _buildDetailItem('City / State / PIN', cityStatePin),
                     const SizedBox(height: 12),
-                    _buildDetailItem('GSTIN / Tax ID', '29ABCDE1234F1Z5'),
+                    _buildDetailItem('GSTIN / Tax ID', gstin),
                     const SizedBox(height: 12),
                     _buildDetailItem('Business Type', 'Hyperpharmacy & Retail Outlet'),
                   ],
                 ),
               ),
             ],
-          ),
-          const SizedBox(height: 16),
-          Align(
-            alignment: Alignment.centerRight,
-            child: PharmacySecondaryButton(
-              label: 'Edit Business Details',
-              icon: Icons.edit_note_rounded,
-              compact: true,
-              onPressed: () {},
-            ),
           ),
         ],
       ),
@@ -381,9 +483,9 @@ class _PharmacyProfileScreenState extends State<PharmacyProfileScreen> {
         children: [
           Text('Support & Escalation Contact', style: PharmacyTypography.subtitle.copyWith(fontWeight: FontWeight.bold)),
           const Divider(height: 20),
-          _buildInfoRow(Icons.person_pin_outlined, 'Lead Pharmacist', 'Dr. Rajesh Sharma'),
+          _buildInfoRow(Icons.person_pin_outlined, 'Support Desk', 'SHIELD Operations Desk'),
           const SizedBox(height: 8),
-          _buildInfoRow(Icons.phone_in_talk_outlined, 'Support Desk', '+91 80 4455 6677'),
+          _buildInfoRow(Icons.phone_in_talk_outlined, 'Support Helpline', '+91 80 4455 6677'),
         ],
       ),
     );
@@ -400,15 +502,7 @@ class _PharmacyProfileScreenState extends State<PharmacyProfileScreen> {
             contentPadding: EdgeInsets.zero,
             leading: const Icon(Icons.lock_outline_rounded, color: PharmacyColors.navy),
             title: Text('Change Password', style: PharmacyTypography.caption.copyWith(fontWeight: FontWeight.bold)),
-            subtitle: Text('Last updated 30 days ago', style: PharmacyTypography.caption),
-            trailing: const Icon(Icons.chevron_right_rounded),
-            onTap: () {},
-          ),
-          ListTile(
-            contentPadding: EdgeInsets.zero,
-            leading: const Icon(Icons.devices_rounded, color: PharmacyColors.navy),
-            title: Text('Active Sessions', style: PharmacyTypography.caption.copyWith(fontWeight: FontWeight.bold)),
-            subtitle: Text('1 active Web session', style: PharmacyTypography.caption),
+            subtitle: Text('Manage authentication credentials', style: PharmacyTypography.caption),
             trailing: const Icon(Icons.chevron_right_rounded),
             onTap: () {},
           ),
@@ -425,35 +519,26 @@ class _PharmacyProfileScreenState extends State<PharmacyProfileScreen> {
           Text('Quick Actions', style: PharmacyTypography.subtitle.copyWith(fontWeight: FontWeight.bold)),
           const SizedBox(height: 12),
           PharmacySecondaryButton(
-            label: 'Download Business Certificate',
-            icon: Icons.download_rounded,
+            label: 'Refresh Profile Data',
+            icon: Icons.refresh_rounded,
             compact: true,
-            onPressed: () {},
-          ),
-          const SizedBox(height: 8),
-          PharmacySecondaryButton(
-            label: 'View Pharmacy Storefront',
-            icon: Icons.open_in_new_rounded,
-            compact: true,
-            onPressed: () {},
+            onPressed: _loadProfile,
           ),
         ],
       ),
     );
   }
 
-  Widget _buildAccountInfoCard() {
+  Widget _buildAccountInfoCard(String created, String status) {
     return PharmacyCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text('Account System Info', style: PharmacyTypography.subtitle.copyWith(fontWeight: FontWeight.bold)),
           const Divider(height: 20),
-          _buildInfoRow(Icons.calendar_today_outlined, 'Account Created', '2026-01-15'),
+          _buildInfoRow(Icons.calendar_today_outlined, 'Account Created', created),
           const SizedBox(height: 8),
-          _buildInfoRow(Icons.access_time_rounded, 'Last Login', 'Today 08:30 AM'),
-          const SizedBox(height: 8),
-          _buildInfoRow(Icons.verified_user_outlined, 'Account Status', 'ACTIVE & VERIFIED'),
+          _buildInfoRow(Icons.verified_user_outlined, 'Account Status', status.toUpperCase()),
         ],
       ),
     );

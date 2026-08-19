@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:shield/shared/services/api_service.dart';
 import 'package:shield/features/provider/pharmacy/domain/models/pharmacy_order_model.dart';
 
@@ -123,17 +124,28 @@ class PharmacyOrdersRepository {
     return PharmacyOrderModel.fromJson(data);
   }
 
-  Future<PharmacyOrderModel> uploadOrderInvoice({
+  Future<PharmacyOrderModel> uploadOrderInvoiceFile({
     required String orderId,
-    required String invoiceUrl,
-    String? invoiceFileName,
+    required List<int> bytes,
+    required String fileName,
   }) async {
+    final formData = FormData.fromMap({
+      'file': MultipartFile.fromBytes(bytes, filename: fileName),
+    });
+
     final response = await ApiService.dio.post(
+      '/pharmacy/orders/$orderId/invoice/upload',
+      data: formData,
+    );
+    final data = response.data['data'] as Map<String, dynamic>;
+    return PharmacyOrderModel.fromJson(data);
+  }
+
+  Future<PharmacyOrderModel> removeOrderInvoice({
+    required String orderId,
+  }) async {
+    final response = await ApiService.dio.delete(
       '/pharmacy/orders/$orderId/invoice',
-      data: {
-        'invoiceUrl': invoiceUrl,
-        if (invoiceFileName != null) 'invoiceFileName': invoiceFileName,
-      },
     );
     final data = response.data['data'] as Map<String, dynamic>;
     return PharmacyOrderModel.fromJson(data);
@@ -148,5 +160,30 @@ class PharmacyOrdersRepository {
     final data = response.data['data'] as Map<String, dynamic>;
     return PharmacyOrderModel.fromJson(data);
   }
-}
 
+  Future<Map<String, dynamic>> fetchPharmacyProfile() async {
+    final response = await ApiService.dio.get('/pharmacy/profile');
+    return response.data['data'] as Map<String, dynamic>;
+  }
+
+  Future<Map<String, dynamic>> updatePharmacyProfile(Map<String, dynamic> payload) async {
+    final response = await ApiService.dio.patch(
+      '/pharmacy/profile',
+      data: payload,
+    );
+    return response.data['data'] as Map<String, dynamic>;
+  }
+
+  Future<Map<String, dynamic>> fetchPharmacySettings() async {
+    final response = await ApiService.dio.get('/pharmacy/settings');
+    return response.data['data'] as Map<String, dynamic>;
+  }
+
+  Future<Map<String, dynamic>> updatePharmacySettings(Map<String, dynamic> payload) async {
+    final response = await ApiService.dio.patch(
+      '/pharmacy/settings',
+      data: payload,
+    );
+    return response.data['data'] as Map<String, dynamic>;
+  }
+}

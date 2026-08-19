@@ -13,7 +13,7 @@ describe('PharmacyService customer wellness catalogue', () => {
       productCategory: { findMany: jest.fn().mockResolvedValue([{ id: BigInt(2), name: 'Vitamins' }]) },
       $transaction: jest.fn(async (queries: Promise<unknown>[]) => Promise.all(queries)),
     };
-    const service = new PharmacyService(prisma as any, {} as any, {} as any, {} as any, {} as any);
+    const service = new PharmacyService(prisma as any, {} as any, {} as any, {} as any, {} as any, {} as any, {} as any);
 
     await expect(service.listCustomerWellnessProducts({ page: '1', pageSize: '24' })).resolves.toEqual({
       items: [{
@@ -46,7 +46,7 @@ describe('PharmacyService customer wellness catalogue', () => {
     const prisma = {
       purchase: { findMany: jest.fn().mockResolvedValue([purchase]) },
     };
-    const service = new PharmacyService(prisma as any, {} as any, {} as any, {} as any, {} as any);
+    const service = new PharmacyService(prisma as any, {} as any, {} as any, {} as any, {} as any, {} as any, {} as any);
 
     await expect(service.listCustomerOrders(BigInt(7))).resolves.toEqual([{
       id: '9',
@@ -77,7 +77,7 @@ describe('PharmacyService customer wellness catalogue', () => {
 
   it('does not disclose another customer order', async () => {
     const prisma = { purchase: { findFirst: jest.fn().mockResolvedValue(null) } };
-    const service = new PharmacyService(prisma as any, {} as any, {} as any, {} as any, {} as any);
+    const service = new PharmacyService(prisma as any, {} as any, {} as any, {} as any, {} as any, {} as any, {} as any);
 
     await expect(service.getCustomerOrder(BigInt(7), BigInt(9))).rejects.toThrow('Order not found.');
     expect(prisma.purchase.findFirst).toHaveBeenCalledWith(expect.objectContaining({
@@ -92,7 +92,7 @@ describe('PharmacyService customer wellness catalogue', () => {
       },
     };
     const providerScope = { assertProviderCanAccessPurchase: jest.fn() };
-    const service = new PharmacyService(prisma as any, providerScope as any, {} as any, {} as any, {} as any);
+    const service = new PharmacyService(prisma as any, providerScope as any, {} as any, {} as any, {} as any, {} as any, {} as any);
 
     await expect(service.updateOrderStatus(10n, 'PREPARING')).rejects.toThrow('Terminal order in status COMPLETED cannot be reopened');
   });
@@ -104,7 +104,7 @@ describe('PharmacyService customer wellness catalogue', () => {
       },
     };
     const providerScope = { assertProviderCanAccessPurchase: jest.fn() };
-    const service = new PharmacyService(prisma as any, providerScope as any, {} as any, {} as any, {} as any);
+    const service = new PharmacyService(prisma as any, providerScope as any, {} as any, {} as any, {} as any, {} as any, {} as any);
 
     await expect(service.updateOrderStatus(11n, 'CANCELLED')).rejects.toThrow('Cancellation or rejection reason is required.');
   });

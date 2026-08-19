@@ -67,6 +67,8 @@ describe('PharmacyService Operational Order Persistence & Isolation', () => {
       pricingService,
       referralService,
       walletService,
+      { persistScopedPrivateObject: jest.fn(), readObjectBuffer: jest.fn() } as any,
+      { send: jest.fn() } as any,
     );
   });
 

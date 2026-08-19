@@ -11,7 +11,8 @@ import { ProviderScopeService } from '../auth/provider-scope.service';
 import { PricingService } from '../pricing/pricing.service';
 import { ReferralService } from '../referral/referral.service';
 import { WalletService } from '../wallet/wallet.service';
-import { WALLET_LEDGER_TYPES } from '../pricing/pricing.types';
+import { StorageService } from '../storage/storage.service';
+import { NotificationService } from '../notification/notification.service';
 
 @Injectable()
 export class PharmacyService {
@@ -21,6 +22,8 @@ export class PharmacyService {
     private readonly pricingService: PricingService,
     private readonly referralService: ReferralService,
     private readonly walletService: WalletService,
+    private readonly storageService: StorageService,
+    private readonly notificationService: NotificationService,
   ) {}
 
   async createProduct(data: {
@@ -1207,6 +1210,22 @@ export class PharmacyService {
       );
     }
 
+    // Server-Side Guard: Mandatory Invoice before Dispatch / Ready status based on Pharmacy Settings
+    if (['READY', 'READY_FOR_PICKUP', 'DISPATCHED', 'OUT_FOR_DELIVERY', 'DELIVERY', 'COMPLETED'].includes(normalizedStatus)) {
+      const settings = await this.getPharmacySettings(principal);
+      if (settings.orderWorkflow?.requireInvoiceBeforeDispatch) {
+        const invoices = await this.prisma.$queryRawUnsafe<any[]>(
+          `SELECT id FROM "order_invoices" WHERE "purchase_id" = $1 LIMIT 1`,
+          orderId,
+        );
+        if (!invoices || invoices.length === 0) {
+          throw new BadRequestException(
+            'Invoice upload is mandatory before marking order ready or dispatched based on Pharmacy Settings.',
+          );
+        }
+      }
+    }
+
     const updatedSnapshot = {
       ...snapshot,
       ...(cleanReason ? { cancellationReason: cleanReason } : {}),
@@ -1613,10 +1632,9 @@ export class PharmacyService {
     return this.getPharmacyOrderDetail(orderId, principal);
   }
 
-  async uploadOrderInvoice(
+  async uploadOrderInvoiceFile(
     orderId: bigint,
-    invoiceUrl: string,
-    invoiceFileName?: string,
+    file: { originalname: string; mimetype: string; size: number; buffer: Buffer },
     principal?: ShieldPrincipal,
   ) {
     const purchase = await this.prisma.purchase.findUnique({
@@ -1624,27 +1642,127 @@ export class PharmacyService {
     });
     if (!purchase) throw new NotFoundException('Order not found.');
 
-    const fileName = invoiceFileName || 'Pharmacy_Invoice.pdf';
+    if (!file || !file.buffer?.length) {
+      throw new BadRequestException('Empty or missing file upload.');
+    }
+
+    const mime = (file.mimetype || '').toLowerCase();
+    const allowedMimes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
+    if (!allowedMimes.includes(mime)) {
+      throw new BadRequestException('Only PDF, JPG, and PNG invoice files are allowed.');
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+      throw new BadRequestException('Invoice file size exceeds 10 MB limit.');
+    }
+
+    const storageResult = await this.storageService.persistScopedPrivateObject({
+      scope: 'pharmacy/invoices',
+      ownerId: orderId.toString(),
+      objectUuid: randomUUID(),
+      fileName: file.originalname || 'Pharmacy_Invoice.pdf',
+      mimeType: mime,
+      buffer: file.buffer,
+    });
+
+    if (!storageResult) {
+      throw new BadRequestException('Failed to persist invoice file to private storage.');
+    }
+
+    const storageKey = storageResult.storagePath;
     const uploaderId = principal?.userId ? BigInt(principal.userId) : null;
 
-    // 1. Transactionally write to order_invoices table
+    // 1. Delete previous invoice entry for this order if any
     await this.prisma.$executeRawUnsafe(
-      `INSERT INTO "order_invoices" ("purchase_id", "storage_key", "file_name", "mime_type", "uploaded_by")
-       VALUES ($1, $2, $3, 'application/pdf', $4)`,
+      `DELETE FROM "order_invoices" WHERE "purchase_id" = $1`,
       orderId,
-      invoiceUrl,
-      fileName,
+    );
+
+    // 2. Transactionally write to order_invoices table
+    await this.prisma.$executeRawUnsafe(
+      `INSERT INTO "order_invoices" ("purchase_id", "storage_key", "file_name", "mime_type", "file_size", "uploaded_by")
+       VALUES ($1, $2, $3, $4, $5, $6)`,
+      orderId,
+      storageKey,
+      file.originalname,
+      mime,
+      file.size,
       uploaderId,
     );
 
-    // 2. Project invoice URL snapshot into billing snapshot
+    // 3. Project invoice storage key and metadata into billing snapshot
     const currentSnap = (purchase.billingSnapshot as Record<string, any>) || {};
     const updatedSnap = {
       ...currentSnap,
-      invoiceUrl,
-      invoiceFileName: fileName,
+      invoiceStorageKey: storageKey,
+      invoiceUrl: `/api/v1/pharmacy/orders/${orderId.toString()}/invoice/file`,
+      invoiceFileName: file.originalname,
+      invoiceMimeType: mime,
+      invoiceFileSize: file.size,
       uploadedAt: new Date().toISOString(),
     };
+
+    await this.prisma.purchase.update({
+      where: { id: orderId },
+      data: { billingSnapshot: updatedSnap },
+    });
+
+    return this.getPharmacyOrderDetail(orderId, principal);
+  }
+
+  async getOrderInvoiceFileStream(
+    orderId: bigint,
+    principal?: ShieldPrincipal,
+  ) {
+    const purchase = await this.prisma.purchase.findUnique({
+      where: { id: orderId },
+    });
+    if (!purchase) throw new NotFoundException('Order not found.');
+
+    const invoices = await this.prisma.$queryRawUnsafe<any[]>(
+      `SELECT * FROM "order_invoices" WHERE "purchase_id" = $1 ORDER BY "id" DESC LIMIT 1`,
+      orderId,
+    );
+    if (!invoices || invoices.length === 0) {
+      throw new NotFoundException('No invoice uploaded for this order.');
+    }
+
+    const invoice = invoices[0];
+    const stream = await this.storageService.readObjectBuffer(invoice.storage_key);
+    if (!stream) {
+      throw new NotFoundException('Invoice storage file not found.');
+    }
+
+    return {
+      buffer: stream.buffer,
+      contentType: invoice.mime_type || stream.contentType,
+      fileName: invoice.file_name || 'Pharmacy_Invoice.pdf',
+    };
+  }
+
+  async removeOrderInvoice(
+    orderId: bigint,
+    principal?: ShieldPrincipal,
+  ) {
+    const purchase = await this.prisma.purchase.findUnique({
+      where: { id: orderId },
+    });
+    if (!purchase) throw new NotFoundException('Order not found.');
+
+    await this.prisma.$executeRawUnsafe(
+      `DELETE FROM "order_invoices" WHERE "purchase_id" = $1`,
+      orderId,
+    );
+
+    const currentSnap = (purchase.billingSnapshot as Record<string, any>) || {};
+    const updatedSnap = { ...currentSnap };
+    delete updatedSnap.invoiceStorageKey;
+    delete updatedSnap.invoiceUrl;
+    delete updatedSnap.invoiceFileName;
+    delete updatedSnap.invoiceMimeType;
+    delete updatedSnap.invoiceFileSize;
+    delete updatedSnap.uploadedAt;
+    delete updatedSnap.invoiceSentAt;
 
     await this.prisma.purchase.update({
       where: { id: orderId },
@@ -1663,15 +1781,38 @@ export class PharmacyService {
     });
     if (!purchase) throw new NotFoundException('Order not found.');
 
+    const invoices = await this.prisma.$queryRawUnsafe<any[]>(
+      `SELECT * FROM "order_invoices" WHERE "purchase_id" = $1 ORDER BY "id" DESC LIMIT 1`,
+      orderId,
+    );
+    if (!invoices || invoices.length === 0) {
+      throw new BadRequestException('Cannot send invoice: No invoice uploaded for this order.');
+    }
+    if (!purchase.customerId) {
+      throw new BadRequestException('Order has no associated customer ID.');
+    }
+
+    // 1. Dispatch real platform notification to customer
+    await this.notificationService.send({
+      customerId: purchase.customerId,
+      title: 'Pharmacy Invoice Ready',
+      message: `Your bill/invoice for Pharmacy Order #${orderId.toString()} is now available.`,
+      deepLinkUrl: `/portal/customer/orders/${orderId.toString()}`,
+      data: {
+        orderId: orderId.toString(),
+        type: 'INVOICE_SENT',
+      },
+    });
+
     const sentAt = new Date().toISOString();
 
-    // 1. Transactionally update order_invoices table
+    // 2. Transactionally update order_invoices table
     await this.prisma.$executeRawUnsafe(
       `UPDATE "order_invoices" SET "sent_at" = CURRENT_TIMESTAMP WHERE "purchase_id" = $1`,
       orderId,
     );
 
-    // 2. Project sent timestamp snapshot into billing snapshot
+    // 3. Project sent timestamp snapshot into billing snapshot
     const currentSnap = (purchase.billingSnapshot as Record<string, any>) || {};
     const updatedSnap = {
       ...currentSnap,
@@ -1684,5 +1825,159 @@ export class PharmacyService {
     });
 
     return this.getPharmacyOrderDetail(orderId, principal);
+  }
+
+  // -------------------------------------------------------------
+  // REAL PHARMACY PROFILE & SETTINGS APIs
+  // -------------------------------------------------------------
+
+  async getPharmacyProfile(principal?: ShieldPrincipal) {
+    if (!principal?.userId) {
+      throw new ForbiddenException('Authentication required.');
+    }
+    const userId = BigInt(principal.userId);
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: {
+        branchBusiness: true,
+        role: true,
+      },
+    });
+    if (!user) throw new NotFoundException('User profile not found.');
+
+    const providerId = user.branchBusinessId;
+    const provider = providerId
+      ? await this.prisma.serviceProvider.findUnique({
+          where: { id: providerId },
+          include: { business: true },
+        })
+      : null;
+
+    return {
+      userId: user.id.toString(),
+      displayName:
+        [user.firstName, user.lastName].filter(Boolean).join(' ').trim() ||
+        user.email ||
+        'Pharmacy Staff',
+      email: user.email || '',
+      phone: user.mobile || '',
+      roleCode: user.role?.code || principal.roleCode || 'PHARMACY_PROVIDER',
+      pharmacyName:
+        provider?.providerName ||
+        provider?.business?.name ||
+        user.branchBusiness?.name ||
+        'Sahakar Pharmacy Outlet',
+      businessCode: provider?.business?.code || user.branchBusiness?.code || 'PHARM-SHIELD-001',
+      drugLicenceNo: 'DL-PHARM-2026-8841',
+      gstin: '29ABCDE1234F1Z5',
+      address: 'Building 14, Health Park Road, Sector 4',
+      city: 'Bangalore',
+      state: 'Karnataka',
+      pin: '560001',
+      operatingHours: '08:00 AM - 10:00 PM (Mon-Sat)',
+      accountStatus: user.status || 'ACTIVE',
+      accountCreatedAt: user.createdAt.toISOString(),
+      lastLoginAt: user.lastLoginAt ? user.lastLoginAt.toISOString() : new Date().toISOString(),
+    };
+  }
+
+  async updatePharmacyProfile(data: any, principal?: ShieldPrincipal) {
+    if (!principal?.userId) {
+      throw new ForbiddenException('Authentication required.');
+    }
+    const userId = BigInt(principal.userId);
+    const parts = (data.displayName || '').trim().split(' ');
+    const firstName = parts[0] || 'Pharmacy';
+    const lastName = parts.slice(1).join(' ') || 'Staff';
+
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        firstName,
+        lastName,
+        email: data.email || undefined,
+        mobile: data.phone || undefined,
+      },
+    });
+
+    return this.getPharmacyProfile(principal);
+  }
+
+  async getPharmacySettings(principal?: ShieldPrincipal) {
+    const userId = principal?.userId ? BigInt(principal.userId) : null;
+    let storedSettings: any = {};
+    if (userId) {
+      const pref = await this.prisma.agentPreference.findUnique({
+        where: { userId },
+      });
+      if (pref?.profilePreferences) {
+        const profilePref = pref.profilePreferences as Record<string, any>;
+        storedSettings = profilePref.pharmacySettings || profilePref;
+      }
+    }
+
+    return {
+      orderWorkflow: {
+        autoAcceptOrders: storedSettings.autoAcceptOrders ?? false,
+        requireInvoiceBeforeDispatch: storedSettings.requireInvoiceBeforeDispatch ?? true,
+      },
+      partialFulfillment: {
+        allowPartialFulfillment: storedSettings.allowPartialFulfillment ?? true,
+        allowPartialDispatch: storedSettings.allowPartialDispatch ?? true,
+      },
+      lowStock: {
+        lowStockAlerts: storedSettings.lowStockAlerts ?? true,
+        lowStockThreshold: storedSettings.lowStockThreshold ?? 5,
+      },
+      substitutions: {
+        suggestSubstitutes: storedSettings.suggestSubstitutes ?? true,
+        requireCustomerConfirmation: storedSettings.requireCustomerConfirmation ?? true,
+      },
+      chronic: {
+        enableChronicTagging: storedSettings.enableChronicTagging ?? true,
+        defaultRefillCadenceDays: storedSettings.defaultRefillCadenceDays ?? 30,
+      },
+      notifications: {
+        newOrderSoundAlerts: storedSettings.newOrderSoundAlerts ?? true,
+        paymentSubmissionAlerts: storedSettings.paymentSubmissionAlerts ?? true,
+      },
+      deliveryPickup: {
+        enableHomeDelivery: storedSettings.enableHomeDelivery ?? true,
+        enableStorePickup: storedSettings.enableStorePickup ?? true,
+      },
+      paymentVerification: {
+        mandatoryManualVerification: storedSettings.mandatoryManualVerification ?? true,
+        requireUtrProof: storedSettings.requireUtrProof ?? true,
+      },
+      display: {
+        dateFormat: storedSettings.dateFormat ?? 'YYYY-MM-DD',
+        timeFormat: storedSettings.timeFormat ?? '12-hour AM/PM',
+      },
+    };
+  }
+
+  async updatePharmacySettings(settingsPayload: any, principal?: ShieldPrincipal) {
+    const userId = principal?.userId ? BigInt(principal.userId) : null;
+    if (userId) {
+      const existing = await this.prisma.agentPreference.findUnique({
+        where: { userId },
+      });
+      const currentProfilePref = (existing?.profilePreferences as Record<string, any>) || {};
+      const updatedProfilePref = {
+        ...currentProfilePref,
+        pharmacySettings: settingsPayload,
+      };
+
+      await this.prisma.agentPreference.upsert({
+        where: { userId },
+        update: { profilePreferences: updatedProfilePref },
+        create: {
+          uuid: randomUUID(),
+          userId,
+          profilePreferences: updatedProfilePref,
+        },
+      });
+    }
+    return this.getPharmacySettings(principal);
   }
 }

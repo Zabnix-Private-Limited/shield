@@ -10,6 +10,7 @@ import { WalletModule } from '../wallet/wallet.module';
 import { StorageModule } from '../storage/storage.module';
 import { TimelineModule } from '../timeline/timeline.module';
 import { AuthModule } from '../auth/auth.module';
+import { NotificationModule } from '../notification/notification.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { AuthModule } from '../auth/auth.module';
     StorageModule,
     TimelineModule,
     AuthModule,
+    NotificationModule,
   ],
   controllers: [PharmacyController],
   providers: [

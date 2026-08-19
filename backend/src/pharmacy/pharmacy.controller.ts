@@ -821,19 +821,52 @@ export class PharmacyController {
   }
 
   @RequirePermissions('providers.update')
-  @Post('pharmacy/orders/:id/invoice')
-  async uploadOrderInvoice(
+  @Post('pharmacy/orders/:id/invoice/upload')
+  @UseInterceptors(FileInterceptor('file'))
+  async uploadOrderInvoiceFile(
     @Param('id') id: string,
-    @Body() body: { invoiceUrl: string; invoiceFileName?: string },
+    @UploadedFile() file: Express.Multer.File,
     @CurrentPrincipal() principal?: ShieldPrincipal,
   ) {
     return {
       success: true,
-      message: 'Order invoice metadata uploaded successfully.',
-      data: await this.pharmacyService.uploadOrderInvoice(
+      message: 'Order invoice file uploaded successfully.',
+      data: await this.pharmacyService.uploadOrderInvoiceFile(
         this.parseId(id, 'Order ID'),
-        body.invoiceUrl,
-        body.invoiceFileName,
+        file,
+        principal,
+      ),
+    };
+  }
+
+  @RequirePermissions('providers.read')
+  @Get('pharmacy/orders/:id/invoice/file')
+  async getOrderInvoiceFile(
+    @Param('id') id: string,
+    @Res() res: Response,
+    @CurrentPrincipal() principal?: ShieldPrincipal,
+  ) {
+    const { buffer, contentType, fileName } = await this.pharmacyService.getOrderInvoiceFileStream(
+      this.parseId(id, 'Order ID'),
+      principal,
+    );
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Content-Disposition', `inline; filename="${fileName}"`);
+    res.setHeader('Cache-Control', 'private, max-age=3600');
+    res.send(buffer);
+  }
+
+  @RequirePermissions('providers.update')
+  @Delete('pharmacy/orders/:id/invoice')
+  async removeOrderInvoice(
+    @Param('id') id: string,
+    @CurrentPrincipal() principal?: ShieldPrincipal,
+  ) {
+    return {
+      success: true,
+      message: 'Order invoice removed successfully.',
+      data: await this.pharmacyService.removeOrderInvoice(
+        this.parseId(id, 'Order ID'),
         principal,
       ),
     };
@@ -847,11 +880,57 @@ export class PharmacyController {
   ) {
     return {
       success: true,
-      message: 'Order invoice dispatched to customer.',
+      message: 'Order invoice dispatched to customer via push and in-app notification.',
       data: await this.pharmacyService.sendOrderInvoice(
         this.parseId(id, 'Order ID'),
         principal,
       ),
+    };
+  }
+
+  @RequirePermissions('providers.view')
+  @Get('pharmacy/profile')
+  async getPharmacyProfile(@CurrentPrincipal() principal?: ShieldPrincipal) {
+    return {
+      success: true,
+      message: 'Pharmacy profile retrieved successfully.',
+      data: await this.pharmacyService.getPharmacyProfile(principal),
+    };
+  }
+
+  @RequirePermissions('providers.update')
+  @Patch('pharmacy/profile')
+  async updatePharmacyProfile(
+    @Body() body: any,
+    @CurrentPrincipal() principal?: ShieldPrincipal,
+  ) {
+    return {
+      success: true,
+      message: 'Pharmacy profile updated successfully.',
+      data: await this.pharmacyService.updatePharmacyProfile(body, principal),
+    };
+  }
+
+  @RequirePermissions('providers.view')
+  @Get('pharmacy/settings')
+  async getPharmacySettings(@CurrentPrincipal() principal?: ShieldPrincipal) {
+    return {
+      success: true,
+      message: 'Pharmacy settings retrieved successfully.',
+      data: await this.pharmacyService.getPharmacySettings(principal),
+    };
+  }
+
+  @RequirePermissions('providers.update')
+  @Patch('pharmacy/settings')
+  async updatePharmacySettings(
+    @Body() body: any,
+    @CurrentPrincipal() principal?: ShieldPrincipal,
+  ) {
+    return {
+      success: true,
+      message: 'Pharmacy settings updated successfully.',
+      data: await this.pharmacyService.updatePharmacySettings(body, principal),
     };
   }
 }

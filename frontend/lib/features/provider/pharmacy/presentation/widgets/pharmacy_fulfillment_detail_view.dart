@@ -518,70 +518,125 @@ class _PharmacyFulfillmentDetailViewState
                               .copyWith(fontWeight: FontWeight.bold)),
                       const SizedBox(height: 8),
                       if (order.invoiceFileName != null) ...[
-                        Row(
-                          children: [
-                            const Icon(Icons.picture_as_pdf_rounded,
-                                color: PharmacyColors.primary),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(order.invoiceFileName!,
-                                  style: PharmacyTypography.caption.copyWith(
-                                      fontWeight: FontWeight.bold)),
-                            ),
-                          ],
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: PharmacyColors.primarySoft,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: PharmacyColors.primary.withValues(alpha: 0.3)),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  const Icon(Icons.picture_as_pdf_rounded, color: PharmacyColors.primary, size: 20),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      order.invoiceFileName!,
+                                      style: PharmacyTypography.caption.copyWith(fontWeight: FontWeight.bold, color: PharmacyColors.navy),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: order.invoiceSentAt != null ? PharmacyColors.successBg : PharmacyColors.surface,
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: Text(
+                                      order.invoiceSentAt != null ? 'SENT TO CUSTOMER' : 'UPLOADED',
+                                      style: PharmacyTypography.tiny.copyWith(
+                                        color: order.invoiceSentAt != null ? PharmacyColors.successText : PharmacyColors.textSecondary,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              if (order.invoiceSentAt != null) ...[
+                                const SizedBox(height: 4),
+                                Text(
+                                  'Sent on ${order.invoiceSentAt!.toIso8601String().split('T').first}',
+                                  style: PharmacyTypography.tiny.copyWith(color: PharmacyColors.textSecondary),
+                                ),
+                              ],
+                            ],
+                          ),
                         ),
                         const SizedBox(height: 10),
                       ],
-                      Row(
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 6,
                         children: [
-                          Expanded(
-                            child: PharmacySecondaryButton(
-                              label: order.invoiceFileName != null
-                                  ? 'Replace Invoice'
-                                  : 'Upload Bill / Invoice',
-                              compact: true,
-                              icon: Icons.upload_file_rounded,
-                              onPressed: () async {
-                                final messenger = ScaffoldMessenger.of(context);
-                                final file = await pickPrescriptionFile();
-                                if (file == null) return;
-                                final fileName = file.name;
-                                final invoiceUrl = 'r2://pharmacy-invoices/${widget.order.id}/$fileName';
-                                final success = await PharmacyOrdersController.instance.uploadOrderInvoice(
-                                  orderId: widget.order.id,
-                                  invoiceUrl: invoiceUrl,
-                                  invoiceFileName: fileName,
-                                );
-                                if (!mounted) return;
-                                messenger.showSnackBar(
-                                  SnackBar(
-                                    content: Text(success
-                                        ? 'Invoice file "$fileName" uploaded.'
-                                        : 'Failed to upload invoice: ${PharmacyOrdersController.instance.error}'),
-                                  ),
-                                );
-                              },
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          PharmacyPrimaryButton(
-                            label: 'Send Invoice',
+                          PharmacySecondaryButton(
+                            label: order.invoiceFileName != null
+                                ? 'Replace'
+                                : 'Upload Bill / Invoice',
                             compact: true,
-                            icon: Icons.send_rounded,
+                            icon: Icons.upload_file_rounded,
                             onPressed: () async {
                               final messenger = ScaffoldMessenger.of(context);
-                              final success = await PharmacyOrdersController.instance.sendOrderInvoice(
+                              final file = await pickPrescriptionFile();
+                              if (file == null) return;
+                              final success = await PharmacyOrdersController.instance.uploadOrderInvoiceFile(
                                 orderId: widget.order.id,
+                                bytes: file.bytes,
+                                fileName: file.name,
                               );
                               if (!mounted) return;
                               messenger.showSnackBar(
                                 SnackBar(
                                   content: Text(success
-                                      ? 'Invoice sent to customer notification channel.'
-                                      : 'Failed to send invoice: ${PharmacyOrdersController.instance.error}'),
+                                      ? 'Invoice "${file.name}" uploaded successfully.'
+                                      : 'Failed to upload invoice: ${PharmacyOrdersController.instance.error}'),
                                 ),
                               );
                             },
+                          ),
+                          if (order.invoiceFileName != null) ...[
+                            PharmacyDangerButton(
+                              label: 'Remove',
+                              compact: true,
+                              icon: Icons.delete_outline_rounded,
+                              onPressed: () async {
+                                final messenger = ScaffoldMessenger.of(context);
+                                final success = await PharmacyOrdersController.instance.removeOrderInvoice(
+                                  orderId: widget.order.id,
+                                );
+                                if (!mounted) return;
+                                messenger.showSnackBar(
+                                  SnackBar(
+                                    content: Text(success
+                                        ? 'Invoice removed.'
+                                        : 'Failed to remove invoice: ${PharmacyOrdersController.instance.error}'),
+                                  ),
+                                );
+                              },
+                            ),
+                          ],
+                          PharmacyPrimaryButton(
+                            label: 'Send Invoice',
+                            compact: true,
+                            icon: Icons.send_rounded,
+                            onPressed: order.invoiceFileName == null
+                                ? null
+                                : () async {
+                                    final messenger = ScaffoldMessenger.of(context);
+                                    final success = await PharmacyOrdersController.instance.sendOrderInvoice(
+                                      orderId: widget.order.id,
+                                    );
+                                    if (!mounted) return;
+                                    messenger.showSnackBar(
+                                      SnackBar(
+                                        content: Text(success
+                                            ? 'Invoice sent to customer notification channel.'
+                                            : 'Failed to send invoice: ${PharmacyOrdersController.instance.error}'),
+                                      ),
+                                    );
+                                  },
                           ),
                         ],
                       ),

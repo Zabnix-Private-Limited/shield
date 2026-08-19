@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:shield/features/provider/pharmacy/data/pharmacy_orders_repository.dart';
 import 'package:shield/features/provider/pharmacy/design/pharmacy_colors.dart';
 import 'package:shield/features/provider/pharmacy/design/pharmacy_radius.dart';
 import 'package:shield/features/provider/pharmacy/design/pharmacy_typography.dart';
 import 'package:shield/features/provider/pharmacy/presentation/widgets/pharmacy_components.dart';
+import 'package:shield/features/provider/pharmacy/presentation/widgets/pharmacy_skeletons.dart';
 
 class PharmacySettingsScreen extends StatefulWidget {
   const PharmacySettingsScreen({super.key});
@@ -12,8 +14,10 @@ class PharmacySettingsScreen extends StatefulWidget {
 }
 
 class _PharmacySettingsScreenState extends State<PharmacySettingsScreen> {
+  bool _isLoading = true;
   bool _isSaving = false;
   bool _isDirty = false;
+  final PharmacyOrdersRepository _repository = PharmacyOrdersRepository();
 
   // Order Workflow Settings
   bool _autoAcceptOrders = false;
@@ -33,7 +37,7 @@ class _PharmacySettingsScreenState extends State<PharmacySettingsScreen> {
 
   // Chronic Order Tagging
   bool _enableChronicTagging = true;
-  final int _defaultRefillCadence = 30;
+  int _defaultRefillCadence = 30;
 
   // Notifications
   bool _newOrderSoundAlerts = true;
@@ -51,51 +55,124 @@ class _PharmacySettingsScreenState extends State<PharmacySettingsScreen> {
   String _dateFormat = 'YYYY-MM-DD';
   String _timeFormat = '12-hour AM/PM';
 
+  @override
+  void initState() {
+    super.initState();
+    _loadSettings();
+  }
+
+  Future<void> _loadSettings() async {
+    setState(() => _isLoading = true);
+    try {
+      final data = await _repository.fetchPharmacySettings();
+      if (!mounted) return;
+      final workflow = data['orderWorkflow'] as Map<String, dynamic>? ?? {};
+      final partial = data['partialFulfillment'] as Map<String, dynamic>? ?? {};
+      final lowStock = data['lowStock'] as Map<String, dynamic>? ?? {};
+      final subs = data['substitutions'] as Map<String, dynamic>? ?? {};
+      final chronic = data['chronic'] as Map<String, dynamic>? ?? {};
+      final notifs = data['notifications'] as Map<String, dynamic>? ?? {};
+      final deliv = data['deliveryPickup'] as Map<String, dynamic>? ?? {};
+      final payVerif = data['paymentVerification'] as Map<String, dynamic>? ?? {};
+      final disp = data['display'] as Map<String, dynamic>? ?? {};
+
+      setState(() {
+        _autoAcceptOrders = workflow['autoAcceptOrders'] ?? false;
+        _requireInvoiceBeforeDispatch = workflow['requireInvoiceBeforeDispatch'] ?? true;
+
+        _allowPartialFulfillment = partial['allowPartialFulfillment'] ?? true;
+        _allowPartialDispatch = partial['allowPartialDispatch'] ?? true;
+
+        _lowStockAlerts = lowStock['lowStockAlerts'] ?? true;
+        _lowStockThreshold = lowStock['lowStockThreshold'] ?? 5;
+
+        _suggestSubstitutes = subs['suggestSubstitutes'] ?? true;
+        _requireCustomerConfirmation = subs['requireCustomerConfirmation'] ?? true;
+
+        _enableChronicTagging = chronic['enableChronicTagging'] ?? true;
+        _defaultRefillCadence = chronic['defaultRefillCadenceDays'] ?? 30;
+
+        _newOrderSoundAlerts = notifs['newOrderSoundAlerts'] ?? true;
+        _paymentSubmissionAlerts = notifs['paymentSubmissionAlerts'] ?? true;
+
+        _enableHomeDelivery = deliv['enableHomeDelivery'] ?? true;
+        _enableStorePickup = deliv['enableStorePickup'] ?? true;
+
+        _mandatoryManualVerification = payVerif['mandatoryManualVerification'] ?? true;
+        _requireUtrProof = payVerif['requireUtrProof'] ?? true;
+
+        _dateFormat = disp['dateFormat'] ?? 'YYYY-MM-DD';
+        _timeFormat = disp['timeFormat'] ?? '12-hour AM/PM';
+
+        _isLoading = false;
+        _isDirty = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+    }
+  }
+
   void _markDirty() {
     if (!_isDirty) setState(() => _isDirty = true);
   }
 
   void _handleSave() async {
     setState(() => _isSaving = true);
-    await Future.delayed(const Duration(milliseconds: 600));
-    if (!mounted) return;
-    setState(() {
-      _isSaving = false;
-      _isDirty = false;
-    });
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Pharmacy Settings saved successfully.')),
-    );
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final payload = {
+        'autoAcceptOrders': _autoAcceptOrders,
+        'requireInvoiceBeforeDispatch': _requireInvoiceBeforeDispatch,
+        'allowPartialFulfillment': _allowPartialFulfillment,
+        'allowPartialDispatch': _allowPartialDispatch,
+        'lowStockAlerts': _lowStockAlerts,
+        'lowStockThreshold': _lowStockThreshold,
+        'suggestSubstitutes': _suggestSubstitutes,
+        'requireCustomerConfirmation': _requireCustomerConfirmation,
+        'enableChronicTagging': _enableChronicTagging,
+        'defaultRefillCadenceDays': _defaultRefillCadence,
+        'newOrderSoundAlerts': _newOrderSoundAlerts,
+        'paymentSubmissionAlerts': _paymentSubmissionAlerts,
+        'enableHomeDelivery': _enableHomeDelivery,
+        'enableStorePickup': _enableStorePickup,
+        'mandatoryManualVerification': _mandatoryManualVerification,
+        'requireUtrProof': _requireUtrProof,
+        'dateFormat': _dateFormat,
+        'timeFormat': _timeFormat,
+      };
+
+      await _repository.updatePharmacySettings(payload);
+      if (!mounted) return;
+      setState(() {
+        _isSaving = false;
+        _isDirty = false;
+      });
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Pharmacy Settings saved and persisted to server.')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isSaving = false);
+      messenger.showSnackBar(
+        SnackBar(content: Text('Failed to save settings: $e')),
+      );
+    }
   }
 
   void _handleReset() {
-    setState(() {
-      _autoAcceptOrders = false;
-      _requireInvoiceBeforeDispatch = true;
-      _allowPartialFulfillment = true;
-      _allowPartialDispatch = true;
-      _lowStockAlerts = true;
-      _lowStockThreshold = 5;
-      _suggestSubstitutes = true;
-      _requireCustomerConfirmation = true;
-      _enableChronicTagging = true;
-      _newOrderSoundAlerts = true;
-      _paymentSubmissionAlerts = true;
-      _enableHomeDelivery = true;
-      _enableStorePickup = true;
-      _mandatoryManualVerification = true;
-      _requireUtrProof = true;
-      _dateFormat = 'YYYY-MM-DD';
-      _timeFormat = '12-hour AM/PM';
-      _isDirty = false;
-    });
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Settings reset to system defaults.')),
-    );
+    _loadSettings();
   }
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const SingleChildScrollView(
+        padding: EdgeInsets.all(20),
+        child: PharmacySettingsSkeleton(),
+      );
+    }
+
     final isDesktop = MediaQuery.of(context).size.width >= 1024;
 
     return SingleChildScrollView(
@@ -234,7 +311,7 @@ class _PharmacySettingsScreenState extends State<PharmacySettingsScreen> {
                 Row(
                   children: [
                     PharmacySecondaryButton(
-                      label: 'Reset to Defaults',
+                      label: 'Reset to Server Defaults',
                       onPressed: _handleReset,
                     ),
                     const SizedBox(width: 12),
@@ -279,7 +356,7 @@ class _PharmacySettingsScreenState extends State<PharmacySettingsScreen> {
           const SizedBox(height: 12),
           PharmacySwitchTile(
             title: 'Mandatory Invoice',
-            subtitle: 'Require bill/invoice upload before dispatch',
+            subtitle: 'Require bill/invoice upload before order dispatch',
             value: _requireInvoiceBeforeDispatch,
             onChanged: (val) {
               _markDirty();
