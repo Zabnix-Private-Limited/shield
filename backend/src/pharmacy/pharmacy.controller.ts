@@ -30,6 +30,7 @@ import {
   UpdateUpiDto,
 } from './dto/pharmacy-payment-details.dto';
 import { RejectPaymentDto, SubmitManualPaymentDto } from './dto/pharmacy-payments.dto';
+import { PharmacySettingsDto } from './dto/pharmacy-settings.dto';
 
 @Controller()
 export class PharmacyController {
@@ -924,7 +925,7 @@ export class PharmacyController {
   @RequirePermissions('providers.update')
   @Patch('pharmacy/settings')
   async updatePharmacySettings(
-    @Body() body: any,
+    @Body() body: PharmacySettingsDto,
     @CurrentPrincipal() principal?: ShieldPrincipal,
   ) {
     return {

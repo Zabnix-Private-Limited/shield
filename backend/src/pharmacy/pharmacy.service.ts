@@ -1637,13 +1637,28 @@ export class PharmacyService {
     file: { originalname: string; mimetype: string; size: number; buffer: Buffer },
     principal?: ShieldPrincipal,
   ) {
+    await this.providerScopeService.assertProviderCanAccessPurchase(orderId, principal);
+
     const purchase = await this.prisma.purchase.findUnique({
       where: { id: orderId },
+      include: { provider: true },
     });
     if (!purchase) throw new NotFoundException('Order not found.');
 
+    if (
+      purchase.provider &&
+      (purchase.provider.status !== 'ACTIVE' ||
+        purchase.provider.providerType !== 'PHARMACY')
+    ) {
+      throw new ForbiddenException('Access denied: Active pharmacy provider context required.');
+    }
+
     if (!file || !file.buffer?.length) {
       throw new BadRequestException('Empty or missing file upload.');
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+      throw new BadRequestException('Invoice file size exceeds 10 MB limit.');
     }
 
     const mime = (file.mimetype || '').toLowerCase();
@@ -1652,10 +1667,21 @@ export class PharmacyService {
       throw new BadRequestException('Only PDF, JPG, and PNG invoice files are allowed.');
     }
 
-    if (file.size > 10 * 1024 * 1024) {
-      throw new BadRequestException('Invoice file size exceeds 10 MB limit.');
+    const signature = this.storageService.validateContentSignature(file.buffer);
+    if (!signature.isValid) {
+      throw new BadRequestException(
+        'Invalid file content signature. Uploaded file bytes must be authentic PDF, JPEG, or PNG.',
+      );
     }
 
+    // Read current authoritative invoice row if one exists to get oldStorageKey
+    const existingInvoices = await this.prisma.$queryRawUnsafe<any[]>(
+      `SELECT * FROM "order_invoices" WHERE "purchase_id" = $1 ORDER BY "id" DESC LIMIT 1`,
+      orderId,
+    );
+    const oldStorageKey = existingInvoices?.[0]?.storage_key ?? null;
+
+    // Upload new private object
     const storageResult = await this.storageService.persistScopedPrivateObject({
       scope: 'pharmacy/invoices',
       ownerId: orderId.toString(),
@@ -1669,43 +1695,39 @@ export class PharmacyService {
       throw new BadRequestException('Failed to persist invoice file to private storage.');
     }
 
-    const storageKey = storageResult.storagePath;
+    const newStorageKey = storageResult.storagePath;
     const uploaderId = principal?.userId ? BigInt(principal.userId) : null;
 
-    // 1. Delete previous invoice entry for this order if any
-    await this.prisma.$executeRawUnsafe(
-      `DELETE FROM "order_invoices" WHERE "purchase_id" = $1`,
-      orderId,
-    );
+    // Atomically replace DB metadata in a Prisma transaction
+    try {
+      await this.prisma.$transaction(async (tx) => {
+        await tx.$executeRawUnsafe(
+          `DELETE FROM "order_invoices" WHERE "purchase_id" = $1`,
+          orderId,
+        );
+        await tx.$executeRawUnsafe(
+          `INSERT INTO "order_invoices" ("purchase_id", "storage_key", "file_name", "mime_type", "file_size", "uploaded_by")
+           VALUES ($1, $2, $3, $4, $5, $6)`,
+          orderId,
+          newStorageKey,
+          file.originalname,
+          mime,
+          file.size,
+          uploaderId,
+        );
+      });
+    } catch (err) {
+      // Clean up newly uploaded R2/local file if DB replacement fails
+      await this.storageService.deletePrivateObject(newStorageKey);
+      throw new BadRequestException(
+        'Failed to replace invoice record in database: ' + (err as Error).message,
+      );
+    }
 
-    // 2. Transactionally write to order_invoices table
-    await this.prisma.$executeRawUnsafe(
-      `INSERT INTO "order_invoices" ("purchase_id", "storage_key", "file_name", "mime_type", "file_size", "uploaded_by")
-       VALUES ($1, $2, $3, $4, $5, $6)`,
-      orderId,
-      storageKey,
-      file.originalname,
-      mime,
-      file.size,
-      uploaderId,
-    );
-
-    // 3. Project invoice storage key and metadata into billing snapshot
-    const currentSnap = (purchase.billingSnapshot as Record<string, any>) || {};
-    const updatedSnap = {
-      ...currentSnap,
-      invoiceStorageKey: storageKey,
-      invoiceUrl: `/api/v1/pharmacy/orders/${orderId.toString()}/invoice/file`,
-      invoiceFileName: file.originalname,
-      invoiceMimeType: mime,
-      invoiceFileSize: file.size,
-      uploadedAt: new Date().toISOString(),
-    };
-
-    await this.prisma.purchase.update({
-      where: { id: orderId },
-      data: { billingSnapshot: updatedSnap },
-    });
+    // Delete superseded storage object ONLY after DB transaction succeeds
+    if (oldStorageKey && oldStorageKey !== newStorageKey) {
+      await this.storageService.deletePrivateObject(oldStorageKey);
+    }
 
     return this.getPharmacyOrderDetail(orderId, principal);
   }
@@ -1714,10 +1736,21 @@ export class PharmacyService {
     orderId: bigint,
     principal?: ShieldPrincipal,
   ) {
+    await this.providerScopeService.assertProviderCanAccessPurchase(orderId, principal);
+
     const purchase = await this.prisma.purchase.findUnique({
       where: { id: orderId },
+      include: { provider: true },
     });
     if (!purchase) throw new NotFoundException('Order not found.');
+
+    if (
+      purchase.provider &&
+      (purchase.provider.status !== 'ACTIVE' ||
+        purchase.provider.providerType !== 'PHARMACY')
+    ) {
+      throw new ForbiddenException('Access denied: Active pharmacy provider context required.');
+    }
 
     const invoices = await this.prisma.$queryRawUnsafe<any[]>(
       `SELECT * FROM "order_invoices" WHERE "purchase_id" = $1 ORDER BY "id" DESC LIMIT 1`,
@@ -1744,30 +1777,36 @@ export class PharmacyService {
     orderId: bigint,
     principal?: ShieldPrincipal,
   ) {
+    await this.providerScopeService.assertProviderCanAccessPurchase(orderId, principal);
+
     const purchase = await this.prisma.purchase.findUnique({
       where: { id: orderId },
+      include: { provider: true },
     });
     if (!purchase) throw new NotFoundException('Order not found.');
+
+    if (
+      purchase.provider &&
+      (purchase.provider.status !== 'ACTIVE' ||
+        purchase.provider.providerType !== 'PHARMACY')
+    ) {
+      throw new ForbiddenException('Access denied: Active pharmacy provider context required.');
+    }
+
+    const existingInvoices = await this.prisma.$queryRawUnsafe<any[]>(
+      `SELECT * FROM "order_invoices" WHERE "purchase_id" = $1 ORDER BY "id" DESC LIMIT 1`,
+      orderId,
+    );
+    const oldStorageKey = existingInvoices?.[0]?.storage_key ?? null;
 
     await this.prisma.$executeRawUnsafe(
       `DELETE FROM "order_invoices" WHERE "purchase_id" = $1`,
       orderId,
     );
 
-    const currentSnap = (purchase.billingSnapshot as Record<string, any>) || {};
-    const updatedSnap = { ...currentSnap };
-    delete updatedSnap.invoiceStorageKey;
-    delete updatedSnap.invoiceUrl;
-    delete updatedSnap.invoiceFileName;
-    delete updatedSnap.invoiceMimeType;
-    delete updatedSnap.invoiceFileSize;
-    delete updatedSnap.uploadedAt;
-    delete updatedSnap.invoiceSentAt;
-
-    await this.prisma.purchase.update({
-      where: { id: orderId },
-      data: { billingSnapshot: updatedSnap },
-    });
+    if (oldStorageKey) {
+      await this.storageService.deletePrivateObject(oldStorageKey);
+    }
 
     return this.getPharmacyOrderDetail(orderId, principal);
   }
@@ -1776,10 +1815,21 @@ export class PharmacyService {
     orderId: bigint,
     principal?: ShieldPrincipal,
   ) {
+    await this.providerScopeService.assertProviderCanAccessPurchase(orderId, principal);
+
     const purchase = await this.prisma.purchase.findUnique({
       where: { id: orderId },
+      include: { provider: true },
     });
     if (!purchase) throw new NotFoundException('Order not found.');
+
+    if (
+      purchase.provider &&
+      (purchase.provider.status !== 'ACTIVE' ||
+        purchase.provider.providerType !== 'PHARMACY')
+    ) {
+      throw new ForbiddenException('Access denied: Active pharmacy provider context required.');
+    }
 
     const invoices = await this.prisma.$queryRawUnsafe<any[]>(
       `SELECT * FROM "order_invoices" WHERE "purchase_id" = $1 ORDER BY "id" DESC LIMIT 1`,
@@ -1788,11 +1838,26 @@ export class PharmacyService {
     if (!invoices || invoices.length === 0) {
       throw new BadRequestException('Cannot send invoice: No invoice uploaded for this order.');
     }
+    const invoice = invoices[0];
+    if (invoice.sent_at) {
+      // Invoice has already been sent. Ordinary Send Invoice is idempotent and skips duplicate notification.
+      return this.getPharmacyOrderDetail(orderId, principal);
+    }
+
     if (!purchase.customerId) {
       throw new BadRequestException('Order has no associated customer ID.');
     }
 
-    // 1. Dispatch real platform notification to customer
+    // Atomic claim to set sent_at so concurrent requests cannot double send
+    const claimed = await this.prisma.$executeRawUnsafe(
+      `UPDATE "order_invoices" SET "sent_at" = CURRENT_TIMESTAMP WHERE "id" = $1 AND "sent_at" IS NULL`,
+      invoice.id,
+    );
+    if (claimed === 0) {
+      return this.getPharmacyOrderDetail(orderId, principal);
+    }
+
+    // Dispatch notification ONLY after successful atomic sent_at claim
     await this.notificationService.send({
       customerId: purchase.customerId,
       title: 'Pharmacy Invoice Ready',
@@ -1804,26 +1869,6 @@ export class PharmacyService {
       },
     });
 
-    const sentAt = new Date().toISOString();
-
-    // 2. Transactionally update order_invoices table
-    await this.prisma.$executeRawUnsafe(
-      `UPDATE "order_invoices" SET "sent_at" = CURRENT_TIMESTAMP WHERE "purchase_id" = $1`,
-      orderId,
-    );
-
-    // 3. Project sent timestamp snapshot into billing snapshot
-    const currentSnap = (purchase.billingSnapshot as Record<string, any>) || {};
-    const updatedSnap = {
-      ...currentSnap,
-      invoiceSentAt: sentAt,
-    };
-
-    await this.prisma.purchase.update({
-      where: { id: orderId },
-      data: { billingSnapshot: updatedSnap },
-    });
-
     return this.getPharmacyOrderDetail(orderId, principal);
   }
 
@@ -1831,7 +1876,7 @@ export class PharmacyService {
   // REAL PHARMACY PROFILE & SETTINGS APIs
   // -------------------------------------------------------------
 
-  async getPharmacyProfile(principal?: ShieldPrincipal) {
+  async resolvePharmacyProvider(principal?: ShieldPrincipal) {
     if (!principal?.userId) {
       throw new ForbiddenException('Authentication required.');
     }
@@ -1845,13 +1890,31 @@ export class PharmacyService {
     });
     if (!user) throw new NotFoundException('User profile not found.');
 
-    const providerId = user.branchBusinessId;
-    const provider = providerId
-      ? await this.prisma.serviceProvider.findUnique({
-          where: { id: providerId },
-          include: { business: true },
-        })
-      : null;
+    // User.branchBusinessId references Business.id, NOT ServiceProvider.id.
+    // Resolve ServiceProvider where businessId == user.branchBusinessId AND providerType == 'PHARMACY' AND status == 'ACTIVE'
+    let provider = null;
+    if (user.branchBusinessId) {
+      provider = await this.prisma.serviceProvider.findFirst({
+        where: {
+          businessId: user.branchBusinessId,
+          providerType: 'PHARMACY',
+          status: 'ACTIVE',
+        },
+        include: { business: true },
+      });
+    }
+
+    if (!provider) {
+      throw new ForbiddenException('No active PHARMACY service provider context found for this user.');
+    }
+
+    return { user, provider };
+  }
+
+  async getPharmacyProfile(principal?: ShieldPrincipal) {
+    const { user, provider } = await this.resolvePharmacyProvider(principal);
+    const providerAny = provider as any;
+    const businessAny = provider?.business as any;
 
     return {
       userId: user.id.toString(),
@@ -1859,25 +1922,21 @@ export class PharmacyService {
         [user.firstName, user.lastName].filter(Boolean).join(' ').trim() ||
         user.email ||
         'Pharmacy Staff',
-      email: user.email || '',
-      phone: user.mobile || '',
-      roleCode: user.role?.code || principal.roleCode || 'PHARMACY_PROVIDER',
-      pharmacyName:
-        provider?.providerName ||
-        provider?.business?.name ||
-        user.branchBusiness?.name ||
-        'Sahakar Pharmacy Outlet',
-      businessCode: provider?.business?.code || user.branchBusiness?.code || 'PHARM-SHIELD-001',
-      drugLicenceNo: 'DL-PHARM-2026-8841',
-      gstin: '29ABCDE1234F1Z5',
-      address: 'Building 14, Health Park Road, Sector 4',
-      city: 'Bangalore',
-      state: 'Karnataka',
-      pin: '560001',
-      operatingHours: '08:00 AM - 10:00 PM (Mon-Sat)',
+      email: user.email || null,
+      phone: user.mobile || null,
+      roleCode: user.role?.code || principal?.roleCode || 'PHARMACY_PROVIDER',
+      pharmacyName: provider?.providerName || businessAny?.name || null,
+      businessCode: businessAny?.code || null,
+      drugLicenceNo: providerAny?.licenseNumber || null,
+      gstin: providerAny?.taxIdentifier || businessAny?.taxId || null,
+      address: providerAny?.address || businessAny?.address || null,
+      city: providerAny?.city || businessAny?.city || null,
+      state: providerAny?.state || businessAny?.state || null,
+      pin: providerAny?.pincode || businessAny?.pincode || null,
+      operatingHours: providerAny?.operatingHours || null,
       accountStatus: user.status || 'ACTIVE',
       accountCreatedAt: user.createdAt.toISOString(),
-      lastLoginAt: user.lastLoginAt ? user.lastLoginAt.toISOString() : new Date().toISOString(),
+      lastLoginAt: user.lastLoginAt ? user.lastLoginAt.toISOString() : null,
     };
   }
 
@@ -1905,59 +1964,97 @@ export class PharmacyService {
 
   async getPharmacySettings(principal?: ShieldPrincipal) {
     const userId = principal?.userId ? BigInt(principal.userId) : null;
-    let storedSettings: any = {};
+    let providerId: bigint | null = null;
+    if (principal) {
+      try {
+        const { provider } = await this.resolvePharmacyProvider(principal);
+        providerId = provider.id;
+      } catch (err) {
+        // Fallback for non-pharmacy principals
+      }
+    }
+
+    let userSettings: any = {};
     if (userId) {
       const pref = await this.prisma.agentPreference.findUnique({
         where: { userId },
       });
       if (pref?.profilePreferences) {
         const profilePref = pref.profilePreferences as Record<string, any>;
-        storedSettings = profilePref.pharmacySettings || profilePref;
+        userSettings = profilePref.pharmacySettings || profilePref;
       }
+    }
+
+    let providerSettings: any = {};
+    if (providerId) {
+      try {
+        const pSettings = await this.prisma.$queryRawUnsafe<any[]>(
+          `SELECT "settings" FROM "pharmacy_provider_settings" WHERE "provider_id" = $1 LIMIT 1`,
+          providerId,
+        );
+        if (pSettings?.[0]?.settings) {
+          providerSettings = pSettings[0].settings;
+        }
+      } catch (err) {
+        // Table handoff script pending, fallback to userSettings
+        providerSettings = userSettings;
+      }
+    } else {
+      providerSettings = userSettings;
     }
 
     return {
       orderWorkflow: {
-        autoAcceptOrders: storedSettings.autoAcceptOrders ?? false,
-        requireInvoiceBeforeDispatch: storedSettings.requireInvoiceBeforeDispatch ?? true,
+        autoAcceptOrders: providerSettings.autoAcceptOrders ?? false,
+        requireInvoiceBeforeDispatch: providerSettings.requireInvoiceBeforeDispatch ?? true,
       },
       partialFulfillment: {
-        allowPartialFulfillment: storedSettings.allowPartialFulfillment ?? true,
-        allowPartialDispatch: storedSettings.allowPartialDispatch ?? true,
+        allowPartialFulfillment: providerSettings.allowPartialFulfillment ?? true,
+        allowPartialDispatch: providerSettings.allowPartialDispatch ?? true,
       },
       lowStock: {
-        lowStockAlerts: storedSettings.lowStockAlerts ?? true,
-        lowStockThreshold: storedSettings.lowStockThreshold ?? 5,
+        lowStockAlerts: providerSettings.lowStockAlerts ?? true,
+        lowStockThreshold: providerSettings.lowStockThreshold ?? 5,
       },
       substitutions: {
-        suggestSubstitutes: storedSettings.suggestSubstitutes ?? true,
-        requireCustomerConfirmation: storedSettings.requireCustomerConfirmation ?? true,
+        suggestSubstitutes: providerSettings.suggestSubstitutes ?? true,
+        requireCustomerConfirmation: providerSettings.requireCustomerConfirmation ?? true,
       },
       chronic: {
-        enableChronicTagging: storedSettings.enableChronicTagging ?? true,
-        defaultRefillCadenceDays: storedSettings.defaultRefillCadenceDays ?? 30,
+        enableChronicTagging: providerSettings.enableChronicTagging ?? true,
+        defaultRefillCadenceDays: providerSettings.defaultRefillCadenceDays ?? 30,
       },
       notifications: {
-        newOrderSoundAlerts: storedSettings.newOrderSoundAlerts ?? true,
-        paymentSubmissionAlerts: storedSettings.paymentSubmissionAlerts ?? true,
+        newOrderSoundAlerts: userSettings.newOrderSoundAlerts ?? true,
+        paymentSubmissionAlerts: userSettings.paymentSubmissionAlerts ?? true,
       },
       deliveryPickup: {
-        enableHomeDelivery: storedSettings.enableHomeDelivery ?? true,
-        enableStorePickup: storedSettings.enableStorePickup ?? true,
+        enableHomeDelivery: providerSettings.enableHomeDelivery ?? true,
+        enableStorePickup: providerSettings.enableStorePickup ?? true,
       },
       paymentVerification: {
-        mandatoryManualVerification: storedSettings.mandatoryManualVerification ?? true,
-        requireUtrProof: storedSettings.requireUtrProof ?? true,
+        mandatoryManualVerification: providerSettings.mandatoryManualVerification ?? true,
+        requireUtrProof: providerSettings.requireUtrProof ?? true,
       },
       display: {
-        dateFormat: storedSettings.dateFormat ?? 'YYYY-MM-DD',
-        timeFormat: storedSettings.timeFormat ?? '12-hour AM/PM',
+        dateFormat: userSettings.dateFormat ?? 'YYYY-MM-DD',
+        timeFormat: userSettings.timeFormat ?? '12-hour AM/PM',
       },
     };
   }
 
   async updatePharmacySettings(settingsPayload: any, principal?: ShieldPrincipal) {
     const userId = principal?.userId ? BigInt(principal.userId) : null;
+    let providerId: bigint | null = null;
+    if (principal) {
+      try {
+        const { provider } = await this.resolvePharmacyProvider(principal);
+        providerId = provider.id;
+      } catch (err) {
+        // Fallback for non-pharmacy principals
+      }
+    }
+
     if (userId) {
       const existing = await this.prisma.agentPreference.findUnique({
         where: { userId },
@@ -1978,6 +2075,21 @@ export class PharmacyService {
         },
       });
     }
+
+    if (providerId) {
+      try {
+        await this.prisma.$executeRawUnsafe(
+          `INSERT INTO "pharmacy_provider_settings" ("provider_id", "settings")
+           VALUES ($1, $2::jsonb)
+           ON CONFLICT ("provider_id") DO UPDATE SET "settings" = $2::jsonb, "updated_at" = CURRENT_TIMESTAMP`,
+          providerId,
+          JSON.stringify(settingsPayload),
+        );
+      } catch (err) {
+        // Table handoff script pending database owner execution
+      }
+    }
+
     return this.getPharmacySettings(principal);
   }
 }

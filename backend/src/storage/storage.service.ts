@@ -251,4 +251,63 @@ export class StorageService {
     }
     return null;
   }
+
+  async deletePrivateObject(storagePath: string): Promise<boolean> {
+    if (!storagePath) return false;
+
+    if (storagePath.startsWith('r2://') && this.r2Client) {
+      const prefix = `r2://${this.env.r2Bucket}/`;
+      const objectKey = storagePath.startsWith(prefix)
+        ? storagePath.slice(prefix.length)
+        : storagePath.replace(/^r2:\/\/[^/]+\//, '');
+
+      try {
+        const { DeleteObjectCommand } = await import('@aws-sdk/client-s3');
+        await this.r2Client.send(
+          new DeleteObjectCommand({
+            Bucket: this.env.r2Bucket,
+            Key: objectKey,
+          }),
+        );
+        return true;
+      } catch (err) {
+        return false;
+      }
+    }
+
+    if (storagePath.startsWith('/uploads/')) {
+      const absolutePath = join(process.cwd(), storagePath);
+      try {
+        const { unlink } = await import('fs/promises');
+        await unlink(absolutePath);
+        return true;
+      } catch (err) {
+        return false;
+      }
+    }
+    return false;
+  }
+
+  validateContentSignature(buffer: Buffer): { isValid: boolean; detectedMime: string | null } {
+    if (!buffer || buffer.length < 4) {
+      return { isValid: false, detectedMime: null };
+    }
+
+    // PDF Magic Bytes: %PDF- (0x25 0x50 0x44 0x46)
+    if (buffer[0] === 0x25 && buffer[1] === 0x50 && buffer[2] === 0x44 && buffer[3] === 0x46) {
+      return { isValid: true, detectedMime: 'application/pdf' };
+    }
+
+    // PNG Magic Bytes: 0x89 0x50 0x4E 0x47
+    if (buffer[0] === 0x89 && buffer[1] === 0x50 && buffer[2] === 0x4E && buffer[3] === 0x47) {
+      return { isValid: true, detectedMime: 'image/png' };
+    }
+
+    // JPEG Magic Bytes: 0xFF 0xD8 0xFF
+    if (buffer[0] === 0xFF && buffer[1] === 0xD8 && buffer[2] === 0xFF) {
+      return { isValid: true, detectedMime: 'image/jpeg' };
+    }
+
+    return { isValid: false, detectedMime: null };
+  }
 }

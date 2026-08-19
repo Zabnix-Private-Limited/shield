@@ -14,6 +14,12 @@ describe('PharmacyService Operational Order Persistence & Isolation', () => {
   beforeEach(() => {
     prisma = {
       $transaction: jest.fn().mockImplementation((cb) => cb(prisma)),
+      $queryRawUnsafe: jest.fn(),
+      $executeRawUnsafe: jest.fn(),
+      user: {
+        findUnique: jest.fn(),
+        update: jest.fn(),
+      },
       customer: {
         findUnique: jest.fn().mockResolvedValue({ id: 1n, membership: null, wallet: { id: 10n } }),
       },
@@ -67,7 +73,12 @@ describe('PharmacyService Operational Order Persistence & Isolation', () => {
       pricingService,
       referralService,
       walletService,
-      { persistScopedPrivateObject: jest.fn(), readObjectBuffer: jest.fn() } as any,
+      {
+        persistScopedPrivateObject: jest.fn(),
+        readObjectBuffer: jest.fn(),
+        deletePrivateObject: jest.fn().mockResolvedValue(true),
+        validateContentSignature: jest.fn().mockReturnValue({ isValid: true, detectedMime: 'application/pdf' }),
+      } as any,
       { send: jest.fn() } as any,
     );
   });
@@ -713,6 +724,113 @@ describe('PharmacyService Operational Order Persistence & Isolation', () => {
 
       expect(res.success).toBe(true);
       expect(res.data.id).toBe('501');
+    });
+  });
+
+  describe('Pharmacy Security, Provider Resolution & Invoice Hardening', () => {
+    it('authoritatively maps user.branchBusinessId (Business.id=20) to ServiceProvider.id=105', async () => {
+      prisma.user.findUnique.mockResolvedValue({
+        id: 10n,
+        branchBusinessId: 20n,
+        firstName: 'Pharma',
+        lastName: 'Admin',
+        email: 'admin@pharma.org',
+        mobile: '9876543210',
+        status: 'ACTIVE',
+        createdAt: new Date(),
+        lastLoginAt: null,
+      });
+
+      prisma.serviceProvider.findFirst.mockResolvedValue({
+        id: 105n,
+        businessId: 20n,
+        providerType: 'PHARMACY',
+        status: 'ACTIVE',
+        providerName: 'Shield Health Pharmacy',
+        business: { id: 20n, code: 'PHARM-20', name: 'Shield Health' },
+      });
+
+      const principal = { principalType: 'USER', userId: '10', roleCode: 'PHARMACY_PROVIDER' } as any;
+      const profile = await service.getPharmacyProfile(principal);
+
+      expect(prisma.serviceProvider.findFirst).toHaveBeenCalledWith({
+        where: {
+          businessId: 20n,
+          providerType: 'PHARMACY',
+          status: 'ACTIVE',
+        },
+        include: { business: true },
+      });
+
+      expect(profile.pharmacyName).toBe('Shield Health Pharmacy');
+      expect(profile.businessCode).toBe('PHARM-20');
+      expect(profile.lastLoginAt).toBeNull();
+    });
+
+    it('fails closed on invoice upload when assertProviderCanAccessPurchase throws ForbiddenException', async () => {
+      providerScopeService.assertProviderCanAccessPurchase.mockRejectedValue(
+        new ForbiddenException('You are not authorized to access this purchase or order.'),
+      );
+
+      const file = {
+        originalname: 'invoice.pdf',
+        mimetype: 'application/pdf',
+        size: 1024,
+        buffer: Buffer.from('%PDF-1.4 test bytes'),
+      };
+
+      await expect(
+        service.uploadOrderInvoiceFile(999n, file, { userId: '10' } as any),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('rejects invoice uploads with invalid magic byte signatures', async () => {
+      providerScopeService.assertProviderCanAccessPurchase.mockResolvedValue(undefined as any);
+      prisma.purchase.findUnique.mockResolvedValue({
+        id: 501n,
+        provider: { status: 'ACTIVE', providerType: 'PHARMACY' },
+      });
+      (service['storageService'].validateContentSignature as jest.Mock).mockReturnValue({
+        isValid: false,
+        detectedMime: null,
+      });
+
+      const fakePdfFile = {
+        originalname: 'malicious.pdf',
+        mimetype: 'application/pdf',
+        size: 1024,
+        buffer: Buffer.from('NOT_A_REAL_PDF_FILE'),
+      };
+
+      await expect(
+        service.uploadOrderInvoiceFile(501n, fakePdfFile, { userId: '10' } as any),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('skips duplicate push notification on sendOrderInvoice when invoice is already sent', async () => {
+      providerScopeService.assertProviderCanAccessPurchase.mockResolvedValue(undefined as any);
+      prisma.purchase.findUnique.mockResolvedValue({
+        id: 501n,
+        customerId: 1n,
+        provider: { status: 'ACTIVE', providerType: 'PHARMACY' },
+      });
+
+      prisma.$queryRawUnsafe.mockResolvedValue([
+        {
+          id: 701n,
+          purchase_id: 501n,
+          storage_key: 'r2://bucket/invoices/501.pdf',
+          file_name: '501.pdf',
+          sent_at: new Date(),
+        },
+      ]);
+
+      jest.spyOn(service, 'getPharmacyOrderDetail').mockResolvedValue({ id: '501' } as any);
+
+      const result = await service.sendOrderInvoice(501n, { userId: '10' } as any);
+
+      expect(result.id).toBe('501');
+      expect(prisma.$executeRawUnsafe).not.toHaveBeenCalled();
     });
   });
 });

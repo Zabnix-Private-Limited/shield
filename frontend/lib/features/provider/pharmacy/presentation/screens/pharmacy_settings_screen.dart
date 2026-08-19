@@ -173,68 +173,135 @@ class _PharmacySettingsScreenState extends State<PharmacySettingsScreen> {
       );
     }
 
-    final isDesktop = MediaQuery.of(context).size.width >= 1024;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isDesktop = screenWidth >= 1024;
+    final isCompactHeader = screenWidth < 640;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Top Header Bar
+          // Top Responsive Header Bar
           PharmacyCard(
             padding: const EdgeInsets.all(20),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: PharmacyColors.primary.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(PharmacyRadius.card),
+            child: isCompactHeader
+                ? Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: PharmacyColors.primary.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(PharmacyRadius.card),
+                            ),
+                            child: const Icon(
+                              Icons.tune_rounded,
+                              color: PharmacyColors.primary,
+                              size: 28,
+                            ),
+                          ),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Pharmacy Settings',
+                                  style: PharmacyTypography.h2.copyWith(fontWeight: FontWeight.bold),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'Configure operational policies and display behavior.',
+                                  style: PharmacyTypography.caption.copyWith(color: PharmacyColors.textSecondary),
+                                  overflow: TextOverflow.ellipsis,
+                                  maxLines: 2,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
-                      child: const Icon(
-                        Icons.tune_rounded,
-                        color: PharmacyColors.primary,
-                        size: 28,
+                      const SizedBox(height: 16),
+                      Wrap(
+                        spacing: 10,
+                        runSpacing: 10,
+                        children: [
+                          PharmacySecondaryButton(
+                            label: 'Discard Changes',
+                            icon: Icons.restore_rounded,
+                            onPressed: _handleReset,
+                          ),
+                          PharmacyPrimaryButton(
+                            label: 'Save Changes',
+                            icon: Icons.save_rounded,
+                            isLoading: _isSaving,
+                            onPressed: _isDirty ? _handleSave : null,
+                          ),
+                        ],
                       ),
-                    ),
-                    const SizedBox(width: 16),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Pharmacy Settings',
-                          style: PharmacyTypography.h2.copyWith(fontWeight: FontWeight.bold),
+                    ],
+                  )
+                : Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: PharmacyColors.primary.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(PharmacyRadius.card),
+                              ),
+                              child: const Icon(
+                                Icons.tune_rounded,
+                                color: PharmacyColors.primary,
+                                size: 28,
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Pharmacy Settings',
+                                    style: PharmacyTypography.h2.copyWith(fontWeight: FontWeight.bold),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'Configure workflow, notifications, and app behavior to match your pharmacy operations.',
+                                    style: PharmacyTypography.caption.copyWith(color: PharmacyColors.textSecondary),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
                         ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Configure workflow, notifications, and app behavior to match your pharmacy operations.',
-                          style: PharmacyTypography.caption.copyWith(color: PharmacyColors.textSecondary),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-                Row(
-                  children: [
-                    PharmacySecondaryButton(
-                      label: 'Reset Defaults',
-                      icon: Icons.restore_rounded,
-                      onPressed: _handleReset,
-                    ),
-                    const SizedBox(width: 12),
-                    PharmacyPrimaryButton(
-                      label: 'Save Changes',
-                      icon: Icons.save_rounded,
-                      isLoading: _isSaving,
-                      onPressed: _isDirty ? _handleSave : null,
-                    ),
-                  ],
-                ),
-              ],
-            ),
+                      ),
+                      const SizedBox(width: 16),
+                      Row(
+                        children: [
+                          PharmacySecondaryButton(
+                            label: 'Discard Changes',
+                            icon: Icons.restore_rounded,
+                            onPressed: _handleReset,
+                          ),
+                          const SizedBox(width: 12),
+                          PharmacyPrimaryButton(
+                            label: 'Save Changes',
+                            icon: Icons.save_rounded,
+                            isLoading: _isSaving,
+                            onPressed: _isDirty ? _handleSave : null,
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
           ),
           const SizedBox(height: 20),
 
@@ -295,11 +362,14 @@ class _PharmacySettingsScreenState extends State<PharmacySettingsScreen> {
           ],
 
           const SizedBox(height: 24),
-          // Bottom Sticky Actions Bar
+          // Bottom Responsive Actions Bar
           PharmacyCard(
             padding: const EdgeInsets.all(16),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            child: Wrap(
+              alignment: WrapAlignment.spaceBetween,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: 12,
+              runSpacing: 12,
               children: [
                 Text(
                   _isDirty ? 'Unsaved settings modifications pending' : 'All settings up to date',
@@ -308,15 +378,16 @@ class _PharmacySettingsScreenState extends State<PharmacySettingsScreen> {
                     color: _isDirty ? PharmacyColors.navy : PharmacyColors.textSecondary,
                   ),
                 ),
-                Row(
+                Wrap(
+                  spacing: 12,
+                  runSpacing: 12,
                   children: [
                     PharmacySecondaryButton(
-                      label: 'Reset to Server Defaults',
+                      label: 'Discard Changes',
                       onPressed: _handleReset,
                     ),
-                    const SizedBox(width: 12),
                     PharmacyPrimaryButton(
-                      label: 'Save Pharmacy Settings',
+                      label: 'Save Settings',
                       icon: Icons.check_circle_rounded,
                       isLoading: _isSaving,
                       onPressed: _isDirty ? _handleSave : null,
@@ -340,7 +411,13 @@ class _PharmacySettingsScreenState extends State<PharmacySettingsScreen> {
             children: [
               const Icon(Icons.assignment_outlined, color: PharmacyColors.primary),
               const SizedBox(width: 8),
-              Text('Order Workflow', style: PharmacyTypography.subtitle.copyWith(fontWeight: FontWeight.bold)),
+              Expanded(
+                child: Text(
+                  'Order Workflow',
+                  style: PharmacyTypography.subtitle.copyWith(fontWeight: FontWeight.bold),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
             ],
           ),
           const Divider(height: 20),
@@ -377,7 +454,13 @@ class _PharmacySettingsScreenState extends State<PharmacySettingsScreen> {
             children: [
               const Icon(Icons.remove_circle_outline, color: PharmacyColors.primary),
               const SizedBox(width: 8),
-              Text('Partial Fulfillment', style: PharmacyTypography.subtitle.copyWith(fontWeight: FontWeight.bold)),
+              Expanded(
+                child: Text(
+                  'Partial Fulfillment',
+                  style: PharmacyTypography.subtitle.copyWith(fontWeight: FontWeight.bold),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
             ],
           ),
           const Divider(height: 20),
@@ -414,7 +497,13 @@ class _PharmacySettingsScreenState extends State<PharmacySettingsScreen> {
             children: [
               const Icon(Icons.warning_amber_rounded, color: PharmacyColors.primary),
               const SizedBox(width: 8),
-              Text('Low-Stock Behavior', style: PharmacyTypography.subtitle.copyWith(fontWeight: FontWeight.bold)),
+              Expanded(
+                child: Text(
+                  'Low-Stock Behavior',
+                  style: PharmacyTypography.subtitle.copyWith(fontWeight: FontWeight.bold),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
             ],
           ),
           const Divider(height: 20),
@@ -465,7 +554,13 @@ class _PharmacySettingsScreenState extends State<PharmacySettingsScreen> {
             children: [
               const Icon(Icons.swap_horiz_rounded, color: PharmacyColors.primary),
               const SizedBox(width: 8),
-              Text('Substitute Preferences', style: PharmacyTypography.subtitle.copyWith(fontWeight: FontWeight.bold)),
+              Expanded(
+                child: Text(
+                  'Substitute Preferences',
+                  style: PharmacyTypography.subtitle.copyWith(fontWeight: FontWeight.bold),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
             ],
           ),
           const Divider(height: 20),
@@ -502,7 +597,13 @@ class _PharmacySettingsScreenState extends State<PharmacySettingsScreen> {
             children: [
               const Icon(Icons.event_repeat_rounded, color: PharmacyColors.primary),
               const SizedBox(width: 8),
-              Text('Chronic Refill Tagging', style: PharmacyTypography.subtitle.copyWith(fontWeight: FontWeight.bold)),
+              Expanded(
+                child: Text(
+                  'Chronic Refill Tagging',
+                  style: PharmacyTypography.subtitle.copyWith(fontWeight: FontWeight.bold),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
             ],
           ),
           const Divider(height: 20),
@@ -531,7 +632,13 @@ class _PharmacySettingsScreenState extends State<PharmacySettingsScreen> {
             children: [
               const Icon(Icons.notifications_active_outlined, color: PharmacyColors.primary),
               const SizedBox(width: 8),
-              Text('Notifications', style: PharmacyTypography.subtitle.copyWith(fontWeight: FontWeight.bold)),
+              Expanded(
+                child: Text(
+                  'Notifications',
+                  style: PharmacyTypography.subtitle.copyWith(fontWeight: FontWeight.bold),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
             ],
           ),
           const Divider(height: 20),
@@ -568,7 +675,13 @@ class _PharmacySettingsScreenState extends State<PharmacySettingsScreen> {
             children: [
               const Icon(Icons.local_shipping_outlined, color: PharmacyColors.primary),
               const SizedBox(width: 8),
-              Text('Delivery & Pickup Rules', style: PharmacyTypography.subtitle.copyWith(fontWeight: FontWeight.bold)),
+              Expanded(
+                child: Text(
+                  'Delivery & Pickup Rules',
+                  style: PharmacyTypography.subtitle.copyWith(fontWeight: FontWeight.bold),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
             ],
           ),
           const Divider(height: 20),
@@ -605,7 +718,13 @@ class _PharmacySettingsScreenState extends State<PharmacySettingsScreen> {
             children: [
               const Icon(Icons.verified_user_outlined, color: PharmacyColors.primary),
               const SizedBox(width: 8),
-              Text('Payment Verification', style: PharmacyTypography.subtitle.copyWith(fontWeight: FontWeight.bold)),
+              Expanded(
+                child: Text(
+                  'Payment Verification',
+                  style: PharmacyTypography.subtitle.copyWith(fontWeight: FontWeight.bold),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
             ],
           ),
           const Divider(height: 20),
@@ -642,18 +761,25 @@ class _PharmacySettingsScreenState extends State<PharmacySettingsScreen> {
             children: [
               const Icon(Icons.display_settings_rounded, color: PharmacyColors.primary),
               const SizedBox(width: 8),
-              Text('Display & App Behavior', style: PharmacyTypography.subtitle.copyWith(fontWeight: FontWeight.bold)),
+              Expanded(
+                child: Text(
+                  'Display & App Behavior',
+                  style: PharmacyTypography.subtitle.copyWith(fontWeight: FontWeight.bold),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
             ],
           ),
           const Divider(height: 20),
           Text('Date Display Format', style: PharmacyTypography.caption.copyWith(fontWeight: FontWeight.bold)),
           const SizedBox(height: 4),
           DropdownButtonFormField<String>(
+            isExpanded: true,
             initialValue: _dateFormat,
             decoration: const InputDecoration(border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8)),
             items: const [
-              DropdownMenuItem(value: 'YYYY-MM-DD', child: Text('YYYY-MM-DD (2026-08-19)')),
-              DropdownMenuItem(value: 'DD/MM/YYYY', child: Text('DD/MM/YYYY (19/08/2026)')),
+              DropdownMenuItem(value: 'YYYY-MM-DD', child: Text('YYYY-MM-DD (2026-08-19)', overflow: TextOverflow.ellipsis)),
+              DropdownMenuItem(value: 'DD/MM/YYYY', child: Text('DD/MM/YYYY (19/08/2026)', overflow: TextOverflow.ellipsis)),
             ],
             onChanged: (val) {
               if (val != null) {
@@ -666,11 +792,12 @@ class _PharmacySettingsScreenState extends State<PharmacySettingsScreen> {
           Text('Time Format', style: PharmacyTypography.caption.copyWith(fontWeight: FontWeight.bold)),
           const SizedBox(height: 4),
           DropdownButtonFormField<String>(
+            isExpanded: true,
             initialValue: _timeFormat,
             decoration: const InputDecoration(border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8)),
             items: const [
-              DropdownMenuItem(value: '12-hour AM/PM', child: Text('12-hour AM/PM (03:14 PM)')),
-              DropdownMenuItem(value: '24-hour', child: Text('24-hour (15:14)')),
+              DropdownMenuItem(value: '12-hour AM/PM', child: Text('12-hour AM/PM (03:14 PM)', overflow: TextOverflow.ellipsis)),
+              DropdownMenuItem(value: '24-hour', child: Text('24-hour (15:14)', overflow: TextOverflow.ellipsis)),
             ],
             onChanged: (val) {
               if (val != null) {

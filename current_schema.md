@@ -587,7 +587,9 @@ CREATE TABLE "order_customer_confirmations" (
 	"confirmation_status" varchar(50) DEFAULT 'PENDING' NOT NULL,
 	"reason" text,
 	"requested_at" timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
-	"confirmed_at" timestamp with time zone
+	"confirmed_at" timestamp with time zone,
+	"purchase_item_id" bigint,
+	"requested_by" bigint
 );
 CREATE TABLE "order_invoices" (
 	"id" bigserial PRIMARY KEY,
@@ -595,14 +597,18 @@ CREATE TABLE "order_invoices" (
 	"storage_key" varchar(500) NOT NULL,
 	"file_name" varchar(255) DEFAULT 'Pharmacy_Invoice.pdf' NOT NULL,
 	"uploaded_at" timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
-	"sent_at" timestamp with time zone
+	"sent_at" timestamp with time zone,
+	"mime_type" varchar(100) DEFAULT 'application/pdf' NOT NULL,
+	"file_size" bigint,
+	"uploaded_by" bigint
 );
 CREATE TABLE "order_pharmacist_notes" (
 	"id" bigserial PRIMARY KEY,
 	"purchase_id" bigint NOT NULL,
 	"notes" text NOT NULL,
 	"author_id" bigint,
-	"created_at" timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+	"created_at" timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+	"visibility" varchar(50) DEFAULT 'INTERNAL' NOT NULL
 );
 CREATE TABLE "permissions" (
 	"id" bigserial PRIMARY KEY,
@@ -610,6 +616,14 @@ CREATE TABLE "permissions" (
 	"code" varchar(100),
 	"name" varchar(255),
 	"description" text
+);
+CREATE TABLE "pharmacy_provider_settings" (
+	"id" bigserial PRIMARY KEY,
+	"uuid" uuid DEFAULT gen_random_uuid() NOT NULL,
+	"provider_id" bigint NOT NULL CONSTRAINT "pharmacy_provider_settings_provider_id_key" UNIQUE,
+	"settings" jsonb DEFAULT '{}' NOT NULL,
+	"created_at" timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+	"updated_at" timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
 CREATE TABLE "prescription_pharmacy_requests" (
 	"id" bigserial PRIMARY KEY,
@@ -711,7 +725,11 @@ CREATE TABLE "purchase_item_fulfillments" (
 	"stock_status" varchar(50) DEFAULT 'FULL_STOCK' NOT NULL,
 	"decision_status" varchar(50) DEFAULT 'PENDING' NOT NULL,
 	"created_at" timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
-	"updated_at" timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+	"updated_at" timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+	"rejected_quantity" numeric(10, 2) DEFAULT '0.00' NOT NULL,
+	"decision_reason" text,
+	"decision_actor_id" bigint,
+	"authoritative_price" numeric(12, 2)
 );
 CREATE TABLE "purchase_item_substitutions" (
 	"id" bigserial PRIMARY KEY,
@@ -720,7 +738,10 @@ CREATE TABLE "purchase_item_substitutions" (
 	"substitute_name" varchar(255) NOT NULL,
 	"substitute_unit_price" numeric(12, 2) DEFAULT '0.00' NOT NULL,
 	"decision_reason" text,
-	"created_at" timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+	"created_at" timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+	"substitute_quantity" numeric(10, 2) DEFAULT '1.00' NOT NULL,
+	"proposed_by" bigint,
+	"customer_confirmation_status" varchar(50) DEFAULT 'PENDING' NOT NULL
 );
 CREATE TABLE "purchase_items" (
 	"id" bigserial PRIMARY KEY,
@@ -1146,6 +1167,9 @@ CREATE UNIQUE INDEX "order_pharmacist_notes_pkey" ON "order_pharmacist_notes" ("
 CREATE UNIQUE INDEX "permissions_code_key" ON "permissions" ("code");
 CREATE UNIQUE INDEX "permissions_pkey" ON "permissions" ("id");
 CREATE UNIQUE INDEX "permissions_uuid_key" ON "permissions" ("uuid");
+CREATE UNIQUE INDEX "idx_pharmacy_provider_settings_provider_id" ON "pharmacy_provider_settings" ("provider_id");
+CREATE UNIQUE INDEX "pharmacy_provider_settings_pkey" ON "pharmacy_provider_settings" ("id");
+CREATE UNIQUE INDEX "pharmacy_provider_settings_provider_id_key" ON "pharmacy_provider_settings" ("provider_id");
 CREATE INDEX "idx_prescription_pharmacy_requests_customer" ON "prescription_pharmacy_requests" ("customer_id","created_at");
 CREATE INDEX "idx_prescription_pharmacy_requests_document" ON "prescription_pharmacy_requests" ("document_id");
 CREATE INDEX "idx_prescription_pharmacy_requests_provider_status" ON "prescription_pharmacy_requests" ("provider_id","status");
@@ -1321,15 +1345,15 @@ ALTER TABLE "memberships" ADD CONSTRAINT "memberships_customer_id_fkey" FOREIGN 
 ALTER TABLE "memberships" ADD CONSTRAINT "memberships_membership_type_id_fkey" FOREIGN KEY ("membership_type_id") REFERENCES "membership_types"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 ALTER TABLE "notifications" ADD CONSTRAINT "notifications_customer_id_fkey" FOREIGN KEY ("customer_id") REFERENCES "customers"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 ALTER TABLE "order_chronic_refills" ADD CONSTRAINT "fk_order_chronic_refills_purchase" FOREIGN KEY ("purchase_id") REFERENCES "purchases"("id") ON DELETE CASCADE;
-ALTER TABLE "order_chronic_refills" ADD CONSTRAINT "order_chronic_refills_purchase_id_fkey" FOREIGN KEY ("purchase_id") REFERENCES "purchases"("id") ON DELETE CASCADE;
 ALTER TABLE "order_chronic_refills" ADD CONSTRAINT "order_chronic_refills_tagged_by_fkey" FOREIGN KEY ("tagged_by") REFERENCES "users"("id") ON DELETE SET NULL;
 ALTER TABLE "order_customer_confirmations" ADD CONSTRAINT "fk_order_customer_confirmations_purchase" FOREIGN KEY ("purchase_id") REFERENCES "purchases"("id") ON DELETE CASCADE;
-ALTER TABLE "order_customer_confirmations" ADD CONSTRAINT "order_customer_confirmations_purchase_id_fkey" FOREIGN KEY ("purchase_id") REFERENCES "purchases"("id") ON DELETE CASCADE;
+ALTER TABLE "order_customer_confirmations" ADD CONSTRAINT "order_customer_confirmations_purchase_item_id_fkey" FOREIGN KEY ("purchase_item_id") REFERENCES "purchase_items"("id") ON DELETE CASCADE;
+ALTER TABLE "order_customer_confirmations" ADD CONSTRAINT "order_customer_confirmations_requested_by_fkey" FOREIGN KEY ("requested_by") REFERENCES "users"("id") ON DELETE SET NULL;
 ALTER TABLE "order_invoices" ADD CONSTRAINT "fk_order_invoices_purchase" FOREIGN KEY ("purchase_id") REFERENCES "purchases"("id") ON DELETE CASCADE;
-ALTER TABLE "order_invoices" ADD CONSTRAINT "order_invoices_purchase_id_fkey" FOREIGN KEY ("purchase_id") REFERENCES "purchases"("id") ON DELETE CASCADE;
+ALTER TABLE "order_invoices" ADD CONSTRAINT "order_invoices_uploaded_by_fkey" FOREIGN KEY ("uploaded_by") REFERENCES "users"("id") ON DELETE SET NULL;
 ALTER TABLE "order_pharmacist_notes" ADD CONSTRAINT "fk_order_pharmacist_notes_purchase" FOREIGN KEY ("purchase_id") REFERENCES "purchases"("id") ON DELETE CASCADE;
 ALTER TABLE "order_pharmacist_notes" ADD CONSTRAINT "order_pharmacist_notes_author_id_fkey" FOREIGN KEY ("author_id") REFERENCES "users"("id") ON DELETE SET NULL;
-ALTER TABLE "order_pharmacist_notes" ADD CONSTRAINT "order_pharmacist_notes_purchase_id_fkey" FOREIGN KEY ("purchase_id") REFERENCES "purchases"("id") ON DELETE CASCADE;
+ALTER TABLE "pharmacy_provider_settings" ADD CONSTRAINT "fk_pharmacy_provider_settings_provider" FOREIGN KEY ("provider_id") REFERENCES "service_providers"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 ALTER TABLE "prescription_pharmacy_requests" ADD CONSTRAINT "prescription_pharmacy_requests_customer_id_fkey" FOREIGN KEY ("customer_id") REFERENCES "customers"("id") ON DELETE CASCADE;
 ALTER TABLE "prescription_pharmacy_requests" ADD CONSTRAINT "prescription_pharmacy_requests_document_id_fkey" FOREIGN KEY ("document_id") REFERENCES "documents"("id") ON DELETE RESTRICT;
 ALTER TABLE "prescription_pharmacy_requests" ADD CONSTRAINT "prescription_pharmacy_requests_provider_id_fkey" FOREIGN KEY ("provider_id") REFERENCES "service_providers"("id") ON DELETE RESTRICT;
@@ -1343,11 +1367,10 @@ ALTER TABLE "provider_profile_branch_assignments" ADD CONSTRAINT "provider_profi
 ALTER TABLE "provider_profile_branch_assignments" ADD CONSTRAINT "provider_profile_branch_assignments_profile_fkey" FOREIGN KEY ("provider_profile_id") REFERENCES "provider_profiles"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 ALTER TABLE "provider_profiles" ADD CONSTRAINT "provider_profiles_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 ALTER TABLE "purchase_item_fulfillments" ADD CONSTRAINT "fk_purchase_item_fulfillment_item" FOREIGN KEY ("purchase_item_id") REFERENCES "purchase_items"("id") ON DELETE CASCADE;
-ALTER TABLE "purchase_item_fulfillments" ADD CONSTRAINT "purchase_item_fulfillments_purchase_item_id_fkey" FOREIGN KEY ("purchase_item_id") REFERENCES "purchase_items"("id") ON DELETE CASCADE;
+ALTER TABLE "purchase_item_fulfillments" ADD CONSTRAINT "purchase_item_fulfillments_decision_actor_id_fkey" FOREIGN KEY ("decision_actor_id") REFERENCES "users"("id") ON DELETE SET NULL;
 ALTER TABLE "purchase_item_substitutions" ADD CONSTRAINT "fk_purchase_item_substitutions_item" FOREIGN KEY ("purchase_item_id") REFERENCES "purchase_items"("id") ON DELETE CASCADE;
 ALTER TABLE "purchase_item_substitutions" ADD CONSTRAINT "fk_purchase_item_substitutions_prod" FOREIGN KEY ("substitute_product_id") REFERENCES "products"("id") ON DELETE SET NULL;
-ALTER TABLE "purchase_item_substitutions" ADD CONSTRAINT "purchase_item_substitutions_purchase_item_id_fkey" FOREIGN KEY ("purchase_item_id") REFERENCES "purchase_items"("id") ON DELETE CASCADE;
-ALTER TABLE "purchase_item_substitutions" ADD CONSTRAINT "purchase_item_substitutions_substitute_product_id_fkey" FOREIGN KEY ("substitute_product_id") REFERENCES "products"("id") ON DELETE SET NULL;
+ALTER TABLE "purchase_item_substitutions" ADD CONSTRAINT "purchase_item_substitutions_proposed_by_fkey" FOREIGN KEY ("proposed_by") REFERENCES "users"("id") ON DELETE SET NULL;
 ALTER TABLE "purchase_items" ADD CONSTRAINT "purchase_items_product_id_fkey" FOREIGN KEY ("product_id") REFERENCES "products"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 ALTER TABLE "purchase_items" ADD CONSTRAINT "purchase_items_purchase_id_fkey" FOREIGN KEY ("purchase_id") REFERENCES "purchases"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 ALTER TABLE "purchases" ADD CONSTRAINT "purchases_appointment_id_fkey" FOREIGN KEY ("appointment_id") REFERENCES "appointments"("id") ON DELETE SET NULL ON UPDATE CASCADE;
