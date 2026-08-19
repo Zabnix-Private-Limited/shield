@@ -1,7 +1,6 @@
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:shield/features/provider/pharmacy/design/pharmacy_colors.dart';
-import 'package:shield/features/provider/pharmacy/design/pharmacy_radius.dart';
 import 'package:shield/features/provider/pharmacy/design/pharmacy_typography.dart';
 import 'package:shield/features/provider/pharmacy/domain/models/pharmacy_payment_method_model.dart';
 import 'package:shield/features/provider/pharmacy/presentation/controllers/pharmacy_payment_details_controller.dart';

@@ -674,7 +674,12 @@ describe('PharmacyService Operational Order Persistence & Isolation', () => {
     let controller: PharmacyController;
 
     beforeEach(() => {
-      controller = new PharmacyController(service, providerScopeService);
+      controller = new PharmacyController(
+        service as any,
+        {} as any,
+        {} as any,
+        providerScopeService as any,
+      );
     });
 
     it('rejects Non-Customer principals (Agent, Provider, Admin) on POST /customer/orders', async () => {

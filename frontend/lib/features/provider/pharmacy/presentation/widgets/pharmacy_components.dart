@@ -278,7 +278,7 @@ class PharmacyToggleRow extends StatelessWidget {
           Switch(
             value: value,
             onChanged: onChanged,
-            activeColor: PharmacyColors.primary,
+            activeTrackColor: PharmacyColors.primary,
           ),
         ],
       ),

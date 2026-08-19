@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:shield/features/provider/pharmacy/design/pharmacy_colors.dart';
 import 'package:shield/features/provider/pharmacy/design/pharmacy_radius.dart';
@@ -9,7 +8,6 @@ import 'package:shield/features/provider/pharmacy/presentation/controllers/pharm
 import 'package:shield/features/provider/pharmacy/presentation/widgets/pharmacy_order_history_card.dart';
 import 'package:shield/features/provider/pharmacy/presentation/widgets/pharmacy_order_history_detail_sheet.dart';
 import 'package:shield/features/provider/pharmacy/presentation/widgets/pharmacy_components.dart';
-import 'package:shield/features/provider/pharmacy/presentation/widgets/pharmacy_status_chip.dart';
 
 class PharmacyOrderHistoryScreen extends StatefulWidget {
   const PharmacyOrderHistoryScreen({super.key});

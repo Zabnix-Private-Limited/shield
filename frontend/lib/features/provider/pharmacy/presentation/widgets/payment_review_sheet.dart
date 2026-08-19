@@ -172,9 +172,9 @@ class _PaymentReviewSheetState extends State<PaymentReviewSheet> {
               width: double.infinity,
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: AppColors.shieldLightBlue.withOpacity(0.15),
+                color: AppColors.shieldLightBlue.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppColors.shieldBlue.withOpacity(0.3)),
+                border: Border.all(color: AppColors.shieldBlue.withValues(alpha: 0.3)),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -210,7 +210,7 @@ class _PaymentReviewSheetState extends State<PaymentReviewSheet> {
             ListTile(
               contentPadding: EdgeInsets.zero,
               leading: CircleAvatar(
-                backgroundColor: AppColors.shieldNavy.withOpacity(0.1),
+                backgroundColor: AppColors.shieldNavy.withValues(alpha: 0.1),
                 child: const Icon(Icons.person_outline, color: AppColors.shieldNavy),
               ),
               title: Text(p.customerName, style: AppTypography.subtitle2),
@@ -238,7 +238,7 @@ class _PaymentReviewSheetState extends State<PaymentReviewSheet> {
                             color: AppColors.shieldNavy,
                           ),
                         ),
-                        backgroundColor: AppColors.shieldLightBlue.withOpacity(0.2),
+                        backgroundColor: AppColors.shieldLightBlue.withValues(alpha: 0.2),
                         visualDensity: VisualDensity.compact,
                       ),
                     ],

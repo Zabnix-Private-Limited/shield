@@ -127,6 +127,8 @@
 9. **End-to-End Source Integration Rule**: Every visual action, button, toggle, or form submission must form a complete end-to-end pipeline (`UI -> State Controller -> Repository -> Dio API Service -> NestJS Controller -> NestJS Service -> Prisma Model -> State Update`). Never use SnackBar toasts or mock fallbacks as a substitute for real backend state persistence.
 10. **Layout Overflow Defensive Rule**: Wrap button text and flexible card text in `Flexible(child: Text(..., overflow: TextOverflow.ellipsis))` in custom component libraries to prevent horizontal RenderFlex errors. Ensure skeleton blocks and sidebar layouts provide scroll ownership.
 11. **Owner-Testing & Non-Testing Guardrail**: All runtime UAT (Web, Mobile, APK) is executed by the human project owner. Agents must perform thorough static source audits and fix all identified code issues, but must never run automated test runners (`flutter test`, `jest`, browser subagents) unless explicitly requested.
+12. **Zero-Warning Quality Gate Rule**: Before declaring any module or feature source-complete, agents must execute local compiler/analyzer checks (`flutter analyze` and `npx tsc --noEmit`) to ensure **0 errors** and **0 warnings** on affected source files. All unused imports, deprecated widget APIs, and `use_build_context_synchronously` warnings must be resolved.
+13. **Schema Expansion Handoff Rule**: When extending database schema, agents generate forward SQL and verification scripts under `backend/prisma/manual-sql/`. Agents must never edit `current_schema.md` directly. Once applied by the human project owner, the owner-updated `current_schema.md` becomes the DB source of truth.
 
 ## Project File Structure
 ```

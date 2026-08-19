@@ -45,43 +45,50 @@ class BankAccountCard extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(6),
-                      decoration: BoxDecoration(
-                        color: AppColors.shieldLightBlue.withOpacity(0.2),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: const Icon(
-                        Icons.account_balance_outlined,
-                        size: 20,
-                        color: AppColors.shieldNavy,
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          method.bankName ?? 'Bank Account',
-                          style: AppTypography.subtitle2.copyWith(
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.shieldNavy,
-                          ),
+                Expanded(
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: AppColors.shieldLightBlue.withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(8),
                         ),
-                        if (method.displayLabel != null &&
-                            method.displayLabel!.isNotEmpty)
-                          Text(
-                            method.displayLabel!,
-                            style: AppTypography.caption.copyWith(
-                              color: AppColors.charcoal,
+                        child: const Icon(
+                          Icons.account_balance_outlined,
+                          size: 20,
+                          color: AppColors.shieldNavy,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              method.bankName ?? 'Bank Account',
+                              overflow: TextOverflow.ellipsis,
+                              style: AppTypography.subtitle2.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.shieldNavy,
+                              ),
                             ),
-                          ),
-                      ],
-                    ),
-                  ],
+                            if (method.displayLabel != null &&
+                                method.displayLabel!.isNotEmpty)
+                              Text(
+                                method.displayLabel!,
+                                overflow: TextOverflow.ellipsis,
+                                style: AppTypography.caption.copyWith(
+                                  color: AppColors.charcoal,
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
+                const SizedBox(width: 8),
                 Row(
                   children: [
                     if (method.isPrimary)
@@ -89,7 +96,7 @@ class BankAccountCard extends StatelessWidget {
                         padding: const EdgeInsets.symmetric(
                             horizontal: 8, vertical: 3),
                         decoration: BoxDecoration(
-                          color: AppColors.shieldBlue.withOpacity(0.1),
+                          color: AppColors.shieldBlue.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Text(

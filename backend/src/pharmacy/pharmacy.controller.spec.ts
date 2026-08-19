@@ -11,9 +11,13 @@ describe('PharmacyController customer wellness catalogue', () => {
     createCustomerPrescriptionRequest: jest.fn(),
     listCustomerPrescriptionRequests: jest.fn(),
   };
+  const paymentDetailsService = {};
+  const paymentsService = {};
   const providerScope = { assertProviderCanAccessCustomer: jest.fn() };
   const controller = new PharmacyController(
     pharmacyService as any,
+    paymentDetailsService as any,
+    paymentsService as any,
     providerScope as any,
   );
 

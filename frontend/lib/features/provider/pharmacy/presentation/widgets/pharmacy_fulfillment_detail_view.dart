@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:shield/features/provider/pharmacy/design/pharmacy_colors.dart';
-import 'package:shield/features/provider/pharmacy/design/pharmacy_radius.dart';
 import 'package:shield/features/provider/pharmacy/design/pharmacy_typography.dart';
 import 'package:shield/features/provider/pharmacy/domain/models/pharmacy_order_model.dart';
 import 'package:shield/features/provider/pharmacy/presentation/controllers/pharmacy_orders_controller.dart';
@@ -102,6 +101,7 @@ class _PharmacyFulfillmentDetailViewState
             label: 'Apply Substitute',
             compact: true,
             onPressed: () async {
+              final messenger = ScaffoldMessenger.of(context);
               Navigator.pop(ctx);
               final subPrice = double.tryParse(priceController.text.trim()) ?? (item.unitPrice * 0.9);
               final success = await PharmacyOrdersController.instance.updateOrderItemFulfillment(
@@ -112,15 +112,14 @@ class _PharmacyFulfillmentDetailViewState
                 substituteUnitPrice: subPrice,
                 decisionReason: reasonController.text.trim(),
               );
-              if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(success
-                        ? 'Substitute "${nameController.text.trim()}" saved for ${item.name}.'
-                        : 'Failed to save substitute: ${PharmacyOrdersController.instance.error}'),
-                  ),
-                );
-              }
+              if (!mounted) return;
+              messenger.showSnackBar(
+                SnackBar(
+                  content: Text(success
+                      ? 'Substitute "${nameController.text.trim()}" saved for ${item.name}.'
+                      : 'Failed to save substitute: ${PharmacyOrdersController.instance.error}'),
+                ),
+              );
             },
           ),
         ],
@@ -163,6 +162,7 @@ class _PharmacyFulfillmentDetailViewState
             label: 'Confirm Partial',
             compact: true,
             onPressed: () async {
+              final messenger = ScaffoldMessenger.of(context);
               Navigator.pop(ctx);
               final qty = double.tryParse(qtyController.text.trim()) ?? 1.0;
               final success = await PharmacyOrdersController.instance.updateOrderItemFulfillment(
@@ -173,15 +173,14 @@ class _PharmacyFulfillmentDetailViewState
                 decisionStatus: 'PARTIAL',
                 decisionReason: 'Partial quantity fulfilled due to stock availability.',
               );
-              if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(success
-                        ? 'Partial quantity ($qty) approved for ${item.name}.'
-                        : 'Failed to update item: ${PharmacyOrdersController.instance.error}'),
-                  ),
-                );
-              }
+              if (!mounted) return;
+              messenger.showSnackBar(
+                SnackBar(
+                  content: Text(success
+                      ? 'Partial quantity ($qty) approved for ${item.name}.'
+                      : 'Failed to update item: ${PharmacyOrdersController.instance.error}'),
+                ),
+              );
             },
           ),
         ],
@@ -292,22 +291,22 @@ class _PharmacyFulfillmentDetailViewState
                                 color: PharmacyColors.textSecondary)),
                         Switch(
                           value: _isChronic,
-                          activeColor: PharmacyColors.primary,
+                          activeTrackColor: PharmacyColors.primary,
                           onChanged: (val) async {
                             setState(() => _isChronic = val);
+                            final messenger = ScaffoldMessenger.of(context);
                             final success = await PharmacyOrdersController.instance.toggleChronicOrder(
                               orderId: widget.order.id,
                               isChronic: val,
                             );
-                            if (mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text(success
-                                      ? (val ? 'Order tagged as Chronic Refill Order.' : 'Chronic tag removed.')
-                                      : 'Failed to update chronic status: ${PharmacyOrdersController.instance.error}'),
-                                ),
-                              );
-                            }
+                            if (!mounted) return;
+                            messenger.showSnackBar(
+                              SnackBar(
+                                content: Text(success
+                                    ? (val ? 'Order tagged as Chronic Refill Order.' : 'Chronic tag removed.')
+                                    : 'Failed to update chronic status: ${PharmacyOrdersController.instance.error}'),
+                              ),
+                            );
                           },
                         ),
                       ],
@@ -388,6 +387,7 @@ class _PharmacyFulfillmentDetailViewState
                                 compact: true,
                                 icon: Icons.check_circle_outline,
                                 onPressed: () async {
+                                  final messenger = ScaffoldMessenger.of(context);
                                   final success = await PharmacyOrdersController.instance.updateOrderItemFulfillment(
                                     orderId: widget.order.id,
                                     itemId: item.id,
@@ -396,15 +396,14 @@ class _PharmacyFulfillmentDetailViewState
                                     decisionStatus: 'APPROVED',
                                     decisionReason: 'Fully stock approved by pharmacist.',
                                   );
-                                  if (mounted) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                        content: Text(success
-                                            ? 'Full quantity approved for ${item.name}.'
-                                            : 'Failed to approve item: ${PharmacyOrdersController.instance.error}'),
-                                      ),
-                                    );
-                                  }
+                                  if (!mounted) return;
+                                  messenger.showSnackBar(
+                                    SnackBar(
+                                      content: Text(success
+                                          ? 'Full quantity approved for ${item.name}.'
+                                          : 'Failed to approve item: ${PharmacyOrdersController.instance.error}'),
+                                    ),
+                                  );
                                 },
                               ),
                               if (item.availableQuantity < item.quantity &&
@@ -427,6 +426,7 @@ class _PharmacyFulfillmentDetailViewState
                                 compact: true,
                                 icon: Icons.cancel_outlined,
                                 onPressed: () async {
+                                  final messenger = ScaffoldMessenger.of(context);
                                   final success = await PharmacyOrdersController.instance.updateOrderItemFulfillment(
                                     orderId: widget.order.id,
                                     itemId: item.id,
@@ -435,15 +435,14 @@ class _PharmacyFulfillmentDetailViewState
                                     decisionStatus: 'REJECTED',
                                     decisionReason: 'Item unavailable or out of stock.',
                                   );
-                                  if (mounted) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                        content: Text(success
-                                            ? '${item.name} rejected from order fulfillment.'
-                                            : 'Failed to reject item: ${PharmacyOrdersController.instance.error}'),
-                                      ),
-                                    );
-                                  }
+                                  if (!mounted) return;
+                                  messenger.showSnackBar(
+                                    SnackBar(
+                                      content: Text(success
+                                          ? '${item.name} rejected from order fulfillment.'
+                                          : 'Failed to reject item: ${PharmacyOrdersController.instance.error}'),
+                                    ),
+                                  );
                                 },
                               ),
                             ],
@@ -487,19 +486,19 @@ class _PharmacyFulfillmentDetailViewState
                         compact: true,
                         icon: Icons.save_outlined,
                         onPressed: () async {
+                          final messenger = ScaffoldMessenger.of(context);
                           final success = await PharmacyOrdersController.instance.savePharmacistNotes(
                             orderId: widget.order.id,
                             notes: _notesController.text.trim(),
                           );
-                          if (mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(success
-                                    ? 'Pharmacist notes saved.'
-                                    : 'Failed to save notes: ${PharmacyOrdersController.instance.error}'),
-                              ),
-                            );
-                          }
+                          if (!mounted) return;
+                          messenger.showSnackBar(
+                            SnackBar(
+                              content: Text(success
+                                  ? 'Pharmacist notes saved.'
+                                  : 'Failed to save notes: ${PharmacyOrdersController.instance.error}'),
+                            ),
+                          );
                         },
                       ),
                     ],
@@ -543,6 +542,7 @@ class _PharmacyFulfillmentDetailViewState
                               compact: true,
                               icon: Icons.upload_file_rounded,
                               onPressed: () async {
+                                final messenger = ScaffoldMessenger.of(context);
                                 final file = await pickPrescriptionFile();
                                 if (file == null) return;
                                 final fileName = file.name;
@@ -552,15 +552,14 @@ class _PharmacyFulfillmentDetailViewState
                                   invoiceUrl: invoiceUrl,
                                   invoiceFileName: fileName,
                                 );
-                                if (mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text(success
-                                          ? 'Invoice file "$fileName" uploaded.'
-                                          : 'Failed to upload invoice: ${PharmacyOrdersController.instance.error}'),
-                                    ),
-                                  );
-                                }
+                                if (!mounted) return;
+                                messenger.showSnackBar(
+                                  SnackBar(
+                                    content: Text(success
+                                        ? 'Invoice file "$fileName" uploaded.'
+                                        : 'Failed to upload invoice: ${PharmacyOrdersController.instance.error}'),
+                                  ),
+                                );
                               },
                             ),
                           ),
@@ -570,18 +569,18 @@ class _PharmacyFulfillmentDetailViewState
                             compact: true,
                             icon: Icons.send_rounded,
                             onPressed: () async {
+                              final messenger = ScaffoldMessenger.of(context);
                               final success = await PharmacyOrdersController.instance.sendOrderInvoice(
                                 orderId: widget.order.id,
                               );
-                              if (mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(success
-                                        ? 'Invoice sent to customer notification channel.'
-                                        : 'Failed to send invoice: ${PharmacyOrdersController.instance.error}'),
-                                  ),
-                                );
-                              }
+                              if (!mounted) return;
+                              messenger.showSnackBar(
+                                SnackBar(
+                                  content: Text(success
+                                      ? 'Invoice sent to customer notification channel.'
+                                      : 'Failed to send invoice: ${PharmacyOrdersController.instance.error}'),
+                                ),
+                              );
                             },
                           ),
                         ],
