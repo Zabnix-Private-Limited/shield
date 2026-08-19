@@ -6,6 +6,7 @@ import 'package:shield/features/provider/pharmacy/design/pharmacy_typography.dar
 import 'package:shield/features/provider/pharmacy/presentation/widgets/pharmacy_components.dart';
 import 'package:shield/features/provider/pharmacy/presentation/widgets/pharmacy_skeletons.dart';
 import 'package:shield/shared/services/internal_auth_session.dart';
+import 'package:shield/shared/widgets/portal_support.dart';
 
 class PharmacyProfileScreen extends StatefulWidget {
   const PharmacyProfileScreen({super.key});
@@ -69,7 +70,6 @@ class _PharmacyProfileScreenState extends State<PharmacyProfileScreen> {
 
   void _handleSave() async {
     setState(() => _isSaving = true);
-    final messenger = ScaffoldMessenger.of(context);
     try {
       final payload = {
         'displayName': _nameController.text.trim(),
@@ -82,14 +82,16 @@ class _PharmacyProfileScreenState extends State<PharmacyProfileScreen> {
         _profileData = updated;
         _isSaving = false;
       });
-      messenger.showSnackBar(
-        const SnackBar(content: Text('Pharmacy Profile updated and persisted successfully.')),
+      showPortalSnackBar(
+        context,
+        'Pharmacy Profile updated and persisted successfully.',
       );
     } catch (e) {
       if (!mounted) return;
       setState(() => _isSaving = false);
-      messenger.showSnackBar(
-        SnackBar(content: Text('Failed to update profile: $e')),
+      showPortalSnackBar(
+        context,
+        'Failed to update profile: $e',
       );
     }
   }

@@ -3,6 +3,7 @@ import 'package:shield/app/theme/app_colors.dart';
 import 'package:shield/app/theme/app_typography.dart';
 import 'package:shield/features/provider/pharmacy/domain/models/pharmacy_order_model.dart';
 import 'package:shield/features/provider/pharmacy/presentation/controllers/pharmacy_orders_controller.dart';
+import 'package:shield/shared/widgets/portal_support.dart';
 
 class PharmacyOrderDetailSheet extends StatefulWidget {
   final PharmacyOrderModel order;
@@ -208,12 +209,9 @@ class _PharmacyOrderDetailSheetState extends State<PharmacyOrderDetailSheet> {
                     OutlinedButton.icon(
                       onPressed: () {
                         // Open prescription attachment preview
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text(
-                              'Opening prescription document attachment preview...',
-                            ),
-                          ),
+                        showPortalSnackBar(
+                          context,
+                          'Opening prescription document attachment preview...',
                         );
                       },
                       icon: const Icon(Icons.open_in_new, size: 16),

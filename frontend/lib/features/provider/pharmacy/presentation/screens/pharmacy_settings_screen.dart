@@ -5,6 +5,7 @@ import 'package:shield/features/provider/pharmacy/design/pharmacy_radius.dart';
 import 'package:shield/features/provider/pharmacy/design/pharmacy_typography.dart';
 import 'package:shield/features/provider/pharmacy/presentation/widgets/pharmacy_components.dart';
 import 'package:shield/features/provider/pharmacy/presentation/widgets/pharmacy_skeletons.dart';
+import 'package:shield/shared/widgets/portal_support.dart';
 
 class PharmacySettingsScreen extends StatefulWidget {
   const PharmacySettingsScreen({super.key});
@@ -119,7 +120,6 @@ class _PharmacySettingsScreenState extends State<PharmacySettingsScreen> {
 
   void _handleSave() async {
     setState(() => _isSaving = true);
-    final messenger = ScaffoldMessenger.of(context);
     try {
       final payload = {
         'autoAcceptOrders': _autoAcceptOrders,
@@ -148,14 +148,16 @@ class _PharmacySettingsScreenState extends State<PharmacySettingsScreen> {
         _isSaving = false;
         _isDirty = false;
       });
-      messenger.showSnackBar(
-        const SnackBar(content: Text('Pharmacy Settings saved and persisted to server.')),
+      showPortalSnackBar(
+        context,
+        'Pharmacy Settings saved and persisted to server.',
       );
     } catch (e) {
       if (!mounted) return;
       setState(() => _isSaving = false);
-      messenger.showSnackBar(
-        SnackBar(content: Text('Failed to save settings: $e')),
+      showPortalSnackBar(
+        context,
+        'Failed to save settings: $e',
       );
     }
   }
