@@ -69,4 +69,84 @@ class PharmacyOrdersRepository {
     final data = response.data['data'] as Map<String, dynamic>;
     return PharmacyOrderModel.fromJson(data);
   }
+
+  Future<PharmacyOrderModel> updateOrderItemFulfillment({
+    required String orderId,
+    required String itemId,
+    double? fulfillQuantity,
+    String? stockStatus,
+    String? decisionStatus,
+    String? substituteName,
+    double? substituteUnitPrice,
+    String? decisionReason,
+  }) async {
+    final response = await ApiService.dio.patch(
+      '/pharmacy/orders/$orderId/items/$itemId',
+      data: {
+        if (fulfillQuantity != null) 'fulfillQuantity': fulfillQuantity,
+        if (stockStatus != null) 'stockStatus': stockStatus,
+        if (decisionStatus != null) 'decisionStatus': decisionStatus,
+        if (substituteName != null) 'substituteName': substituteName,
+        if (substituteUnitPrice != null) 'substituteUnitPrice': substituteUnitPrice,
+        if (decisionReason != null) 'decisionReason': decisionReason,
+      },
+    );
+    final data = response.data['data'] as Map<String, dynamic>;
+    return PharmacyOrderModel.fromJson(data);
+  }
+
+  Future<PharmacyOrderModel> toggleChronicOrder({
+    required String orderId,
+    required bool isChronic,
+    int? repeatIntervalDays,
+  }) async {
+    final response = await ApiService.dio.patch(
+      '/pharmacy/orders/$orderId/chronic',
+      data: {
+        'isChronic': isChronic,
+        if (repeatIntervalDays != null) 'repeatIntervalDays': repeatIntervalDays,
+      },
+    );
+    final data = response.data['data'] as Map<String, dynamic>;
+    return PharmacyOrderModel.fromJson(data);
+  }
+
+  Future<PharmacyOrderModel> savePharmacistNotes({
+    required String orderId,
+    required String notes,
+  }) async {
+    final response = await ApiService.dio.post(
+      '/pharmacy/orders/$orderId/notes',
+      data: {'notes': notes},
+    );
+    final data = response.data['data'] as Map<String, dynamic>;
+    return PharmacyOrderModel.fromJson(data);
+  }
+
+  Future<PharmacyOrderModel> uploadOrderInvoice({
+    required String orderId,
+    required String invoiceUrl,
+    String? invoiceFileName,
+  }) async {
+    final response = await ApiService.dio.post(
+      '/pharmacy/orders/$orderId/invoice',
+      data: {
+        'invoiceUrl': invoiceUrl,
+        if (invoiceFileName != null) 'invoiceFileName': invoiceFileName,
+      },
+    );
+    final data = response.data['data'] as Map<String, dynamic>;
+    return PharmacyOrderModel.fromJson(data);
+  }
+
+  Future<PharmacyOrderModel> sendOrderInvoice({
+    required String orderId,
+  }) async {
+    final response = await ApiService.dio.post(
+      '/pharmacy/orders/$orderId/send-invoice',
+    );
+    final data = response.data['data'] as Map<String, dynamic>;
+    return PharmacyOrderModel.fromJson(data);
+  }
 }
+

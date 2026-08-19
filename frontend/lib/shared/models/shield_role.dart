@@ -17,10 +17,13 @@ enum SHIELDRole {
 
   static SHIELDRole fromRouteKey(String? value) {
     switch (value) {
-      case 'provider':
       case 'pharmacy-staff':
+        return SHIELDRole.pharmacyStaff;
       case 'clinic-staff':
+        return SHIELDRole.clinicStaff;
       case 'dental-staff':
+        return SHIELDRole.dentalStaff;
+      case 'provider':
         return SHIELDRole.provider;
     }
 
@@ -33,6 +36,7 @@ enum SHIELDRole {
   static SHIELDRole fromBackendRoleCode(String? value) {
     switch (value?.trim().toUpperCase()) {
       case 'PHARMACY_PROVIDER':
+        return SHIELDRole.pharmacyStaff;
       case 'LAB_PROVIDER':
       case 'DOCTOR':
       case 'HOMECARE_PROVIDER':

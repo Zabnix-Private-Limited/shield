@@ -1417,4 +1417,250 @@ export class PharmacyService {
 
     return this.pharmacyFulfillmentProjection(purchase);
   }
+
+  async updateOrderItemFulfillment(
+    orderId: bigint,
+    itemId: bigint,
+    payload: any,
+    principal?: ShieldPrincipal,
+  ) {
+    const item = await this.prisma.purchaseItem.findUnique({
+      where: { id: itemId },
+    });
+    if (!item || item.purchaseId !== orderId) {
+      throw new NotFoundException('Order item not found.');
+    }
+
+    const approvedQty = payload.fulfillQuantity != null ? Number(payload.fulfillQuantity) : Number(item.quantity);
+    const dispatchedQty = payload.dispatchedQuantity != null ? Number(payload.dispatchedQuantity) : 0;
+    const remainingQty = Math.max(0, approvedQty - dispatchedQty);
+
+    const currentMeta = (item.metadata as Record<string, any>) || {};
+    const updatedMeta = {
+      ...currentMeta,
+      fulfillQuantity: approvedQty,
+      dispatchedQuantity: dispatchedQty,
+      remainingQuantity: remainingQty,
+      stockStatus: payload.stockStatus ?? currentMeta.stockStatus ?? 'FULL_STOCK',
+      decisionStatus: payload.decisionStatus ?? currentMeta.decisionStatus ?? 'APPROVED',
+      substituteProductId: payload.substituteProductId ?? currentMeta.substituteProductId,
+      substituteName: payload.substituteName ?? currentMeta.substituteName,
+      substituteUnitPrice: payload.substituteUnitPrice ?? currentMeta.substituteUnitPrice,
+      decisionReason: payload.decisionReason ?? currentMeta.decisionReason,
+      updatedAt: new Date().toISOString(),
+    };
+
+    await this.prisma.purchaseItem.update({
+      where: { id: itemId },
+      data: { metadata: updatedMeta },
+    });
+
+    // Write to normalized DB tables when manual SQL migration has been applied by owner
+    try {
+      await this.prisma.$executeRawUnsafe(
+        `INSERT INTO "purchase_item_fulfillments" ("purchase_item_id", "approved_quantity", "dispatched_quantity", "remaining_quantity", "stock_status", "decision_status", "updated_at")
+         VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP)`,
+        itemId,
+        approvedQty,
+        dispatchedQty,
+        remainingQty,
+        updatedMeta.stockStatus,
+        updatedMeta.decisionStatus,
+      );
+      if (updatedMeta.decisionStatus === 'SUBSTITUTED' && updatedMeta.substituteName) {
+        await this.prisma.$executeRawUnsafe(
+          `INSERT INTO "purchase_item_substitutions" ("purchase_item_id", "substitute_product_id", "substitute_name", "substitute_unit_price", "decision_reason")
+           VALUES ($1, $2, $3, $4, $5)`,
+          itemId,
+          updatedMeta.substituteProductId ? BigInt(updatedMeta.substituteProductId) : null,
+          updatedMeta.substituteName,
+          updatedMeta.substituteUnitPrice ? Number(updatedMeta.substituteUnitPrice) : 0,
+          updatedMeta.decisionReason || null,
+        );
+      }
+    } catch (_) {
+      // Graceful fallback if normalized table migration is pending owner execution
+    }
+
+    return this.getPharmacyOrderDetail(orderId, principal);
+  }
+
+  async toggleChronicOrder(
+    orderId: bigint,
+    isChronic: boolean,
+    repeatIntervalDays?: number,
+    principal?: ShieldPrincipal,
+  ) {
+    const purchase = await this.prisma.purchase.findUnique({
+      where: { id: orderId },
+    });
+    if (!purchase) throw new NotFoundException('Order not found.');
+
+    const interval = repeatIntervalDays ?? 30;
+    const currentSnap = (purchase.billingSnapshot as Record<string, any>) || {};
+    const updatedSnap = {
+      ...currentSnap,
+      isChronic,
+      repeatIntervalDays: interval,
+      taggedAt: new Date().toISOString(),
+    };
+
+    await this.prisma.purchase.update({
+      where: { id: orderId },
+      data: { billingSnapshot: updatedSnap },
+    });
+
+    try {
+      await this.prisma.$executeRawUnsafe(
+        `INSERT INTO "order_chronic_refills" ("purchase_id", "is_chronic", "repeat_interval_days", "tagged_by")
+         VALUES ($1, $2, $3, $4)`,
+        orderId,
+        isChronic,
+        interval,
+        principal?.userId ? BigInt(principal.userId) : null,
+      );
+    } catch (_) {}
+
+    return this.getPharmacyOrderDetail(orderId, principal);
+  }
+
+  async savePharmacistNotes(
+    orderId: bigint,
+    notes: string,
+    principal?: ShieldPrincipal,
+  ) {
+    const purchase = await this.prisma.purchase.findUnique({
+      where: { id: orderId },
+    });
+    if (!purchase) throw new NotFoundException('Order not found.');
+
+    const currentSnap = (purchase.billingSnapshot as Record<string, any>) || {};
+    const updatedSnap = {
+      ...currentSnap,
+      pharmacistNotes: notes,
+      notesUpdatedAt: new Date().toISOString(),
+    };
+
+    await this.prisma.purchase.update({
+      where: { id: orderId },
+      data: { billingSnapshot: updatedSnap },
+    });
+
+    try {
+      await this.prisma.$executeRawUnsafe(
+        `INSERT INTO "order_pharmacist_notes" ("purchase_id", "notes", "author_id")
+         VALUES ($1, $2, $3)`,
+        orderId,
+        notes,
+        principal?.userId ? BigInt(principal.userId) : null,
+      );
+    } catch (_) {}
+
+    return this.getPharmacyOrderDetail(orderId, principal);
+  }
+
+  async requestCustomerConfirmation(
+    orderId: bigint,
+    reason?: string,
+    principal?: ShieldPrincipal,
+  ) {
+    const purchase = await this.prisma.purchase.findUnique({
+      where: { id: orderId },
+    });
+    if (!purchase) throw new NotFoundException('Order not found.');
+
+    const confirmationReason = reason || 'Substitution or partial fulfillment confirmation required.';
+    const currentSnap = (purchase.billingSnapshot as Record<string, any>) || {};
+    const updatedSnap = {
+      ...currentSnap,
+      customerConfirmationRequested: true,
+      confirmationReason,
+      confirmationRequestedAt: new Date().toISOString(),
+    };
+
+    await this.prisma.purchase.update({
+      where: { id: orderId },
+      data: { billingSnapshot: updatedSnap },
+    });
+
+    try {
+      await this.prisma.$executeRawUnsafe(
+        `INSERT INTO "order_customer_confirmations" ("purchase_id", "confirmation_status", "reason")
+         VALUES ($1, 'PENDING', $2)`,
+        orderId,
+        confirmationReason,
+      );
+    } catch (_) {}
+
+    return this.getPharmacyOrderDetail(orderId, principal);
+  }
+
+  async uploadOrderInvoice(
+    orderId: bigint,
+    invoiceUrl: string,
+    invoiceFileName?: string,
+    principal?: ShieldPrincipal,
+  ) {
+    const purchase = await this.prisma.purchase.findUnique({
+      where: { id: orderId },
+    });
+    if (!purchase) throw new NotFoundException('Order not found.');
+
+    const fileName = invoiceFileName || 'Pharmacy_Invoice.pdf';
+    const currentSnap = (purchase.billingSnapshot as Record<string, any>) || {};
+    const updatedSnap = {
+      ...currentSnap,
+      invoiceUrl,
+      invoiceFileName: fileName,
+      uploadedAt: new Date().toISOString(),
+    };
+
+    await this.prisma.purchase.update({
+      where: { id: orderId },
+      data: { billingSnapshot: updatedSnap },
+    });
+
+    try {
+      await this.prisma.$executeRawUnsafe(
+        `INSERT INTO "order_invoices" ("purchase_id", "storage_key", "file_name")
+         VALUES ($1, $2, $3)`,
+        orderId,
+        invoiceUrl,
+        fileName,
+      );
+    } catch (_) {}
+
+    return this.getPharmacyOrderDetail(orderId, principal);
+  }
+
+  async sendOrderInvoice(
+    orderId: bigint,
+    principal?: ShieldPrincipal,
+  ) {
+    const purchase = await this.prisma.purchase.findUnique({
+      where: { id: orderId },
+    });
+    if (!purchase) throw new NotFoundException('Order not found.');
+
+    const sentAt = new Date().toISOString();
+    const currentSnap = (purchase.billingSnapshot as Record<string, any>) || {};
+    const updatedSnap = {
+      ...currentSnap,
+      invoiceSentAt: sentAt,
+    };
+
+    await this.prisma.purchase.update({
+      where: { id: orderId },
+      data: { billingSnapshot: updatedSnap },
+    });
+
+    try {
+      await this.prisma.$executeRawUnsafe(
+        `UPDATE "order_invoices" SET "sent_at" = CURRENT_TIMESTAMP WHERE "purchase_id" = $1`,
+        orderId,
+      );
+    } catch (_) {}
+
+    return this.getPharmacyOrderDetail(orderId, principal);
+  }
 }

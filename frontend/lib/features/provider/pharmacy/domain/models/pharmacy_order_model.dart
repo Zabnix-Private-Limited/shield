@@ -29,26 +29,66 @@ class PharmacyOrderItem {
   final String? productId;
   final String name;
   final double quantity;
+  final double availableQuantity;
+  final double fulfillQuantity;
   final double unitPrice;
   final double lineTotal;
+  final String stockStatus; // FULL_STOCK | LOW_STOCK | OUT_OF_STOCK
+  final String decisionStatus; // APPROVED | PARTIAL | REJECTED | SUBSTITUTED | AWAITING_CUSTOMER_CONFIRMATION
+  final String? substituteName;
+  final double? substituteUnitPrice;
+  final String? decisionReason;
 
   const PharmacyOrderItem({
     required this.id,
     this.productId,
     required this.name,
     required this.quantity,
+    required this.availableQuantity,
+    required this.fulfillQuantity,
     required this.unitPrice,
     required this.lineTotal,
+    required this.stockStatus,
+    required this.decisionStatus,
+    this.substituteName,
+    this.substituteUnitPrice,
+    this.decisionReason,
   });
 
   factory PharmacyOrderItem.fromJson(Map<String, dynamic> json) {
+    final meta = json['metadata'] is Map<String, dynamic>
+        ? json['metadata'] as Map<String, dynamic>
+        : const <String, dynamic>{};
+
+    final reqQty = (json['quantity'] as num?)?.toDouble() ?? 1.0;
+    final availQty = (meta['availableQuantity'] as num?)?.toDouble() ?? reqQty;
+    final fulQty = (meta['fulfillQuantity'] as num?)?.toDouble() ?? reqQty;
+
+    String stock = (meta['stockStatus'] ?? '').toString();
+    if (stock.isEmpty) {
+      if (availQty >= reqQty) {
+        stock = 'FULL_STOCK';
+      } else if (availQty > 0) {
+        stock = 'LOW_STOCK';
+      } else {
+        stock = 'OUT_OF_STOCK';
+      }
+    }
+
     return PharmacyOrderItem(
       id: (json['id'] ?? '').toString(),
       productId: json['productId']?.toString(),
       name: (json['name'] ?? 'Product').toString(),
-      quantity: (json['quantity'] as num?)?.toDouble() ?? 1.0,
+      quantity: reqQty,
+      availableQuantity: availQty,
+      fulfillQuantity: fulQty,
       unitPrice: (json['unitPrice'] as num?)?.toDouble() ?? 0.0,
-      lineTotal: (json['lineTotal'] as num?)?.toDouble() ?? 0.0,
+      lineTotal: (json['totalPrice'] as num?)?.toDouble() ?? ((json['lineTotal'] as num?)?.toDouble() ?? 0.0),
+      stockStatus: stock,
+      decisionStatus: (meta['decisionStatus'] ?? 'APPROVED').toString(),
+      substituteName: meta['substituteName']?.toString(),
+      substituteUnitPrice: (meta['substituteUnitPrice'] as num?)?.toDouble(),
+      decisionReason: meta['decisionReason']?.toString(),
     );
   }
 }
@@ -65,6 +105,12 @@ class PharmacyOrderModel {
   final String? deliveryAddress;
   final String? customerNotes;
   final String? cancellationReason;
+  final String? pharmacistNotes;
+  final bool isChronic;
+  final String? invoiceUrl;
+  final String? invoiceFileName;
+  final DateTime? invoiceSentAt;
+  final bool customerConfirmationRequested;
   final double totalAmount;
   final double payableAmount;
   final DateTime submittedAt;
@@ -83,6 +129,12 @@ class PharmacyOrderModel {
     this.deliveryAddress,
     this.customerNotes,
     this.cancellationReason,
+    this.pharmacistNotes,
+    this.isChronic = false,
+    this.invoiceUrl,
+    this.invoiceFileName,
+    this.invoiceSentAt,
+    this.customerConfirmationRequested = false,
     required this.totalAmount,
     required this.payableAmount,
     required this.submittedAt,
@@ -109,13 +161,17 @@ class PharmacyOrderModel {
       parsedDate = DateTime.now();
     }
 
+    final billingSnap = json['billingSnapshot'] is Map<String, dynamic>
+        ? json['billingSnapshot'] as Map<String, dynamic>
+        : const <String, dynamic>{};
+
     return PharmacyOrderModel(
       id: (json['id'] ?? '').toString(),
       uuid: (json['uuid'] ?? '').toString(),
-      orderNumber: (json['orderNumber'] ?? '').toString(),
-      status: (json['status'] ?? 'PLACED').toString(),
+      orderNumber: (json['orderNumber'] ?? json['invoiceNumber'] ?? '').toString(),
+      status: (json['status'] ?? json['orderStatus'] ?? 'PLACED').toString(),
       paymentStatus: (json['paymentStatus'] ?? 'PENDING').toString(),
-      orderSource: (json['orderSource'] ?? 'MANUAL_ITEMS').toString(),
+      orderSource: (json['orderSource'] ?? json['purchaseKind'] ?? 'MANUAL_ITEMS').toString(),
       fulfillmentPreference: json['fulfillmentPreference']?.toString(),
       customer: json['customer'] != null
           ? PharmacyOrderCustomer.fromJson(
@@ -125,10 +181,19 @@ class PharmacyOrderModel {
       deliveryAddress: json['deliveryAddress']?.toString(),
       customerNotes: json['customerNotes']?.toString(),
       cancellationReason: json['cancellationReason']?.toString(),
+      pharmacistNotes: billingSnap['pharmacistNotes']?.toString() ?? json['pharmacistNotes']?.toString(),
+      isChronic: billingSnap['isChronic'] == true || json['isChronic'] == true,
+      invoiceUrl: billingSnap['invoiceUrl']?.toString() ?? json['invoiceUrl']?.toString(),
+      invoiceFileName: billingSnap['invoiceFileName']?.toString() ?? json['invoiceFileName']?.toString(),
+      invoiceSentAt: billingSnap['invoiceSentAt'] != null
+          ? DateTime.tryParse(billingSnap['invoiceSentAt'].toString())
+          : null,
+      customerConfirmationRequested:
+          billingSnap['customerConfirmationRequested'] == true,
       totalAmount: (json['totalAmount'] as num?)?.toDouble() ?? 0.0,
       payableAmount: (json['payableAmount'] as num?)?.toDouble() ?? 0.0,
       submittedAt: parsedDate,
-      items: (json['items'] as List? ?? const <dynamic>[])
+      items: (json['items'] as List? ?? json['purchaseItems'] as List? ?? const <dynamic>[])
           .map((i) => PharmacyOrderItem.fromJson(i as Map<String, dynamic>))
           .toList(),
       prescriptionDocument: json['prescriptionDocument'] as Map<String, dynamic>?,
@@ -144,6 +209,7 @@ class PharmacyOrdersSummary {
   final int deliveryCount;
   final int completedCount;
   final int cancelledCount;
+  final int chronicCount;
   final int totalCount;
 
   const PharmacyOrdersSummary({
@@ -154,6 +220,7 @@ class PharmacyOrdersSummary {
     required this.deliveryCount,
     required this.completedCount,
     required this.cancelledCount,
+    this.chronicCount = 0,
     required this.totalCount,
   });
 
@@ -166,6 +233,7 @@ class PharmacyOrdersSummary {
       deliveryCount: (json['deliveryCount'] as num?)?.toInt() ?? 0,
       completedCount: (json['completedCount'] as num?)?.toInt() ?? 0,
       cancelledCount: (json['cancelledCount'] as num?)?.toInt() ?? 0,
+      chronicCount: (json['chronicCount'] as num?)?.toInt() ?? 0,
       totalCount: (json['totalCount'] as num?)?.toInt() ?? 0,
     );
   }

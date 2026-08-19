@@ -1,13 +1,14 @@
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
-import 'package:shield/app/theme/app_colors.dart';
-import 'package:shield/app/theme/app_typography.dart';
-import 'package:shield/shared/widgets/app_skeleton.dart';
+import 'package:shield/features/provider/pharmacy/design/pharmacy_colors.dart';
+import 'package:shield/features/provider/pharmacy/design/pharmacy_radius.dart';
+import 'package:shield/features/provider/pharmacy/design/pharmacy_typography.dart';
 import 'package:shield/features/provider/pharmacy/domain/models/pharmacy_payment_method_model.dart';
 import 'package:shield/features/provider/pharmacy/presentation/controllers/pharmacy_payment_details_controller.dart';
 import 'package:shield/features/provider/pharmacy/presentation/widgets/bank_account_card.dart';
 import 'package:shield/features/provider/pharmacy/presentation/widgets/upi_payment_card.dart';
 import 'package:shield/features/provider/pharmacy/presentation/widgets/payment_method_form_sheet.dart';
+import 'package:shield/features/provider/pharmacy/presentation/widgets/pharmacy_components.dart';
 
 class PharmacyPaymentDetailsScreen extends StatefulWidget {
   const PharmacyPaymentDetailsScreen({super.key});
@@ -135,141 +136,105 @@ class _PharmacyPaymentDetailsScreenState
     final isEmpty = _controller.isEmpty;
 
     return Column(
-      mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Header Copy with Refresh Action
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Payment Details',
-                    style: AppTypography.h3.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.shieldNavy,
+        // Header Card
+        PharmacyCard(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Payment Details Configuration',
+                      style: PharmacyTypography.h2,
                     ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Manage the bank and UPI details customers can use for manual payments.',
-                    style: AppTypography.caption.copyWith(
-                      color: Colors.grey.shade600,
+                    const SizedBox(height: 4),
+                    Text(
+                      'Manage active Bank Account and UPI QR details. Delivered securely to customer payment screens.',
+                      style: PharmacyTypography.caption,
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-            IconButton(
-              icon: const Icon(Icons.refresh, color: AppColors.shieldNavy),
-              tooltip: 'Refresh Payment Details',
-              onPressed: () => _controller.loadPaymentDetails(),
-            ),
-          ],
+              IconButton(
+                icon: const Icon(Icons.refresh_rounded, color: PharmacyColors.navy),
+                tooltip: 'Refresh Payment Details',
+                onPressed: () => _controller.loadPaymentDetails(),
+              ),
+            ],
+          ),
         ),
-        const SizedBox(height: 20),
+        const SizedBox(height: 16),
 
         if (isLoading && isEmpty) ...[
-          const AppPortalSectionSkeleton(
-            showHero: false,
-            statCards: 2,
-            listItems: 3,
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 40),
+            child: Center(
+              child: CircularProgressIndicator(color: PharmacyColors.primary),
+            ),
           ),
         ] else if (error != null && isEmpty) ...[
-          Center(
-            child: Padding(
-              padding: const EdgeInsets.all(24),
+          PharmacyCard(
+            padding: const EdgeInsets.all(24),
+            child: Center(
               child: Column(
                 children: [
-                  const Icon(
-                    Icons.error_outline_rounded,
-                    size: 48,
-                    color: Colors.red,
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    'Unable to load payment details',
-                    style: AppTypography.subtitle1.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    error,
-                    style: AppTypography.caption,
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 16),
-                  ElevatedButton.icon(
+                  const Icon(Icons.error_outline_rounded,
+                      size: 44, color: PharmacyColors.danger),
+                  const SizedBox(height: 10),
+                  Text('Unable to load payment details',
+                      style: PharmacyTypography.subtitle
+                          .copyWith(fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 4),
+                  Text(error, style: PharmacyTypography.caption),
+                  const SizedBox(height: 14),
+                  PharmacyPrimaryButton(
+                    label: 'Retry Loading',
                     onPressed: () => _controller.loadPaymentDetails(),
-                    icon: const Icon(Icons.refresh),
-                    label: const Text('Retry'),
                   ),
                 ],
               ),
             ),
           ),
         ] else if (isEmpty) ...[
-          // Empty State
-          Center(
-            child: Container(
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.grey.shade200),
-              ),
+          PharmacyCard(
+            padding: const EdgeInsets.all(24),
+            child: Center(
               child: Column(
                 children: [
-                  Icon(
-                    Icons.account_balance_wallet_outlined,
-                    size: 56,
-                    color: Colors.grey.shade400,
-                  ),
+                  const Icon(Icons.account_balance_wallet_outlined,
+                      size: 56, color: PharmacyColors.textTertiary),
                   const SizedBox(height: 12),
                   Text(
-                    'Payment details have not been configured yet.',
-                    style: AppTypography.subtitle1.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: Colors.grey.shade800,
-                    ),
+                    'No payment details configured yet',
+                    style: PharmacyTypography.subtitle
+                        .copyWith(fontWeight: FontWeight.bold),
                   ),
-                  const SizedBox(height: 6),
+                  const SizedBox(height: 4),
                   Text(
-                    'Customers cannot use manual bank or UPI payment instructions until at least one active payment method is configured.',
-                    style: AppTypography.caption.copyWith(
-                      color: Colors.grey.shade600,
-                    ),
+                    'Configure at least one Bank Account or UPI ID with QR image for customer payments.',
+                    style: PharmacyTypography.caption,
                     textAlign: TextAlign.center,
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 16),
                   Wrap(
                     spacing: 12,
-                    runSpacing: 10,
                     children: [
-                      ElevatedButton.icon(
-                        onPressed: () => _openAddForm(
-                          defaultType: 'BANK_ACCOUNT',
-                        ),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.shieldNavy,
-                        ),
-                        icon: const Icon(Icons.add, color: Colors.white),
-                        label: const Text(
-                          'Add Bank Account',
-                          style: TextStyle(color: Colors.white),
-                        ),
+                      PharmacyPrimaryButton(
+                        label: 'Add Bank Account',
+                        icon: Icons.add_rounded,
+                        onPressed: () =>
+                            _openAddForm(defaultType: 'BANK_ACCOUNT'),
                       ),
-                      OutlinedButton.icon(
-                        onPressed: () => _openAddForm(
-                          defaultType: 'UPI',
-                        ),
-                        icon: const Icon(Icons.add),
-                        label: const Text('Add UPI'),
+                      PharmacySecondaryButton(
+                        label: 'Add UPI ID',
+                        icon: Icons.add_rounded,
+                        onPressed: () => _openAddForm(defaultType: 'UPI'),
                       ),
                     ],
                   ),
@@ -278,43 +243,25 @@ class _PharmacyPaymentDetailsScreenState
             ),
           ),
         ] else ...[
-          // Bank Accounts Section
+          // Bank Accounts Section Header
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                'Bank Accounts',
-                style: AppTypography.subtitle1.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              ElevatedButton.icon(
-                onPressed: () => _openAddForm(
-                  defaultType: 'BANK_ACCOUNT',
-                ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.shieldNavy,
-                  visualDensity: VisualDensity.compact,
-                ),
-                icon: const Icon(Icons.add, size: 16, color: Colors.white),
-                label: const Text(
-                  'Add Bank Account',
-                  style: TextStyle(color: Colors.white),
-                ),
+              Text('Bank Accounts',
+                  style: PharmacyTypography.subtitle
+                      .copyWith(fontWeight: FontWeight.bold)),
+              PharmacyPrimaryButton(
+                label: 'Add Bank Account',
+                compact: true,
+                icon: Icons.add_rounded,
+                onPressed: () => _openAddForm(defaultType: 'BANK_ACCOUNT'),
               ),
             ],
           ),
           const SizedBox(height: 10),
           if (bankAccounts.isEmpty) ...[
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              child: Text(
-                'No bank accounts configured.',
-                style: AppTypography.caption.copyWith(
-                  color: Colors.grey.shade600,
-                ),
-              ),
-            ),
+            Text('No bank accounts configured.',
+                style: PharmacyTypography.caption),
           ] else ...[
             ...bankAccounts.map(
               (b) => BankAccountCard(
@@ -329,43 +276,25 @@ class _PharmacyPaymentDetailsScreenState
           ],
           const SizedBox(height: 24),
 
-          // UPI Methods Section
+          // UPI & QR Section Header
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                'UPI & QR Codes',
-                style: AppTypography.subtitle1.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              ElevatedButton.icon(
-                onPressed: () => _openAddForm(
-                  defaultType: 'UPI',
-                ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.shieldGreen,
-                  visualDensity: VisualDensity.compact,
-                ),
-                icon: const Icon(Icons.add, size: 16, color: Colors.white),
-                label: const Text(
-                  'Add UPI',
-                  style: TextStyle(color: Colors.white),
-                ),
+              Text('UPI Details & QR Codes',
+                  style: PharmacyTypography.subtitle
+                      .copyWith(fontWeight: FontWeight.bold)),
+              PharmacyPrimaryButton(
+                label: 'Add UPI ID',
+                compact: true,
+                icon: Icons.add_rounded,
+                onPressed: () => _openAddForm(defaultType: 'UPI'),
               ),
             ],
           ),
           const SizedBox(height: 10),
           if (upiMethods.isEmpty) ...[
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              child: Text(
-                'No UPI IDs configured.',
-                style: AppTypography.caption.copyWith(
-                  color: Colors.grey.shade600,
-                ),
-              ),
-            ),
+            Text('No UPI details configured.',
+                style: PharmacyTypography.caption),
           ] else ...[
             ...upiMethods.map(
               (u) => UpiPaymentCard(

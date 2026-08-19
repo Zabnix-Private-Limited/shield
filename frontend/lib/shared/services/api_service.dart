@@ -14,6 +14,7 @@ import '../models/notification.dart';
 import '../models/prescription_analysis.dart';
 import '../models/wallet.dart';
 import 'customer_auth_session.dart';
+import 'internal_auth_session.dart';
 
 class ApiService {
   static Dio get dio => _dio;
@@ -922,6 +923,11 @@ class ApiService {
   }
 
   static Future<Map<String, dynamic>> getAgentWorkspace() async {
+    final roleCode = InternalAuthSession.instance.roleCode?.trim().toUpperCase();
+    if (roleCode != 'SHIELD_AGENT') {
+      debugPrint('[ApiService] Fail-closed: getAgentWorkspace blocked for active role $roleCode');
+      return const <String, dynamic>{};
+    }
     final response = await _getWithRetry('/agents/workspace', maxAttempts: 3);
     return _readEnvelope(response);
   }
@@ -933,6 +939,11 @@ class ApiService {
     int page = 1,
     int pageSize = 25,
   }) async {
+    final roleCode = InternalAuthSession.instance.roleCode?.trim().toUpperCase();
+    if (roleCode != 'SHIELD_AGENT') {
+      debugPrint('[ApiService] Fail-closed: getAgentCustomers blocked for active role $roleCode');
+      return const <String, dynamic>{};
+    }
     final response = await _getWithRetry(
       '/agents/customers',
       queryParameters: {
@@ -951,6 +962,11 @@ class ApiService {
   static Future<Map<String, dynamic>> getAgentCustomerWorkspace(
     String customerId,
   ) async {
+    final roleCode = InternalAuthSession.instance.roleCode?.trim().toUpperCase();
+    if (roleCode != 'SHIELD_AGENT') {
+      debugPrint('[ApiService] Fail-closed: getAgentCustomerWorkspace blocked for active role $roleCode');
+      return const <String, dynamic>{};
+    }
     final response = await _getWithRetry(
       '/agents/customers/$customerId/workspace',
       maxAttempts: 3,
@@ -959,11 +975,21 @@ class ApiService {
   }
 
   static Future<Map<String, dynamic>> getAgentCurrentProfile() async {
+    final roleCode = InternalAuthSession.instance.roleCode?.trim().toUpperCase();
+    if (roleCode != 'SHIELD_AGENT') {
+      debugPrint('[ApiService] Fail-closed: getAgentCurrentProfile blocked for active role $roleCode');
+      return const <String, dynamic>{};
+    }
     final response = await _getWithRetry('/agents/me/profile', maxAttempts: 3);
     return _readEnvelope(response);
   }
 
   static Future<Map<String, dynamic>> getAgentPreferences() async {
+    final roleCode = InternalAuthSession.instance.roleCode?.trim().toUpperCase();
+    if (roleCode != 'SHIELD_AGENT') {
+      debugPrint('[ApiService] Fail-closed: getAgentPreferences blocked for active role $roleCode');
+      return const <String, dynamic>{};
+    }
     final response = await _getWithRetry(
       '/agents/me/preferences',
       maxAttempts: 3,

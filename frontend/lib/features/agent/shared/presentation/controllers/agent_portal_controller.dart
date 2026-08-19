@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 
+import '../../../../../shared/services/internal_auth_session.dart';
 import '../../data/agent_portal_repository.dart';
 
 class AgentPortalController extends ChangeNotifier {
@@ -48,16 +49,19 @@ class AgentPortalController extends ChangeNotifier {
   Map<String, dynamic> get customerListPage => _customerListPage;
 
   Map<String, dynamic> get summary =>
-      Map<String, dynamic>.from(workspace['summary'] ?? const {});
+      selectedCustomerWorkspace['summary'] is Map<String, dynamic>
+          ? selectedCustomerWorkspace['summary'] as Map<String, dynamic>
+          : const <String, dynamic>{};
   Map<String, dynamic> get performance =>
       Map<String, dynamic>.from(workspace['performance'] ?? const {});
   Map<String, dynamic> get authProfile =>
       Map<String, dynamic>.from(workspace['authProfile'] ?? const {});
   Map<String, dynamic> get agentSettings =>
       Map<String, dynamic>.from(workspace['agentSettings'] ?? const {});
-  Map<String, dynamic> get selectedCustomer => Map<String, dynamic>.from(
-    selectedCustomerWorkspace['customer'] ?? const {},
-  );
+  Map<String, dynamic> get selectedCustomer =>
+      selectedCustomerWorkspace['customer'] is Map<String, dynamic>
+          ? selectedCustomerWorkspace['customer'] as Map<String, dynamic>
+          : const <String, dynamic>{};
 
   List<Map<String, dynamic>> get customers => List<Map<String, dynamic>>.from(
     ((_customerListPage['items'] as List?) ??

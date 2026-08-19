@@ -124,6 +124,9 @@
 6. When building or expanding any portal (Customer, Provider, CRM, Manager, Executive, or Super Admin), prefer backend-driven workspace contracts over frontend-owned business semantics, and treat the Provider Portal architecture as the template to generalize from.
 7. When expanding the Provider Portal, prefer adding backend-owned modules/plugins inside the shared Provider Platform shell over creating separate provider-type portals or duplicate workflow pages.
 8. **Production Code Preservation Rule**: When implementing auth bypasses, temporary dev modes, or disabling features/roles for local development, **NEVER delete production-ready code, guards, assertions, or route logic**. Always comment out production code blocks with clear tags (`// PRODUCTION CODE (UNCOMMENT FOR PROD)` / `// DEV BYPASS MODE:`) so production security and functionality can be restored cleanly without re-writing logic.
+9. **End-to-End Source Integration Rule**: Every visual action, button, toggle, or form submission must form a complete end-to-end pipeline (`UI -> State Controller -> Repository -> Dio API Service -> NestJS Controller -> NestJS Service -> Prisma Model -> State Update`). Never use SnackBar toasts or mock fallbacks as a substitute for real backend state persistence.
+10. **Layout Overflow Defensive Rule**: Wrap button text and flexible card text in `Flexible(child: Text(..., overflow: TextOverflow.ellipsis))` in custom component libraries to prevent horizontal RenderFlex errors. Ensure skeleton blocks and sidebar layouts provide scroll ownership.
+11. **Owner-Testing & Non-Testing Guardrail**: All runtime UAT (Web, Mobile, APK) is executed by the human project owner. Agents must perform thorough static source audits and fix all identified code issues, but must never run automated test runners (`flutter test`, `jest`, browser subagents) unless explicitly requested.
 
 ## Project File Structure
 ```

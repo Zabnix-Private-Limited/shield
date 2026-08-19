@@ -1,12 +1,13 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:shield/app/theme/app_colors.dart';
-import 'package:shield/app/theme/app_typography.dart';
-import 'package:shield/features/provider/pharmacy/presentation/controllers/pharmacy_orders_controller.dart';
+import 'package:shield/features/provider/pharmacy/design/pharmacy_colors.dart';
+import 'package:shield/features/provider/pharmacy/design/pharmacy_radius.dart';
+import 'package:shield/features/provider/pharmacy/design/pharmacy_typography.dart';
 import 'package:shield/features/provider/pharmacy/domain/models/pharmacy_order_model.dart';
-import 'package:shield/features/provider/pharmacy/presentation/widgets/pharmacy_order_card.dart';
-import 'package:shield/features/provider/pharmacy/presentation/widgets/pharmacy_order_detail_sheet.dart';
-import 'package:shield/shared/widgets/app_skeleton.dart';
+import 'package:shield/features/provider/pharmacy/presentation/controllers/pharmacy_orders_controller.dart';
+import 'package:shield/features/provider/pharmacy/presentation/widgets/pharmacy_components.dart';
+import 'package:shield/features/provider/pharmacy/presentation/widgets/pharmacy_status_chip.dart';
+import 'package:shield/features/provider/pharmacy/presentation/widgets/pharmacy_fulfillment_detail_view.dart';
 
 class PharmacyOrdersScreen extends StatefulWidget {
   const PharmacyOrdersScreen({super.key});
@@ -16,7 +17,8 @@ class PharmacyOrdersScreen extends StatefulWidget {
 }
 
 class _PharmacyOrdersScreenState extends State<PharmacyOrdersScreen> {
-  final PharmacyOrdersController _controller = PharmacyOrdersController.instance;
+  final PharmacyOrdersController _controller =
+      PharmacyOrdersController.instance;
   final TextEditingController _searchController = TextEditingController();
   Timer? _debounceTimer;
 
@@ -47,30 +49,36 @@ class _PharmacyOrdersScreenState extends State<PharmacyOrdersScreen> {
 
   void _onSearchChanged(String query) {
     _debounceTimer?.cancel();
-    _debounceTimer = Timer(const Duration(milliseconds: 350), () {
+    _debounceTimer = Timer(const Duration(milliseconds: 300), () {
       _controller.setSearchQuery(query);
     });
   }
 
-  void _openOrderDetail(PharmacyOrderModel order) {
+  void _openMobileOrderDetail(PharmacyOrderModel order) {
     _controller.selectOrder(order);
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (ctx) => DraggableScrollableSheet(
-        initialChildSize: 0.85,
+        initialChildSize: 0.9,
         minChildSize: 0.5,
         maxChildSize: 0.95,
-        builder: (_, scrollController) => PharmacyOrderDetailSheet(
-          order: order,
-          onClose: () => Navigator.pop(ctx),
+        builder: (_, scrollController) => Container(
+          decoration: const BoxDecoration(
+            color: PharmacyColors.canvas,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+          ),
+          child: PharmacyFulfillmentDetailView(
+            order: order,
+            onClose: () => Navigator.pop(ctx),
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildFilterChip(String label, String value, int badgeCount) {
+  Widget _buildFilterChip(String label, String value, int count) {
     final isSelected = _controller.activeStatusFilter == value;
     return Padding(
       padding: const EdgeInsets.only(right: 8),
@@ -79,20 +87,22 @@ class _PharmacyOrdersScreenState extends State<PharmacyOrdersScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(label),
-            if (badgeCount > 0) ...[
+            if (count > 0) ...[
               const SizedBox(width: 6),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
-                  color: isSelected ? Colors.white : AppColors.shieldNavy,
-                  borderRadius: BorderRadius.circular(10),
+                  color: isSelected
+                      ? PharmacyColors.primary
+                      : PharmacyColors.navy,
+                  borderRadius: BorderRadius.circular(PharmacyRadius.chip),
                 ),
                 child: Text(
-                  '$badgeCount',
-                  style: TextStyle(
-                    fontSize: 11,
+                  '$count',
+                  style: PharmacyTypography.tiny.copyWith(
+                    color: Colors.white,
                     fontWeight: FontWeight.bold,
-                    color: isSelected ? AppColors.shieldNavy : Colors.white,
                   ),
                 ),
               ),
@@ -100,61 +110,25 @@ class _PharmacyOrdersScreenState extends State<PharmacyOrdersScreen> {
           ],
         ),
         selected: isSelected,
-        selectedColor: AppColors.shieldNavy,
-        labelStyle: TextStyle(
-          color: isSelected ? Colors.white : AppColors.charcoal,
+        selectedColor: PharmacyColors.primarySoft,
+        labelStyle: PharmacyTypography.caption.copyWith(
+          color: isSelected
+              ? PharmacyColors.primaryHover
+              : PharmacyColors.text,
           fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
         ),
-        backgroundColor: Colors.grey.shade100,
+        backgroundColor: PharmacyColors.canvas,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(PharmacyRadius.chip),
           side: BorderSide(
-            color: isSelected ? AppColors.shieldNavy : Colors.grey.shade300,
+            color: isSelected
+                ? PharmacyColors.primary
+                : PharmacyColors.border,
           ),
         ),
         onSelected: (_) => _controller.setStatusFilter(value),
       ),
     );
-  }
-
-  String? _getPrimaryActionLabel(PharmacyOrderModel order) {
-    switch (order.status.toUpperCase()) {
-      case 'PLACED':
-      case 'SUBMITTED':
-      case 'REQUESTED':
-      case 'NEW':
-        return 'Accept Order';
-      case 'ACCEPTED':
-        return 'Start Preparing';
-      case 'PREPARING':
-        return order.isHomeDelivery ? 'Dispatch Delivery' : 'Ready for Pickup';
-      case 'READY_FOR_PICKUP':
-      case 'OUT_FOR_DELIVERY':
-      case 'READY':
-        return 'Mark Completed';
-      default:
-        return null;
-    }
-  }
-
-  String? _getNextStatus(PharmacyOrderModel order) {
-    switch (order.status.toUpperCase()) {
-      case 'PLACED':
-      case 'SUBMITTED':
-      case 'REQUESTED':
-      case 'NEW':
-        return 'ACCEPTED';
-      case 'ACCEPTED':
-        return 'PREPARING';
-      case 'PREPARING':
-        return order.isHomeDelivery ? 'OUT_FOR_DELIVERY' : 'READY_FOR_PICKUP';
-      case 'READY_FOR_PICKUP':
-      case 'OUT_FOR_DELIVERY':
-      case 'READY':
-        return 'COMPLETED';
-      default:
-        return null;
-    }
   }
 
   @override
@@ -163,169 +137,279 @@ class _PharmacyOrdersScreenState extends State<PharmacyOrdersScreen> {
     final orders = _controller.orders;
     final isLoading = _controller.isLoading;
     final error = _controller.error;
+    final selectedOrder = _controller.selectedOrder ??
+        (orders.isNotEmpty ? orders.first : null);
+    final isDesktop = MediaQuery.of(context).size.width >= 1024;
 
     return Column(
-      mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Search & Header Surface
-        Container(
-          color: Colors.white,
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+        // Top Search & Filter Bar
+        PharmacyCard(
+          padding: const EdgeInsets.all(12),
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Search TextField
-              TextField(
-                controller: _searchController,
-                onChanged: _onSearchChanged,
-                decoration: InputDecoration(
-                  hintText: 'Search order #, customer name or phone...',
-                  prefixIcon: const Icon(Icons.search, size: 20),
-                  suffixIcon: _searchController.text.isNotEmpty
-                      ? IconButton(
-                          icon: const Icon(Icons.clear, size: 18),
-                          onPressed: () {
-                            _searchController.clear();
-                            _controller.setSearchQuery('');
-                          },
-                        )
-                      : null,
-                  contentPadding: const EdgeInsets.symmetric(vertical: 10),
-                  filled: true,
-                  fillColor: Colors.grey.shade100,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                    borderSide: BorderSide.none,
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _searchController,
+                      onChanged: _onSearchChanged,
+                      decoration: InputDecoration(
+                        hintText:
+                            'Search order #, customer name, phone, or items...',
+                        prefixIcon: const Icon(Icons.search_rounded,
+                            color: PharmacyColors.textSecondary),
+                        suffixIcon: _searchController.text.isNotEmpty
+                            ? IconButton(
+                                icon: const Icon(Icons.clear_rounded,
+                                    size: 18),
+                                onPressed: () {
+                                  _searchController.clear();
+                                  _controller.setSearchQuery('');
+                                },
+                              )
+                            : null,
+                        contentPadding:
+                            const EdgeInsets.symmetric(vertical: 10),
+                        filled: true,
+                        fillColor: PharmacyColors.canvas,
+                        border: OutlineInputBorder(
+                          borderRadius:
+                              BorderRadius.circular(PharmacyRadius.field),
+                          borderSide:
+                              const BorderSide(color: PharmacyColors.border),
+                        ),
+                      ),
+                    ),
                   ),
-                ),
+                  const SizedBox(width: 12),
+                  IconButton(
+                    icon: const Icon(Icons.refresh_rounded,
+                        color: PharmacyColors.navy),
+                    tooltip: 'Refresh Orders Queue',
+                    onPressed: () => _controller.loadOrders(),
+                  ),
+                ],
               ),
-              const SizedBox(height: 10),
-
-              // Horizontal Filter Chips
+              const SizedBox(height: 12),
+              // Queue Filter Chips
               SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
                 child: Row(
                   children: [
-                    _buildFilterChip('All', 'ALL', summary?.totalCount ?? 0),
+                    _buildFilterChip('All Orders', 'ALL', summary?.totalCount ?? 0),
                     _buildFilterChip('New', 'NEW', summary?.newCount ?? 0),
                     _buildFilterChip('Accepted', 'ACCEPTED', summary?.acceptedCount ?? 0),
                     _buildFilterChip('Preparing', 'PREPARING', summary?.preparingCount ?? 0),
-                    _buildFilterChip('Ready', 'READY', summary?.readyCount ?? 0),
-                    _buildFilterChip('Delivery', 'DELIVERY', summary?.deliveryCount ?? 0),
-                    _buildFilterChip('Completed', 'COMPLETED', summary?.completedCount ?? 0),
-                    _buildFilterChip('Cancelled', 'CANCELLED', summary?.cancelledCount ?? 0),
+                    _buildFilterChip('Ready for Pickup', 'READY_FOR_PICKUP', summary?.readyCount ?? 0),
+                    _buildFilterChip('Out for Delivery', 'OUT_FOR_DELIVERY', summary?.deliveryCount ?? 0),
+                    _buildFilterChip('Chronic Orders', 'CHRONIC', summary?.chronicCount ?? 0),
                   ],
                 ),
               ),
             ],
           ),
         ),
-        const Divider(height: 1),
+        const SizedBox(height: 16),
 
-        // Orders Body List
         if (isLoading && orders.isEmpty) ...[
           const Padding(
-            padding: EdgeInsets.all(16),
-            child: AppPortalSectionSkeleton(
-              showHero: false,
-              statCards: 0,
-              listItems: 5,
+            padding: EdgeInsets.symmetric(vertical: 40),
+            child: Center(
+              child: CircularProgressIndicator(color: PharmacyColors.primary),
             ),
           ),
         ] else if (error != null && orders.isEmpty) ...[
-          Center(
-            child: Padding(
-              padding: const EdgeInsets.all(24),
+          PharmacyCard(
+            padding: const EdgeInsets.all(24),
+            child: Center(
               child: Column(
-                mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(
-                    Icons.error_outline_rounded,
-                    size: 48,
-                    color: Colors.red,
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    'Unable to load pharmacy orders',
-                    style: AppTypography.subtitle1.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    error,
-                    style: AppTypography.caption,
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 16),
-                  ElevatedButton.icon(
+                  const Icon(Icons.error_outline_rounded,
+                      size: 44, color: PharmacyColors.danger),
+                  const SizedBox(height: 10),
+                  Text('Unable to load orders queue',
+                      style: PharmacyTypography.subtitle
+                          .copyWith(fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 4),
+                  Text(error, style: PharmacyTypography.caption),
+                  const SizedBox(height: 14),
+                  PharmacyPrimaryButton(
+                    label: 'Retry',
                     onPressed: () => _controller.loadOrders(),
-                    icon: const Icon(Icons.refresh),
-                    label: const Text('Retry'),
                   ),
                 ],
               ),
             ),
           ),
         ] else if (orders.isEmpty) ...[
-          Center(
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    Icons.shopping_bag_outlined,
-                    size: 56,
-                    color: Colors.grey.shade400,
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    'No pharmacy orders found',
-                    style: AppTypography.subtitle1.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: Colors.grey.shade700,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    _searchController.text.isNotEmpty
-                        ? 'No orders match "${_searchController.text}".'
-                        : 'New customer orders will appear here for fulfillment.',
-                    style: AppTypography.caption.copyWith(
-                      color: Colors.grey.shade600,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
-              ),
-            ),
+          const PharmacyEmptyState(
+            title: 'No orders found',
+            subtitle:
+                'No orders match the selected filter or search query.',
+            icon: Icons.assignment_outlined,
           ),
         ] else ...[
-          ListView.builder(
-            padding: const EdgeInsets.all(16),
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: orders.length,
-            itemBuilder: (context, index) {
-              final order = orders[index];
-              final primaryLabel = _getPrimaryActionLabel(order);
-              final nextStatus = _getNextStatus(order);
+          // Split Pane for Desktop / Stacked for Mobile
+          isDesktop
+              ? SizedBox(
+                  height: 720,
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Left Queue List Column
+                      SizedBox(
+                        width: 380,
+                        child: ListView.builder(
+                          itemCount: orders.length,
+                          itemBuilder: (ctx, index) {
+                            final order = orders[index];
+                            final isSelected = selectedOrder?.id == order.id;
+                            return Padding(
+                              padding: const EdgeInsets.only(bottom: 10),
+                              child: PharmacyCard(
+                                padding: const EdgeInsets.all(12),
+                                border: Border.all(
+                                  color: isSelected
+                                      ? PharmacyColors.primary
+                                      : PharmacyColors.border,
+                                  width: isSelected ? 2.0 : 1.0,
+                                ),
+                                child: InkWell(
+                                  onTap: () =>
+                                      _controller.selectOrder(order),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Text(
+                                            order.orderNumber,
+                                            style: PharmacyTypography.subtitle
+                                                .copyWith(
+                                                    fontWeight:
+                                                        FontWeight.bold),
+                                          ),
+                                          PharmacyStatusChip(
+                                              status: order.status, compact: true),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 6),
+                                      Text(
+                                        order.customer?.fullName ??
+                                            'Walk-in Customer',
+                                        style: PharmacyTypography.caption
+                                            .copyWith(
+                                                color: PharmacyColors.text),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Text(
+                                            '${order.items.length} items • ${order.displayFulfillment}',
+                                            style: PharmacyTypography.tiny,
+                                          ),
+                                          Text(
+                                            '₹ ${order.payableAmount.toStringAsFixed(2)}',
+                                            style: PharmacyTypography.caption
+                                                .copyWith(
+                                                    fontWeight:
+                                                        FontWeight.bold,
+                                                    color: PharmacyColors
+                                                        .navy),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 16),
 
-              return PharmacyOrderCard(
-                order: order,
-                onTap: () => _openOrderDetail(order),
-                primaryActionLabel: primaryLabel,
-                isActionLoading: _controller.isOrderUpdating(order.id),
-                onPrimaryAction: (primaryLabel != null && nextStatus != null)
-                    ? () => _controller.updateOrderStatus(
-                          orderId: order.id,
-                          nextStatus: nextStatus,
-                        )
-                    : null,
-              );
-            },
-          ),
+                      // Right Selected Order Detail Workspace
+                      Expanded(
+                        child: selectedOrder != null
+                            ? PharmacyFulfillmentDetailView(
+                                order: selectedOrder,
+                              )
+                            : const PharmacyEmptyState(
+                                title: 'Select an order',
+                                subtitle:
+                                    'Click an order on the left to view fulfillment details.',
+                              ),
+                      ),
+                    ],
+                  ),
+                )
+              : ListView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: orders.length,
+                  itemBuilder: (ctx, index) {
+                    final order = orders[index];
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 10),
+                      child: PharmacyCard(
+                        padding: const EdgeInsets.all(14),
+                        child: InkWell(
+                          onTap: () => _openMobileOrderDetail(order),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    order.orderNumber,
+                                    style: PharmacyTypography.subtitle
+                                        .copyWith(fontWeight: FontWeight.bold),
+                                  ),
+                                  PharmacyStatusChip(status: order.status),
+                                ],
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                order.customer?.fullName ??
+                                    'Walk-in Customer',
+                                style: PharmacyTypography.caption
+                                    .copyWith(color: PharmacyColors.text),
+                              ),
+                              const SizedBox(height: 4),
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    '${order.items.length} items • ${order.displayFulfillment}',
+                                    style: PharmacyTypography.tiny,
+                                  ),
+                                  Text(
+                                    '₹ ${order.payableAmount.toStringAsFixed(2)}',
+                                    style: PharmacyTypography.caption.copyWith(
+                                        fontWeight: FontWeight.bold,
+                                        color: PharmacyColors.navy),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
         ],
       ],
     );

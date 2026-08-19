@@ -745,5 +745,113 @@ export class PharmacyController {
     };
   }
 
+  @RequirePermissions('providers.update')
+  @Patch('pharmacy/orders/:id/items/:itemId')
+  async updateOrderItemFulfillment(
+    @Param('id') id: string,
+    @Param('itemId') itemId: string,
+    @Body() body: any,
+    @CurrentPrincipal() principal?: ShieldPrincipal,
+  ) {
+    return {
+      success: true,
+      message: 'Item fulfillment decision updated.',
+      data: await this.pharmacyService.updateOrderItemFulfillment(
+        this.parseId(id, 'Order ID'),
+        this.parseId(itemId, 'Item ID'),
+        body,
+        principal,
+      ),
+    };
+  }
 
+  @RequirePermissions('providers.update')
+  @Patch('pharmacy/orders/:id/chronic')
+  async toggleChronicOrder(
+    @Param('id') id: string,
+    @Body() body: { isChronic: boolean; repeatIntervalDays?: number },
+    @CurrentPrincipal() principal?: ShieldPrincipal,
+  ) {
+    return {
+      success: true,
+      message: 'Chronic order status updated.',
+      data: await this.pharmacyService.toggleChronicOrder(
+        this.parseId(id, 'Order ID'),
+        body.isChronic,
+        body.repeatIntervalDays,
+        principal,
+      ),
+    };
+  }
+
+  @RequirePermissions('providers.update')
+  @Post('pharmacy/orders/:id/notes')
+  async savePharmacistNotes(
+    @Param('id') id: string,
+    @Body() body: { notes: string },
+    @CurrentPrincipal() principal?: ShieldPrincipal,
+  ) {
+    return {
+      success: true,
+      message: 'Pharmacist notes saved successfully.',
+      data: await this.pharmacyService.savePharmacistNotes(
+        this.parseId(id, 'Order ID'),
+        body.notes,
+        principal,
+      ),
+    };
+  }
+
+  @RequirePermissions('providers.update')
+  @Post('pharmacy/orders/:id/request-customer-confirmation')
+  async requestCustomerConfirmation(
+    @Param('id') id: string,
+    @Body() body: { reason?: string },
+    @CurrentPrincipal() principal?: ShieldPrincipal,
+  ) {
+    return {
+      success: true,
+      message: 'Customer confirmation request triggered.',
+      data: await this.pharmacyService.requestCustomerConfirmation(
+        this.parseId(id, 'Order ID'),
+        body.reason,
+        principal,
+      ),
+    };
+  }
+
+  @RequirePermissions('providers.update')
+  @Post('pharmacy/orders/:id/invoice')
+  async uploadOrderInvoice(
+    @Param('id') id: string,
+    @Body() body: { invoiceUrl: string; invoiceFileName?: string },
+    @CurrentPrincipal() principal?: ShieldPrincipal,
+  ) {
+    return {
+      success: true,
+      message: 'Order invoice metadata uploaded successfully.',
+      data: await this.pharmacyService.uploadOrderInvoice(
+        this.parseId(id, 'Order ID'),
+        body.invoiceUrl,
+        body.invoiceFileName,
+        principal,
+      ),
+    };
+  }
+
+  @RequirePermissions('providers.update')
+  @Post('pharmacy/orders/:id/send-invoice')
+  async sendOrderInvoice(
+    @Param('id') id: string,
+    @CurrentPrincipal() principal?: ShieldPrincipal,
+  ) {
+    return {
+      success: true,
+      message: 'Order invoice dispatched to customer.',
+      data: await this.pharmacyService.sendOrderInvoice(
+        this.parseId(id, 'Order ID'),
+        principal,
+      ),
+    };
+  }
 }

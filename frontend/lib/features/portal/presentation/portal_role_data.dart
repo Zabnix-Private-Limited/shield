@@ -416,6 +416,16 @@ PortalRoleData portalDataForRole(SHIELDRole role) {
             title: 'Order History',
             summary: 'Completed and historical orders.',
           ),
+          _section(
+            'profile',
+            title: 'Profile',
+            summary: 'Pharmacy provider account profile.',
+          ),
+          _section(
+            'settings',
+            title: 'Settings',
+            summary: 'Pharmacy operational settings.',
+          ),
         ],
       );
     case SHIELDRole.clinicStaff:

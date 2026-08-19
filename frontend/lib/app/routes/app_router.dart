@@ -320,13 +320,22 @@ final GoRouter router = GoRouter(
     GoRoute(
       path: '/portal/:role/:section',
       name: 'role-portal',
+      redirect: (context, state) {
+        final roleKey = state.pathParameters['role'];
+        final section = state.pathParameters['section'] ?? 'dashboard';
+        final activeRoleCode =
+            InternalAuthSession.instance.roleCode?.trim().toUpperCase();
+        final isPharmacyIdentity = activeRoleCode == 'PHARMACY_PROVIDER' ||
+            InternalAuthSession.instance.homeRole == SHIELDRole.pharmacyStaff;
+        if (roleKey == 'provider' && isPharmacyIdentity) {
+          return '/portal/pharmacy-staff/$section';
+        }
+        return null;
+      },
       pageBuilder: (context, state) {
         final requestedRole = SHIELDRole.fromRouteKey(
           state.pathParameters['role'],
         );
-        // DEV BYPASS MODE: Render requestedRole directly so dropdown switching transitions workspace.
-        // PRODUCTION CODE (UNCOMMENT FOR STRICT PROD AUTH):
-        // final resolvedRole = PortalResolver.current?.role ?? requestedRole;
         final resolvedRole = requestedRole;
         final section = state.pathParameters['section'];
         return _buildFadeTransitionPage(

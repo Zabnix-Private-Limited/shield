@@ -14196,3 +14196,62 @@ Completed source-code corrections for SHIELD Pharmacy Order History contract ali
 - Direct Database Mutations: NO
 - Prisma DDL/Migrations: NO
 - Non-Pharmacy UI: Unmodified (NO)
+
+
+## Pharmacy UAT Defect Fixes (Owner UAT Video Corrections)
+**Date**: 2026-08-19 12:30:40 IST
+**Dev**: Antigravity AI
+
+### Overview
+Fixed three specific runtime defects identified during the latest manual Pharmacy UAT video:
+1. Fail-closed role check preventing Pharmacy sessions from invoking Agent workspace/customer APIs.
+2. Canonical Pharmacy route family alignment (/portal/pharmacy-staff/dashboard) with legacy route redirects for Pharmacy identity.
+3. RenderFlex 274px overflow fix during loading/bootstrap state by wrapping root section skeleton in scrollable page frame.
+
+### Frontend Files
+- lib/shared/services/api_service.dart
+- lib/features/agent/shared/presentation/controllers/agent_portal_controller.dart
+- lib/shared/widgets/global_role_dropdown.dart
+- lib/shared/models/shield_role.dart
+- lib/app/routes/app_router.dart
+- lib/features/portal/presentation/portal_role_data.dart
+- lib/features/portal/presentation/screens/portal_shell.dart
+
+- lib/shared/services/api_service.dart: Added missing internal_auth_session.dart import for InternalAuthSession fail-closed role check.
+
+
+## Pharmacy Complete Production Implementation (Canonical Design System & Advanced Order Fulfillment)
+**Date**: 2026-08-19 13:28:00 IST
+**Dev**: Antigravity AI
+
+### Overview
+Transformed the SHIELD Pharmacy Portal into a complete production-grade Pharmacy operations product based on the approved canonical design system package (Design System/Pharmacy Design/):
+1. **Design Tokens & Reusable Component Foundation**: Created PharmacyColors, PharmacySpacing, PharmacyRadius, PharmacyTypography, PharmacyBreakpoints, PharmacyMetricCard, PharmacyStatusChip, PharmacyPrimaryButton, PharmacySecondaryButton, PharmacyDangerButton, PharmacyQuantityStepper, PharmacyCard, PharmacyAlertBanner, and PharmacyEmptyState.
+2. **Dashboard Complete Redesign**: Interactive KPI cards (New Orders, Preparing, Ready for Pickup, Out for Delivery, Pending Payments, Approved Today, Completed Today), payment configuration banner alert, clickable recent orders queue, and clickable recent payment requests.
+3. **Advanced Orders Workspace & Per-Item Fulfillment**: Built split-pane desktop layout with order queue list on left and selected order fulfillment workspace on right. Supported per-item stock verification (FULL_STOCK, LOW_STOCK, OUT_OF_STOCK), item approval/rejection/substitution modal, chronic order tagging, pharmacist notes, bill/invoice upload & send invoice, customer confirmation request, and contextual order action bar.
+4. **Payments & Payment Details Redesign**: Re-styled PharmacyPaymentsScreen and PharmacyPaymentDetailsScreen with design system tokens and cards while preserving atomic PENDING -> APPROVED financial ledger invariants and same-origin authenticated QR delivery streams.
+5. **Order History Redesign**: Applied design system cards, date range filter chips (All Time, Today, Last 7 Days, Last 30 Days, This Month), status chips, search, and pagination.
+6. **Backend Controller & Service Extensions**: Added NestJS endpoints and methods in PharmacyController and PharmacyService for per-item fulfillment decisions, chronic order tagging, pharmacist notes, customer confirmation, and invoice management.
+7. **Database Governance & Manual SQL**: Generated ackend/prisma/manual-sql/20260819_pharmacy_advanced_fulfillment.sql and 20260819_pharmacy_advanced_fulfillment_verify.sql for GIN index optimization. current_schema.md remained unmodified.
+
+### Frontend Files
+- lib/features/provider/pharmacy/design/pharmacy_colors.dart
+- lib/features/provider/pharmacy/design/pharmacy_spacing.dart
+- lib/features/provider/pharmacy/design/pharmacy_typography.dart
+- lib/features/provider/pharmacy/presentation/widgets/pharmacy_metric_card.dart
+- lib/features/provider/pharmacy/presentation/widgets/pharmacy_status_chip.dart
+- lib/features/provider/pharmacy/presentation/widgets/pharmacy_components.dart
+- lib/features/provider/pharmacy/presentation/widgets/pharmacy_fulfillment_detail_view.dart
+- lib/features/provider/dashboard/presentation/screens/pharmacy_dashboard_view.dart
+- lib/features/provider/pharmacy/domain/models/pharmacy_order_model.dart
+- lib/features/provider/pharmacy/presentation/screens/pharmacy_orders_screen.dart
+- lib/features/provider/pharmacy/presentation/screens/pharmacy_payments_screen.dart
+- lib/features/provider/pharmacy/presentation/screens/pharmacy_payment_details_screen.dart
+- lib/features/provider/pharmacy/presentation/screens/pharmacy_order_history_screen.dart
+
+### Backend Files
+- src/pharmacy/pharmacy.controller.ts
+- src/pharmacy/pharmacy.service.ts
+- prisma/manual-sql/20260819_pharmacy_advanced_fulfillment.sql
+- prisma/manual-sql/20260819_pharmacy_advanced_fulfillment_verify.sql
+SHIELD Pharmacy Portal — Design Token Fix (PharmacyRadius)SHIELD Pharmacy Portal — Source-Level End-to-End Audit & Fulfillment WiringSHIELD Pharmacy Portal — Responsive App Shell & Normalized DB Persistence Refinement

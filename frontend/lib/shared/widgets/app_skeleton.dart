@@ -63,21 +63,23 @@ class AppPageSkeleton extends StatelessWidget {
                 color: AppColors.white,
                 border: Border(right: BorderSide(color: AppColors.divider)),
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: const [
-                  AppSkeletonBlock(height: 30, width: 120),
-                  SizedBox(height: 10),
-                  AppSkeletonBlock(height: 18, width: 140),
-                  SizedBox(height: 24),
-                  AppSkeletonBlock(height: 60),
-                  SizedBox(height: 10),
-                  AppSkeletonBlock(height: 60),
-                  SizedBox(height: 10),
-                  AppSkeletonBlock(height: 60),
-                  SizedBox(height: 10),
-                  AppSkeletonBlock(height: 60),
-                ],
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: const [
+                    AppSkeletonBlock(height: 30, width: 120),
+                    SizedBox(height: 10),
+                    AppSkeletonBlock(height: 18, width: 140),
+                    SizedBox(height: 24),
+                    AppSkeletonBlock(height: 60),
+                    SizedBox(height: 10),
+                    AppSkeletonBlock(height: 60),
+                    SizedBox(height: 10),
+                    AppSkeletonBlock(height: 60),
+                    SizedBox(height: 10),
+                    AppSkeletonBlock(height: 60),
+                  ],
+                ),
               ),
             ),
             Expanded(

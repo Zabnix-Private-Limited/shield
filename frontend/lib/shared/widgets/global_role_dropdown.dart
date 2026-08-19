@@ -44,7 +44,7 @@ class GlobalRoleDropdown extends StatelessWidget {
       key: 'pharmacy',
       label: 'Pharmacist',
       icon: Icons.local_pharmacy_outlined,
-      route: '/portal/provider/dashboard',
+      route: '/portal/pharmacy-staff/dashboard',
       backendRoleCode: 'PHARMACY_PROVIDER',
     ),
     GlobalRoleOption(

@@ -231,7 +231,24 @@ class _PortalShellState extends State<PortalShell> {
           ),
         );
       }
-      return const AppPortalSectionSkeleton();
+      return Scaffold(
+        backgroundColor: AppColors.lightGray,
+        body: SafeArea(
+          child: SingleChildScrollView(
+            physics: const BouncingScrollPhysics(),
+            padding: EdgeInsets.fromLTRB(
+              AppResponsive.horizontalPadding(context),
+              20,
+              AppResponsive.horizontalPadding(context),
+              24,
+            ),
+            child: const AppPageFrame(
+              maxWidth: 1240,
+              child: AppPortalSectionSkeleton(),
+            ),
+          ),
+        ),
+      );
     }
 
     if (_error != null || _sectionData == null) {
@@ -333,62 +350,315 @@ class _PortalShellState extends State<PortalShell> {
                   );
                 },
               )
-            : LayoutBuilder(
-                builder: (context, constraints) {
-                  final isCompactScreen = constraints.maxWidth < 1024;
-                  if (isCompactScreen) {
-                    return Scaffold(
-                      backgroundColor: AppColors.lightGray,
-                      drawer: Drawer(
-                        child: SafeArea(
-                          child: _InternalPortalSidebar(
-                            portal: portal,
-                            activeSectionKey: activeKey,
-                            collapsed: false,
-                            inDrawer: true,
-                          ),
-                        ),
-                      ),
-                      body: Builder(
-                        builder: (scaffoldContext) => _RoleContent(
-                          portal: portal,
-                          section: section,
-                          customerId: widget.customerId,
-                          onSidebarToggle: () =>
-                              Scaffold.of(scaffoldContext).openDrawer(),
-                          isSidebarExpanded: false,
-                        ),
-                      ),
-                    );
-                  }
-
-                  return Row(
-                    children: [
-                      _InternalPortalSidebar(
-                        portal: portal,
-                        activeSectionKey: activeKey,
-                        collapsed: !_isInternalSidebarExpanded,
-                        inDrawer: false,
-                      ),
-                      Expanded(
-                        child: Scaffold(
-                          backgroundColor: AppColors.lightGray,
-                          body: _RoleContent(
-                            portal: portal,
-                            section: section,
-                            customerId: widget.customerId,
-                            onSidebarToggle: _toggleInternalSidebar,
-                            isSidebarExpanded: _isInternalSidebarExpanded,
-                          ),
-                        ),
-                      ),
-                    ],
-                  );
-                },
+            : _PharmacyPortalResponsiveShell(
+                portal: portal,
+                section: section,
+                activeSectionKey: activeKey,
+                customerId: widget.customerId,
+                isSidebarExpanded: _isInternalSidebarExpanded,
+                onSidebarToggle: _toggleInternalSidebar,
               ),
       ),
     );
   }
+}
+
+class _PharmacyPortalResponsiveShell extends StatelessWidget {
+  final PortalRoleData portal;
+  final PortalSectionData section;
+  final String activeSectionKey;
+  final String? customerId;
+  final bool isSidebarExpanded;
+  final VoidCallback onSidebarToggle;
+
+  const _PharmacyPortalResponsiveShell({
+    required this.portal,
+    required this.section,
+    required this.activeSectionKey,
+    this.customerId,
+    required this.isSidebarExpanded,
+    required this.onSidebarToggle,
+  });
+
+  void _showMoreMenu(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        decoration: const BoxDecoration(
+          color: AppColors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: Text(
+                'Pharmacy Staff Menu',
+                style: AppTypography.h4.copyWith(color: AppColors.shieldNavy),
+              ),
+            ),
+            const SizedBox(height: 12),
+            ListTile(
+              leading: const Icon(Icons.account_balance_wallet_outlined,
+                  color: AppColors.shieldNavy),
+              title: const Text('Payment Details'),
+              onTap: () {
+                Navigator.pop(ctx);
+                context.go('/portal/pharmacy-staff/payment-details');
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.history_rounded,
+                  color: AppColors.shieldNavy),
+              title: const Text('Order History'),
+              onTap: () {
+                Navigator.pop(ctx);
+                context.go('/portal/pharmacy-staff/history');
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.person_outline_rounded,
+                  color: AppColors.shieldNavy),
+              title: const Text('My Profile'),
+              onTap: () {
+                Navigator.pop(ctx);
+                context.go('/portal/pharmacy-staff/profile');
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.settings_outlined,
+                  color: AppColors.shieldNavy),
+              title: const Text('Settings'),
+              onTap: () {
+                Navigator.pop(ctx);
+                context.go('/portal/pharmacy-staff/settings');
+              },
+            ),
+            const Divider(),
+            ListTile(
+              leading: const Icon(Icons.logout_rounded, color: Colors.red),
+              title: const Text('Sign Out', style: TextStyle(color: Colors.red)),
+              onTap: () async {
+                Navigator.pop(ctx);
+                await InternalAuthSession.instance.clearSession();
+                if (context.mounted) {
+                  context.go('/');
+                }
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  int _getBottomNavIndex(String activeKey) {
+    switch (activeKey) {
+      case 'dashboard':
+        return 0;
+      case 'orders':
+      case 'queue':
+        return 1;
+      case 'payments':
+        return 2;
+      default:
+        return 3;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final mediaWidth = MediaQuery.of(context).size.width;
+    final isLandscape =
+        MediaQuery.of(context).orientation == Orientation.landscape;
+    final isPharmacy = portal.role == SHIELDRole.pharmacyStaff ||
+        InternalAuthSession.instance.roleCode == 'PHARMACY_PROVIDER';
+
+    // 1. Desktop Mode (width >= 1024): Fixed Sidebar + Scrollable Workspace
+    if (mediaWidth >= 1024) {
+      return Row(
+        children: [
+          _InternalPortalSidebar(
+            portal: portal,
+            activeSectionKey: activeSectionKey,
+            collapsed: !isSidebarExpanded,
+            inDrawer: false,
+          ),
+          Expanded(
+            child: Scaffold(
+              backgroundColor: AppColors.lightGray,
+              body: _RoleContent(
+                portal: portal,
+                section: section,
+                customerId: customerId,
+                onSidebarToggle: onSidebarToggle,
+                isSidebarExpanded: isSidebarExpanded,
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+
+    // 2. Landscape Mode (Tablet/Phone Landscape < 1024): Navigation Rail + Workspace
+    if (isLandscape) {
+      final selectedRailIndex = _getBottomNavIndex(activeSectionKey);
+      return Row(
+        children: [
+          NavigationRail(
+            selectedIndex: selectedRailIndex,
+            backgroundColor: AppColors.white,
+            selectedIconTheme:
+                const IconThemeData(color: AppColors.shieldTeal),
+            selectedLabelTextStyle: const TextStyle(
+              color: AppColors.shieldTeal,
+              fontWeight: FontWeight.bold,
+              fontSize: 12,
+            ),
+            unselectedIconTheme:
+                const IconThemeData(color: AppColors.shieldNavy),
+            unselectedLabelTextStyle: const TextStyle(
+              color: AppColors.shieldNavy,
+              fontSize: 12,
+            ),
+            onDestinationSelected: (idx) {
+              if (idx == 0) {
+                context.go('/portal/pharmacy-staff/dashboard');
+              } else if (idx == 1) {
+                context.go('/portal/pharmacy-staff/orders');
+              } else if (idx == 2) {
+                context.go('/portal/pharmacy-staff/payments');
+              } else if (idx == 3) {
+                _showMoreMenu(context);
+              }
+            },
+            labelType: NavigationRailLabelType.all,
+            destinations: const [
+              NavigationRailDestination(
+                icon: Icon(Icons.space_dashboard_outlined),
+                selectedIcon: Icon(Icons.space_dashboard_rounded),
+                label: Text('Dashboard'),
+              ),
+              NavigationRailDestination(
+                icon: Icon(Icons.shopping_bag_outlined),
+                selectedIcon: Icon(Icons.shopping_bag_rounded),
+                label: Text('Orders'),
+              ),
+              NavigationRailDestination(
+                icon: Icon(Icons.payments_outlined),
+                selectedIcon: Icon(Icons.payments_rounded),
+                label: Text('Payments'),
+              ),
+              NavigationRailDestination(
+                icon: Icon(Icons.grid_view_rounded),
+                selectedIcon: Icon(Icons.grid_view_rounded),
+                label: Text('More'),
+              ),
+            ],
+          ),
+          const VerticalDivider(thickness: 1, width: 1),
+          Expanded(
+            child: Scaffold(
+              backgroundColor: AppColors.lightGray,
+              body: _RoleContent(
+                portal: portal,
+                section: section,
+                customerId: customerId,
+                onSidebarToggle: onSidebarToggle,
+                isSidebarExpanded: false,
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+
+    // 3. Portrait Mode (Phone/Tablet Portrait < 1024): Fixed Bottom Navigation
+    if (isPharmacy) {
+      final selectedNavIndex = _getBottomNavIndex(activeSectionKey);
+      return Scaffold(
+        backgroundColor: AppColors.lightGray,
+        body: _RoleContent(
+          portal: portal,
+          section: section,
+          customerId: customerId,
+          onSidebarToggle: onSidebarToggle,
+          isSidebarExpanded: false,
+        ),
+        bottomNavigationBar: BottomNavigationBar(
+          currentIndex: selectedNavIndex,
+          type: BottomNavigationBarType.fixed,
+          backgroundColor: AppColors.white,
+          selectedItemColor: AppColors.shieldTeal,
+          unselectedItemColor: AppColors.shieldNavy,
+          selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold),
+          elevation: 8,
+          onTap: (idx) {
+            if (idx == 0) {
+              context.go('/portal/pharmacy-staff/dashboard');
+            } else if (idx == 1) {
+              context.go('/portal/pharmacy-staff/orders');
+            } else if (idx == 2) {
+              context.go('/portal/pharmacy-staff/payments');
+            } else if (idx == 3) {
+              _showMoreMenu(context);
+            }
+          },
+          items: const [
+            BottomNavigationBarItem(
+              icon: Icon(Icons.space_dashboard_outlined),
+              activeIcon: Icon(Icons.space_dashboard_rounded),
+              label: 'Dashboard',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.shopping_bag_outlined),
+              activeIcon: Icon(Icons.shopping_bag_rounded),
+              label: 'Orders',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.payments_outlined),
+              activeIcon: Icon(Icons.payments_rounded),
+              label: 'Payments',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.grid_view_rounded),
+              activeIcon: Icon(Icons.grid_view_rounded),
+              label: 'More',
+            ),
+          ],
+        ),
+      );
+    }
+
+    // Generic Internal Fallback
+    return Scaffold(
+      backgroundColor: AppColors.lightGray,
+      drawer: Drawer(
+        child: SafeArea(
+          child: _InternalPortalSidebar(
+            portal: portal,
+            activeSectionKey: activeSectionKey,
+            collapsed: false,
+            inDrawer: true,
+          ),
+        ),
+      ),
+      body: Builder(
+        builder: (scaffoldContext) => _RoleContent(
+          portal: portal,
+          section: section,
+          customerId: customerId,
+          onSidebarToggle: () => Scaffold.of(scaffoldContext).openDrawer(),
+          isSidebarExpanded: false,
+        ),
+      ),
+    );
+  }
+}
 }
 
 class _EditablePrescriptionItem {
@@ -705,7 +975,7 @@ class _RoleContent extends StatelessWidget {
     } else if (isAgentRole) {
       content = _buildAgentModuleContent(section);
     } else if (isPharmacyRole) {
-      content = _buildPharmacyModuleContent(section);
+      content = _buildPharmacyModuleContent(context, section);
     } else if (isProviderRole) {
       content = _buildProviderModuleContent(section);
     } else if (isCardUtilization) {
@@ -802,7 +1072,7 @@ class _RoleContent extends StatelessWidget {
     );
   }
 
-  Widget _buildPharmacyModuleContent(PortalSectionData section) {
+  Widget _buildPharmacyModuleContent(BuildContext context, PortalSectionData section) {
     switch (section.rendererKey ?? section.moduleId ?? section.key) {
       case 'orders':
         return const PharmacyOrdersScreen();
@@ -813,7 +1083,10 @@ class _RoleContent extends StatelessWidget {
       case 'history':
         return const PharmacyOrderHistoryScreen();
       case 'dashboard':
-        return const PharmacyDashboardView();
+        return PharmacyDashboardView(
+          onNavigateToSection: (sectionKey) =>
+              context.go('/portal/pharmacy-staff/$sectionKey'),
+        );
       case 'queue':
         return const PharmacyOrdersScreen();
       case 'profile':
@@ -821,7 +1094,10 @@ class _RoleContent extends StatelessWidget {
       case 'settings':
         return const ProviderSettingsScreen();
       default:
-        return const PharmacyDashboardView();
+        return PharmacyDashboardView(
+          onNavigateToSection: (sectionKey) =>
+              context.go('/portal/pharmacy-staff/$sectionKey'),
+        );
     }
   }
 

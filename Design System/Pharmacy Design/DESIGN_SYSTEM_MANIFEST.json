@@ -1,0 +1,24 @@
+{
+  "package": "SHIELD Pharmacy Design System",
+  "version": "1.0",
+  "reference_date": "2026-08-19",
+  "canonical_route_family": "/portal/pharmacy-staff/",
+  "font": "Inter",
+  "primary": "#0B9C78",
+  "navy": "#10213F",
+  "canvas": "#F7F9FC",
+  "surface": "#FFFFFF",
+  "status": {
+    "success": "#12B76A",
+    "warning": "#F79009",
+    "danger": "#F04438",
+    "info": "#2E90FA",
+    "purple": "#7F56D9"
+  },
+  "breakpoints": {
+    "mobile_max": 599,
+    "tablet_max": 1023,
+    "desktop_min": 1024,
+    "wide_min": 1440
+  }
+}

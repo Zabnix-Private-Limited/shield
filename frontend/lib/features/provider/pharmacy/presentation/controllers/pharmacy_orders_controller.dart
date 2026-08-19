@@ -101,4 +101,145 @@ class PharmacyOrdersController extends ChangeNotifier {
       notifyListeners();
     }
   }
+
+  void _updateLocalOrder(String orderId, PharmacyOrderModel updated) {
+    final index = _orders.indexWhere((o) => o.id == orderId);
+    if (index != -1) {
+      _orders[index] = updated;
+    }
+    if (_selectedOrder?.id == orderId) {
+      _selectedOrder = updated;
+    }
+  }
+
+  Future<bool> updateOrderItemFulfillment({
+    required String orderId,
+    required String itemId,
+    double? fulfillQuantity,
+    String? stockStatus,
+    String? decisionStatus,
+    String? substituteName,
+    double? substituteUnitPrice,
+    String? decisionReason,
+  }) async {
+    if (_updatingOrderIds.contains(orderId)) return false;
+    _updatingOrderIds.add(orderId);
+    notifyListeners();
+
+    try {
+      final updated = await _repository.updateOrderItemFulfillment(
+        orderId: orderId,
+        itemId: itemId,
+        fulfillQuantity: fulfillQuantity,
+        stockStatus: stockStatus,
+        decisionStatus: decisionStatus,
+        substituteName: substituteName,
+        substituteUnitPrice: substituteUnitPrice,
+        decisionReason: decisionReason,
+      );
+      _updateLocalOrder(orderId, updated);
+      return true;
+    } catch (e) {
+      _error = e.toString();
+      return false;
+    } finally {
+      _updatingOrderIds.remove(orderId);
+      notifyListeners();
+    }
+  }
+
+  Future<bool> toggleChronicOrder({
+    required String orderId,
+    required bool isChronic,
+  }) async {
+    if (_updatingOrderIds.contains(orderId)) return false;
+    _updatingOrderIds.add(orderId);
+    notifyListeners();
+
+    try {
+      final updated = await _repository.toggleChronicOrder(
+        orderId: orderId,
+        isChronic: isChronic,
+      );
+      _updateLocalOrder(orderId, updated);
+      return true;
+    } catch (e) {
+      _error = e.toString();
+      return false;
+    } finally {
+      _updatingOrderIds.remove(orderId);
+      notifyListeners();
+    }
+  }
+
+  Future<bool> savePharmacistNotes({
+    required String orderId,
+    required String notes,
+  }) async {
+    if (_updatingOrderIds.contains(orderId)) return false;
+    _updatingOrderIds.add(orderId);
+    notifyListeners();
+
+    try {
+      final updated = await _repository.savePharmacistNotes(
+        orderId: orderId,
+        notes: notes,
+      );
+      _updateLocalOrder(orderId, updated);
+      return true;
+    } catch (e) {
+      _error = e.toString();
+      return false;
+    } finally {
+      _updatingOrderIds.remove(orderId);
+      notifyListeners();
+    }
+  }
+
+  Future<bool> uploadOrderInvoice({
+    required String orderId,
+    required String invoiceUrl,
+    String? invoiceFileName,
+  }) async {
+    if (_updatingOrderIds.contains(orderId)) return false;
+    _updatingOrderIds.add(orderId);
+    notifyListeners();
+
+    try {
+      final updated = await _repository.uploadOrderInvoice(
+        orderId: orderId,
+        invoiceUrl: invoiceUrl,
+        invoiceFileName: invoiceFileName,
+      );
+      _updateLocalOrder(orderId, updated);
+      return true;
+    } catch (e) {
+      _error = e.toString();
+      return false;
+    } finally {
+      _updatingOrderIds.remove(orderId);
+      notifyListeners();
+    }
+  }
+
+  Future<bool> sendOrderInvoice({
+    required String orderId,
+  }) async {
+    if (_updatingOrderIds.contains(orderId)) return false;
+    _updatingOrderIds.add(orderId);
+    notifyListeners();
+
+    try {
+      final updated = await _repository.sendOrderInvoice(orderId: orderId);
+      _updateLocalOrder(orderId, updated);
+      return true;
+    } catch (e) {
+      _error = e.toString();
+      return false;
+    } finally {
+      _updatingOrderIds.remove(orderId);
+      notifyListeners();
+    }
+  }
 }
+

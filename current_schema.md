@@ -1108,8 +1108,11 @@ CREATE UNIQUE INDEX "provider_profile_branch_assignments_pkey" ON "provider_prof
 CREATE UNIQUE INDEX "provider_profiles_pkey" ON "provider_profiles" ("id");
 CREATE UNIQUE INDEX "provider_profiles_user_id_key" ON "provider_profiles" ("user_id");
 CREATE UNIQUE INDEX "provider_profiles_uuid_key" ON "provider_profiles" ("uuid");
+CREATE INDEX "idx_purchase_items_metadata_gin" ON "purchase_items" USING gin ("metadata");
 CREATE UNIQUE INDEX "purchase_items_pkey" ON "purchase_items" ("id");
 CREATE INDEX "idx_purchases_appointment" ON "purchases" ("appointment_id");
+CREATE INDEX "idx_purchases_billing_snapshot_gin" ON "purchases" USING gin ("billing_snapshot");
+CREATE INDEX "idx_purchases_chronic" ON "purchases" ("(billing_snapshot ->> 'isChronic'::text)");
 CREATE INDEX "idx_purchases_kind" ON "purchases" ("purchase_kind");
 CREATE INDEX "idx_purchases_payment_status" ON "purchases" ("payment_status");
 CREATE UNIQUE INDEX "purchases_customer_invoice_key" ON "purchases" ("customer_id","invoice_number");
