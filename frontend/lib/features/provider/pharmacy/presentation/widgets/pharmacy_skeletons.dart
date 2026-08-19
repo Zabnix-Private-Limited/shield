@@ -311,16 +311,30 @@ class PharmacyProfileSkeleton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDesktop = MediaQuery.of(context).size.width >= 1024;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const PharmacySkeletonBlock(height: 120),
+        const PharmacySkeletonBlock(height: 80),
         const SizedBox(height: 16),
-        const PharmacySkeletonBlock(height: 160),
-        const SizedBox(height: 16),
-        const PharmacySkeletonBlock(height: 140),
-        const SizedBox(height: 16),
-        const PharmacySkeletonBlock(height: 140),
+        if (isDesktop)
+          const Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SizedBox(width: 320, child: PharmacySkeletonBlock(height: 380)),
+              SizedBox(width: 16),
+              Expanded(child: PharmacySkeletonBlock(height: 380)),
+              SizedBox(width: 16),
+              SizedBox(width: 300, child: PharmacySkeletonBlock(height: 380)),
+            ],
+          )
+        else ...[
+          const PharmacySkeletonBlock(height: 180),
+          const SizedBox(height: 16),
+          const PharmacySkeletonBlock(height: 220),
+          const SizedBox(height: 16),
+          const PharmacySkeletonBlock(height: 180),
+        ],
       ],
     );
   }
@@ -331,16 +345,39 @@ class PharmacySettingsSkeleton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDesktop = MediaQuery.of(context).size.width >= 1024;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const PharmacySkeletonBlock(height: 60),
+        const PharmacySkeletonBlock(height: 80),
         const SizedBox(height: 16),
-        const PharmacySkeletonBlock(height: 180),
-        const SizedBox(height: 16),
-        const PharmacySkeletonBlock(height: 180),
-        const SizedBox(height: 16),
-        const PharmacySkeletonBlock(height: 120),
+        if (isDesktop) ...[
+          const Row(
+            children: [
+              Expanded(child: PharmacySkeletonBlock(height: 180)),
+              SizedBox(width: 16),
+              Expanded(child: PharmacySkeletonBlock(height: 180)),
+              SizedBox(width: 16),
+              Expanded(child: PharmacySkeletonBlock(height: 180)),
+            ],
+          ),
+          const SizedBox(height: 16),
+          const Row(
+            children: [
+              Expanded(child: PharmacySkeletonBlock(height: 180)),
+              SizedBox(width: 16),
+              Expanded(child: PharmacySkeletonBlock(height: 180)),
+              SizedBox(width: 16),
+              Expanded(child: PharmacySkeletonBlock(height: 180)),
+            ],
+          ),
+        ] else ...[
+          const PharmacySkeletonBlock(height: 160),
+          const SizedBox(height: 16),
+          const PharmacySkeletonBlock(height: 160),
+          const SizedBox(height: 16),
+          const PharmacySkeletonBlock(height: 160),
+        ],
       ],
     );
   }

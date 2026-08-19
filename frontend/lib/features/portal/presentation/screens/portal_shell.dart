@@ -39,6 +39,8 @@ import '../../../provider/pharmacy/presentation/screens/pharmacy_orders_screen.d
 import 'package:shield/features/provider/pharmacy/presentation/screens/pharmacy_payment_details_screen.dart';
 import 'package:shield/features/provider/pharmacy/presentation/screens/pharmacy_payments_screen.dart';
 import 'package:shield/features/provider/pharmacy/presentation/screens/pharmacy_order_history_screen.dart';
+import 'package:shield/features/provider/pharmacy/presentation/screens/pharmacy_profile_screen.dart';
+import 'package:shield/features/provider/pharmacy/presentation/screens/pharmacy_settings_screen.dart';
 import '../../../provider/profile/presentation/screens/provider_profile_screen.dart';
 import '../../../provider/queue/presentation/screens/provider_queue_screen.dart';
 import '../../../provider/settings/presentation/screens/provider_settings_screen.dart';
@@ -1046,7 +1048,7 @@ class _RoleContent extends StatelessWidget {
       slivers: [
         SliverToBoxAdapter(
           child: AppPageFrame(
-            maxWidth: 1240,
+            maxWidth: portal.role == SHIELDRole.pharmacyStaff ? 1600 : 1240,
             padding: EdgeInsets.fromLTRB(
               AppResponsive.horizontalPadding(context),
               20,
@@ -1090,9 +1092,9 @@ class _RoleContent extends StatelessWidget {
       case 'queue':
         return const PharmacyOrdersScreen();
       case 'profile':
-        return const ProviderProfileScreen();
+        return const PharmacyProfileScreen();
       case 'settings':
-        return const ProviderSettingsScreen();
+        return const PharmacySettingsScreen();
       default:
         return PharmacyDashboardView(
           onNavigateToSection: (sectionKey) =>
@@ -1883,6 +1885,40 @@ class _AdminPortalNav extends StatelessWidget {
                         }
                         return Tooltip(message: section.title, child: tile);
                       }),
+                      if (!isCollapsedRail && portal.role == SHIELDRole.pharmacyStaff) ...[
+                        const SizedBox(height: 16),
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: PharmacyColors.primarySoft,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: PharmacyColors.primary.withValues(alpha: 0.3)),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  const Icon(Icons.help_outline_rounded, size: 16, color: PharmacyColors.primary),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    'Need help?',
+                                    style: AppTypography.caption.copyWith(
+                                      fontWeight: FontWeight.bold,
+                                      color: PharmacyColors.navy,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'Contact SHIELD Pharmacy Support 24/7',
+                                style: AppTypography.tiny.copyWith(color: PharmacyColors.textSecondary),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                 );

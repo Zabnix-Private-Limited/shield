@@ -445,3 +445,54 @@ class PharmacyEmptyState extends StatelessWidget {
     );
   }
 }
+
+class PharmacySwitchTile extends StatelessWidget {
+  final String title;
+  final String subtitle;
+  final bool value;
+  final ValueChanged<bool> onChanged;
+
+  const PharmacySwitchTile({
+    super.key,
+    required this.title,
+    required this.subtitle,
+    required this.value,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: PharmacyTypography.caption.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: PharmacyColors.navy,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                subtitle,
+                style: PharmacyTypography.caption.copyWith(
+                  color: PharmacyColors.textSecondary,
+                  fontSize: 11,
+                ),
+              ),
+            ],
+          ),
+        ),
+        Switch.adaptive(
+          value: value,
+          onChanged: onChanged,
+          activeTrackColor: PharmacyColors.primary,
+        ),
+      ],
+    );
+  }
+}
