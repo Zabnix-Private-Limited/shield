@@ -868,6 +868,9 @@ export class PharmacyService {
       ? String(snapshot.fulfillmentPreference)
       : null;
 
+    const isChronic = snapshot.isChronic === true || snapshot.isChronic === 'true';
+    const repeatIntervalDays = snapshot.repeatIntervalDays != null ? Number(snapshot.repeatIntervalDays) : 30;
+
     return {
       id: purchase.id.toString(),
       uuid: purchase.uuid,
@@ -876,6 +879,8 @@ export class PharmacyService {
       paymentStatus: purchase.paymentStatus ?? 'PENDING',
       orderSource: source,
       fulfillmentPreference,
+      isChronic,
+      repeatIntervalDays,
       customer: purchase.customer
         ? {
             id: purchase.customer.id.toString(),
