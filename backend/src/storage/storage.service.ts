@@ -208,4 +208,47 @@ export class StorageService {
     // return a raw filesystem/static path as though it were a secure URL.
     return null;
   }
+
+  async readObjectBuffer(
+    storagePath: string,
+  ): Promise<{ buffer: Buffer; contentType: string } | null> {
+    if (storagePath.startsWith('r2://') && this.r2Client) {
+      const prefix = `r2://${this.env.r2Bucket}/`;
+      const objectKey = storagePath.startsWith(prefix)
+        ? storagePath.slice(prefix.length)
+        : storagePath.replace(/^r2:\/\/[^/]+\//, '');
+
+      try {
+        const result = await this.r2Client.send(
+          new GetObjectCommand({
+            Bucket: this.env.r2Bucket,
+            Key: objectKey,
+          }),
+        );
+        if (!result.Body) return null;
+        const bytes = await result.Body.transformToByteArray();
+        return {
+          buffer: Buffer.from(bytes),
+          contentType: result.ContentType || 'image/png',
+        };
+      } catch (err) {
+        return null;
+      }
+    }
+
+    if (storagePath.startsWith('/uploads/')) {
+      const absolutePath = join(process.cwd(), storagePath);
+      try {
+        const { readFile } = await import('fs/promises');
+        const buffer = await readFile(absolutePath);
+        const ext = absolutePath.split('.').pop()?.toLowerCase();
+        const contentType =
+          ext === 'jpg' || ext === 'jpeg' ? 'image/jpeg' : 'image/png';
+        return { buffer, contentType };
+      } catch (err) {
+        return null;
+      }
+    }
+    return null;
+  }
 }

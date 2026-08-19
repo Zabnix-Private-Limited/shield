@@ -842,7 +842,7 @@ export class PharmacyService {
       lineTotal: item.totalPrice == null ? 0 : Number(item.totalPrice),
     }));
 
-    let source = 'MANUAL_ITEMS';
+    let source = 'UNKNOWN';
     if (purchase.purchaseKind === 'WELLNESS') {
       source = 'WELLNESS';
     } else if (
@@ -850,6 +850,12 @@ export class PharmacyService {
       snapshot.prescriptionDocumentId != null
     ) {
       source = 'PRESCRIPTION';
+    } else if (purchase.purchaseKind === 'MANUAL_ITEMS') {
+      source = 'MANUAL_ITEMS';
+    } else if (snapshot.orderSource) {
+      source = String(snapshot.orderSource).toUpperCase();
+    } else if (purchase.purchaseKind) {
+      source = String(purchase.purchaseKind).toUpperCase();
     }
 
     const fulfillmentPreference = snapshot.fulfillmentPreference
@@ -925,7 +931,9 @@ export class PharmacyService {
     } else if (targetStatus === 'ACCEPTED') {
       where.orderStatus = { in: ['ACCEPTED', 'REVIEWING'] };
     } else if (targetStatus === 'PREPARING') {
-      where.orderStatus = { in: ['PREPARING', 'PROCESSING'] };
+      where.orderStatus = {
+        in: ['ACCEPTED', 'REVIEWING', 'PREPARING', 'PROCESSING'],
+      };
     } else if (targetStatus === 'READY') {
       where.orderStatus = { in: ['READY', 'READY_FOR_PICKUP'] };
     } else if (targetStatus === 'DELIVERY') {
@@ -1266,6 +1274,16 @@ export class PharmacyService {
       }
     }
 
+    if (query?.fulfillment && query.fulfillment.trim().toUpperCase() !== 'ALL') {
+      const ful = query.fulfillment.trim().toUpperCase();
+      if (['HOME_DELIVERY', 'COLLECT_FROM_PHARMACY'].includes(ful)) {
+        where.billingSnapshot = {
+          path: ['fulfillmentPreference'],
+          equals: ful,
+        };
+      }
+    }
+
     if (query?.search?.trim()) {
       const search = query.search.trim();
       where.OR = [
@@ -1278,18 +1296,46 @@ export class PharmacyService {
     }
 
     if (query?.from || query?.to) {
-      const fromDate = query.from ? new Date(query.from) : null;
-      const toDate = query.to ? new Date(query.to) : null;
+      let fromDate: Date | undefined;
+      let toDate: Date | undefined;
 
-      const dateGte =
-        fromDate && !isNaN(fromDate.getTime()) ? fromDate : undefined;
-      const dateLte =
-        toDate && !isNaN(toDate.getTime()) ? toDate : undefined;
+      if (query.from?.trim()) {
+        const rawFrom = query.from.trim();
+        if (/^\d{4}-\d{2}-\d{2}$/.test(rawFrom)) {
+          fromDate = new Date(`${rawFrom}T00:00:00.000+05:30`);
+        } else {
+          fromDate = new Date(rawFrom);
+        }
+      }
 
-      if (dateGte || dateLte) {
+      if (query.to?.trim()) {
+        const rawTo = query.to.trim();
+        if (/^\d{4}-\d{2}-\d{2}$/.test(rawTo)) {
+          // Date-only string: endUtc is start of next day (lt nextDay)
+          const [y, m, d] = rawTo.split('-').map(Number);
+          const nextDay = new Date(Date.UTC(y, m - 1, d + 1));
+          const nextDayStr = nextDay.toISOString().slice(0, 10);
+          toDate = new Date(`${nextDayStr}T00:00:00.000+05:30`);
+        } else {
+          const parsedTo = new Date(rawTo);
+          if (!isNaN(parsedTo.getTime())) {
+            // For ISO strings from UI without explicit end-of-day, extend to end of business day
+            const isoStr = rawTo.slice(0, 10);
+            const [y, m, d] = isoStr.split('-').map(Number);
+            const nextDay = new Date(Date.UTC(y, m - 1, d + 1));
+            const nextDayStr = nextDay.toISOString().slice(0, 10);
+            toDate = new Date(`${nextDayStr}T00:00:00.000+05:30`);
+          }
+        }
+      }
+
+      const dateGte = fromDate && !isNaN(fromDate.getTime()) ? fromDate : undefined;
+      const dateLt = toDate && !isNaN(toDate.getTime()) ? toDate : undefined;
+
+      if (dateGte || dateLt) {
         where.orderStatusUpdatedAt = {
           ...(dateGte ? { gte: dateGte } : {}),
-          ...(dateLte ? { lte: dateLte } : {}),
+          ...(dateLt ? { lt: dateLt } : {}),
         };
       }
     }

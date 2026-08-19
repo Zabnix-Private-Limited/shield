@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:shield/app/theme/app_colors.dart';
 import 'package:shield/app/theme/app_typography.dart';
@@ -297,10 +298,18 @@ class _PharmacyOrderHistoryScreenState
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    error,
-                    style: AppTypography.caption,
+                    'Please retry. If the problem continues, contact support.',
+                    style: AppTypography.body2.copyWith(color: Colors.grey.shade700),
                     textAlign: TextAlign.center,
                   ),
+                  if (kDebugMode) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      error,
+                      style: AppTypography.caption.copyWith(color: Colors.red.shade700, fontSize: 10),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
                   const SizedBox(height: 16),
                   ElevatedButton.icon(
                     onPressed: () => _controller.loadHistory(),

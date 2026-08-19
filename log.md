@@ -14081,3 +14081,95 @@ Fixed the critical actual screen rendering defect in the SHIELD Pharmacy Portal.
 - **Chrome Browser UAT**: Verified live web application on port `53431`. Page body renders real `PharmacyDashboardView` (New Orders, Preparing, Ready for Pickup, Out for Delivery, Completed Today, Payment Details warning banner, Financial & Verification metrics). Zero fallthrough to generic `_EnterpriseWorkspaceView`.
 - **Flutter Test**: 5 / 5 tests passed in `test/pharmacy_navigation_fallback_test.dart`.
 - **Flutter Analyze**: 0 Errors.
+
+
+## Phase 6 Final Correction: SHIELD Pharmacy Order History Route Collision & Error UX
+
+**Dev**: Antigravity Agent
+**Date**: 2026-08-19 10:21:00 IST
+
+### High-Level Summary
+Resolved the Order History HTTP 400 UAT failure defect. Identified that in `backend/src/pharmacy/pharmacy.controller.ts`, `@Get('pharmacy/orders/:id')` (line 382) was defined BEFORE static route `@Get('pharmacy/orders/history')` (line 672), causing NestJS route resolution to match `:id = "history"` and throw `BadRequestException('Order ID is required.')` (HTTP 400). Reordered static history routes above dynamic `:id` routes. In frontend `pharmacy_order_history_screen.dart`, sanitized error presentation to hide raw `DioException` text from production UI and show user-actionable message ("Please retry. If the problem continues, contact support.") with retry capabilities.
+
+### Detailed Engineering Changes
+1. **NestJS Route Precedence Correction**:
+   - Reordered controller method declarations in `backend/src/pharmacy/pharmacy.controller.ts`: placed `@Get('pharmacy/orders/history')` and `@Get('pharmacy/orders/history/:id')` BEFORE `@Get('pharmacy/orders/:id')`.
+   - Re-compilation via `npm run build` succeeded cleanly.
+2. **Backend Unit & Metadata Precedence Tests**:
+   - Added unit test in `backend/src/pharmacy/pharmacy.controller.spec.ts` checking controller prototype metadata (`Reflect.getMetadata('path', ...)`) to guarantee static history routes remain registered prior to dynamic `:id` routes.
+   - All 5 Jest test suites (58/58 tests) passed cleanly.
+3. **Frontend Error UX Clean-Up**:
+   - Updated `frontend/lib/features/provider/pharmacy/presentation/screens/pharmacy_order_history_screen.dart` to display concise, user-friendly error text while preserving technical logs in debug mode.
+   - Updated `frontend/test/pharmacy_navigation_fallback_test.dart` to verify role isolation semantics (6/6 tests PASS).
+
+### Verification Results
+- **Jest Tests**: 58 / 58 passed (`npx jest src/pharmacy/ --runInBand`).
+- **Backend Build**: `npm run build` exit code 0.
+- **Flutter Test**: 6 / 6 passed in `test/pharmacy_navigation_fallback_test.dart`.
+- **Flutter Analyze**: 0 errors in pharmacy feature files.
+
+
+## Phase 6 Final Phase 1 Handoff: Controlled Dev UAT Dataset & Backend Provider Scope Hardening
+
+**Dev**: Antigravity Agent
+**Date**: 2026-08-19 10:35:00 IST
+
+### High-Level Summary
+Completed Phase 1 of the Controlled Dev UAT dataset phase. Generated real, isolated, schema-compliant UAT seed SQL scripts (`backend/prisma/demo-seeds/20260819_pharmacy_uat_data.sql` and read-only `20260819_pharmacy_uat_data_verify.sql`) covering 12 purchases across full status matrix, fulfillment modes, purchase types, distinct `order_status_updated_at` dates, and 4 manual payment recharge intents (pending, approved with wallet credit, rejected). Hardened `getPharmacyProviderId` across pharmacy payment services to enforce `providerType: 'PHARMACY'` when an explicit provider ID is supplied, and mapped active order statuses `ACCEPTED` and `REVIEWING` to the `newOrdersCount` dashboard aggregate metric. Enforced absolute database governance (`current_schema.md` read-only, zero direct SQL mutations on owner DB). Verified database state confirms `UAT_PURCHASES_COUNT: 0`, awaiting owner SQL script execution before launching Phase 2 live browser UAT.
+
+### Detailed Engineering Changes
+1. **Controlled Dev UAT Dataset SQL Generation**:
+   - `backend/prisma/demo-seeds/20260819_pharmacy_uat_data.sql`: Seed script populating active bank/UPI payment methods, 3 UAT customers with active wallets, 12 isolated purchases (`INV-UAT-001` through `INV-UAT-012`), and 4 manual wallet recharge intents (`UAT-RECHARGE-IDEMP-001` through `004`).
+   - `backend/prisma/demo-seeds/20260819_pharmacy_uat_data_verify.sql`: Read-only SQL query script for verifying UAT records post-seeding.
+2. **Backend Provider Scope Hardening**:
+   - `backend/src/pharmacy/pharmacy-payments.service.ts` & `backend/src/pharmacy/pharmacy-payment-details.service.ts`: Updated `getPharmacyProviderId` to enforce `providerType: 'PHARMACY'` when an explicit `providerId` scope is provided.
+   - Updated `getPharmacyDashboard` in `pharmacy-payments.service.ts` to include `ACCEPTED` and `REVIEWING` statuses in `newOrdersCount`.
+
+### Files Modified / Created
+**Backend Files (New)**:
+- `backend/prisma/demo-seeds/20260819_pharmacy_uat_data.sql`
+- `backend/prisma/demo-seeds/20260819_pharmacy_uat_data_verify.sql`
+
+**Backend Files (Modified)**:
+- `backend/src/pharmacy/pharmacy-payments.service.ts`
+- `backend/src/pharmacy/pharmacy-payment-details.service.ts`
+
+### Verification Results
+- **NestJS Jest Suite**: 58 / 58 passed (`npx jest src/pharmacy/ --runInBand`).
+- **Backend Build (`npm run build`)**: Exit Code 0.
+- **Flutter Tests**: 6 / 6 passed in `test/pharmacy_navigation_fallback_test.dart`.
+- **Database Status Check**: Verified `UAT_PURCHASES_COUNT: 0` (owner execution pending).
+- **Governance**: `DATABASE_OWNER_ACTION_REQUIRED = YES`.
+
+
+## Phase 6 Final Phase 1 Handoff: Controlled Dev UAT Dataset & Backend Provider Scope Hardening
+
+**Dev**: Antigravity Agent
+**Date**: 2026-08-19 10:35:00 IST
+
+### High-Level Summary
+Completed Phase 1 of the Controlled Dev UAT dataset phase. Generated real, isolated, schema-compliant UAT seed SQL scripts (`backend/prisma/demo-seeds/20260819_pharmacy_uat_data.sql` and read-only `20260819_pharmacy_uat_data_verify.sql`) covering 12 purchases across full status matrix, fulfillment modes, purchase types, distinct `order_status_updated_at` dates, and 4 manual payment recharge intents (pending, approved with wallet credit, rejected). Hardened `getPharmacyProviderId` across pharmacy payment services to enforce `providerType: 'PHARMACY'` when an explicit provider ID is supplied, and mapped active order statuses `ACCEPTED` and `REVIEWING` to the `newOrdersCount` dashboard aggregate metric. Enforced absolute database governance (`current_schema.md` read-only, zero direct SQL mutations on owner DB). Verified database state confirms `UAT_PURCHASES_COUNT: 0`, awaiting owner SQL script execution before launching Phase 2 live browser UAT.
+
+### Detailed Engineering Changes
+1. **Controlled Dev UAT Dataset SQL Generation**:
+   - `backend/prisma/demo-seeds/20260819_pharmacy_uat_data.sql`: Seed script populating active bank/UPI payment methods, 3 UAT customers with active wallets, 12 isolated purchases (`INV-UAT-001` through `INV-UAT-012`), and 4 manual wallet recharge intents (`UAT-RECHARGE-IDEMP-001` through `004`).
+   - `backend/prisma/demo-seeds/20260819_pharmacy_uat_data_verify.sql`: Read-only SQL query script for verifying UAT records post-seeding.
+2. **Backend Provider Scope Hardening**:
+   - `backend/src/pharmacy/pharmacy-payments.service.ts` & `backend/src/pharmacy/pharmacy-payment-details.service.ts`: Updated `getPharmacyProviderId` to enforce `providerType: 'PHARMACY'` when an explicit `providerId` scope is provided.
+   - Updated `getPharmacyDashboard` in `pharmacy-payments.service.ts` to include `ACCEPTED` and `REVIEWING` statuses in `newOrdersCount`.
+
+### Files Modified / Created
+**Backend Files (New)**:
+- `backend/prisma/demo-seeds/20260819_pharmacy_uat_data.sql`
+- `backend/prisma/demo-seeds/20260819_pharmacy_uat_data_verify.sql`
+
+**Backend Files (Modified)**:
+- `backend/src/pharmacy/pharmacy-payments.service.ts`
+- `backend/src/pharmacy/pharmacy-payment-details.service.ts`
+
+### Verification Results
+- **NestJS Jest Suite**: 58 / 58 passed (`npx jest src/pharmacy/ --runInBand`).
+- **Backend Build (`npm run build`)**: Exit Code 0.
+- **Flutter Tests**: 6 / 6 passed in `test/pharmacy_navigation_fallback_test.dart`.
+- **Database Status Check**: Verified `UAT_PURCHASES_COUNT: 0` (owner execution pending).
+- **Governance**: `DATABASE_OWNER_ACTION_REQUIRED = YES`.

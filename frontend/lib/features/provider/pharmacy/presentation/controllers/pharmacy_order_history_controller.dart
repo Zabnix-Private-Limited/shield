@@ -61,19 +61,22 @@ class PharmacyOrderHistoryController extends ChangeNotifier {
 
   (String?, String?) _resolveDateRange() {
     final now = DateTime.now();
+    String formatDate(DateTime d) =>
+        '${d.year.toString().padLeft(4, '0')}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+
     switch (_activeDatePreset) {
       case 'TODAY':
-        final start = DateTime(now.year, now.month, now.day);
-        return (start.toIso8601String(), now.toIso8601String());
+        final todayStr = formatDate(now);
+        return (todayStr, todayStr);
       case 'LAST_7_DAYS':
         final start = now.subtract(const Duration(days: 7));
-        return (start.toIso8601String(), now.toIso8601String());
+        return (formatDate(start), formatDate(now));
       case 'LAST_30_DAYS':
         final start = now.subtract(const Duration(days: 30));
-        return (start.toIso8601String(), now.toIso8601String());
+        return (formatDate(start), formatDate(now));
       case 'THIS_MONTH':
         final start = DateTime(now.year, now.month, 1);
-        return (start.toIso8601String(), now.toIso8601String());
+        return (formatDate(start), formatDate(now));
       default:
         return (null, null);
     }

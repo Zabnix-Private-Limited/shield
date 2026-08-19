@@ -142,5 +142,13 @@ void main() {
       expect(keys.contains('queue'), isFalse);
       expect(keys.contains('patients'), isFalse);
     });
+
+    test('isPharmacyRole strictly identifies pharmacyStaff and does not misidentify generic doctor/clinic roles', () {
+      final doctorData = portalDataForRole(SHIELDRole.provider);
+      expect(doctorData.role, SHIELDRole.provider);
+
+      final pharmacyData = portalDataForRole(SHIELDRole.pharmacyStaff);
+      expect(pharmacyData.role, SHIELDRole.pharmacyStaff);
+    });
   });
 }

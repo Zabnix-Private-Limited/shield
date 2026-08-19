@@ -90,7 +90,7 @@ export class PharmacyPaymentDetailsService {
 
     if (scope.providerId) {
       provider = await this.prisma.serviceProvider.findFirst({
-        where: { id: scope.providerId, status: 'ACTIVE' },
+        where: { id: scope.providerId, providerType: 'PHARMACY', status: 'ACTIVE' },
       });
     } else if (scope.businessId) {
       provider = await this.prisma.serviceProvider.findFirst({
@@ -164,8 +164,7 @@ export class PharmacyPaymentDetailsService {
       } else if (m.methodType === 'UPI') {
         let qrImageUrl: string | undefined;
         if (m.qrStoragePath) {
-          const downloadUrl = await this.storageService.createDownloadUrl(m.qrStoragePath);
-          if (downloadUrl) qrImageUrl = downloadUrl;
+          qrImageUrl = `/pharmacy/payment-details/upi/${m.id.toString()}/qr-image`;
         }
 
         upiMethods.push({
@@ -645,5 +644,18 @@ export class PharmacyPaymentDetailsService {
     }
 
     return { providerId: providerId.toString(), bankAccounts, upiMethods };
+  }
+
+  async getUpiQrImageStream(id: bigint, principal?: ShieldPrincipal) {
+    const providerId = await this.getPharmacyProviderId(principal);
+    const method = await this.verifyMethodOwnership(id, providerId);
+    if (method.methodType !== 'UPI' || !method.qrStoragePath) {
+      throw new NotFoundException('UPI QR code image not found.');
+    }
+    const result = await this.storageService.readObjectBuffer(method.qrStoragePath);
+    if (!result) {
+      throw new NotFoundException('QR code image object could not be retrieved from storage.');
+    }
+    return result;
   }
 }

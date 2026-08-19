@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shield/app/theme/app_colors.dart';
 import 'package:shield/app/theme/app_typography.dart';
 import 'package:shield/features/provider/pharmacy/domain/models/pharmacy_payment_method_model.dart';
+import 'package:shield/shared/services/api_service.dart';
 
 class UpiPaymentCard extends StatelessWidget {
   final PharmacyPaymentMethodModel method;
@@ -139,7 +140,9 @@ class UpiPaymentCard extends StatelessWidget {
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(8),
                   child: Image.network(
-                    method.qrImageUrl!,
+                    method.qrImageUrl!.startsWith('/')
+                        ? '${ApiService.currentBaseUrl}${method.qrImageUrl}'
+                        : method.qrImageUrl!,
                     fit: BoxFit.contain,
                     errorBuilder: (_, __, ___) => const Center(
                       child: Icon(Icons.broken_image_outlined, size: 36),

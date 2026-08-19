@@ -96,7 +96,7 @@ describe('PharmacyPaymentDetailsService', () => {
     expect(result.bankAccounts[0].maskedAccountNumber).toBe('•••• •••• 9012');
     expect(result.upiMethods).toHaveLength(1);
     expect(result.upiMethods[0].upiId).toBe('pharmacy@upi');
-    expect(result.upiMethods[0].qrImageUrl).toBe('https://storage.shield.local/qr.png');
+    expect(result.upiMethods[0].qrImageUrl).toBe('/pharmacy/payment-details/upi/2/qr-image');
   });
 
   it('should throw NotFoundException if Pharmacy A attempts to access Pharmacy B method', async () => {

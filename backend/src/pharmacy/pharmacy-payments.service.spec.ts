@@ -41,6 +41,9 @@ describe('PharmacyPaymentsService', () => {
       cashWalletTransaction: {
         create: jest.fn().mockResolvedValue({ id: 10n }),
       },
+      walletTransaction: {
+        create: jest.fn().mockResolvedValue({ id: 11n }),
+      },
       $transaction: jest.fn((cb) => cb(prisma)),
     };
 

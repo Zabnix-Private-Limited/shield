@@ -9,9 +9,11 @@ import {
   Patch,
   Post,
   Query,
+  Res,
   UploadedFile,
   UseInterceptors,
 } from '@nestjs/common';
+import type { Response } from 'express';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { CurrentPrincipal } from '../auth/current-principal.decorator';
 import { Public } from '../auth/public.decorator';
@@ -378,6 +380,54 @@ export class PharmacyController {
     };
   }
 
+  @RequirePermissions('providers.read')
+  @Get('pharmacy/orders/history')
+  async listPharmacyOrderHistory(
+    @CurrentPrincipal() principal?: ShieldPrincipal,
+    @Query('status') status?: string,
+    @Query('source') source?: string,
+    @Query('fulfillment') fulfillment?: string,
+    @Query('search') search?: string,
+    @Query('from') from?: string,
+    @Query('to') to?: string,
+    @Query('page') page?: string,
+    @Query('pageSize') pageSize?: string,
+  ) {
+    return {
+      success: true,
+      message: 'Pharmacy order history retrieved successfully.',
+      data: await this.pharmacyService.listPharmacyOrderHistory(
+        {
+          status,
+          source,
+          fulfillment,
+          search,
+          from,
+          to,
+          page: page ? Number(page) : undefined,
+          pageSize: pageSize ? Number(pageSize) : undefined,
+        },
+        principal,
+      ),
+    };
+  }
+
+  @RequirePermissions('providers.read')
+  @Get('pharmacy/orders/history/:id')
+  async getPharmacyOrderHistoryDetail(
+    @Param('id') id: string,
+    @CurrentPrincipal() principal?: ShieldPrincipal,
+  ) {
+    return {
+      success: true,
+      message: 'Pharmacy order history detail retrieved successfully.',
+      data: await this.pharmacyService.getPharmacyOrderHistoryDetail(
+        this.parseId(id, 'Order ID'),
+        principal,
+      ),
+    };
+  }
+
   @RequirePermissions('providers.view')
   @Get('pharmacy/orders/:id')
   async getPharmacyOrderDetail(
@@ -490,6 +540,37 @@ export class PharmacyController {
         principal,
       ),
     };
+  }
+
+  @RequirePermissions('providers.view')
+  @Get('pharmacy/payment-details/upi/:id/qr-image')
+  async getUpiQrImage(
+    @Param('id') id: string,
+    @Res() res: Response,
+    @CurrentPrincipal() principal?: ShieldPrincipal,
+  ) {
+    const { buffer, contentType } = await this.paymentDetailsService.getUpiQrImageStream(
+      this.parseId(id, 'UPI ID'),
+      principal,
+    );
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Cache-Control', 'public, max-age=3600');
+    res.send(buffer);
+  }
+
+  @Public()
+  @Get('customer/pharmacies/payment-details/upi/:id/qr-image')
+  async getCustomerUpiQrImage(
+    @Param('id') id: string,
+    @Res() res: Response,
+  ) {
+    const { buffer, contentType } = await this.paymentDetailsService.getUpiQrImageStream(
+      this.parseId(id, 'UPI ID'),
+      undefined,
+    );
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Cache-Control', 'public, max-age=3600');
+    res.send(buffer);
   }
 
   @RequirePermissions('providers.update')
@@ -664,55 +745,5 @@ export class PharmacyController {
     };
   }
 
-  // -------------------------------------------------------------
-  // PHASE 4 PHARMACY ORDER HISTORY
-  // -------------------------------------------------------------
 
-  @RequirePermissions('providers.read')
-  @Get('pharmacy/orders/history')
-  async listPharmacyOrderHistory(
-    @CurrentPrincipal() principal?: ShieldPrincipal,
-    @Query('status') status?: string,
-    @Query('source') source?: string,
-    @Query('fulfillment') fulfillment?: string,
-    @Query('search') search?: string,
-    @Query('from') from?: string,
-    @Query('to') to?: string,
-    @Query('page') page?: string,
-    @Query('pageSize') pageSize?: string,
-  ) {
-    return {
-      success: true,
-      message: 'Pharmacy order history retrieved successfully.',
-      data: await this.pharmacyService.listPharmacyOrderHistory(
-        {
-          status,
-          source,
-          fulfillment,
-          search,
-          from,
-          to,
-          page: page ? Number(page) : undefined,
-          pageSize: pageSize ? Number(pageSize) : undefined,
-        },
-        principal,
-      ),
-    };
-  }
-
-  @RequirePermissions('providers.read')
-  @Get('pharmacy/orders/history/:id')
-  async getPharmacyOrderHistoryDetail(
-    @Param('id') id: string,
-    @CurrentPrincipal() principal?: ShieldPrincipal,
-  ) {
-    return {
-      success: true,
-      message: 'Pharmacy order history detail retrieved successfully.',
-      data: await this.pharmacyService.getPharmacyOrderHistoryDetail(
-        this.parseId(id, 'Order ID'),
-        principal,
-      ),
-    };
-  }
 }

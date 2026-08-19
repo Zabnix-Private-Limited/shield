@@ -38,10 +38,14 @@ class PharmacyOrderHistorySummary {
 
   factory PharmacyOrderHistorySummary.fromJson(Map<String, dynamic> json) {
     return PharmacyOrderHistorySummary(
-      totalCompletedCount: (json['totalCompletedCount'] as num?)?.toInt() ?? 0,
-      completedOrderValue: (json['completedOrderValue'] as num?)?.toDouble() ?? 0.0,
-      totalCancelledCount: (json['totalCancelledCount'] as num?)?.toInt() ?? 0,
-      totalRejectedCount: (json['totalRejectedCount'] as num?)?.toInt() ?? 0,
+      totalCompletedCount:
+          (json['completedCount'] ?? json['totalCompletedCount'] as num?)?.toInt() ?? 0,
+      completedOrderValue:
+          (json['completedValue'] ?? json['completedOrderValue'] as num?)?.toDouble() ?? 0.0,
+      totalCancelledCount:
+          (json['cancelledCount'] ?? json['totalCancelledCount'] as num?)?.toInt() ?? 0,
+      totalRejectedCount:
+          (json['rejectedCount'] ?? json['totalRejectedCount'] as num?)?.toInt() ?? 0,
     );
   }
 }
@@ -58,7 +62,9 @@ class PharmacyOrderHistoryResponse {
   });
 
   factory PharmacyOrderHistoryResponse.fromJson(Map<String, dynamic> json) {
-    final rawOrders = json['orders'] as List? ?? const [];
+    final rawOrders = (json['items'] ?? json['orders']) as List? ?? const [];
+    final summaryJson =
+        (json['metrics'] ?? json['summary']) as Map<String, dynamic>? ?? {};
     return PharmacyOrderHistoryResponse(
       orders: rawOrders
           .map((o) => PharmacyOrderModel.fromJson(o as Map<String, dynamic>))
@@ -66,9 +72,7 @@ class PharmacyOrderHistoryResponse {
       pagination: PharmacyOrderHistoryPagination.fromJson(
         (json['pagination'] as Map<String, dynamic>?) ?? {},
       ),
-      summary: PharmacyOrderHistorySummary.fromJson(
-        (json['summary'] as Map<String, dynamic>?) ?? {},
-      ),
+      summary: PharmacyOrderHistorySummary.fromJson(summaryJson),
     );
   }
 }

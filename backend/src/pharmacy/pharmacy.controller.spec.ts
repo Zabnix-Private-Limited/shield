@@ -121,6 +121,81 @@ describe('PharmacyController customer wellness catalogue', () => {
     await expect(
       controller.getCustomerOrder('9', { principalType: 'USER' } as any),
     ).rejects.toThrow('Authenticated customer context is required.');
-    expect(pharmacyService.getCustomerOrder).not.toHaveBeenCalled();
+    expect(pharmacyService.listCustomerOrders).not.toHaveBeenCalled();
+  });
+
+  describe('Route Precedence & Order History', () => {
+    it('defines history routes ahead of dynamic :id routes in controller metadata', () => {
+      const proto = PharmacyController.prototype;
+      const historyPath = Reflect.getMetadata('path', proto.listPharmacyOrderHistory);
+      const detailPath = Reflect.getMetadata('path', proto.getPharmacyOrderDetail);
+
+      expect(historyPath).toBe('pharmacy/orders/history');
+      expect(detailPath).toBe('pharmacy/orders/:id');
+
+      // Verify listPharmacyOrderHistory appears before getPharmacyOrderDetail in method declarations
+      const methodNames = Object.getOwnPropertyNames(proto);
+      const historyIdx = methodNames.indexOf('listPharmacyOrderHistory');
+      const detailIdx = methodNames.indexOf('getPharmacyOrderDetail');
+
+      expect(historyIdx).toBeGreaterThan(-1);
+      expect(detailIdx).toBeGreaterThan(-1);
+      expect(historyIdx).toBeLessThan(detailIdx);
+    });
+
+    it('delegates listPharmacyOrderHistory to pharmacyService.listPharmacyOrderHistory', async () => {
+      const mockResult = { items: [], pagination: { page: 1, pageSize: 20, total: 0, totalPages: 0 }, metrics: { completedCount: 0, completedValue: 0, cancelledCount: 0, rejectedCount: 0 } };
+      (pharmacyService as any).listPharmacyOrderHistory = jest.fn().mockResolvedValue(mockResult);
+
+      const res = await controller.listPharmacyOrderHistory(
+        { principalType: 'USER', roleKeys: ['PHARMACY_PROVIDER'] } as any,
+        'ALL_HISTORY',
+        'ALL',
+        'ALL',
+        'test',
+        undefined,
+        undefined,
+        '1',
+        '20',
+      );
+
+      expect(res).toEqual({
+        success: true,
+        message: 'Pharmacy order history retrieved successfully.',
+        data: mockResult,
+      });
+      expect((pharmacyService as any).listPharmacyOrderHistory).toHaveBeenCalledWith(
+        {
+          status: 'ALL_HISTORY',
+          source: 'ALL',
+          fulfillment: 'ALL',
+          search: 'test',
+          from: undefined,
+          to: undefined,
+          page: 1,
+          pageSize: 20,
+        },
+        expect.anything(),
+      );
+    });
+
+    it('parses numeric ID correctly for getPharmacyOrderDetail', async () => {
+      (pharmacyService as any).getPharmacyOrderDetail = jest.fn().mockResolvedValue({ id: '123' });
+
+      const res = await controller.getPharmacyOrderDetail(
+        '123',
+        { principalType: 'USER', roleKeys: ['PHARMACY_PROVIDER'] } as any,
+      );
+
+      expect(res).toEqual({
+        success: true,
+        message: 'Pharmacy order detail retrieved.',
+        data: { id: '123' },
+      });
+      expect((pharmacyService as any).getPharmacyOrderDetail).toHaveBeenCalledWith(
+        BigInt(123),
+        expect.anything(),
+      );
+    });
   });
 });

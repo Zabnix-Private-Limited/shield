@@ -26,7 +26,7 @@ export class PharmacyPaymentsService {
 
     if (scope.providerId) {
       provider = await this.prisma.serviceProvider.findFirst({
-        where: { id: scope.providerId, status: 'ACTIVE' },
+        where: { id: scope.providerId, providerType: 'PHARMACY', status: 'ACTIVE' },
       });
     } else if (scope.businessId) {
       provider = await this.prisma.serviceProvider.findFirst({
@@ -66,32 +66,13 @@ export class PharmacyPaymentsService {
       month: '2-digit',
       day: '2-digit',
     });
-    const localDateStr = formatter.format(now);
-    const [year, month, day] = localDateStr.split('-').map(Number);
 
-    const tempUtc = new Date(Date.UTC(year, month - 1, day, 0, 0, 0, 0));
+    const [{ value: year }, , { value: month }, , { value: day }] =
+      formatter.formatToParts(now);
+    const dateStr = `${year}-${month}-${day}`;
 
-    const localTimeParts = new Intl.DateTimeFormat('en-US', {
-      timeZone,
-      hour12: false,
-      year: 'numeric',
-      month: 'numeric',
-      day: 'numeric',
-      hour: 'numeric',
-      minute: 'numeric',
-      second: 'numeric',
-    }).formatToParts(tempUtc);
-
-    const parts: Record<string, number> = {};
-    for (const p of localTimeParts) {
-      if (p.type !== 'literal') parts[p.type] = Number(p.value);
-    }
-    if (parts.hour === 24) parts.hour = 0;
-
-    const localAsUtc = new Date(Date.UTC(parts.year, parts.month - 1, parts.day, parts.hour, parts.minute, parts.second));
-    const offsetMs = localAsUtc.getTime() - tempUtc.getTime();
-
-    const startUtc = new Date(tempUtc.getTime() - offsetMs);
+    const startLocalStr = `${dateStr}T00:00:00.000`;
+    const startUtc = new Date(`${startLocalStr}+05:30`);
     const endUtc = new Date(startUtc.getTime() + 24 * 60 * 60 * 1000);
 
     return { startUtc, endUtc };
@@ -130,11 +111,11 @@ export class PharmacyPaymentsService {
           orderStatus: { in: ['PLACED', 'SUBMITTED', 'REQUESTED', 'NEW'] },
         },
       }),
-      // Preparing Orders
+      // Preparing Orders (includes ACCEPTED, REVIEWING, PREPARING, PROCESSING)
       this.prisma.purchase.count({
         where: {
           ...pharmacyDomainWhere,
-          orderStatus: { in: ['PREPARING', 'PROCESSING'] },
+          orderStatus: { in: ['ACCEPTED', 'REVIEWING', 'PREPARING', 'PROCESSING'] },
         },
       }),
       // Ready Orders
@@ -506,12 +487,25 @@ export class PharmacyPaymentsService {
         throw new NotFoundException('Payment request not found after state claim.');
       }
 
-      // 2. Create dynamic wallet ledger entry (Cash Wallet Transaction)
+      // 2. Create dynamic wallet ledger entry (Cash Wallet & Main Wallet Transactions)
       await tx.cashWalletTransaction.create({
         data: {
           uuid: randomUUID(),
           walletId: intent.walletId,
           transactionType: 'RECHARGE',
+          amount: intent.amount,
+          referenceType: 'MANUAL_RECHARGE_APPROVAL',
+          referenceId: id,
+          remarks: `Manual ${intent.paymentChannel || 'payment'} verified and approved by Pharmacy.`,
+        },
+      });
+
+      await tx.walletTransaction.create({
+        data: {
+          uuid: randomUUID(),
+          walletId: intent.walletId,
+          transactionType: 'RECHARGE',
+          subLedgerType: 'CASH',
           amount: intent.amount,
           referenceType: 'MANUAL_RECHARGE_APPROVAL',
           referenceId: id,
