@@ -62,7 +62,10 @@ class PharmacyOrderHistoryResponse {
   });
 
   factory PharmacyOrderHistoryResponse.fromJson(Map<String, dynamic> json) {
-    final rawOrders = (json['items'] ?? json['orders']) as List? ?? const [];
+    if (!json.containsKey('items') && !json.containsKey('orders')) {
+      throw const FormatException("Pharmacy order history response missing required 'items' or 'orders' key");
+    }
+    final rawOrders = (json['items'] ?? json['orders']) as List;
     final summaryJson =
         (json['metrics'] ?? json['summary']) as Map<String, dynamic>? ?? {};
     return PharmacyOrderHistoryResponse(

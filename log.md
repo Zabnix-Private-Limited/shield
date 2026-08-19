@@ -14173,3 +14173,26 @@ Completed Phase 1 of the Controlled Dev UAT dataset phase. Generated real, isola
 - **Flutter Tests**: 6 / 6 passed in `test/pharmacy_navigation_fallback_test.dart`.
 - **Database Status Check**: Verified `UAT_PURCHASES_COUNT: 0` (owner execution pending).
 - **Governance**: `DATABASE_OWNER_ACTION_REQUIRED = YES`.
+
+
+## Pharmacy Final Release Gate Source-Code Corrections Handoff (2026-08-19 IST)
+
+### High-Level Summary
+Completed source-code corrections for SHIELD Pharmacy Order History contract alignment, private QR delivery, asset path declarations, layout safeguards, and payment approval ledger invariants. Per owner directive, all autonomous browser/suite testing is stopped and handoff is prepared for manual owner testing.
+
+### Key Changes Made
+1. **Order History Response Contract**:
+   - frontend/lib/features/provider/pharmacy/domain/models/pharmacy_order_history_model.dart: Enhanced PharmacyOrderHistoryResponse.fromJson to strictly check for presence of items or orders collection key and throw a clear FormatException on missing keys instead of silently defaulting to empty arrays.
+2. **Secure QR Code Streaming**:
+   - backend/src/pharmacy/pharmacy-payment-details.service.ts & backend/src/pharmacy/pharmacy.controller.ts: Ensured private R2 QR images are served through authenticated same-origin streaming endpoints (/pharmacy/payment-details/upi/:id/qr-image) to eliminate cross-origin R2 browser errors.
+3. **Asset Resolution & Layout Guards**:
+   - frontend/pubspec.yaml: Ensured assets/logos/ directory containing shield_mark.png and shield_wordmark.png is properly declared.
+   - frontend/lib/features/provider/pharmacy/: Verified layout overflow handling and responsive constraints across Pharmacy screens.
+4. **Financial Ledger Invariants**:
+   - backend/src/pharmacy/pharmacy-payments.service.ts: Confirmed atomic state claim (PENDING -> APPROVED), single-winner concurrency protection, dynamic cash/main wallet transactions generation (MANUAL_RECHARGE_APPROVAL), and audit trail.
+
+### Governance Compliance
+- current_schema.md: Unmodified (NO)
+- Direct Database Mutations: NO
+- Prisma DDL/Migrations: NO
+- Non-Pharmacy UI: Unmodified (NO)
