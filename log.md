@@ -14287,3 +14287,24 @@ Authoritatively enforced single outlet / pharmacy scope for Pharmacy Staff acros
 - `todo.md`: Added Item 5 detailing Super Admin Pharmacy Staff Outlet Assignment feature requirements.
 
 - `backend/src/auth/provider-scope.service.ts`: Added DEV BYPASS MODE fallback tag to `resolveAssignedPharmacy` for local unauthenticated development windows where mock principal has no assigned `branchBusinessId`. Preserved production fail-closed security assertions when in production auth context.
+
+
+## SHIELD Full Application UAT Seed Dataset & Coverage Matrix
+**Timestamp**: 2026-08-19 22:25:00 IST
+**Developer**: Antigravity AI
+
+### High-Level Summary
+Generated a comprehensive, deterministic, idempotent PostgreSQL UAT seed dataset covering all SHIELD portals, core domain modules, and transactional states. Enforced a minimum requirement of 5 records per meaningful status/workflow state to enable thorough UAT testing across Admin, Agent, CRM, Pharmacy Provider, Doctor, and Customer portals without modifying current_schema.md or executing live DB modifications.
+
+### Key Changes & Design Choices
+- **Idempotency & Safety**: Encapsulated SQL statements inside BEGIN; ... COMMIT; transactions with PL/pgSQL DO  blocks and IF NOT EXISTS / WHERE NOT EXISTS checks. No auto-increment assumptions are made; all relations reference dynamic IDs via queries.
+- **Coverage Depth**: Generated 45 purchase orders across all 9 order_status values (PLACED, ACCEPTED, PARTIAL_REVIEW, PREPARING, READY_FOR_PICKUP, OUT_FOR_DELIVERY, COMPLETED, CANCELLED, REJECTED), 20 wallet recharge intents across 4 statuses, 25 memberships across 4 statuses, 25 appointments across 5 clinical statuses, 20 complaints across 4 CRM statuses, 20 customer import batches, 15 ERP customers, and 25 referral events.
+- **Portal Identities**: Seeded test account credentials for Super Admin, SHIELD Agent, CRM Executive, Pharmacy Provider Staff, Doctor, and Customer accounts.
+
+### Backend & Database Seed Files
+- [20260819_full_app_uat_seed.sql](file:///E:/K4NN4N/shield/backend/prisma/demo-seeds/20260819_full_app_uat_seed.sql): Deterministic, idempotent full-application UAT data seed SQL.
+- [20260819_full_app_uat_seed_verify.sql](file:///E:/K4NN4N/shield/backend/prisma/demo-seeds/20260819_full_app_uat_seed_verify.sql): Read-only status count verification queries.
+
+### Documentation Files
+- [FULL_APP_UAT_SEED_COVERAGE.md](file:///E:/K4NN4N/shield/docs/uat/FULL_APP_UAT_SEED_COVERAGE.md): Coverage matrix, test account credentials/roles, binary fixture notes, and ingestion instructions.
+\n**Timestamp**: 2026-08-19 22:28:00 IST\n**Developer**: Antigravity AI\n\n### Bug Fix: Foreign Key Alignment in Full App UAT Seed Script\n- **Issue**: Neon console execution failed on section 6 (card_requests) due to card_requests_requested_by_fkey constraint error (requested_by pointing to customers.id instead of users.id).\n- **Fix**: Replaced v_cust_rec.id with v_admin_id in card_requests.requested_by.\n- **Hardening**: Aligned purchase_item_fulfillments.purchase_item_id to reference v_item_id (purchase_items.id) instead of v_purchase_id.\n- **Files Modified**: [20260819_full_app_uat_seed.sql](file:///E:/K4NN4N/shield/backend/prisma/demo-seeds/20260819_full_app_uat_seed.sql)\n\n**Timestamp**: 2026-08-19 22:29:00 IST\n**Developer**: Antigravity AI\n\n### Updated UAT Data Seed: Strictly Pharmacy Only\n- **Directive**: User requested strictly Pharmacy-related data only (nothing less, nothing more).\n- **Pruned Entities**: Removed all non-pharmacy clinical tables (appointments, consultations, dental records, lab reports, doctor/lab providers), CRM complaints, ERP import batches, and referral events.\n- **Pharmacy Domain Tables Included**: Outlets/Businesses, Service Providers (Pharmacy), Provider Payment Methods, Pharmacy Provider Settings, Pharmacy Staff & Admin Users, Customers & Wallets, Product Categories, Products, Purchases (45 across all 9 statuses), Purchase Items, Fulfillments, Pharmacist Notes, Chronic Refill Tags, Confirmations, Invoices, Store Change Requests (15 across 3 statuses), Prescription Requests (20 across 4 statuses), and Wallet Recharge Intents (20 across 4 statuses).\n- **Files Updated**: [20260819_full_app_uat_seed.sql](file:///E:/K4NN4N/shield/backend/prisma/demo-seeds/20260819_full_app_uat_seed.sql), [20260819_full_app_uat_seed_verify.sql](file:///E:/K4NN4N/shield/backend/prisma/demo-seeds/20260819_full_app_uat_seed_verify.sql), [FULL_APP_UAT_SEED_COVERAGE.md](file:///E:/K4NN4N/shield/docs/uat/FULL_APP_UAT_SEED_COVERAGE.md)\n

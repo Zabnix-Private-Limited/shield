@@ -125,8 +125,8 @@ class _PharmacyProfileScreenState extends State<PharmacyProfileScreen> {
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 24),
-                SizedBox(
-                  width: double.infinity,
+                ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 320),
                   child: PharmacyPrimaryButton(
                     label: 'Retry / Refresh Assignment',
                     icon: Icons.refresh_rounded,
