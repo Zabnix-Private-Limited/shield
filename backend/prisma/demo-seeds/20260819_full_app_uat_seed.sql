@@ -274,23 +274,78 @@ BEGIN
                     gen_random_uuid(), v_cust_rec.id, v_provider_id, 'INV-UAT-' || s || '-' || k,
                     500.00, 50.00, 450.00, now() - (i || ' days')::interval, 'PHARMACY_PRESCRIPTION',
                     CASE WHEN s = 'COMPLETED' THEN 'PAID' ELSE 'PENDING' END, s, now() - (i || ' hours')::interval,
-                    '{"isChronic": true, "subtotal": 500.00, "discount": 50.00, "finalPayable": 450.00}'::jsonb
+                    jsonb_build_object(
+                        'isChronic', (i % 3 = 0),
+                        'fulfillmentPreference', CASE WHEN i % 2 = 0 THEN 'HOME_DELIVERY' ELSE 'COLLECT_FROM_PHARMACY' END,
+                        'subtotal', 500.00,
+                        'discount', 50.00,
+                        'finalPayable', 450.00
+                    )
                 ) RETURNING id INTO v_purchase_id;
 
-                -- Purchase Item 1
+                -- Purchase Item 1: Paracetamol 650mg Suppress
                 INSERT INTO purchase_items (purchase_id, product_id, quantity, unit_price, total_price, item_type, item_name)
                 VALUES (v_purchase_id, v_p1_id, 2.00, 40.00, 80.00, 'MEDICINE', 'Paracetamol 650mg Suppress')
                 RETURNING id INTO v_item_id;
 
-                -- Purchase Item Fulfillment Record
                 INSERT INTO purchase_item_fulfillments (purchase_item_id, approved_quantity, dispatched_quantity, remaining_quantity, stock_status, decision_status, decision_reason, decision_actor_id, authoritative_price)
                 VALUES (
                     v_item_id, 2.00,
                     CASE WHEN s = 'COMPLETED' THEN 2.00 ELSE 0.00 END,
                     CASE WHEN s = 'COMPLETED' THEN 0.00 ELSE 2.00 END,
                     'FULL_STOCK',
-                    CASE WHEN s IN ('ACCEPTED', 'PREPARING', 'READY_FOR_PICKUP', 'OUT_FOR_DELIVERY', 'COMPLETED') THEN 'APPROVED' ELSE 'PENDING' END,
+                    CASE WHEN s IN ('ACCEPTED', 'PARTIAL_REVIEW', 'PREPARING', 'READY_FOR_PICKUP', 'OUT_FOR_DELIVERY', 'COMPLETED') THEN 'APPROVED' ELSE 'PENDING' END,
                     'In-stock verified by counter pharmacist', v_admin_id, 40.00
+                );
+
+                -- Purchase Item 2: Amoxicillin 500mg Capsule
+                INSERT INTO purchase_items (purchase_id, product_id, quantity, unit_price, total_price, item_type, item_name)
+                VALUES (v_purchase_id, v_p2_id, 10.00, 15.00, 150.00, 'MEDICINE', 'Amoxicillin 500mg Capsule')
+                RETURNING id INTO v_item_id;
+
+                INSERT INTO purchase_item_fulfillments (purchase_item_id, approved_quantity, dispatched_quantity, remaining_quantity, stock_status, decision_status, decision_reason, decision_actor_id, authoritative_price)
+                VALUES (
+                    v_item_id,
+                    CASE WHEN s = 'PARTIAL_REVIEW' THEN 5.00 ELSE 10.00 END,
+                    CASE WHEN s = 'COMPLETED' THEN 10.00 ELSE 0.00 END,
+                    CASE WHEN s = 'COMPLETED' THEN 0.00 ELSE (CASE WHEN s = 'PARTIAL_REVIEW' THEN 5.00 ELSE 10.00 END) END,
+                    CASE WHEN s = 'PARTIAL_REVIEW' THEN 'LOW_STOCK' ELSE 'FULL_STOCK' END,
+                    CASE WHEN s = 'PARTIAL_REVIEW' THEN 'PARTIAL' WHEN s IN ('ACCEPTED', 'PREPARING', 'READY_FOR_PICKUP', 'OUT_FOR_DELIVERY', 'COMPLETED') THEN 'APPROVED' ELSE 'PENDING' END,
+                    CASE WHEN s = 'PARTIAL_REVIEW' THEN 'Partial stock available (5/10 units)' ELSE 'Full stock available in inventory' END,
+                    v_admin_id, 15.00
+                );
+
+                -- Purchase Item 3: Vitamin C 500mg Chewable
+                INSERT INTO purchase_items (purchase_id, product_id, quantity, unit_price, total_price, item_type, item_name)
+                VALUES (v_purchase_id, NULL, 1.00, 120.00, 120.00, 'WELLNESS', 'Vitamin C 500mg Chewable')
+                RETURNING id INTO v_item_id;
+
+                INSERT INTO purchase_item_fulfillments (purchase_item_id, approved_quantity, dispatched_quantity, remaining_quantity, stock_status, decision_status, decision_reason, decision_actor_id, authoritative_price)
+                VALUES (
+                    v_item_id, 1.00,
+                    CASE WHEN s = 'COMPLETED' THEN 1.00 ELSE 0.00 END,
+                    CASE WHEN s = 'COMPLETED' THEN 0.00 ELSE 1.00 END,
+                    'FULL_STOCK',
+                    CASE WHEN s = 'PARTIAL_REVIEW' THEN 'SUBSTITUTED' WHEN s IN ('ACCEPTED', 'PREPARING', 'READY_FOR_PICKUP', 'OUT_FOR_DELIVERY', 'COMPLETED') THEN 'APPROVED' ELSE 'PENDING' END,
+                    CASE WHEN s = 'PARTIAL_REVIEW' THEN 'Substituted with C-Celin 500mg Chewable' ELSE 'Wellness supplement verified' END,
+                    v_admin_id, 120.00
+                );
+
+                -- Purchase Item 4: Pantoprazole 40mg Gastro-Resistant
+                INSERT INTO purchase_items (purchase_id, product_id, quantity, unit_price, total_price, item_type, item_name)
+                VALUES (v_purchase_id, NULL, 1.00, 150.00, 150.00, 'MEDICINE', 'Pantoprazole 40mg Gastro-Resistant')
+                RETURNING id INTO v_item_id;
+
+                INSERT INTO purchase_item_fulfillments (purchase_item_id, approved_quantity, dispatched_quantity, remaining_quantity, stock_status, decision_status, decision_reason, decision_actor_id, authoritative_price)
+                VALUES (
+                    v_item_id,
+                    CASE WHEN s = 'PARTIAL_REVIEW' THEN 0.00 ELSE 1.00 END,
+                    CASE WHEN s = 'COMPLETED' THEN 1.00 ELSE 0.00 END,
+                    CASE WHEN s = 'COMPLETED' THEN 0.00 ELSE (CASE WHEN s = 'PARTIAL_REVIEW' THEN 0.00 ELSE 1.00 END) END,
+                    CASE WHEN s = 'PARTIAL_REVIEW' THEN 'OUT_OF_STOCK' ELSE 'FULL_STOCK' END,
+                    CASE WHEN s = 'PARTIAL_REVIEW' THEN 'REJECTED' WHEN s IN ('ACCEPTED', 'PREPARING', 'READY_FOR_PICKUP', 'OUT_FOR_DELIVERY', 'COMPLETED') THEN 'APPROVED' ELSE 'PENDING' END,
+                    CASE WHEN s = 'PARTIAL_REVIEW' THEN 'Item temporarily out of stock' ELSE 'Medicine verified in stock' END,
+                    v_admin_id, 150.00
                 );
 
                 -- Pharmacist Notes
