@@ -390,16 +390,34 @@ export class PharmacyPaymentsService {
         mobile: true,
         customerCode: true,
         wallet: { select: { id: true } },
+        shieldCard: { select: { id: true, cardNumber: true, status: true } },
+        membership: { select: { id: true, membershipNumber: true, status: true } },
       },
     });
 
-    return customers.map((c) => ({
-      id: c.id.toString(),
-      name: this.formatCustomerName(c),
-      mobile: c.mobile,
-      customerCode: c.customerCode,
-      walletId: c.wallet?.id?.toString() ?? null,
-    }));
+    return customers.map((c) => {
+      const isMember = !!(
+        c.customerCode ||
+        (c.shieldCard && c.shieldCard.status === 'ACTIVE') ||
+        (c.membership && c.membership.status === 'ACTIVE')
+      );
+
+      return {
+        id: c.id.toString(),
+        name: this.formatCustomerName(c),
+        mobile: c.mobile,
+        customerCode:
+          c.customerCode ??
+          c.shieldCard?.cardNumber ??
+          c.membership?.membershipNumber ??
+          'SHIELD Member',
+        walletId: c.wallet?.id?.toString() ?? null,
+        isMembershipHolder: isMember,
+        membershipBadge: isMember
+          ? 'SHIELD Privilege Member'
+          : 'Non-Member (Wellness Only)',
+      };
+    });
   }
 
   async submitManualPayment(
@@ -422,11 +440,27 @@ export class PharmacyPaymentsService {
     const customerId = BigInt(dto.customerId.trim());
     let customer = await this.prisma.customer.findUnique({
       where: { id: customerId },
-      include: { wallet: true },
+      include: {
+        wallet: true,
+        shieldCard: true,
+        membership: true,
+      },
     });
 
     if (!customer) {
       throw new NotFoundException('Customer record not found.');
+    }
+
+    const isMembershipHolder = !!(
+      customer.customerCode ||
+      (customer.shieldCard && customer.shieldCard.status === 'ACTIVE') ||
+      (customer.membership && customer.membership.status === 'ACTIVE')
+    );
+
+    if (!isMembershipHolder) {
+      throw new BadRequestException(
+        'Wallet recharge is restricted strictly to SHIELD Privilege Card members. Non-member app users can only purchase wellness products directly from customer interfaces.',
+      );
     }
 
     let wallet = customer.wallet;

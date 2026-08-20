@@ -319,15 +319,53 @@ class _CounterPaymentDialogState extends State<CounterPaymentDialog> {
                               final cust = _customerSearchResults[idx];
                               final isSelected =
                                   _selectedCustomer?['id'] == cust['id'];
+                              final isMember = cust['isMembershipHolder'] != false;
                               return ListTile(
                                 dense: true,
-                                title: Text(
-                                  cust['name'] ?? 'Member',
-                                  style: PharmacyTypography.body.copyWith(
-                                    fontWeight: isSelected
-                                        ? FontWeight.bold
-                                        : FontWeight.normal,
-                                  ),
+                                title: Row(
+                                  children: [
+                                    Flexible(
+                                      child: Text(
+                                        cust['name'] ?? 'Member',
+                                        overflow: TextOverflow.ellipsis,
+                                        style: PharmacyTypography.body.copyWith(
+                                          fontWeight: isSelected
+                                              ? FontWeight.bold
+                                              : FontWeight.normal,
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 6, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: isMember
+                                            ? PharmacyColors.primarySoft
+                                            : PharmacyColors.warning
+                                                .withValues(alpha: 0.1),
+                                        borderRadius: BorderRadius.circular(4),
+                                        border: Border.all(
+                                          color: isMember
+                                              ? PharmacyColors.primary
+                                              : PharmacyColors.warning,
+                                          width: 0.8,
+                                        ),
+                                      ),
+                                      child: Text(
+                                        isMember
+                                            ? 'SHIELD Member'
+                                            : 'Non-Member (Wellness Only)',
+                                        style: PharmacyTypography.tiny.copyWith(
+                                          color: isMember
+                                              ? PharmacyColors.primaryHover
+                                              : PharmacyColors.warning,
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
                                 subtitle: Text(
                                   'Card Code: ${cust['customerCode'] ?? 'N/A'} • Phone: ${cust['mobile'] ?? 'N/A'}',
@@ -338,6 +376,14 @@ class _CounterPaymentDialogState extends State<CounterPaymentDialog> {
                                         color: PharmacyColors.primary, size: 18)
                                     : null,
                                 onTap: () {
+                                  if (!isMember) {
+                                    showPortalSnackBar(
+                                      context,
+                                      'Non-member app users cannot hold wallet balances. They can only purchase wellness products directly from customer interfaces.',
+                                      type: PortalToastType.error,
+                                    );
+                                    return;
+                                  }
                                   setState(() => _selectedCustomer = cust);
                                 },
                               );

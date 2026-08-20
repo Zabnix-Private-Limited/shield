@@ -51,18 +51,23 @@
    - SHIELD should have one Provider Platform with backend-driven modules, not separate duplicated provider portals for doctor, pharmacy, dental, laboratory, dietitian, or home-care roles.
    - Provider type should change the loaded module registry, module renderer identifiers, workflow stages, forms, actions, and permissions through backend metadata, while the Flutter shell remains a reusable renderer.
    - Avoid frontend branching on provider type for business semantics; if a provider workflow needs to differ, add or adjust the backend module contract instead of creating provider-type-specific pages.
+11. Responsive Pop-over Detail View Pattern
+   - In multi-pane desktop portal layouts, when viewport width falls below 1180px or on window resizing, detail views must pop out into a centered modal dialog (`showDialog` overlay with `maxWidth: 860`, `maxHeight: 780`) to prevent horizontal layout compression.
+   - Detail views must enforce a 3-tier structure: Pinned Top Header, Scrollable Middle Content (`Expanded -> SingleChildScrollView`), and Pinned Bottom Action Bar.
 
 ## Database Rules
 - `current_schema.md` at the repository root is the read-only source of truth for the current database situation and schema state.
 - **NEVER edit `current_schema.md` directly**. Only the human project owner updates `current_schema.md` after applying database migrations.
+- **EXTERNAL ERP DECOUPLING**: SHIELD is not an inventory master system. Stock levels and product catalogs live in the client's external ERP. `product_id` in purchase order lines must remain optional (`NULL`) so dynamic item names and prescription line items are processed without local inventory catalog constraints.
 - Use UUIDs for public identifiers
 - Use BIGSERIAL for internal primary keys
 - **NO STORED BALANCE IN WALLET TABLE**: Always calculate dynamically from transactions.
 - Wallet balances are ledger-based via `sub_ledger_type` in `wallet_transactions` and must remain separated across `CASH`, `REWARD_POINTS`, and hidden `SHIELD_BENEFIT` entries.
+- **PRIVILEGE MEMBER WALLET RECHARGE RULE**: Counter wallet recharges and 10% extra promotional credit are strictly restricted to registered SHIELD Privilege Card / Membership holders. Minimum recharge is ₹10,000 in exact multiples of ₹10,000. Non-member app users can only purchase wellness products directly from customer-facing app interfaces and cannot hold wallet balances.
 - `SHIELD_BENEFIT` is company-funded promotional credit and must never be exposed to customers as a remaining wallet balance; only applied-discount lines are customer-visible.
 - Referral rewards must stay delayed and status-driven (`PENDING -> VERIFIED -> QUALIFIED -> REWARDED/REJECTED`) rather than being credited at registration or approval time.
 - Pricing, benefit application, membership discounts, referral qualification, reward redemption, and final payable calculations should be centralized through a rule engine/service layer, not scattered across individual feature modules.
-- Enforce location constraint check using `issued_business_id` in `shield_cards`.
+- Enforce location constraint check using `issued_business_id` in `shield_cards` (**ASSOCIATED PHARMACY BRANCH RESTRICTION**: Customers can only purchase or redeem services from their associated/assigned pharmacy branch).
 - Soft delete support (deleted_at column)
 - Append-only audit logs
 - Index frequently queried columns
@@ -75,7 +80,7 @@
 1. RBAC + ABAC authorization
 2. Firebase Phone OTP verification (Customers) and Firebase Google Sign-In verification (Staff / Service Providers / Admins)
 3. Mandatory `agent_code` check for Customer registration (onboarding agent who initiated creation)
-4. Enforce branch restriction rules on SHIELD card utilization (Hyperpharmacy store cards are locked to their issuing branch, general service providers are cross-compatible)
+4. Enforce branch restriction rules on SHIELD card utilization (Hyperpharmacy store cards are strictly locked to their associated issuing pharmacy branch; cross-branch pharmacy purchases are blocked)
 5. Encrypt sensitive data at rest
 6. HTTPS only (TLS 1.3)
 7. Audit all critical actions
