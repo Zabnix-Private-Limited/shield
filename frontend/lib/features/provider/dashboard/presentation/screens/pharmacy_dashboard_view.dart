@@ -3,6 +3,9 @@ import 'package:shield/features/provider/pharmacy/design/pharmacy_colors.dart';
 import 'package:shield/features/provider/pharmacy/design/pharmacy_spacing.dart';
 import 'package:shield/features/provider/pharmacy/design/pharmacy_typography.dart';
 import 'package:shield/features/provider/pharmacy/presentation/controllers/pharmacy_dashboard_controller.dart';
+import 'package:shield/features/provider/pharmacy/presentation/controllers/pharmacy_orders_controller.dart';
+import 'package:shield/features/provider/pharmacy/presentation/controllers/pharmacy_payments_controller.dart';
+import 'package:shield/features/provider/pharmacy/presentation/controllers/pharmacy_order_history_controller.dart';
 import 'package:shield/features/provider/pharmacy/presentation/widgets/pharmacy_components.dart';
 import 'package:shield/features/provider/pharmacy/presentation/widgets/pharmacy_metric_card.dart';
 import 'package:shield/features/provider/pharmacy/presentation/widgets/pharmacy_status_chip.dart';
@@ -159,7 +162,10 @@ class _PharmacyDashboardViewState extends State<PharmacyDashboardView> {
                 iconColor: PharmacyColors.info,
                 badge: 'Pending',
                 badgeColor: PharmacyColors.info,
-                onTap: () => widget.onNavigateToSection?.call('orders'),
+                onTap: () {
+                  PharmacyOrdersController.instance.setStatusFilter('NEW');
+                  widget.onNavigateToSection?.call('orders');
+                },
               ),
               PharmacyMetricCard(
                 title: 'Preparing',
@@ -168,7 +174,10 @@ class _PharmacyDashboardViewState extends State<PharmacyDashboardView> {
                 iconColor: PharmacyColors.warning,
                 badge: 'In Progress',
                 badgeColor: PharmacyColors.warning,
-                onTap: () => widget.onNavigateToSection?.call('orders'),
+                onTap: () {
+                  PharmacyOrdersController.instance.setStatusFilter('PREPARING');
+                  widget.onNavigateToSection?.call('orders');
+                },
               ),
               PharmacyMetricCard(
                 title: 'Ready for Pickup',
@@ -177,7 +186,10 @@ class _PharmacyDashboardViewState extends State<PharmacyDashboardView> {
                 iconColor: PharmacyColors.primary,
                 badge: 'Store Pickup',
                 badgeColor: PharmacyColors.primary,
-                onTap: () => widget.onNavigateToSection?.call('orders'),
+                onTap: () {
+                  PharmacyOrdersController.instance.setStatusFilter('READY_FOR_PICKUP');
+                  widget.onNavigateToSection?.call('orders');
+                },
               ),
               PharmacyMetricCard(
                 title: 'Out for Delivery',
@@ -186,7 +198,10 @@ class _PharmacyDashboardViewState extends State<PharmacyDashboardView> {
                 iconColor: PharmacyColors.purple,
                 badge: 'In Transit',
                 badgeColor: PharmacyColors.purple,
-                onTap: () => widget.onNavigateToSection?.call('orders'),
+                onTap: () {
+                  PharmacyOrdersController.instance.setStatusFilter('OUT_FOR_DELIVERY');
+                  widget.onNavigateToSection?.call('orders');
+                },
               ),
             ],
           ),
@@ -215,7 +230,10 @@ class _PharmacyDashboardViewState extends State<PharmacyDashboardView> {
                 iconColor: PharmacyColors.warning,
                 badge: 'Verification Needed',
                 badgeColor: PharmacyColors.warning,
-                onTap: () => widget.onNavigateToSection?.call('payments'),
+                onTap: () {
+                  PharmacyPaymentsController.instance.setActiveStatus('PENDING');
+                  widget.onNavigateToSection?.call('payments');
+                },
               ),
               PharmacyMetricCard(
                 title: 'Approved Today',
@@ -224,7 +242,10 @@ class _PharmacyDashboardViewState extends State<PharmacyDashboardView> {
                 iconColor: PharmacyColors.primary,
                 subtitle:
                     '₹ ${data.payments.approvedAmountToday.toStringAsFixed(2)}',
-                onTap: () => widget.onNavigateToSection?.call('payments'),
+                onTap: () {
+                  PharmacyPaymentsController.instance.setActiveStatus('APPROVED');
+                  widget.onNavigateToSection?.call('payments');
+                },
               ),
               PharmacyMetricCard(
                 title: 'Completed Today',
@@ -233,7 +254,11 @@ class _PharmacyDashboardViewState extends State<PharmacyDashboardView> {
                 iconColor: PharmacyColors.navy,
                 subtitle:
                     '₹ ${data.orders.orderValueToday.toStringAsFixed(2)}',
-                onTap: () => widget.onNavigateToSection?.call('history'),
+                onTap: () {
+                  PharmacyOrderHistoryController.instance.setActiveStatus('COMPLETED');
+                  PharmacyOrderHistoryController.instance.setActiveDatePreset('TODAY');
+                  widget.onNavigateToSection?.call('history');
+                },
               ),
             ],
           ),
@@ -271,7 +296,16 @@ class _PharmacyDashboardViewState extends State<PharmacyDashboardView> {
               (o) => PharmacyCard(
                 padding: const EdgeInsets.all(12),
                 child: InkWell(
-                  onTap: () => widget.onNavigateToSection?.call('orders'),
+                  onTap: () {
+                    final status = o.orderStatus.toUpperCase();
+                    if (status == 'COMPLETED' || status == 'CANCELLED' || status == 'REJECTED') {
+                      PharmacyOrderHistoryController.instance.loadOrderDetail(o.id);
+                      widget.onNavigateToSection?.call('history');
+                    } else {
+                      PharmacyOrdersController.instance.setSearchQuery(o.invoiceNumber);
+                      widget.onNavigateToSection?.call('orders');
+                    }
+                  },
                   borderRadius: BorderRadius.circular(PharmacyRadius.card),
                   child: Row(
                     children: [
@@ -353,7 +387,10 @@ class _PharmacyDashboardViewState extends State<PharmacyDashboardView> {
               (p) => PharmacyCard(
                 padding: const EdgeInsets.all(12),
                 child: InkWell(
-                  onTap: () => widget.onNavigateToSection?.call('payments'),
+                  onTap: () {
+                    PharmacyPaymentsController.instance.loadPaymentDetail(p.id);
+                    widget.onNavigateToSection?.call('payments');
+                  },
                   borderRadius: BorderRadius.circular(PharmacyRadius.card),
                   child: Row(
                     children: [

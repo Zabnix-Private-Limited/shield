@@ -167,218 +167,159 @@ class _PharmacySettingsScreenState extends State<PharmacySettingsScreen> {
 
     final screenWidth = MediaQuery.of(context).size.width;
     final isDesktop = screenWidth >= 1024;
-    final isCompactHeader = screenWidth < 640;
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Top Responsive Header Bar
-          PharmacyCard(
+    return Column(
+      children: [
+        // 1. Scrollable Middle Content Workspace
+        Expanded(
+          child: SingleChildScrollView(
             padding: const EdgeInsets.all(20),
-            child: isCompactHeader
-                ? Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Top Header Card
+                PharmacyCard(
+                  padding: const EdgeInsets.all(20),
+                  child: Row(
                     children: [
-                      Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: PharmacyColors.primary.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(PharmacyRadius.card),
-                            ),
-                            child: const Icon(
-                              Icons.tune_rounded,
-                              color: PharmacyColors.primary,
-                              size: 28,
-                            ),
-                          ),
-                          const SizedBox(width: 14),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Pharmacy Settings',
-                                  style: PharmacyTypography.h2.copyWith(fontWeight: FontWeight.bold),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  'Configure operational policies and display behavior.',
-                                  style: PharmacyTypography.caption.copyWith(color: PharmacyColors.textSecondary),
-                                  overflow: TextOverflow.ellipsis,
-                                  maxLines: 2,
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: PharmacyColors.primary.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(PharmacyRadius.card),
+                        ),
+                        child: const Icon(
+                          Icons.tune_rounded,
+                          color: PharmacyColors.primary,
+                          size: 28,
+                        ),
                       ),
-                      const SizedBox(height: 16),
-                      Wrap(
-                        spacing: 10,
-                        runSpacing: 10,
-                        children: [
-                          PharmacySecondaryButton(
-                            label: 'Discard Changes',
-                            icon: Icons.restore_rounded,
-                            onPressed: _handleReset,
-                          ),
-                          PharmacyPrimaryButton(
-                            label: 'Save Changes',
-                            icon: Icons.save_rounded,
-                            isLoading: _isSaving,
-                            onPressed: _isDirty ? _handleSave : null,
-                          ),
-                        ],
-                      ),
-                    ],
-                  )
-                : Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
+                      const SizedBox(width: 16),
                       Expanded(
-                        child: Row(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Container(
-                              padding: const EdgeInsets.all(12),
-                              decoration: BoxDecoration(
-                                color: PharmacyColors.primary.withValues(alpha: 0.1),
-                                borderRadius: BorderRadius.circular(PharmacyRadius.card),
-                              ),
-                              child: const Icon(
-                                Icons.tune_rounded,
-                                color: PharmacyColors.primary,
-                                size: 28,
-                              ),
+                            Text(
+                              'Pharmacy Settings',
+                              style: PharmacyTypography.h2.copyWith(fontWeight: FontWeight.bold),
                             ),
-                            const SizedBox(width: 16),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Pharmacy Settings',
-                                    style: PharmacyTypography.h2.copyWith(fontWeight: FontWeight.bold),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    'These settings apply to your assigned Pharmacy.',
-                                    style: PharmacyTypography.caption.copyWith(color: PharmacyColors.textSecondary),
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ],
-                              ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Configure operational policies, fulfillment preferences, and display behavior.',
+                              style: PharmacyTypography.caption.copyWith(color: PharmacyColors.textSecondary),
+                              overflow: TextOverflow.ellipsis,
+                              maxLines: 2,
                             ),
                           ],
                         ),
                       ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 20),
+
+                // Settings Cards Layout Grid
+                if (isDesktop) ...[
+                  // Desktop 2-Column Responsive Balanced Grid
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(child: _buildOrderWorkflowCard()),
                       const SizedBox(width: 16),
-                      Row(
-                        children: [
-                          PharmacySecondaryButton(
-                            label: 'Discard Changes',
-                            icon: Icons.restore_rounded,
-                            onPressed: _handleReset,
+                      Expanded(child: _buildPartialFulfillmentCard()),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(child: _buildSubstitutesCard()),
+                      const SizedBox(width: 16),
+                      Expanded(child: _buildChronicTaggingCard()),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(child: _buildNotificationsCard()),
+                      const SizedBox(width: 16),
+                      Expanded(child: _buildDeliveryPickupCard()),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(child: _buildPaymentVerificationCard()),
+                      const SizedBox(width: 16),
+                      Expanded(child: _buildDisplayBehaviorCard()),
+                    ],
+                  ),
+                ] else ...[
+                  // Stacked Mobile / Tablet Layout
+                  _buildOrderWorkflowCard(),
+                  const SizedBox(height: 16),
+                  _buildPartialFulfillmentCard(),
+                  const SizedBox(height: 16),
+                  _buildSubstitutesCard(),
+                  const SizedBox(height: 16),
+                  _buildChronicTaggingCard(),
+                  const SizedBox(height: 16),
+                  _buildNotificationsCard(),
+                  const SizedBox(height: 16),
+                  _buildDeliveryPickupCard(),
+                  const SizedBox(height: 16),
+                  _buildPaymentVerificationCard(),
+                  const SizedBox(height: 16),
+                  _buildDisplayBehaviorCard(),
+                ],
+              ],
+            ),
+          ),
+        ),
+
+        // 2. Fixed Sticky Bottom Action Panel
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+          child: PharmacyCard(
+            color: PharmacyColors.surfaceSubtle,
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Row(
+                    children: [
+                      Icon(
+                        _isDirty ? Icons.edit_note_rounded : Icons.check_circle_outline,
+                        size: 20,
+                        color: _isDirty ? PharmacyColors.warning : PharmacyColors.primary,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          _isDirty ? 'Unsaved settings modifications pending' : 'All settings up to date',
+                          style: PharmacyTypography.caption.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: _isDirty ? PharmacyColors.navy : PharmacyColors.textSecondary,
                           ),
-                          const SizedBox(width: 12),
-                          PharmacyPrimaryButton(
-                            label: 'Save Changes',
-                            icon: Icons.save_rounded,
-                            isLoading: _isSaving,
-                            onPressed: _isDirty ? _handleSave : null,
-                          ),
-                        ],
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
                     ],
                   ),
-          ),
-          const SizedBox(height: 20),
-
-          // Settings Cards Layout Grid
-          if (isDesktop) ...[
-            // Desktop 2-Column Responsive Balanced Grid
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(child: _buildOrderWorkflowCard()),
-                const SizedBox(width: 16),
-                Expanded(child: _buildPartialFulfillmentCard()),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(child: _buildSubstitutesCard()),
-                const SizedBox(width: 16),
-                Expanded(child: _buildChronicTaggingCard()),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(child: _buildNotificationsCard()),
-                const SizedBox(width: 16),
-                Expanded(child: _buildDeliveryPickupCard()),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(child: _buildPaymentVerificationCard()),
-                const SizedBox(width: 16),
-                Expanded(child: _buildDisplayBehaviorCard()),
-              ],
-            ),
-          ] else ...[
-            // Stacked Mobile / Tablet Layout
-            _buildOrderWorkflowCard(),
-            const SizedBox(height: 16),
-            _buildPartialFulfillmentCard(),
-            const SizedBox(height: 16),
-            _buildSubstitutesCard(),
-            const SizedBox(height: 16),
-            _buildChronicTaggingCard(),
-            const SizedBox(height: 16),
-            _buildNotificationsCard(),
-            const SizedBox(height: 16),
-            _buildDeliveryPickupCard(),
-            const SizedBox(height: 16),
-            _buildPaymentVerificationCard(),
-            const SizedBox(height: 16),
-            _buildDisplayBehaviorCard(),
-          ],
-
-          const SizedBox(height: 24),
-          // Bottom Responsive Actions Bar
-          PharmacyCard(
-            padding: const EdgeInsets.all(16),
-            child: Wrap(
-              alignment: WrapAlignment.spaceBetween,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              spacing: 12,
-              runSpacing: 12,
-              children: [
-                Text(
-                  _isDirty ? 'Unsaved settings modifications pending' : 'All settings up to date',
-                  style: PharmacyTypography.caption.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: _isDirty ? PharmacyColors.navy : PharmacyColors.textSecondary,
-                  ),
                 ),
-                Wrap(
-                  spacing: 12,
-                  runSpacing: 12,
+                const SizedBox(width: 12),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     PharmacySecondaryButton(
                       label: 'Discard Changes',
+                      icon: Icons.restore_rounded,
                       onPressed: _handleReset,
                     ),
+                    const SizedBox(width: 12),
                     PharmacyPrimaryButton(
                       label: 'Save Settings',
                       icon: Icons.check_circle_rounded,
@@ -390,8 +331,8 @@ class _PharmacySettingsScreenState extends State<PharmacySettingsScreen> {
               ],
             ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
