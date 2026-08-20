@@ -28,10 +28,6 @@ class _PharmacySettingsScreenState extends State<PharmacySettingsScreen> {
   bool _allowPartialFulfillment = true;
   bool _allowPartialDispatch = true;
 
-  // Low-Stock & Inventory Behavior
-  bool _lowStockAlerts = true;
-  int _lowStockThreshold = 5;
-
   // Alternative & Substitute Preferences
   bool _suggestSubstitutes = true;
   bool _requireCustomerConfirmation = true;
@@ -69,7 +65,6 @@ class _PharmacySettingsScreenState extends State<PharmacySettingsScreen> {
       if (!mounted) return;
       final workflow = data['orderWorkflow'] as Map<String, dynamic>? ?? {};
       final partial = data['partialFulfillment'] as Map<String, dynamic>? ?? {};
-      final lowStock = data['lowStock'] as Map<String, dynamic>? ?? {};
       final subs = data['substitutions'] as Map<String, dynamic>? ?? {};
       final chronic = data['chronic'] as Map<String, dynamic>? ?? {};
       final notifs = data['notifications'] as Map<String, dynamic>? ?? {};
@@ -83,9 +78,6 @@ class _PharmacySettingsScreenState extends State<PharmacySettingsScreen> {
 
         _allowPartialFulfillment = partial['allowPartialFulfillment'] ?? true;
         _allowPartialDispatch = partial['allowPartialDispatch'] ?? true;
-
-        _lowStockAlerts = lowStock['lowStockAlerts'] ?? true;
-        _lowStockThreshold = lowStock['lowStockThreshold'] ?? 5;
 
         _suggestSubstitutes = subs['suggestSubstitutes'] ?? true;
         _requireCustomerConfirmation = subs['requireCustomerConfirmation'] ?? true;
@@ -126,8 +118,6 @@ class _PharmacySettingsScreenState extends State<PharmacySettingsScreen> {
         'requireInvoiceBeforeDispatch': _requireInvoiceBeforeDispatch,
         'allowPartialFulfillment': _allowPartialFulfillment,
         'allowPartialDispatch': _allowPartialDispatch,
-        'lowStockAlerts': _lowStockAlerts,
-        'lowStockThreshold': _lowStockThreshold,
         'suggestSubstitutes': _suggestSubstitutes,
         'requireCustomerConfirmation': _requireCustomerConfirmation,
         'enableChronicTagging': _enableChronicTagging,
@@ -309,15 +299,13 @@ class _PharmacySettingsScreenState extends State<PharmacySettingsScreen> {
 
           // Settings Cards Layout Grid
           if (isDesktop) ...[
-            // Desktop 3-Column Responsive Grid
+            // Desktop 2-Column Responsive Balanced Grid
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Expanded(child: _buildOrderWorkflowCard()),
                 const SizedBox(width: 16),
                 Expanded(child: _buildPartialFulfillmentCard()),
-                const SizedBox(width: 16),
-                Expanded(child: _buildLowStockCard()),
               ],
             ),
             const SizedBox(height: 16),
@@ -327,16 +315,21 @@ class _PharmacySettingsScreenState extends State<PharmacySettingsScreen> {
                 Expanded(child: _buildSubstitutesCard()),
                 const SizedBox(width: 16),
                 Expanded(child: _buildChronicTaggingCard()),
-                const SizedBox(width: 16),
-                Expanded(child: _buildNotificationsCard()),
               ],
             ),
             const SizedBox(height: 16),
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(child: _buildDeliveryPickupCard()),
+                Expanded(child: _buildNotificationsCard()),
                 const SizedBox(width: 16),
+                Expanded(child: _buildDeliveryPickupCard()),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
                 Expanded(child: _buildPaymentVerificationCard()),
                 const SizedBox(width: 16),
                 Expanded(child: _buildDisplayBehaviorCard()),
@@ -347,8 +340,6 @@ class _PharmacySettingsScreenState extends State<PharmacySettingsScreen> {
             _buildOrderWorkflowCard(),
             const SizedBox(height: 16),
             _buildPartialFulfillmentCard(),
-            const SizedBox(height: 16),
-            _buildLowStockCard(),
             const SizedBox(height: 16),
             _buildSubstitutesCard(),
             const SizedBox(height: 16),
@@ -484,63 +475,6 @@ class _PharmacySettingsScreenState extends State<PharmacySettingsScreen> {
               _markDirty();
               setState(() => _allowPartialDispatch = val);
             },
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildLowStockCard() {
-    return PharmacyCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Icon(Icons.warning_amber_rounded, color: PharmacyColors.primary),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  'Low-Stock Behavior',
-                  style: PharmacyTypography.subtitle.copyWith(fontWeight: FontWeight.bold),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            ],
-          ),
-          const Divider(height: 20),
-          PharmacySwitchTile(
-            title: 'Low-Stock Alerts',
-            subtitle: 'Highlight items with quantity below threshold',
-            value: _lowStockAlerts,
-            onChanged: (val) {
-              _markDirty();
-              setState(() => _lowStockAlerts = val);
-            },
-          ),
-          const SizedBox(height: 12),
-          Text('Alert Threshold (Units)', style: PharmacyTypography.caption.copyWith(fontWeight: FontWeight.bold)),
-          const SizedBox(height: 6),
-          Row(
-            children: [
-              IconButton(
-                icon: const Icon(Icons.remove_circle_outline),
-                onPressed: _lowStockThreshold > 1
-                    ? () {
-                        _markDirty();
-                        setState(() => _lowStockThreshold--);
-                      }
-                    : null,
-              ),
-              Text('$_lowStockThreshold units', style: PharmacyTypography.subtitle.copyWith(fontWeight: FontWeight.bold)),
-              IconButton(
-                icon: const Icon(Icons.add_circle_outline),
-                onPressed: () {
-                  _markDirty();
-                  setState(() => _lowStockThreshold++);
-                },
-              ),
-            ],
           ),
         ],
       ),

@@ -54,6 +54,13 @@
 11. Responsive Pop-over Detail View Pattern
    - In multi-pane desktop portal layouts, when viewport width falls below 1180px or on window resizing, detail views must pop out into a centered modal dialog (`showDialog` overlay with `maxWidth: 860`, `maxHeight: 780`) to prevent horizontal layout compression.
    - Detail views must enforce a 3-tier structure: Pinned Top Header, Scrollable Middle Content (`Expanded -> SingleChildScrollView`), and Pinned Bottom Action Bar.
+12. State-Bound Detail View Modal Pattern
+   - Detail views rendered inside pop-over modal overlays (`showDialog` or bottom sheets) MUST subscribe to state controller listeners (`addListener`) and dynamically resolve active models (`selectedModel ?? widget.model`) so item decision updates immediately reflect in real-time.
+13. Terminal Order Protection & Status Feedback
+   - Orders in terminal statuses (`COMPLETED`, `DELIVERED`, `COLLECTED`, `CANCELLED`, `REJECTED`) must replace action buttons with a read-only status banner.
+   - All order status transition button actions must be asynchronous and display top-central toast feedback (`showPortalSnackBar`) presenting human-readable error messages on failure.
+14. ERP Inventory Decoupling & Settings Hygiene
+   - SHIELD is strictly decoupled from client external ERP systems. Do not render inventory stock management, low-stock alert thresholds, or warehouse stock forms in SHIELD provider settings or workspace cards.
 
 ## Database Rules
 - `current_schema.md` at the repository root is the read-only source of truth for the current database situation and schema state.
