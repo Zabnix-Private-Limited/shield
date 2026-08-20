@@ -79,6 +79,44 @@ class _PharmacyOrdersScreenState extends State<PharmacyOrdersScreen> {
     );
   }
 
+  void _openPopOverOrderDetail(PharmacyOrderModel order) {
+    _controller.selectOrder(order);
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (ctx) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(
+              maxWidth: 860,
+              maxHeight: 780,
+            ),
+            child: Container(
+              clipBehavior: Clip.antiAlias,
+              decoration: BoxDecoration(
+                color: PharmacyColors.canvas,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Colors.black26,
+                    blurRadius: 24,
+                    offset: Offset(0, 10),
+                  ),
+                ],
+              ),
+              child: PharmacyFulfillmentDetailView(
+                order: order,
+                onClose: () => Navigator.pop(ctx),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildFilterChip(String label, String value, int count) {
     final isSelected = _controller.activeStatusFilter == value;
     return Padding(
@@ -140,7 +178,8 @@ class _PharmacyOrdersScreenState extends State<PharmacyOrdersScreen> {
     final error = _controller.error;
     final selectedOrder = _controller.selectedOrder ??
         (orders.isNotEmpty ? orders.first : null);
-    final isDesktop = MediaQuery.of(context).size.width >= 1024;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isWideDesktop = screenWidth >= 1200;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -248,8 +287,8 @@ class _PharmacyOrdersScreenState extends State<PharmacyOrdersScreen> {
             icon: Icons.assignment_outlined,
           ),
         ] else ...[
-          // Split Pane for Desktop / Stacked for Mobile
-          isDesktop
+          // Split Pane for Wide Desktop (>= 1200px) / Pop-over Modal for Narrow Desktop & Mobile (< 1200px)
+          isWideDesktop
               ? SizedBox(
                   height: 720,
                   child: Row(
@@ -338,6 +377,7 @@ class _PharmacyOrdersScreenState extends State<PharmacyOrdersScreen> {
                         child: selectedOrder != null
                             ? PharmacyFulfillmentDetailView(
                                 order: selectedOrder,
+                                onPopOver: () => _openPopOverOrderDetail(selectedOrder),
                               )
                             : const PharmacyEmptyState(
                                 title: 'Select an order',
@@ -359,7 +399,9 @@ class _PharmacyOrdersScreenState extends State<PharmacyOrdersScreen> {
                       child: PharmacyCard(
                         padding: const EdgeInsets.all(14),
                         child: InkWell(
-                          onTap: () => _openMobileOrderDetail(order),
+                          onTap: () => screenWidth >= 650
+                              ? _openPopOverOrderDetail(order)
+                              : _openMobileOrderDetail(order),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [

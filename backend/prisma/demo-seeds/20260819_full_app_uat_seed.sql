@@ -285,7 +285,7 @@ BEGIN
 
                 -- Purchase Item 1: Paracetamol 650mg Suppress
                 INSERT INTO purchase_items (purchase_id, product_id, quantity, unit_price, total_price, item_type, item_name)
-                VALUES (v_purchase_id, v_p1_id, 2.00, 40.00, 80.00, 'MEDICINE', 'Paracetamol 650mg Suppress')
+                VALUES (v_purchase_id, NULL, 2.00, 40.00, 80.00, 'MEDICINE', 'Paracetamol 650mg Suppress')
                 RETURNING id INTO v_item_id;
 
                 INSERT INTO purchase_item_fulfillments (purchase_item_id, approved_quantity, dispatched_quantity, remaining_quantity, stock_status, decision_status, decision_reason, decision_actor_id, authoritative_price)
@@ -295,12 +295,12 @@ BEGIN
                     CASE WHEN s = 'COMPLETED' THEN 0.00 ELSE 2.00 END,
                     'FULL_STOCK',
                     CASE WHEN s IN ('ACCEPTED', 'PARTIAL_REVIEW', 'PREPARING', 'READY_FOR_PICKUP', 'OUT_FOR_DELIVERY', 'COMPLETED') THEN 'APPROVED' ELSE 'PENDING' END,
-                    'In-stock verified by counter pharmacist', v_admin_id, 40.00
+                    'Item verified available by pharmacist', v_admin_id, 40.00
                 );
 
                 -- Purchase Item 2: Amoxicillin 500mg Capsule
                 INSERT INTO purchase_items (purchase_id, product_id, quantity, unit_price, total_price, item_type, item_name)
-                VALUES (v_purchase_id, v_p2_id, 10.00, 15.00, 150.00, 'MEDICINE', 'Amoxicillin 500mg Capsule')
+                VALUES (v_purchase_id, NULL, 10.00, 15.00, 150.00, 'MEDICINE', 'Amoxicillin 500mg Capsule')
                 RETURNING id INTO v_item_id;
 
                 INSERT INTO purchase_item_fulfillments (purchase_item_id, approved_quantity, dispatched_quantity, remaining_quantity, stock_status, decision_status, decision_reason, decision_actor_id, authoritative_price)
