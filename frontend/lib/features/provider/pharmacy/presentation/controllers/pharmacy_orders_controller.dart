@@ -16,6 +16,7 @@ class PharmacyOrdersController extends ChangeNotifier {
   List<PharmacyOrderModel> _orders = [];
   PharmacyOrderModel? _selectedOrder;
   final Set<String> _updatingOrderIds = {};
+  final Set<String> _updatingItemKeys = {};
 
   bool get isLoading => _isLoading;
   String? get error => _error;
@@ -46,6 +47,8 @@ class PharmacyOrdersController extends ChangeNotifier {
   PharmacyOrderModel? get selectedOrder => _selectedOrder;
 
   bool isOrderUpdating(String orderId) => _updatingOrderIds.contains(orderId);
+  bool isItemUpdating(String orderId, String itemId) =>
+      _updatingItemKeys.contains('$orderId:$itemId') || _updatingOrderIds.contains(orderId);
 
   void selectOrder(PharmacyOrderModel? order) {
     _selectedOrder = order;
@@ -130,6 +133,7 @@ class PharmacyOrdersController extends ChangeNotifier {
     if (_selectedOrder?.id == orderId) {
       _selectedOrder = updated;
     }
+    notifyListeners();
   }
 
   Future<bool> updateOrderItemFulfillment({
@@ -142,11 +146,12 @@ class PharmacyOrdersController extends ChangeNotifier {
     double? substituteUnitPrice,
     String? decisionReason,
   }) async {
-    if (_updatingOrderIds.contains(orderId)) {
-      _error = 'Fulfillment update already in progress. Please wait a moment.';
+    final itemKey = '$orderId:$itemId';
+    if (_updatingItemKeys.contains(itemKey)) {
+      _error = 'Fulfillment decision update already in progress for this item.';
       return false;
     }
-    _updatingOrderIds.add(orderId);
+    _updatingItemKeys.add(itemKey);
     notifyListeners();
 
     try {
@@ -161,12 +166,13 @@ class PharmacyOrdersController extends ChangeNotifier {
         decisionReason: decisionReason,
       );
       _updateLocalOrder(orderId, updated);
+      _error = null;
       return true;
     } catch (e) {
       _error = e.toString();
       return false;
     } finally {
-      _updatingOrderIds.remove(orderId);
+      _updatingItemKeys.remove(itemKey);
       notifyListeners();
     }
   }

@@ -5,7 +5,26 @@
 
 ---
 
-## 1. Visual Reference Evaluation Matrix
+## 1. Canonical Color System Audit
+
+The implementation was audited against the canonical Pharmacy Design tokens (`02_DESIGN_TOKENS.md`):
+
+| Token Name | Canonical Hex Code | Source Code Hex (`PharmacyColors`) | Audit Result |
+| :--- | :---: | :---: | :---: |
+| **Primary Teal** | `#0B9C78` | `Color(0xFF0B9C78)` | **MATCH** |
+| **Primary Hover** | `#087E63` | `Color(0xFF087E63)` | **MATCH** |
+| **Primary Soft** | `#ECF9F5` | `Color(0xFFECF9F5)` | **MATCH** |
+| **Dark Navy** | `#10213F` | `Color(0xFF10213F)` | **MATCH** |
+| **Navy Strong** | `#091B35` | `Color(0xFF091B35)` | **MATCH** |
+| **Canvas Background** | `#F7F9FC` | `Color(0xFFF7F9FC)` | **MATCH** |
+| **Card Surface** | `#FFFFFF` | `Color(0xFFFFFFFF)` | **MATCH** |
+| **Surface Subtle** | `#FBFCFE` | `Color(0xFFFBFCFE)` | **MATCH** |
+| **Border Soft** | `#E4E9F0` | `Color(0xFFE4E9F0)` | **MATCH** |
+| **Border Strong** | `#D4DBE5` | `Color(0xFFD4DBE5)` | **MATCH** |
+
+---
+
+## 2. Visual Reference Evaluation Matrix
 
 | Reference File | Target Route | Target Viewport | Shell | Structure | Typography | Spacing | Cards | Controls | Status States | Responsive | Status |
 | :--- | :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
@@ -21,19 +40,16 @@
 
 ---
 
-## 2. Dimensional Visual Alignment Analysis
+## 3. Platform & Viewport Status
 
-- **Canvas & Surfaces**: Clean white/light-first canvas with soft slate borders (`#E2E8F0`) and light grey background (`#F8FAFC`).
-- **Brand System & Accent Palette**: Restrained SHIELD Teal (`#10B981`) and SHIELD Navy (`#0F172A`) for primary hierarchy and status chips.
-- **Typography & Scale**: Outfit / Inter typeface hierarchy. Headers (`h2`), subtitles, body text, and captions adhere to design token scale.
-- **Responsive Layout Rules**:
-  - *Desktop (> 1180px)*: Queue + detail split-pane workspace.
-  - *Tablet & Compact (< 1180px)*: Auto-pop detail view modal overlay (`showDialog`, `maxWidth: 860`, `maxHeight: 780`).
-  - *Mobile (< 640px)*: Stacked card-based layout with sticky bottom action controls.
+- **Desktop Web (1920×1080, 1440×900, 1366×768)**: **PASS**
+- **Tablet Web (1024×768, 768×1024)**: **PASS**
+- **Mobile Web (430×932, 390×844)**: **PASS**
+- **Android APK Runtime**: **NOT_TESTED**
 
 ---
 
-## 3. Justified Deltas
+## 4. Justified Deltas
 
-- **Low-Stock Inventory Cards Removed**: The Low-Stock Behavior settings card depicted in `08_settings_detailed_reference.png` was intentionally removed per SHIELD System Rule #14 (*ERP Inventory Decoupling*), as stock levels reside exclusively in the client's external ERP.
-- **Single-Outlet Read-Only Profile**: Branch switching and provider selector dropdowns depicted in mockup variants are omitted on Pharmacy Staff profile per System Rule #4 (*Absolute Pharmacy Access Rule*).
+1. **ERP Inventory Decoupling**: The Low-Stock Behavior settings card in `08_settings_detailed_reference.png` was intentionally removed per System Rule #14 (*ERP Inventory Decoupling*). Warehouse inventory stock levels are managed exclusively in external client ERP systems.
+2. **Single-Outlet Outlet Lock**: Branch switching and provider selector dropdowns depicted in mockup variants are omitted on Pharmacy Staff profile per System Rule #4 (*Absolute Pharmacy Access Rule*).

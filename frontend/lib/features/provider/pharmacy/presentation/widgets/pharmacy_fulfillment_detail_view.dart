@@ -61,7 +61,7 @@ class _PharmacyFulfillmentDetailViewState
     super.dispose();
   }
 
-  void _showSubstituteModal(BuildContext context, PharmacyOrderItem item) {
+  void _showSubstituteModal(BuildContext context, String orderId, PharmacyOrderItem item) {
     final nameController = TextEditingController(
       text: item.substituteName ?? '${item.name} Alt',
     );
@@ -119,7 +119,7 @@ class _PharmacyFulfillmentDetailViewState
               Navigator.pop(ctx);
               final subPrice = double.tryParse(priceController.text.trim()) ?? (item.unitPrice * 0.9);
               final success = await PharmacyOrdersController.instance.updateOrderItemFulfillment(
-                orderId: widget.order.id,
+                orderId: orderId,
                 itemId: item.id,
                 decisionStatus: 'SUBSTITUTED',
                 substituteName: nameController.text.trim(),
@@ -140,7 +140,7 @@ class _PharmacyFulfillmentDetailViewState
     );
   }
 
-  void _showPartialFulfillModal(BuildContext context, PharmacyOrderItem item) {
+  void _showPartialFulfillModal(BuildContext context, String orderId, PharmacyOrderItem item) {
     final qtyController = TextEditingController(
       text: (item.availableQuantity > 0 ? item.availableQuantity : 1).toStringAsFixed(0),
     );
@@ -178,7 +178,7 @@ class _PharmacyFulfillmentDetailViewState
               Navigator.pop(ctx);
               final qty = double.tryParse(qtyController.text.trim()) ?? 1.0;
               final success = await PharmacyOrdersController.instance.updateOrderItemFulfillment(
-                orderId: widget.order.id,
+                orderId: orderId,
                 itemId: item.id,
                 fulfillQuantity: qty,
                 stockStatus: 'LOW_STOCK',
@@ -303,7 +303,7 @@ class _PharmacyFulfillmentDetailViewState
                         ? null
                         : () async {
                             final success = await PharmacyOrdersController.instance.updateOrderItemFulfillment(
-                              orderId: widget.order.id,
+                              orderId: order.id,
                               itemId: item.id,
                               fulfillQuantity: item.quantity,
                               stockStatus: 'FULL_STOCK',
@@ -369,7 +369,7 @@ class _PharmacyFulfillmentDetailViewState
                         label: 'Edit Substitute',
                         compact: true,
                         icon: Icons.edit_outlined,
-                        onPressed: isUpdating ? null : () => _showSubstituteModal(context, item),
+                        onPressed: isUpdating ? null : () => _showSubstituteModal(context, order.id, item),
                       ),
                       const SizedBox(width: 8),
                       PharmacySecondaryButton(
@@ -380,7 +380,7 @@ class _PharmacyFulfillmentDetailViewState
                             ? null
                             : () async {
                                 final success = await PharmacyOrdersController.instance.updateOrderItemFulfillment(
-                                  orderId: widget.order.id,
+                                  orderId: order.id,
                                   itemId: item.id,
                                   fulfillQuantity: item.quantity,
                                   stockStatus: 'FULL_STOCK',
@@ -439,7 +439,7 @@ class _PharmacyFulfillmentDetailViewState
                         ? null
                         : () async {
                             final success = await PharmacyOrdersController.instance.updateOrderItemFulfillment(
-                              orderId: widget.order.id,
+                              orderId: order.id,
                               itemId: item.id,
                               fulfillQuantity: item.quantity,
                               stockStatus: 'FULL_STOCK',
@@ -471,7 +471,7 @@ class _PharmacyFulfillmentDetailViewState
                       ? null
                       : () async {
                           final success = await PharmacyOrdersController.instance.updateOrderItemFulfillment(
-                            orderId: widget.order.id,
+                            orderId: order.id,
                             itemId: item.id,
                             fulfillQuantity: item.quantity,
                             stockStatus: 'FULL_STOCK',
@@ -492,13 +492,13 @@ class _PharmacyFulfillmentDetailViewState
                     label: 'Partial Fulfill',
                     compact: true,
                     icon: Icons.remove_circle_outline,
-                    onPressed: isUpdating ? null : () => _showPartialFulfillModal(context, item),
+                    onPressed: isUpdating ? null : () => _showPartialFulfillModal(context, order.id, item),
                   ),
                 PharmacySecondaryButton(
                   label: 'Suggest Substitute',
                   compact: true,
                   icon: Icons.swap_horiz_rounded,
-                  onPressed: isUpdating ? null : () => _showSubstituteModal(context, item),
+                  onPressed: isUpdating ? null : () => _showSubstituteModal(context, order.id, item),
                 ),
                 PharmacyDangerButton(
                   label: 'Reject Item',
@@ -508,12 +508,12 @@ class _PharmacyFulfillmentDetailViewState
                       ? null
                       : () async {
                           final success = await PharmacyOrdersController.instance.updateOrderItemFulfillment(
-                            orderId: widget.order.id,
+                            orderId: order.id,
                             itemId: item.id,
                             fulfillQuantity: 0,
-                            stockStatus: 'OUT_OF_STOCK',
+                            stockStatus: item.stockStatus,
                             decisionStatus: 'REJECTED',
-                            decisionReason: 'Item unavailable or out of stock.',
+                            decisionReason: 'Item rejected from order fulfillment by pharmacist.',
                           );
                           if (!context.mounted) return;
                           showPortalSnackBar(
@@ -707,7 +707,8 @@ class _PharmacyFulfillmentDetailViewState
                           separatorBuilder: (_, __) => const Divider(height: 20),
                           itemBuilder: (ctx, index) {
                             final item = order.items[index];
-                            return _buildFulfillmentItemTile(context, order, item, isUpdating);
+                            final isItemUpdating = PharmacyOrdersController.instance.isItemUpdating(order.id, item.id);
+                            return _buildFulfillmentItemTile(context, order, item, isItemUpdating);
                           },
                         ),
                       ],

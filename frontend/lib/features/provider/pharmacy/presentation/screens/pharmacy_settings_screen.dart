@@ -284,42 +284,41 @@ class _PharmacySettingsScreenState extends State<PharmacySettingsScreen> {
           padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
           child: PharmacyCard(
             color: PharmacyColors.surfaceSubtle,
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            child: Wrap(
+              alignment: WrapAlignment.spaceBetween,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: 12,
+              runSpacing: 10,
               children: [
-                Expanded(
-                  child: Row(
-                    children: [
-                      Icon(
-                        _isDirty ? Icons.edit_note_rounded : Icons.check_circle_outline,
-                        size: 20,
-                        color: _isDirty ? PharmacyColors.warning : PharmacyColors.primary,
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          _isDirty ? 'Unsaved settings modifications pending' : 'All settings up to date',
-                          style: PharmacyTypography.caption.copyWith(
-                            fontWeight: FontWeight.bold,
-                            color: _isDirty ? PharmacyColors.navy : PharmacyColors.textSecondary,
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 12),
                 Row(
                   mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      _isDirty ? Icons.edit_note_rounded : Icons.check_circle_outline,
+                      size: 20,
+                      color: _isDirty ? PharmacyColors.warning : PharmacyColors.primary,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      _isDirty ? 'Unsaved settings modifications pending' : 'All settings up to date',
+                      style: PharmacyTypography.caption.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: _isDirty ? PharmacyColors.navy : PharmacyColors.textSecondary,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+                Wrap(
+                  spacing: 10,
+                  runSpacing: 8,
                   children: [
                     PharmacySecondaryButton(
                       label: 'Discard Changes',
                       icon: Icons.restore_rounded,
                       onPressed: _handleReset,
                     ),
-                    const SizedBox(width: 12),
                     PharmacyPrimaryButton(
                       label: 'Save Settings',
                       icon: Icons.check_circle_rounded,

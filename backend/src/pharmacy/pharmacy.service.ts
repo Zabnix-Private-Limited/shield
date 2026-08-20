@@ -839,14 +839,52 @@ export class PharmacyService {
 
   private pharmacyFulfillmentProjection(purchase: any) {
     const snapshot = (purchase.billingSnapshot as Record<string, any>) || {};
-    const items = (purchase.purchaseItems ?? []).map((item: any) => ({
-      id: item.id.toString(),
-      productId: item.productId == null ? null : item.productId.toString(),
-      name: item.itemName ?? item.product?.productName ?? 'Product',
-      quantity: item.quantity == null ? 1 : Number(item.quantity),
-      unitPrice: item.unitPrice == null ? 0 : Number(item.unitPrice),
-      lineTotal: item.totalPrice == null ? 0 : Number(item.totalPrice),
-    }));
+    let calculatedPayableSum = 0;
+    let hasCustomFulfillmentDecisions = false;
+
+    const items = (purchase.purchaseItems ?? []).map((item: any) => {
+      const meta = (item.metadata as Record<string, any>) || {};
+      const reqQty = item.quantity == null ? 1 : Number(item.quantity);
+      const origUnitPrice = item.unitPrice == null ? 0 : Number(item.unitPrice);
+      const decisionStatus = (meta.decisionStatus ?? 'PENDING').toString().toUpperCase();
+      const isRejected = decisionStatus === 'REJECTED';
+
+      if (meta.decisionStatus != null) {
+        hasCustomFulfillmentDecisions = true;
+      }
+
+      const fulQty = meta.fulfillQuantity != null
+        ? Number(meta.fulfillQuantity)
+        : (isRejected ? 0 : reqQty);
+      const rejQty = meta.rejectedQuantity != null
+        ? Number(meta.rejectedQuantity)
+        : (isRejected ? reqQty : Math.max(0, reqQty - fulQty));
+      const dispQty = meta.dispatchedQuantity != null ? Number(meta.dispatchedQuantity) : 0;
+      const stockStatus = meta.stockStatus || 'FULL_STOCK';
+
+      const authUnitPrice = meta.substituteUnitPrice != null ? Number(meta.substituteUnitPrice) : origUnitPrice;
+      const lineTotal = isRejected ? 0 : Number((fulQty * authUnitPrice).toFixed(2));
+      calculatedPayableSum += lineTotal;
+
+      return {
+        id: item.id.toString(),
+        productId: item.productId == null ? null : item.productId.toString(),
+        name: item.itemName ?? item.product?.productName ?? 'Product',
+        quantity: reqQty,
+        unitPrice: origUnitPrice,
+        lineTotal,
+        fulfillQuantity: fulQty,
+        rejectedQuantity: rejQty,
+        dispatchedQuantity: dispQty,
+        stockStatus,
+        decisionStatus,
+        substituteProductId: meta.substituteProductId || null,
+        substituteName: meta.substituteName || null,
+        substituteUnitPrice: meta.substituteUnitPrice != null ? Number(meta.substituteUnitPrice) : null,
+        decisionReason: meta.decisionReason || null,
+        metadata: meta,
+      };
+    });
 
     let source = 'UNKNOWN';
     if (purchase.purchaseKind === 'WELLNESS') {
@@ -870,6 +908,11 @@ export class PharmacyService {
 
     const isChronic = snapshot.isChronic === true || snapshot.isChronic === 'true';
     const repeatIntervalDays = snapshot.repeatIntervalDays != null ? Number(snapshot.repeatIntervalDays) : 30;
+
+    const totalAmount = purchase.totalAmount == null ? 0 : Number(purchase.totalAmount);
+    const payableAmount = hasCustomFulfillmentDecisions
+      ? Number(calculatedPayableSum.toFixed(2))
+      : (purchase.payableAmount == null ? totalAmount : Number(purchase.payableAmount));
 
     return {
       id: purchase.id.toString(),
@@ -895,10 +938,8 @@ export class PharmacyService {
       deliveryAddress: snapshot.deliveryAddress ?? null,
       customerNotes: snapshot.customerNotes ?? null,
       cancellationReason: snapshot.cancellationReason ?? null,
-      totalAmount:
-        purchase.totalAmount == null ? 0 : Number(purchase.totalAmount),
-      payableAmount:
-        purchase.payableAmount == null ? 0 : Number(purchase.payableAmount),
+      totalAmount,
+      payableAmount,
       submittedAt: purchase.purchaseDate ?? purchase.createdAt ?? new Date(),
       statusUpdatedAt: purchase.orderStatusUpdatedAt ?? null,
       items,

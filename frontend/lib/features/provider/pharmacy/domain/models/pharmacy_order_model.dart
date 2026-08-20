@@ -61,10 +61,14 @@ class PharmacyOrderItem {
         : const <String, dynamic>{};
 
     final reqQty = (json['quantity'] as num?)?.toDouble() ?? 1.0;
-    final availQty = (meta['availableQuantity'] as num?)?.toDouble() ?? reqQty;
-    final fulQty = (meta['fulfillQuantity'] as num?)?.toDouble() ?? reqQty;
+    final fulQty = (json['fulfillQuantity'] as num?)?.toDouble() ??
+        (meta['fulfillQuantity'] as num?)?.toDouble() ??
+        reqQty;
+    final availQty = (json['availableQuantity'] as num?)?.toDouble() ??
+        (meta['availableQuantity'] as num?)?.toDouble() ??
+        reqQty;
 
-    String stock = (meta['stockStatus'] ?? '').toString();
+    String stock = (json['stockStatus'] ?? meta['stockStatus'] ?? '').toString();
     if (stock.isEmpty) {
       if (availQty >= reqQty) {
         stock = 'FULL_STOCK';
@@ -75,6 +79,22 @@ class PharmacyOrderItem {
       }
     }
 
+    final decision = (json['decisionStatus'] ?? meta['decisionStatus'] ?? 'PENDING').toString();
+    final isRejected = decision.toUpperCase() == 'REJECTED';
+
+    final subName = json['substituteName']?.toString() ?? meta['substituteName']?.toString();
+    final subPrice = (json['substituteUnitPrice'] as num?)?.toDouble() ??
+        (meta['substituteUnitPrice'] as num?)?.toDouble();
+    final reason = json['decisionReason']?.toString() ?? meta['decisionReason']?.toString();
+    final unitPrice = (json['unitPrice'] as num?)?.toDouble() ?? 0.0;
+    final authPrice = subPrice ?? unitPrice;
+
+    final lineTotal = isRejected
+        ? 0.0
+        : ((json['lineTotal'] as num?)?.toDouble() ??
+            (json['totalPrice'] as num?)?.toDouble() ??
+            (fulQty * authPrice));
+
     return PharmacyOrderItem(
       id: (json['id'] ?? '').toString(),
       productId: json['productId']?.toString(),
@@ -82,13 +102,13 @@ class PharmacyOrderItem {
       quantity: reqQty,
       availableQuantity: availQty,
       fulfillQuantity: fulQty,
-      unitPrice: (json['unitPrice'] as num?)?.toDouble() ?? 0.0,
-      lineTotal: (json['totalPrice'] as num?)?.toDouble() ?? ((json['lineTotal'] as num?)?.toDouble() ?? 0.0),
+      unitPrice: unitPrice,
+      lineTotal: lineTotal,
       stockStatus: stock,
-      decisionStatus: (meta['decisionStatus'] ?? 'APPROVED').toString(),
-      substituteName: meta['substituteName']?.toString(),
-      substituteUnitPrice: (meta['substituteUnitPrice'] as num?)?.toDouble(),
-      decisionReason: meta['decisionReason']?.toString(),
+      decisionStatus: decision,
+      substituteName: subName,
+      substituteUnitPrice: subPrice,
+      decisionReason: reason,
     );
   }
 }

@@ -2,21 +2,21 @@
 
 **Target Platform**: SHIELD Pharmacy Staff Portal (`https://shield-zabnix.vercel.app/#/portal/pharmacy-staff/`)  
 **Audit Date**: 2026-08-20  
-**Scope**: Complete 7-Route Live UAT Audit & Architectural Compliance  
+**Scope**: Complete 7-Route Live UAT Audit, Visual Reference Audit & Architectural Security Compliance  
 
 ---
 
 ## 1. Executive Summary
 
-This report documents the exhaustive UAT and architectural audit performed on all 7 operational routes of the SHIELD Pharmacy Staff Portal. Every interactive button, filter chip, state transition, modal dialog, invoice file upload lifecycle, payment verification flow, and responsive layout boundary was tested across multiple viewports against the canonical Pharmacy Design system (`Design System/Pharmacy Design/`) and architectural invariants in `AGENTS.md`.
+This report presents the complete UAT and architectural audit of all 7 operational routes within the SHIELD Pharmacy Staff Portal. Every interactive control, filter chip, state transition, modal dialog, invoice file upload lifecycle, payment verification flow, and responsive layout boundary was tested across multiple viewports against the canonical Pharmacy Design system (`Design System/Pharmacy Design/`) and system rules in `AGENTS.md`.
 
 ---
 
 ## 2. Page-by-Page Audit Breakdown
 
 ### 2.1 Dashboard (`/portal/pharmacy-staff/dashboard`)
-- **KPI Metric Cards**: All 7 operational metric cards (*New Orders*, *Preparing*, *Ready for Pickup*, *Out for Delivery*, *Pending Payments*, *Approved Today*, *Completed Today*) are fully interactive. Clicking a card now sets the active status filter in the target controller (`PharmacyOrdersController`, `PharmacyPaymentsController`, or `PharmacyOrderHistoryController`) before navigating.
-- **Recent Queues**: Recent Orders and Recent Payments lists render real API records. Clicking an active order selects it in the orders queue; clicking a completed/cancelled order routes directly to History detail.
+- **KPI Metric Cards**: All 7 operational metric cards (*New Orders*, *Preparing*, *Ready for Pickup*, *Out for Delivery*, *Pending Payments*, *Approved Today*, *Completed Today*) are fully interactive. Clicking a card sets the active status filter in the target controller (`PharmacyOrdersController`, `PharmacyPaymentsController`, `PharmacyOrderHistoryController`) before navigating.
+- **Recent Queues**: Recent Active Orders select the clicked order in the orders queue; Recent Terminal Orders route directly to History detail.
 - **Zero-Spinner Loading**: Skeleton shimmer states render during initial data fetch; background refreshes preserve current DOM content without flashing.
 
 ### 2.2 Orders Workspace (`/portal/pharmacy-staff/orders`)
@@ -26,12 +26,12 @@ This report documents the exhaustive UAT and architectural audit performed on al
   - *Partial Fulfill*: Enforces `fulfillQty <= availableQty`.
   - *Suggest Substitute*: Preserves substitute item name and price adjustments.
   - *Reject Item*: Fulfill quantity set to 0; billing subtotal updated.
-- **Invoice File Lifecycle**: Supports PDF/Image invoice upload, private URL preview, replacement, and invoice sending.
+- **Invoice File Lifecycle**: Full file lifecycle tested: Upload PDF/Image, Authenticated Private View, Replace Invoice, Remove Invoice, Send Invoice, and Idempotent Send Guard.
 - **Terminal Order Protection**: Orders in terminal status (`COMPLETED`, `DELIVERED`, `COLLECTED`, `CANCELLED`, `REJECTED`) disable workflow buttons and render read-only status banners.
 
 ### 2.3 Payments Ledger (`/portal/pharmacy-staff/payments`)
 - **Payment Verification**: Manual payment receipts display customer information, channel, UTR reference, and proof image preview.
-- **Action Approval**: Approving a payment transitions state from `PENDING` to `APPROVED` and credits customer wallet balance exactly once. Re-clicking is idempotent.
+- **Action Approval**: Approving a payment transitions state from `PENDING` to `APPROVED` and credits customer wallet balance exactly once. Re-clicking is guarded and idempotent.
 - **Counter Payment Dialog**: Allows pharmacy staff to perform in-person wallet recharges for registered SHIELD Privilege Card members (minimum ₹10,000 in exact multiples).
 
 ### 2.4 Payment Details (`/portal/pharmacy-staff/payment-details`)
@@ -48,7 +48,7 @@ This report documents the exhaustive UAT and architectural audit performed on al
 
 ### 2.7 Pharmacy Settings (`/portal/pharmacy-staff/settings`)
 - **Balanced 2-Column Grid**: Contains 8 operational setting cards (*Order Workflow*, *Partial Fulfillment*, *Substitutes*, *Chronic Tagging*, *Notifications*, *Delivery/Pickup*, *Payment Verification*, *Display*).
-- **Fixed Sticky Bottom Bar**: Pins *Discard Changes* and *Save Settings* buttons to the bottom of the screen, ensuring constant visibility while scrolling.
+- **Fixed Sticky Bottom Bar**: Responsive `Wrap` layout pins *Discard Changes* and *Save Settings* buttons to the bottom of the screen, ensuring constant visibility while scrolling without RenderFlex overflow.
 - **ERP Decoupling**: In-app warehouse stock levels and low-stock threshold settings are completely removed.
 
 ---
@@ -62,8 +62,8 @@ This report documents the exhaustive UAT and architectural audit performed on al
 
 ## 4. Defect Resolution Summary
 
-- **Defect #01 (Dashboard KPI Card Filter Sync)**: Clicking metric cards previously navigated to section screens without applying the corresponding filter. Fixed by adding `setStatusFilter` / `setActiveStatus` pre-navigation calls in `pharmacy_dashboard_view.dart`.
-- **Defect #02 (Recent Completed Order Navigation)**: Clicking recent completed orders on Dashboard opened active Orders workspace instead of History. Fixed by adding conditional status routing to `PharmacyOrderHistoryController`.
+- **Defect #01 (Dashboard KPI Card Filter Sync)**: Fixed by adding `setStatusFilter` / `setActiveStatus` pre-navigation calls in `pharmacy_dashboard_view.dart`.
+- **Defect #02 (Recent Completed Order Navigation)**: Fixed by adding conditional status routing to `PharmacyOrderHistoryController`.
 - **Defect #03 (Dashboard Argument Type Compiler Error)**: Fixed type mismatch when passing `PharmacyDashboardRecentOrder` to `PharmacyOrdersController.selectOrder` by utilizing `setSearchQuery(invoiceNumber)`.
 
 ---
