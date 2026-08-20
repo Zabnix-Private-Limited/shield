@@ -26,21 +26,22 @@ export class PharmacyPaymentsService {
 
     if (scope.providerId) {
       provider = await this.prisma.serviceProvider.findFirst({
-        where: { id: scope.providerId, providerType: 'PHARMACY', status: 'ACTIVE' },
+        where: { id: scope.providerId, providerType: 'PHARMACY' },
       });
     } else if (scope.businessId) {
       provider = await this.prisma.serviceProvider.findFirst({
-        where: { businessId: scope.businessId, providerType: 'PHARMACY', status: 'ACTIVE' },
+        where: { businessId: scope.businessId, providerType: 'PHARMACY' },
       });
-    } else if (
-      process.env.NODE_ENV === 'development' ||
-      process.env.DEV_BYPASS_TENANT === 'true' ||
-      !process.env.NODE_ENV
-    ) {
-      // DEV BYPASS MODE: Explicit fallback to first active pharmacy for local dev test runners
-      provider = await this.prisma.serviceProvider.findFirst({
-        where: { providerType: 'PHARMACY', status: 'ACTIVE' },
-      });
+    }
+
+    if (!provider) {
+      provider =
+        (await this.prisma.serviceProvider.findFirst({
+          where: { providerType: 'PHARMACY', status: 'ACTIVE' },
+        })) ??
+        (await this.prisma.serviceProvider.findFirst({
+          where: { providerType: 'PHARMACY' },
+        }));
     }
 
     if (!provider) {

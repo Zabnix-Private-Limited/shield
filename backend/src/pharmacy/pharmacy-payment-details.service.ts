@@ -90,16 +90,22 @@ export class PharmacyPaymentDetailsService {
 
     if (scope.providerId) {
       provider = await this.prisma.serviceProvider.findFirst({
-        where: { id: scope.providerId, providerType: 'PHARMACY', status: 'ACTIVE' },
+        where: { id: scope.providerId, providerType: 'PHARMACY' },
       });
     } else if (scope.businessId) {
       provider = await this.prisma.serviceProvider.findFirst({
-        where: { businessId: scope.businessId, providerType: 'PHARMACY', status: 'ACTIVE' },
+        where: { businessId: scope.businessId, providerType: 'PHARMACY' },
       });
-    } else {
-      provider = await this.prisma.serviceProvider.findFirst({
-        where: { providerType: 'PHARMACY', status: 'ACTIVE' },
-      });
+    }
+
+    if (!provider) {
+      provider =
+        (await this.prisma.serviceProvider.findFirst({
+          where: { providerType: 'PHARMACY', status: 'ACTIVE' },
+        })) ??
+        (await this.prisma.serviceProvider.findFirst({
+          where: { providerType: 'PHARMACY' },
+        }));
     }
 
     if (!provider) {
