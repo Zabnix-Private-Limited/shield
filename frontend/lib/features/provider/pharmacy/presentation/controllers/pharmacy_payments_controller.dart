@@ -107,4 +107,45 @@ class PharmacyPaymentsController extends ChangeNotifier {
       notifyListeners();
     }
   }
+
+  Future<List<Map<String, dynamic>>> searchCustomers(String query) async {
+    try {
+      return await _repository.searchCustomers(query);
+    } catch (e) {
+      debugPrint('Error searching customers: $e');
+      return [];
+    }
+  }
+
+  Future<bool> submitCounterPayment({
+    required String customerId,
+    required double amount,
+    required String paymentChannel,
+    String? referenceNumber,
+    String? customerNotes,
+    bool autoApprove = true,
+  }) async {
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      await _repository.submitManualPayment(
+        customerId: customerId,
+        amount: amount,
+        paymentChannel: paymentChannel,
+        referenceNumber: referenceNumber,
+        customerNotes: customerNotes,
+        autoApprove: autoApprove,
+      );
+      await loadPayments(quiet: true);
+      _isLoading = false;
+      return true;
+    } catch (e) {
+      _isLoading = false;
+      _error = e.toString();
+      notifyListeners();
+      return false;
+    }
+  }
 }

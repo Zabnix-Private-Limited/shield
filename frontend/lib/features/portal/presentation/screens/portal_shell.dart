@@ -710,7 +710,7 @@ class _EditablePrescriptionItem {
 IconData _portalSectionIcon(String key) {
   switch (key) {
     case 'dashboard':
-      return Icons.space_dashboard_outlined;
+      return Icons.grid_view_rounded;
     case 'calendar':
       return Icons.event_note_outlined;
     case 'folder':
@@ -728,10 +728,14 @@ IconData _portalSectionIcon(String key) {
     case 'wallet':
     case 'wallet-ops':
       return Icons.account_balance_wallet_outlined;
+    case 'payments':
+      return Icons.payments_rounded;
+    case 'payment-details':
+      return Icons.credit_card_rounded;
     case 'services':
       return Icons.medical_services_outlined;
     case 'orders':
-      return Icons.shopping_bag_outlined;
+      return Icons.receipt_long_rounded;
     case 'referrals':
       return Icons.account_tree_outlined;
     case 'activity':
@@ -764,7 +768,8 @@ IconData _portalSectionIcon(String key) {
     case 'qr-scan':
       return Icons.qr_code_scanner_rounded;
     case 'history':
-      return Icons.history_rounded;
+    case 'order-history':
+      return Icons.manage_history_rounded;
     case 'consultations':
       return Icons.local_hospital_outlined;
     case 'home-visits':
@@ -1222,6 +1227,92 @@ class _RoleRailNav extends StatelessWidget {
   Widget build(BuildContext context) {
     final width = inDrawer ? null : (collapsed ? 92.0 : 276.0);
 
+    final topSections = portal.sections
+        .where((s) => s.key != 'profile' && s.key != 'settings')
+        .toList();
+    final bottomSections = portal.sections
+        .where((s) => s.key == 'profile' || s.key == 'settings')
+        .toList();
+
+    Widget buildTile(PortalSectionData section) {
+      final isActive = section.key == activeSectionKey;
+      final icon = _portalSectionIcon(section.iconKey ?? section.key);
+      final targetRoute = section.route ??
+          '/portal/${portal.role.routeKey}/${section.key}';
+      final tile = InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: () => context.go(targetRoute),
+        child: Container(
+          margin: const EdgeInsets.only(bottom: 6),
+          padding: EdgeInsets.symmetric(
+            horizontal: collapsed ? 0 : 12,
+            vertical: collapsed ? 10 : 12,
+          ),
+          decoration: BoxDecoration(
+            color: isActive
+                ? portal.accentColor.withValues(alpha: 0.12)
+                : AppColors.transparent,
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: collapsed
+              ? Center(
+                  child: Icon(
+                    icon,
+                    size: 20,
+                    color: isActive ? portal.accentColor : AppColors.darkGray,
+                  ),
+                )
+              : Row(
+                  children: [
+                    Icon(
+                      icon,
+                      size: 18,
+                      color: isActive ? portal.accentColor : AppColors.gray,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        section.title,
+                        style: AppTypography.small.copyWith(
+                          color: isActive
+                              ? portal.accentColor
+                              : AppColors.darkGray,
+                          fontWeight: isActive
+                              ? FontWeight.w700
+                              : FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                    if (section.badgeCount > 0)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: portal.accentColor.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        child: Text(
+                          section.badgeCount.toString(),
+                          style: AppTypography.tiny.copyWith(
+                            color: portal.accentColor,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+        ),
+      );
+
+      if (!collapsed) {
+        return tile;
+      }
+
+      return Tooltip(message: section.title, child: tile);
+    }
+
     return Container(
       width: width,
       decoration: BoxDecoration(
@@ -1285,93 +1376,23 @@ class _RoleRailNav extends StatelessWidget {
                 collapsed ? 10 : 12,
                 12,
               ),
-              children: portal.sections.map((section) {
-                final isActive = section.key == activeSectionKey;
-                final icon = _portalSectionIcon(section.iconKey ?? section.key);
-                final targetRoute =
-                    section.route ??
-                    '/portal/${portal.role.routeKey}/${section.key}';
-                final tile = InkWell(
-                  borderRadius: BorderRadius.circular(16),
-                  onTap: () => context.go(targetRoute),
-                  child: Container(
-                    margin: const EdgeInsets.only(bottom: 8),
-                    padding: EdgeInsets.symmetric(
-                      horizontal: collapsed ? 0 : 12,
-                      vertical: collapsed ? 10 : 12,
-                    ),
-                    decoration: BoxDecoration(
-                      color: isActive
-                          ? portal.accentColor.withValues(alpha: 0.12)
-                          : AppColors.transparent,
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: collapsed
-                        ? Center(
-                            child: Icon(
-                              icon,
-                              size: 20,
-                              color: isActive
-                                  ? portal.accentColor
-                                  : AppColors.darkGray,
-                            ),
-                          )
-                        : Row(
-                            children: [
-                              Icon(
-                                icon,
-                                size: 18,
-                                color: isActive
-                                    ? portal.accentColor
-                                    : AppColors.gray,
-                              ),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: Text(
-                                  section.title,
-                                  style: AppTypography.small.copyWith(
-                                    color: isActive
-                                        ? portal.accentColor
-                                        : AppColors.darkGray,
-                                    fontWeight: isActive
-                                        ? FontWeight.w700
-                                        : FontWeight.w600,
-                                  ),
-                                ),
-                              ),
-                              if (section.badgeCount > 0)
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 8,
-                                    vertical: 4,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: portal.accentColor.withValues(
-                                      alpha: 0.12,
-                                    ),
-                                    borderRadius: BorderRadius.circular(999),
-                                  ),
-                                  child: Text(
-                                    section.badgeCount.toString(),
-                                    style: AppTypography.tiny.copyWith(
-                                      color: portal.accentColor,
-                                      fontWeight: FontWeight.w700,
-                                    ),
-                                  ),
-                                ),
-                            ],
-                          ),
-                  ),
-                );
-
-                if (!collapsed) {
-                  return tile;
-                }
-
-                return Tooltip(message: section.title, child: tile);
-              }).toList(),
+              children: topSections.map(buildTile).toList(),
             ),
           ),
+          if (bottomSections.isNotEmpty) const Divider(height: 1),
+          if (bottomSections.isNotEmpty)
+            Padding(
+              padding: EdgeInsets.fromLTRB(
+                collapsed ? 10 : 12,
+                8,
+                collapsed ? 10 : 12,
+                12,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: bottomSections.map(buildTile).toList(),
+              ),
+            ),
         ],
       ),
     );

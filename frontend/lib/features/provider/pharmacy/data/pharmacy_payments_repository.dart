@@ -53,6 +53,15 @@ class PharmacyPaymentsRepository {
     return PharmacyPaymentRequestModel.fromJson(data);
   }
 
+  Future<List<Map<String, dynamic>>> searchCustomers(String query) async {
+    final response = await ApiService.dio.get(
+      '/pharmacy/customers/search',
+      queryParameters: {'q': query.trim()},
+    );
+    final data = response.data['data'] as List? ?? const [];
+    return data.map((c) => Map<String, dynamic>.from(c as Map)).toList();
+  }
+
   Future<PharmacyPaymentRequestModel> submitManualPayment({
     required String customerId,
     required double amount,
@@ -60,15 +69,23 @@ class PharmacyPaymentsRepository {
     String? paymentMethodId,
     String? referenceNumber,
     String? customerNotes,
+    bool autoApprove = false,
   }) async {
     final payload = <String, dynamic>{
       'customerId': customerId.trim(),
       'amount': amount,
       'paymentChannel': paymentChannel,
+      'autoApprove': autoApprove,
     };
-    if (paymentMethodId != null) payload['paymentMethodId'] = paymentMethodId;
-    if (referenceNumber != null) payload['referenceNumber'] = referenceNumber;
-    if (customerNotes != null) payload['customerNotes'] = customerNotes;
+    if (paymentMethodId != null && paymentMethodId.isNotEmpty) {
+      payload['paymentMethodId'] = paymentMethodId;
+    }
+    if (referenceNumber != null && referenceNumber.isNotEmpty) {
+      payload['referenceNumber'] = referenceNumber;
+    }
+    if (customerNotes != null && customerNotes.isNotEmpty) {
+      payload['customerNotes'] = customerNotes;
+    }
 
     final response = await ApiService.dio.post(
       '/pharmacy/payments/submit',

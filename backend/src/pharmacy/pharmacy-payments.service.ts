@@ -364,6 +364,44 @@ export class PharmacyPaymentsService {
     };
   }
 
+  async searchCustomers(query?: string, principal?: ShieldPrincipal) {
+    await this.getPharmacyProviderId(principal);
+    const q = (query || '').trim();
+
+    const whereCondition = q.length > 0
+      ? {
+          OR: [
+            { firstName: { contains: q, mode: 'insensitive' as const } },
+            { lastName: { contains: q, mode: 'insensitive' as const } },
+            { mobile: { contains: q } },
+            { customerCode: { contains: q, mode: 'insensitive' as const } },
+          ],
+        }
+      : {};
+
+    const customers = await this.prisma.customer.findMany({
+      where: whereCondition,
+      take: 15,
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        mobile: true,
+        customerCode: true,
+        wallet: { select: { id: true } },
+      },
+    });
+
+    return customers.map((c) => ({
+      id: c.id.toString(),
+      name: this.formatCustomerName(c),
+      mobile: c.mobile,
+      customerCode: c.customerCode,
+      walletId: c.wallet?.id?.toString() ?? null,
+    }));
+  }
+
   async submitManualPayment(
     dto: SubmitManualPaymentDto,
     principal?: ShieldPrincipal,
@@ -372,18 +410,34 @@ export class PharmacyPaymentsService {
     if (!dto.customerId?.trim()) {
       throw new BadRequestException('Customer ID is required.');
     }
-    if (!dto.amount || dto.amount <= 0) {
-      throw new BadRequestException('Payment amount must be greater than 0.');
+    if (!dto.amount || dto.amount < 10000) {
+      throw new BadRequestException('Minimum wallet recharge amount is ₹10,000.');
+    }
+    if (Math.floor(dto.amount) % 10000 !== 0) {
+      throw new BadRequestException(
+        'Wallet recharge amount must be in multiples of ₹10,000 (e.g. ₹10,000, ₹20,000, ₹30,000).',
+      );
     }
 
     const customerId = BigInt(dto.customerId.trim());
-    const customer = await this.prisma.customer.findUnique({
+    let customer = await this.prisma.customer.findUnique({
       where: { id: customerId },
       include: { wallet: true },
     });
 
-    if (!customer || !customer.wallet) {
-      throw new NotFoundException('Customer or customer wallet not found.');
+    if (!customer) {
+      throw new NotFoundException('Customer record not found.');
+    }
+
+    let wallet = customer.wallet;
+    if (!wallet) {
+      wallet = await this.prisma.wallet.create({
+        data: {
+          uuid: randomUUID(),
+          customerId,
+          status: 'ACTIVE',
+        },
+      });
     }
 
     let destinationSnapshot: any = null;
@@ -408,32 +462,86 @@ export class PharmacyPaymentsService {
       }
     }
 
+    const isAutoApprove = dto.autoApprove ?? false;
+    const initialStatus = isAutoApprove ? 'APPROVED' : 'PENDING';
+    const now = new Date();
+    const refNum = dto.referenceNumber?.trim() || `RCP-PHARM-${Date.now().toString().slice(-6)}`;
+
     const created = await this.prisma.walletRechargeIntent.create({
       data: {
         uuid: randomUUID(),
         customerId,
-        walletId: customer.wallet.id,
+        walletId: wallet.id,
         providerId,
         paymentMethodId: dto.paymentMethodId ? BigInt(dto.paymentMethodId) : undefined,
-        paymentChannel: dto.paymentChannel || 'BANK_TRANSFER',
-        referenceNumber: dto.referenceNumber?.trim(),
+        paymentChannel: dto.paymentChannel || 'CASH',
+        referenceNumber: refNum,
         amount: dto.amount,
         idempotencyKey: `MANUAL-${randomUUID()}`,
-        status: 'PENDING',
+        status: initialStatus,
         destinationSnapshot,
+        reviewedBy: isAutoApprove && principal?.userId ? BigInt(principal.userId) : undefined,
+        reviewedAt: isAutoApprove ? now : undefined,
+        creditedAt: isAutoApprove ? now : undefined,
       },
     });
 
+    if (isAutoApprove) {
+      const bonusAmount = Number((dto.amount * 0.10).toFixed(2));
+
+      await this.prisma.cashWalletTransaction.create({
+        data: {
+          uuid: randomUUID(),
+          walletId: wallet.id,
+          transactionType: 'RECHARGE',
+          amount: dto.amount,
+          referenceType: 'COUNTER_PAYMENT_ACCEPTED',
+          referenceId: created.id,
+          remarks: `Counter ${dto.paymentChannel || 'payment'} accepted and verified by Pharmacy Staff. Note: ${dto.customerNotes || 'In-person payment'}.`,
+        },
+      });
+
+      await this.prisma.walletTransaction.create({
+        data: {
+          uuid: randomUUID(),
+          walletId: wallet.id,
+          transactionType: 'RECHARGE',
+          subLedgerType: 'CASH',
+          amount: dto.amount,
+          referenceType: 'COUNTER_PAYMENT_ACCEPTED',
+          referenceId: created.id,
+          remarks: `Counter ${dto.paymentChannel || 'payment'} accepted and verified by Pharmacy Staff. Note: ${dto.customerNotes || 'In-person payment'}.`,
+        },
+      });
+
+      // 10% Extra Bonus Credit Entry
+      await this.prisma.walletTransaction.create({
+        data: {
+          uuid: randomUUID(),
+          walletId: wallet.id,
+          transactionType: 'RECHARGE',
+          subLedgerType: 'REWARD_POINTS',
+          amount: bonusAmount,
+          referenceType: 'COUNTER_PAYMENT_BONUS',
+          referenceId: created.id,
+          remarks: `10% Extra Promotional Bonus Credit for ₹${dto.amount} Counter Wallet Recharge.`,
+        },
+      });
+    }
+
     await this.timelineService.recordAuditLog({
-      action: 'MANUAL_PAYMENT_SUBMITTED',
+      action: isAutoApprove ? 'COUNTER_PAYMENT_ACCEPTED' : 'MANUAL_PAYMENT_SUBMITTED',
       entityType: 'WALLET_RECHARGE_INTENT',
       entityId: created.id,
       userId: principal?.userId ? BigInt(principal.userId) : undefined,
       newData: {
         amount: dto.amount,
+        bonusAmount: Number((dto.amount * 0.10).toFixed(2)),
+        totalCredit: Number((dto.amount * 1.10).toFixed(2)),
         paymentChannel: dto.paymentChannel,
-        referenceNumber: dto.referenceNumber,
+        referenceNumber: refNum,
         providerId: providerId.toString(),
+        autoApprove: isAutoApprove,
       },
     });
 
@@ -441,8 +549,11 @@ export class PharmacyPaymentsService {
       id: created.id.toString(),
       uuid: created.uuid,
       amount: Number(created.amount),
+      bonusAmount: Number((dto.amount * 0.10).toFixed(2)),
+      totalCredit: Number((dto.amount * 1.10).toFixed(2)),
       paymentChannel: created.paymentChannel,
       status: created.status,
+      referenceNumber: refNum,
       createdAt: created.createdAt,
     };
   }
@@ -487,6 +598,9 @@ export class PharmacyPaymentsService {
         throw new NotFoundException('Payment request not found after state claim.');
       }
 
+      const baseAmount = Number(intent.amount);
+      const bonusAmount = Number((baseAmount * 0.10).toFixed(2));
+
       // 2. Create dynamic wallet ledger entry (Cash Wallet & Main Wallet Transactions)
       await tx.cashWalletTransaction.create({
         data: {
@@ -510,6 +624,20 @@ export class PharmacyPaymentsService {
           referenceType: 'MANUAL_RECHARGE_APPROVAL',
           referenceId: id,
           remarks: `Manual ${intent.paymentChannel || 'payment'} verified and approved by Pharmacy.`,
+        },
+      });
+
+      // 10% Extra Bonus Credit Entry
+      await tx.walletTransaction.create({
+        data: {
+          uuid: randomUUID(),
+          walletId: intent.walletId,
+          transactionType: 'RECHARGE',
+          subLedgerType: 'REWARD_POINTS',
+          amount: bonusAmount,
+          referenceType: 'MANUAL_RECHARGE_BONUS',
+          referenceId: id,
+          remarks: `10% Extra Promotional Bonus Credit for ₹${baseAmount} Wallet Recharge Approval.`,
         },
       });
 

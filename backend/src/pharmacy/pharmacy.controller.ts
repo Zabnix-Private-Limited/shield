@@ -699,6 +699,19 @@ export class PharmacyController {
     };
   }
 
+  @RequirePermissions('providers.read')
+  @Get('pharmacy/customers/search')
+  async searchCustomers(
+    @Query('q') q?: string,
+    @CurrentPrincipal() principal?: ShieldPrincipal,
+  ) {
+    return {
+      success: true,
+      message: 'Customers retrieved.',
+      data: await this.paymentsService.searchCustomers(q, principal),
+    };
+  }
+
   @RequirePermissions('providers.update')
   @Post('pharmacy/payments/submit')
   async submitManualPayment(

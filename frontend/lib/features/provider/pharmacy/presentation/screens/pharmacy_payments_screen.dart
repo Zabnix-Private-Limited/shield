@@ -5,6 +5,7 @@ import 'package:shield/features/provider/pharmacy/design/pharmacy_radius.dart';
 import 'package:shield/features/provider/pharmacy/design/pharmacy_typography.dart';
 import 'package:shield/features/provider/pharmacy/domain/models/pharmacy_payment_request_model.dart';
 import 'package:shield/features/provider/pharmacy/presentation/controllers/pharmacy_payments_controller.dart';
+import 'package:shield/features/provider/pharmacy/presentation/widgets/counter_payment_dialog.dart';
 import 'package:shield/features/provider/pharmacy/presentation/widgets/payment_review_sheet.dart';
 import 'package:shield/features/provider/pharmacy/presentation/widgets/pharmacy_components.dart';
 import 'package:shield/features/provider/pharmacy/presentation/widgets/pharmacy_status_chip.dart';
@@ -67,6 +68,16 @@ class _PharmacyPaymentsScreenState extends State<PharmacyPaymentsScreen> {
     );
   }
 
+  void _openCounterPaymentDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (ctx) => CounterPaymentDialog(
+        onSaved: () => _controller.loadPayments(quiet: true),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final payments = _controller.payments;
@@ -74,6 +85,9 @@ class _PharmacyPaymentsScreenState extends State<PharmacyPaymentsScreen> {
     final error = _controller.error;
     final activeStatus = _controller.activeStatus;
     final isEmpty = _controller.isEmpty;
+
+    final pendingCount = payments.where((p) => p.isPending).length;
+    final approvedCount = payments.where((p) => p.isApproved).length;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -92,21 +106,121 @@ class _PharmacyPaymentsScreenState extends State<PharmacyPaymentsScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Manual Payment Verification',
+                          'Payment Verification & Counter Acceptance',
                           style: PharmacyTypography.h2,
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          'Review customer bank transfers and UPI receipts. Verification credits customer wallet balance.',
+                          'Review customer bank transfers and UPI receipts, or record walk-in counter payments in real time.',
                           style: PharmacyTypography.caption,
                         ),
                       ],
                     ),
                   ),
-                  IconButton(
-                    icon: const Icon(Icons.refresh_rounded, color: PharmacyColors.navy),
-                    tooltip: 'Refresh Payments',
-                    onPressed: () => _controller.loadPayments(),
+                  Row(
+                    children: [
+                      PharmacyPrimaryButton(
+                        label: '+ Accept Counter Payment',
+                        icon: Icons.point_of_sale_rounded,
+                        onPressed: _openCounterPaymentDialog,
+                      ),
+                      const SizedBox(width: 8),
+                      IconButton(
+                        icon: const Icon(Icons.refresh_rounded, color: PharmacyColors.navy),
+                        tooltip: 'Refresh Payments',
+                        onPressed: () => _controller.loadPayments(),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              const SizedBox(height: 14),
+
+              // Payment Summary Cards Banner
+              Row(
+                children: [
+                  Expanded(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: PharmacyColors.warning.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: PharmacyColors.warning.withValues(alpha: 0.4)),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.pending_actions_rounded,
+                              color: PharmacyColors.warning, size: 20),
+                          const SizedBox(width: 10),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('Pending Verification', style: PharmacyTypography.tiny),
+                              Text('$pendingCount Payments',
+                                  style: PharmacyTypography.caption.copyWith(
+                                      fontWeight: FontWeight.bold,
+                                      color: PharmacyColors.navy)),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: PharmacyColors.primarySoft,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: PharmacyColors.primary.withValues(alpha: 0.4)),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.verified_rounded,
+                              color: PharmacyColors.primary, size: 20),
+                          const SizedBox(width: 10),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('Verified & Approved', style: PharmacyTypography.tiny),
+                              Text('$approvedCount Payments',
+                                  style: PharmacyTypography.caption.copyWith(
+                                      fontWeight: FontWeight.bold,
+                                      color: PharmacyColors.navy)),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: PharmacyColors.canvas,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: PharmacyColors.border),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.point_of_sale_rounded,
+                              color: PharmacyColors.navy, size: 20),
+                          const SizedBox(width: 10),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('Counter Receipts', style: PharmacyTypography.tiny),
+                              Text('Walk-in Active',
+                                  style: PharmacyTypography.caption.copyWith(
+                                      fontWeight: FontWeight.bold,
+                                      color: PharmacyColors.navy)),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
                 ],
               ),
