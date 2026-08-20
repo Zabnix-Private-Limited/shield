@@ -1355,34 +1355,64 @@ class _RoleRailNav extends StatelessWidget {
                   ? CrossAxisAlignment.center
                   : CrossAxisAlignment.start,
               children: [
-                Container(
-                  width: collapsed ? 44 : double.infinity,
-                  padding: EdgeInsets.all(collapsed ? 10 : 14),
-                  decoration: BoxDecoration(
-                    color: portal.accentColor.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Icon(
-                    portal.icon,
-                    color: portal.accentColor,
-                    size: collapsed ? 20 : 22,
-                  ),
-                ),
-                if (!collapsed) ...[
-                  const SizedBox(height: 14),
-                  Text(
-                    portal.role.label,
-                    style: AppTypography.body.copyWith(
-                      color: AppColors.shieldNavy,
-                      fontWeight: FontWeight.w700,
+                if (collapsed)
+                  Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: portal.accentColor.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(12),
                     ),
+                    child: Center(
+                      child: Icon(
+                        portal.icon,
+                        color: portal.accentColor,
+                        size: 22,
+                      ),
+                    ),
+                  )
+                else
+                  Row(
+                    children: [
+                      Container(
+                        width: 42,
+                        height: 42,
+                        decoration: BoxDecoration(
+                          color: portal.accentColor.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Center(
+                          child: Icon(
+                            portal.icon,
+                            color: portal.accentColor,
+                            size: 22,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              portal.role.label,
+                              style: AppTypography.body.copyWith(
+                                color: AppColors.shieldNavy,
+                                fontWeight: FontWeight.w700,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              portal.regionLabel,
+                              style: AppTypography.tiny.copyWith(color: AppColors.gray),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    portal.regionLabel,
-                    style: AppTypography.tiny.copyWith(color: AppColors.gray),
-                  ),
-                ],
               ],
             ),
           ),
@@ -1433,10 +1463,15 @@ class _PortalHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final staffDisplayName = InternalAuthSession.instance.displayName?.trim();
-    final headerEyebrow = (staffDisplayName != null && staffDisplayName.isNotEmpty)
+    final rawDisplayName = InternalAuthSession.instance.displayName?.trim();
+    final staffDisplayName = (rawDisplayName != null &&
+            rawDisplayName.isNotEmpty &&
+            rawDisplayName != 'Admin Bypass User')
+        ? rawDisplayName
+        : null;
+    final headerEyebrow = staffDisplayName != null
         ? '$staffDisplayName • ${portal.role.label}'
-        : portal.role.label;
+        : 'SHIELD Platform • ${portal.role.label}';
 
     return Row(
       children: [

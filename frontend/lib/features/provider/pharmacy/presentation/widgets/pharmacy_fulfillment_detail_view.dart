@@ -36,6 +36,13 @@ class _PharmacyFulfillmentDetailViewState
     _isChronic = widget.order.isChronic;
     _notesController =
         TextEditingController(text: widget.order.pharmacistNotes ?? '');
+    PharmacyOrdersController.instance.addListener(_onControllerUpdate);
+  }
+
+  void _onControllerUpdate() {
+    if (mounted) {
+      setState(() {});
+    }
   }
 
   @override
@@ -49,6 +56,7 @@ class _PharmacyFulfillmentDetailViewState
 
   @override
   void dispose() {
+    PharmacyOrdersController.instance.removeListener(_onControllerUpdate);
     _notesController.dispose();
     super.dispose();
   }
@@ -526,7 +534,11 @@ class _PharmacyFulfillmentDetailViewState
 
   @override
   Widget build(BuildContext context) {
-    final order = widget.order;
+    final order = (PharmacyOrdersController.instance.selectedOrder?.id ==
+                widget.order.id
+            ? PharmacyOrdersController.instance.selectedOrder
+            : null) ??
+        widget.order;
     final isUpdating =
         PharmacyOrdersController.instance.isOrderUpdating(order.id);
     return Column(
@@ -912,6 +924,45 @@ class _PharmacyFulfillmentDetailViewState
                       ],
                     ),
                   )
+                else if (['COMPLETED', 'DELIVERED', 'COLLECTED', 'CANCELLED', 'REJECTED'].contains(order.status.toUpperCase()))
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: (order.status == 'CANCELLED' || order.status == 'REJECTED')
+                          ? PharmacyColors.danger.withValues(alpha: 0.1)
+                          : PharmacyColors.primary.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: (order.status == 'CANCELLED' || order.status == 'REJECTED')
+                            ? PharmacyColors.danger.withValues(alpha: 0.3)
+                            : PharmacyColors.primary.withValues(alpha: 0.3),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          (order.status == 'CANCELLED' || order.status == 'REJECTED')
+                              ? Icons.cancel_outlined
+                              : Icons.check_circle_outline,
+                          size: 16,
+                          color: (order.status == 'CANCELLED' || order.status == 'REJECTED')
+                              ? PharmacyColors.danger
+                              : PharmacyColors.primary,
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          'Order Status: ${order.status} (Terminal State)',
+                          style: PharmacyTypography.caption.copyWith(
+                            color: (order.status == 'CANCELLED' || order.status == 'REJECTED')
+                                ? PharmacyColors.danger
+                                : PharmacyColors.primary,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
                 else
                   Wrap(
                     spacing: 10,
@@ -922,21 +973,37 @@ class _PharmacyFulfillmentDetailViewState
                         PharmacyPrimaryButton(
                           label: 'Approve Order',
                           icon: Icons.check_circle_rounded,
-                          onPressed: () =>
-                              PharmacyOrdersController.instance.updateOrderStatus(
-                            orderId: order.id,
-                            nextStatus: 'ACCEPTED',
-                          ),
+                          onPressed: () async {
+                            final success = await PharmacyOrdersController.instance.updateOrderStatus(
+                              orderId: order.id,
+                              nextStatus: 'ACCEPTED',
+                            );
+                            if (!context.mounted) return;
+                            showPortalSnackBar(
+                              context,
+                              success
+                                  ? 'Order #${order.orderNumber} approved successfully.'
+                                  : 'Could not approve order: ${PharmacyOrdersController.instance.friendlyError}',
+                            );
+                          },
                         ),
                       if (order.status == 'ACCEPTED')
                         PharmacyPrimaryButton(
                           label: 'Start Preparing',
                           icon: Icons.hourglass_top_rounded,
-                          onPressed: () =>
-                              PharmacyOrdersController.instance.updateOrderStatus(
-                            orderId: order.id,
-                            nextStatus: 'PREPARING',
-                          ),
+                          onPressed: () async {
+                            final success = await PharmacyOrdersController.instance.updateOrderStatus(
+                              orderId: order.id,
+                              nextStatus: 'PREPARING',
+                            );
+                            if (!context.mounted) return;
+                            showPortalSnackBar(
+                              context,
+                              success
+                                  ? 'Order #${order.orderNumber} moved to Preparing.'
+                                  : 'Could not update status: ${PharmacyOrdersController.instance.friendlyError}',
+                            );
+                          },
                         ),
                       if (order.status == 'PREPARING')
                         PharmacyPrimaryButton(
@@ -946,36 +1013,62 @@ class _PharmacyFulfillmentDetailViewState
                           icon: order.isHomeDelivery
                               ? Icons.local_shipping_rounded
                               : Icons.storefront_rounded,
-                          onPressed: () =>
-                              PharmacyOrdersController.instance.updateOrderStatus(
-                            orderId: order.id,
-                            nextStatus: order.isHomeDelivery
+                          onPressed: () async {
+                            final next = order.isHomeDelivery
                                 ? 'OUT_FOR_DELIVERY'
-                                : 'READY_FOR_PICKUP',
-                          ),
+                                : 'READY_FOR_PICKUP';
+                            final success = await PharmacyOrdersController.instance.updateOrderStatus(
+                              orderId: order.id,
+                              nextStatus: next,
+                            );
+                            if (!context.mounted) return;
+                            showPortalSnackBar(
+                              context,
+                              success
+                                  ? 'Order #${order.orderNumber} status updated to $next.'
+                                  : 'Could not update status: ${PharmacyOrdersController.instance.friendlyError}',
+                            );
+                          },
                         ),
                       if (order.status == 'READY_FOR_PICKUP' ||
                           order.status == 'OUT_FOR_DELIVERY')
                         PharmacyPrimaryButton(
                           label: 'Mark Order Completed',
                           icon: Icons.task_alt_rounded,
-                          onPressed: () =>
-                              PharmacyOrdersController.instance.updateOrderStatus(
-                            orderId: order.id,
-                            nextStatus: 'COMPLETED',
-                          ),
+                          onPressed: () async {
+                            final success = await PharmacyOrdersController.instance.updateOrderStatus(
+                              orderId: order.id,
+                              nextStatus: 'COMPLETED',
+                            );
+                            if (!context.mounted) return;
+                            showPortalSnackBar(
+                              context,
+                              success
+                                  ? 'Order #${order.orderNumber} marked as Completed!'
+                                  : 'Could not complete order: ${PharmacyOrdersController.instance.friendlyError}',
+                            );
+                          },
                         ),
                       if (order.status != 'COMPLETED' &&
-                          order.status != 'CANCELLED')
+                          order.status != 'CANCELLED' &&
+                          order.status != 'REJECTED')
                         PharmacyDangerButton(
                           label: 'Reject Order',
                           icon: Icons.cancel_outlined,
-                          onPressed: () =>
-                              PharmacyOrdersController.instance.updateOrderStatus(
-                            orderId: order.id,
-                            nextStatus: 'CANCELLED',
-                            cancellationReason: 'Rejected by Pharmacy',
-                          ),
+                          onPressed: () async {
+                            final success = await PharmacyOrdersController.instance.updateOrderStatus(
+                              orderId: order.id,
+                              nextStatus: 'CANCELLED',
+                              cancellationReason: 'Rejected by Pharmacy',
+                            );
+                            if (!context.mounted) return;
+                            showPortalSnackBar(
+                              context,
+                              success
+                                  ? 'Order #${order.orderNumber} rejected.'
+                                  : 'Could not reject order: ${PharmacyOrdersController.instance.friendlyError}',
+                            );
+                          },
                         ),
                     ],
                   ),

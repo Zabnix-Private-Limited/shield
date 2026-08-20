@@ -305,54 +305,7 @@ class _PharmacyProfileScreenState extends State<PharmacyProfileScreen> {
             _buildBusinessDetailsCard(businessName, businessCode, drugLicence, gstin, address, cityStatePin, operatingHours, businessType),
           ],
 
-          const SizedBox(height: 24),
-          // Bottom Actions Row
-          PharmacyCard(
-            padding: const EdgeInsets.all(16),
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                final isCompact = constraints.maxWidth < 450;
-                return isCompact
-                    ? Column(
-                        children: [
-                          SizedBox(
-                            width: double.infinity,
-                            child: PharmacyPrimaryButton(
-                              label: 'Save Profile Changes',
-                              icon: Icons.check_circle_outline,
-                              isLoading: _isSaving,
-                              onPressed: _handleSave,
-                            ),
-                          ),
-                          const SizedBox(height: 10),
-                          SizedBox(
-                            width: double.infinity,
-                            child: PharmacySecondaryButton(
-                              label: 'Discard Changes',
-                              onPressed: _loadProfile,
-                            ),
-                          ),
-                        ],
-                      )
-                    : Row(
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: [
-                          PharmacySecondaryButton(
-                            label: 'Discard Changes',
-                            onPressed: _loadProfile,
-                          ),
-                          const SizedBox(width: 12),
-                          PharmacyPrimaryButton(
-                            label: 'Save Profile Changes',
-                            icon: Icons.check_circle_outline,
-                            isLoading: _isSaving,
-                            onPressed: _handleSave,
-                          ),
-                        ],
-                      );
-              },
-            ),
-          ),
+          const SizedBox(height: 8),
         ],
       ),
     );
@@ -521,6 +474,7 @@ class _PharmacyProfileScreenState extends State<PharmacyProfileScreen> {
                     PharmacyPrimaryButton(
                       label: 'Save Profile',
                       icon: Icons.check_circle_rounded,
+                      isLoading: _isSaving,
                       onPressed: () {
                         Navigator.pop(ctx);
                         _handleSave();
@@ -542,7 +496,7 @@ class _PharmacyProfileScreenState extends State<PharmacyProfileScreen> {
       builder: (ctx) => Dialog(
         backgroundColor: Colors.transparent,
         child: Container(
-          constraints: const BoxConstraints(maxWidth: 640),
+          constraints: const BoxConstraints(maxWidth: 640, maxHeight: 720),
           decoration: BoxDecoration(
             color: PharmacyColors.surface,
             borderRadius: BorderRadius.circular(16),
@@ -646,6 +600,7 @@ class _PharmacyProfileScreenState extends State<PharmacyProfileScreen> {
                     PharmacyPrimaryButton(
                       label: 'Save Business Details',
                       icon: Icons.check_circle_rounded,
+                      isLoading: _isSaving,
                       onPressed: () {
                         Navigator.pop(ctx);
                         _handleSave();
