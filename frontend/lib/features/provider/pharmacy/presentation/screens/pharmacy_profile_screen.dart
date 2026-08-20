@@ -234,7 +234,6 @@ class _PharmacyProfileScreenState extends State<PharmacyProfileScreen> {
     final screenWidth = MediaQuery.of(context).size.width;
     final isDesktop = screenWidth >= 1024;
     final isWideDesktop = screenWidth >= 1200;
-    final isCompactHeader = screenWidth < 640;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
@@ -244,105 +243,40 @@ class _PharmacyProfileScreenState extends State<PharmacyProfileScreen> {
           // Responsive Header Section
           PharmacyCard(
             padding: const EdgeInsets.all(20),
-            child: isCompactHeader
-                ? Column(
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: PharmacyColors.primary.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(PharmacyRadius.card),
+                  ),
+                  child: const Icon(
+                    Icons.storefront_rounded,
+                    color: PharmacyColors.primary,
+                    size: 28,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: PharmacyColors.primary.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(PharmacyRadius.card),
-                            ),
-                            child: const Icon(
-                              Icons.storefront_rounded,
-                              color: PharmacyColors.primary,
-                              size: 28,
-                            ),
-                          ),
-                          const SizedBox(width: 14),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Pharmacy Profile',
-                                  style: PharmacyTypography.h2.copyWith(fontWeight: FontWeight.bold),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  'Manage account identity and provider details.',
-                                  style: PharmacyTypography.caption.copyWith(color: PharmacyColors.textSecondary),
-                                  overflow: TextOverflow.ellipsis,
-                                  maxLines: 2,
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
+                      Text(
+                        'Pharmacy Profile',
+                        style: PharmacyTypography.h2.copyWith(fontWeight: FontWeight.bold),
                       ),
-                      const SizedBox(height: 16),
-                      SizedBox(
-                        width: double.infinity,
-                        child: PharmacyPrimaryButton(
-                          label: 'Save Profile',
-                          icon: Icons.save_rounded,
-                          isLoading: _isSaving,
-                          onPressed: _handleSave,
-                        ),
-                      ),
-                    ],
-                  )
-                : Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Expanded(
-                        child: Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(12),
-                              decoration: BoxDecoration(
-                                color: PharmacyColors.primary.withValues(alpha: 0.1),
-                                borderRadius: BorderRadius.circular(PharmacyRadius.card),
-                              ),
-                              child: const Icon(
-                                Icons.storefront_rounded,
-                                color: PharmacyColors.primary,
-                                size: 28,
-                              ),
-                            ),
-                            const SizedBox(width: 16),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Pharmacy Profile',
-                                    style: PharmacyTypography.h2.copyWith(fontWeight: FontWeight.bold),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    'Manage your account identity, business details, and operating preferences.',
-                                    style: PharmacyTypography.caption.copyWith(color: PharmacyColors.textSecondary),
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      PharmacyPrimaryButton(
-                        label: 'Save Profile',
-                        icon: Icons.save_rounded,
-                        isLoading: _isSaving,
-                        onPressed: _handleSave,
+                      const SizedBox(height: 4),
+                      Text(
+                        'Manage your account identity, business details, and operating preferences.',
+                        style: PharmacyTypography.caption.copyWith(color: PharmacyColors.textSecondary),
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ],
                   ),
+                ),
+              ],
+            ),
           ),
           const SizedBox(height: 20),
 
@@ -426,17 +360,35 @@ class _PharmacyProfileScreenState extends State<PharmacyProfileScreen> {
 
   Widget _buildUserProfileCard(String name, String email, String role, String business) {
     return PharmacyCard(
+      padding: const EdgeInsets.all(20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              CircleAvatar(
-                radius: 28,
-                backgroundColor: PharmacyColors.primary,
-                child: Text(
-                  name.isNotEmpty ? name[0].toUpperCase() : 'P',
-                  style: PharmacyTypography.h2.copyWith(color: Colors.white, fontWeight: FontWeight.bold),
+              Container(
+                width: 56,
+                height: 56,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [PharmacyColors.primary, PharmacyColors.primary.withValues(alpha: 0.8)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: PharmacyColors.primary.withValues(alpha: 0.25),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Center(
+                  child: Text(
+                    name.isNotEmpty ? name[0].toUpperCase() : 'P',
+                    style: PharmacyTypography.h2.copyWith(color: Colors.white, fontWeight: FontWeight.bold),
+                  ),
                 ),
               ),
               const SizedBox(width: 14),
@@ -449,16 +401,17 @@ class _PharmacyProfileScreenState extends State<PharmacyProfileScreen> {
                       style: PharmacyTypography.subtitle.copyWith(fontWeight: FontWeight.bold),
                       overflow: TextOverflow.ellipsis,
                     ),
-                    const SizedBox(height: 2),
+                    const SizedBox(height: 4),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
                         color: PharmacyColors.primarySoft,
-                        borderRadius: BorderRadius.circular(4),
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(color: PharmacyColors.primary.withValues(alpha: 0.2)),
                       ),
                       child: Text(
-                        role.replaceAll('_', ' '),
-                        style: PharmacyTypography.caption.copyWith(color: PharmacyColors.primary, fontWeight: FontWeight.bold),
+                        role.replaceAll('_', ' ').toUpperCase(),
+                        style: PharmacyTypography.caption.copyWith(color: PharmacyColors.primary, fontWeight: FontWeight.bold, fontSize: 11),
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
@@ -467,13 +420,13 @@ class _PharmacyProfileScreenState extends State<PharmacyProfileScreen> {
               ),
             ],
           ),
-          const Divider(height: 24),
+          const Divider(height: 28),
           _buildInfoRow(Icons.phone_outlined, 'Mobile Contact', _phoneController.text.isNotEmpty ? _phoneController.text : 'Not Specified'),
-          const SizedBox(height: 8),
+          const SizedBox(height: 12),
           _buildInfoRow(Icons.email_outlined, 'Email Address', email.isNotEmpty ? email : 'Not Specified'),
-          const SizedBox(height: 8),
+          const SizedBox(height: 12),
           _buildInfoRow(Icons.business_rounded, 'Assigned Outlet', business),
-          const SizedBox(height: 14),
+          const SizedBox(height: 18),
           SizedBox(
             width: double.infinity,
             child: PharmacySecondaryButton(
@@ -491,42 +444,94 @@ class _PharmacyProfileScreenState extends State<PharmacyProfileScreen> {
   void _showEditUserDialog() {
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Edit User Profile'),
-        content: SingleChildScrollView(
+      builder: (ctx) => Dialog(
+        backgroundColor: Colors.transparent,
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 480),
+          decoration: BoxDecoration(
+            color: PharmacyColors.surface,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: const [
+              BoxShadow(
+                color: Colors.black26,
+                blurRadius: 20,
+                offset: Offset(0, 8),
+              ),
+            ],
+          ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              TextField(
-                controller: _nameController,
-                decoration: const InputDecoration(labelText: 'Display Name'),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                decoration: const BoxDecoration(
+                  border: Border(bottom: BorderSide(color: PharmacyColors.border)),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: PharmacyColors.primarySoft,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(Icons.person_rounded, color: PharmacyColors.primary, size: 20),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        'Edit User Profile',
+                        style: PharmacyTypography.subtitle.copyWith(fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close_rounded, color: PharmacyColors.textSecondary),
+                      onPressed: () => Navigator.pop(ctx),
+                    ),
+                  ],
+                ),
               ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: _emailController,
-                decoration: const InputDecoration(labelText: 'Email Address'),
+              Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  children: [
+                    _buildFormField('Display Name', _nameController, 'Enter full name', Icons.person_outline_rounded),
+                    const SizedBox(height: 14),
+                    _buildFormField('Email Address', _emailController, 'Enter email address', Icons.email_outlined),
+                    const SizedBox(height: 14),
+                    _buildFormField('Mobile Contact', _phoneController, 'Enter phone number', Icons.phone_outlined),
+                  ],
+                ),
               ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: _phoneController,
-                decoration: const InputDecoration(labelText: 'Mobile Contact'),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                decoration: const BoxDecoration(
+                  color: PharmacyColors.canvas,
+                  borderRadius: BorderRadius.vertical(bottom: Radius.circular(16)),
+                  border: Border(top: BorderSide(color: PharmacyColors.border)),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    PharmacySecondaryButton(
+                      label: 'Cancel',
+                      onPressed: () => Navigator.pop(ctx),
+                    ),
+                    const SizedBox(width: 12),
+                    PharmacyPrimaryButton(
+                      label: 'Save Profile',
+                      icon: Icons.check_circle_rounded,
+                      onPressed: () {
+                        Navigator.pop(ctx);
+                        _handleSave();
+                      },
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              _handleSave();
-            },
-            child: const Text('Save Profile'),
-          ),
-        ],
       ),
     );
   }
@@ -534,112 +539,166 @@ class _PharmacyProfileScreenState extends State<PharmacyProfileScreen> {
   void _showEditBusinessDialog() {
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Edit Pharmacy & Business Details'),
-        content: SizedBox(
-          width: 500,
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: _businessNameController,
-                  decoration: const InputDecoration(
-                    labelText: 'Business Name',
-                    hintText: 'e.g. SHIELD Hyper Pharmacy Perinthalmanna',
-                  ),
+      builder: (ctx) => Dialog(
+        backgroundColor: Colors.transparent,
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 640),
+          decoration: BoxDecoration(
+            color: PharmacyColors.surface,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: const [
+              BoxShadow(
+                color: Colors.black26,
+                blurRadius: 20,
+                offset: Offset(0, 8),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                decoration: const BoxDecoration(
+                  border: Border(bottom: BorderSide(color: PharmacyColors.border)),
                 ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: _businessCodeController,
-                  decoration: const InputDecoration(
-                    labelText: 'Business Code',
-                    hintText: 'e.g. HYP-PERINTHALMANNA',
-                  ),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: _drugLicenceController,
-                  decoration: const InputDecoration(
-                    labelText: 'Drug Licence No.',
-                    hintText: 'e.g. DL-2026/PHARM/77821',
-                  ),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: _operatingHoursController,
-                  decoration: const InputDecoration(
-                    labelText: 'Operating Hours',
-                    hintText: 'e.g. 24/7 Standard Operating Hours',
-                  ),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: _addressController,
-                  decoration: const InputDecoration(
-                    labelText: 'Registered Address',
-                    hintText: 'e.g. Main Road, Near Jubilee Hospital',
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Row(
+                child: Row(
                   children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: PharmacyColors.primarySoft,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(Icons.store_rounded, color: PharmacyColors.primary, size: 20),
+                    ),
+                    const SizedBox(width: 12),
                     Expanded(
-                      child: TextField(
-                        controller: _cityController,
-                        decoration: const InputDecoration(labelText: 'City'),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Edit Pharmacy & Business Details',
+                            style: PharmacyTypography.subtitle.copyWith(fontWeight: FontWeight.bold),
+                          ),
+                          Text(
+                            'Update master outlet info, licence numbers, and address.',
+                            style: PharmacyTypography.caption.copyWith(color: PharmacyColors.textSecondary),
+                          ),
+                        ],
                       ),
                     ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: TextField(
-                        controller: _stateController,
-                        decoration: const InputDecoration(labelText: 'State'),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: TextField(
-                        controller: _pinController,
-                        decoration: const InputDecoration(labelText: 'PIN Code'),
-                      ),
+                    IconButton(
+                      icon: const Icon(Icons.close_rounded, color: PharmacyColors.textSecondary),
+                      onPressed: () => Navigator.pop(ctx),
                     ),
                   ],
                 ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: _gstinController,
-                  decoration: const InputDecoration(
-                    labelText: 'GSTIN / Tax ID',
-                    hintText: 'e.g. 32AABCS1429B1Z5',
+              ),
+              Flexible(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildFormField('Business Name', _businessNameController, 'e.g. SHIELD Hyper Pharmacy Perinthalmanna', Icons.business_rounded),
+                      const SizedBox(height: 14),
+                      _buildFormField('Business Code', _businessCodeController, 'e.g. HYP-PERINTHALMANNA', Icons.badge_outlined),
+                      const SizedBox(height: 14),
+                      _buildFormField('Drug Licence No.', _drugLicenceController, 'e.g. DL-2026/PHARM/77821', Icons.verified_user_outlined),
+                      const SizedBox(height: 14),
+                      _buildFormField('Operating Hours', _operatingHoursController, 'e.g. 24/7 Standard Operating Hours', Icons.access_time_rounded),
+                      const SizedBox(height: 14),
+                      _buildFormField('Registered Address', _addressController, 'e.g. Main Road, Near Jubilee Hospital', Icons.location_on_outlined),
+                      const SizedBox(height: 14),
+                      Row(
+                        children: [
+                          Expanded(child: _buildFormField('City', _cityController, 'Perinthalmanna', Icons.location_city_rounded)),
+                          const SizedBox(width: 10),
+                          Expanded(child: _buildFormField('State', _stateController, 'Kerala', Icons.map_outlined)),
+                          const SizedBox(width: 10),
+                          Expanded(child: _buildFormField('PIN Code', _pinController, '679322', Icons.pin_drop_outlined)),
+                        ],
+                      ),
+                      const SizedBox(height: 14),
+                      _buildFormField('GSTIN / Tax ID', _gstinController, 'e.g. 32AABCS1429B1Z5', Icons.receipt_long_outlined),
+                      const SizedBox(height: 14),
+                      _buildFormField('Business Type', _businessTypeController, 'e.g. PHARMACY', Icons.category_outlined),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: _businessTypeController,
-                  decoration: const InputDecoration(
-                    labelText: 'Business Type',
-                    hintText: 'e.g. Hyperpharmacy & Retail Outlet',
-                  ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                decoration: const BoxDecoration(
+                  color: PharmacyColors.canvas,
+                  borderRadius: BorderRadius.vertical(bottom: Radius.circular(16)),
+                  border: Border(top: BorderSide(color: PharmacyColors.border)),
                 ),
-              ],
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    PharmacySecondaryButton(
+                      label: 'Cancel',
+                      onPressed: () => Navigator.pop(ctx),
+                    ),
+                    const SizedBox(width: 12),
+                    PharmacyPrimaryButton(
+                      label: 'Save Business Details',
+                      icon: Icons.check_circle_rounded,
+                      onPressed: () {
+                        Navigator.pop(ctx);
+                        _handleSave();
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFormField(String label, TextEditingController controller, String hint, IconData icon) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: PharmacyTypography.caption.copyWith(
+            fontWeight: FontWeight.bold,
+            color: PharmacyColors.navy,
+          ),
+        ),
+        const SizedBox(height: 6),
+        TextField(
+          controller: controller,
+          style: PharmacyTypography.body.copyWith(color: PharmacyColors.navy),
+          decoration: InputDecoration(
+            hintText: hint,
+            hintStyle: PharmacyTypography.body.copyWith(color: PharmacyColors.textSecondary.withValues(alpha: 0.6)),
+            prefixIcon: Icon(icon, size: 18, color: PharmacyColors.textSecondary),
+            isDense: true,
+            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            filled: true,
+            fillColor: PharmacyColors.canvas,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: const BorderSide(color: PharmacyColors.border),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: const BorderSide(color: PharmacyColors.border),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: const BorderSide(color: PharmacyColors.primary, width: 1.5),
             ),
           ),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              _handleSave();
-            },
-            child: const Text('Save Business Details'),
-          ),
-        ],
-      ),
+      ],
     );
   }
 
