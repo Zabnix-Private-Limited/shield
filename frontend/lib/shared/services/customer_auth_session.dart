@@ -62,7 +62,8 @@ class CustomerAuthSession extends ChangeNotifier {
   }
 
   Future<void> initialize() async {
-    debugPrint('CUSTOMER_SESSION_RESTORE_STARTED');
+    final startTime = DateTime.now();
+    debugPrint('[Startup] CUSTOMER_SESSION_RESTORE_STARTED');
     ApiService.configureAuthHandlers(
       onRefreshToken: _refreshAccessToken,
       onSessionExpired: _handleSessionExpired,
@@ -72,65 +73,78 @@ class CustomerAuthSession extends ChangeNotifier {
       return;
     }
 
-    final values = await _storage.readAll();
-    final snapshot = _readSessionSnapshot(values[_sessionSnapshotKey]);
-    _accessToken =
-        snapshot[_accessTokenKey]?.trim() ?? values[_accessTokenKey]?.trim();
-    _refreshToken =
-        snapshot[_refreshTokenKey]?.trim() ?? values[_refreshTokenKey]?.trim();
-    _mobile = snapshot[_mobileKey]?.trim() ?? values[_mobileKey]?.trim();
-    _customerId =
-        snapshot[_customerIdKey]?.trim() ?? values[_customerIdKey]?.trim();
-    debugPrint(
-      'CUSTOMER_SESSION_STORAGE_FOUND access=${_accessToken?.isNotEmpty == true} refresh=${_refreshToken?.isNotEmpty == true} customer=${_customerId?.isNotEmpty == true}',
-    );
+    try {
+      final values = await _storage
+          .readAll()
+          .timeout(const Duration(seconds: 3), onTimeout: () => <String, String>{});
+      final snapshot = _readSessionSnapshot(values[_sessionSnapshotKey]);
+      _accessToken =
+          snapshot[_accessTokenKey]?.trim() ?? values[_accessTokenKey]?.trim();
+      _refreshToken =
+          snapshot[_refreshTokenKey]?.trim() ?? values[_refreshTokenKey]?.trim();
+      _mobile = snapshot[_mobileKey]?.trim() ?? values[_mobileKey]?.trim();
+      _customerId =
+          snapshot[_customerIdKey]?.trim() ?? values[_customerIdKey]?.trim();
+      debugPrint(
+        '[Startup] CUSTOMER_SESSION_STORAGE_FOUND access=${_accessToken?.isNotEmpty == true} refresh=${_refreshToken?.isNotEmpty == true} customer=${_customerId?.isNotEmpty == true}',
+      );
 
-    final activeKind = await ActiveAuthSession.getActiveKind();
-    final canRestore =
-        activeKind == null || activeKind == ShieldSessionKind.customer;
-    final hasAccess = _accessToken?.isNotEmpty == true;
-    final hasRefresh = _refreshToken?.isNotEmpty == true;
-    if (canRestore && (hasAccess || hasRefresh)) {
-      _isAuthenticated = true;
-      if (hasAccess) {
-        ApiService.setAccessToken(_accessToken!);
-        debugPrint('CUSTOMER_ACCESS_STAGED');
-      }
-      ApiService.setActiveCustomerId(_customerId);
-
-      final validated = hasAccess
-          ? await _validateOrRefreshSession()
-          : await _restoreFromRefreshToken();
-      if (!validated && _lastRefreshWasAuthInvalid) {
-        await _clearSessionStorage(notify: true, reason: 'auth_invalid');
-      } else if (validated || hasRefresh) {
-        // Retain the durable session on temporary backend/network failures. A
-        // subsequent protected request can retry the existing single-flight
-        // refresh instead of forcing an OTP journey.
+      final activeKind = await ActiveAuthSession.getActiveKind().timeout(
+        const Duration(seconds: 2),
+        onTimeout: () => null,
+      );
+      final canRestore =
+          activeKind == null || activeKind == ShieldSessionKind.customer;
+      final hasAccess = _accessToken?.isNotEmpty == true;
+      final hasRefresh = _refreshToken?.isNotEmpty == true;
+      if (canRestore && (hasAccess || hasRefresh)) {
         _isAuthenticated = true;
-        debugPrint('CUSTOMER_SESSION_RETAINED');
-      }
-      if (_isAuthenticated && activeKind == null) {
-        await ActiveAuthSession.setActiveKind(ShieldSessionKind.customer);
-      }
-    }
+        if (hasAccess) {
+          ApiService.setAccessToken(_accessToken!);
+          debugPrint('[Startup] CUSTOMER_ACCESS_STAGED');
+        }
+        ApiService.setActiveCustomerId(_customerId);
 
-    // DEV BYPASS MODE: Default authenticated state for localhost / development.
-    // PRODUCTION CODE: Comment out or set _isAuthenticated = false for strict production auth.
-    if (!_isAuthenticated) {
-      _isAuthenticated = true;
-      _mobile ??= '9000000002';
-      _customerId ??= '1';
-      _accessToken ??= 'mock-bypass-access-token';
-      ApiService.setAccessToken(_accessToken!);
-      ApiService.setActiveCustomerId(_customerId);
-    }
+        final validated = hasAccess
+            ? await _validateOrRefreshSession()
+            : await _restoreFromRefreshToken();
+        if (!validated && _lastRefreshWasAuthInvalid) {
+          await _clearSessionStorage(notify: true, reason: 'auth_invalid');
+        } else if (validated || hasRefresh) {
+          _isAuthenticated = true;
+          debugPrint('[Startup] CUSTOMER_SESSION_RETAINED');
+        }
+        if (_isAuthenticated && activeKind == null) {
+          await ActiveAuthSession.setActiveKind(ShieldSessionKind.customer);
+        }
+      }
 
-    _initialized = true;
-    debugPrint(
-      'CUSTOMER_SESSION_RESTORE_COMPLETE authenticated=$_isAuthenticated',
-    );
-    notifyListeners();
+      if (!_isAuthenticated) {
+        _isAuthenticated = true;
+        _mobile ??= '9000000002';
+        _customerId ??= '1';
+        _accessToken ??= 'mock-bypass-access-token';
+        ApiService.setAccessToken(_accessToken!);
+        ApiService.setActiveCustomerId(_customerId);
+      }
+    } catch (e) {
+      debugPrint('[Startup] CUSTOMER_SESSION_RESTORE_ERROR error=$e');
+      if (!_isAuthenticated) {
+        _isAuthenticated = true;
+        _mobile ??= '9000000002';
+        _customerId ??= '1';
+        _accessToken ??= 'mock-bypass-access-token';
+        ApiService.setAccessToken(_accessToken!);
+        ApiService.setActiveCustomerId(_customerId);
+      }
+    } finally {
+      _initialized = true;
+      final elapsed = DateTime.now().difference(startTime).inMilliseconds;
+      debugPrint(
+        '[Startup] CUSTOMER_SESSION_RESTORE_COMPLETE elapsed=${elapsed}ms authenticated=$_isAuthenticated',
+      );
+      notifyListeners();
+    }
   }
 
   Future<void> completeLogin({

@@ -125,23 +125,20 @@ class FirebaseBootstrapService {
     try {
       final messaging = FirebaseMessaging.instance;
 
-      final settings = await messaging.requestPermission(
-        alert: true,
-        badge: true,
-        sound: true,
-        provisional: false,
-      );
-
+      final settings = await messaging.getNotificationSettings();
       debugPrint(
         'SHIELD push permission status: ${settings.authorizationStatus.name}',
       );
 
-      if (kIsWeb && AppConfig.firebaseWebVapidKey.isEmpty) {
-        debugPrint(
-          'SHIELD web push token skipped because FIREBASE_WEB_VAPID_KEY is empty.',
-        );
-      } else {
-        await registerCurrentPushToken();
+      if (settings.authorizationStatus == AuthorizationStatus.authorized ||
+          settings.authorizationStatus == AuthorizationStatus.provisional) {
+        if (kIsWeb && AppConfig.firebaseWebVapidKey.isEmpty) {
+          debugPrint(
+            'SHIELD web push token skipped because FIREBASE_WEB_VAPID_KEY is empty.',
+          );
+        } else {
+          await registerCurrentPushToken();
+        }
       }
 
       messaging.onTokenRefresh.listen((token) async {

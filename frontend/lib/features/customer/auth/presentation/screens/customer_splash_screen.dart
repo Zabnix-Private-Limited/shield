@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -16,10 +17,24 @@ class CustomerSplashScreen extends StatefulWidget {
 
 class _CustomerSplashScreenState extends State<CustomerSplashScreen> {
   bool _routeScheduled = false;
+  Timer? _fallbackTimer;
 
   @override
   void initState() {
     super.initState();
+    _fallbackTimer = Timer(const Duration(milliseconds: 3500), () {
+      if (!_routeScheduled && mounted) {
+        debugPrint('[Startup] Splash fallback timer fired; forcing route transition.');
+        _routeScheduled = true;
+        _routeNext();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _fallbackTimer?.cancel();
+    super.dispose();
   }
 
   void _routeWhenSessionsAreReady() {
@@ -29,6 +44,7 @@ class _CustomerSplashScreenState extends State<CustomerSplashScreen> {
       return;
     }
     _routeScheduled = true;
+    _fallbackTimer?.cancel();
     WidgetsBinding.instance.addPostFrameCallback((_) => _routeNext());
   }
 

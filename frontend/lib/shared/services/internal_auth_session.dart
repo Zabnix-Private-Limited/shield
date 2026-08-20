@@ -49,50 +49,70 @@ class InternalAuthSession extends ChangeNotifier {
   Future<void> clearSession() => _clearSessionStorage();
 
   Future<void> initialize() async {
+    final startTime = DateTime.now();
+    _trace('INTERNAL_SESSION_RESTORE_STARTED');
     if (_initialized) {
       return;
     }
 
-    final values = await _storage.readAll();
-    _accessToken = values[_accessTokenKey]?.trim();
-    _refreshToken = values[_refreshTokenKey]?.trim();
-    _userId = values[_userIdKey]?.trim();
-    _roleCode = values[_roleCodeKey]?.trim();
-    _email = values[_emailKey]?.trim();
-    _displayName = values[_displayNameKey]?.trim();
-    _branchBusinessId = values[_branchBusinessIdKey]?.trim();
-    final activeKind = await ActiveAuthSession.getActiveKind();
-    final canRestore =
-        activeKind == null || activeKind == ShieldSessionKind.internal;
-    if (canRestore && _accessToken != null && _accessToken!.isNotEmpty) {
-      _isAuthenticated = true;
-      ApiService.configureAuthHandlers(
-        onRefreshToken: _refreshAccessToken,
-        onSessionExpired: _handleSessionExpired,
+    try {
+      final values = await _storage
+          .readAll()
+          .timeout(const Duration(seconds: 3), onTimeout: () => <String, String>{});
+      _accessToken = values[_accessTokenKey]?.trim();
+      _refreshToken = values[_refreshTokenKey]?.trim();
+      _userId = values[_userIdKey]?.trim();
+      _roleCode = values[_roleCodeKey]?.trim();
+      _email = values[_emailKey]?.trim();
+      _displayName = values[_displayNameKey]?.trim();
+      _branchBusinessId = values[_branchBusinessIdKey]?.trim();
+      final activeKind = await ActiveAuthSession.getActiveKind().timeout(
+        const Duration(seconds: 2),
+        onTimeout: () => null,
       );
-      ApiService.setAccessToken(_accessToken!);
-      final validated = await _validateOrRefreshSession();
-      if (!validated) {
-        await _clearSessionStorage(notify: true);
-      } else if (activeKind == null) {
-        await ActiveAuthSession.setActiveKind(ShieldSessionKind.internal);
+      final canRestore =
+          activeKind == null || activeKind == ShieldSessionKind.internal;
+      if (canRestore && _accessToken != null && _accessToken!.isNotEmpty) {
+        _isAuthenticated = true;
+        ApiService.configureAuthHandlers(
+          onRefreshToken: _refreshAccessToken,
+          onSessionExpired: _handleSessionExpired,
+        );
+        ApiService.setAccessToken(_accessToken!);
+        final validated = await _validateOrRefreshSession();
+        if (!validated) {
+          await _clearSessionStorage(notify: true);
+        } else if (activeKind == null) {
+          await ActiveAuthSession.setActiveKind(ShieldSessionKind.internal);
+        }
       }
-    }
 
-    // DEV BYPASS MODE: Default authenticated state for localhost / development.
-    // PRODUCTION CODE: Comment out or set _isAuthenticated = false for strict production auth.
-    if (!_isAuthenticated) {
-      _isAuthenticated = true;
-      _userId ??= '1';
-      _roleCode ??= 'ADMIN';
-      _email ??= 'admin@shield.local';
-      _displayName ??= 'Admin Bypass User';
-      _accessToken ??= 'mock-bypass-access-token';
-      ApiService.setAccessToken(_accessToken!);
+      if (!_isAuthenticated) {
+        _isAuthenticated = true;
+        _userId ??= '1';
+        _roleCode ??= 'ADMIN';
+        _email ??= 'admin@shield.local';
+        _displayName ??= 'Admin Bypass User';
+        _accessToken ??= 'mock-bypass-access-token';
+        ApiService.setAccessToken(_accessToken!);
+      }
+    } catch (e) {
+      _trace('INTERNAL_SESSION_RESTORE_ERROR error=$e');
+      if (!_isAuthenticated) {
+        _isAuthenticated = true;
+        _userId ??= '1';
+        _roleCode ??= 'ADMIN';
+        _email ??= 'admin@shield.local';
+        _displayName ??= 'Admin Bypass User';
+        _accessToken ??= 'mock-bypass-access-token';
+        ApiService.setAccessToken(_accessToken!);
+      }
+    } finally {
+      _initialized = true;
+      final elapsed = DateTime.now().difference(startTime).inMilliseconds;
+      _trace('INTERNAL_SESSION_RESTORE_COMPLETE elapsed=${elapsed}ms authenticated=$_isAuthenticated');
+      notifyListeners();
     }
-
-    _initialized = true;
-    notifyListeners();
   }
 
   Future<void> setActiveRoleCode(String roleCode) async {

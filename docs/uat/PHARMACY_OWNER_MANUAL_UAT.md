@@ -82,6 +82,20 @@ When reporting an issue, cite the **Test ID** below for instant source resolutio
 - **Expected UI Result**: Delivery dispatch action is hidden or disabled.
 - **Result Box**: `[ ] PASS   [ ] FAIL` — Notes:
 
+### `UAT-ORD-06`: Item Rejection, Stock Preservation & Dynamic Billing Recalculation
+- **Precondition**: Active PLACED order containing FULL STOCK item.
+- **What to Click**: Click **Reject Item** on a Full Stock item.
+- **Expected UI Result**: 
+  1. Item action buttons lock during in-flight mutation (item-level lock).
+  2. Stock status remains `FULL STOCK` (truthful availability preserved).
+  3. Decision status badge becomes `REJECTED`.
+  4. Line payable becomes `₹0.00`.
+  5. Total Payable decreases dynamically by the rejected item's amount.
+  6. Double-clicks during in-flight request are ignored.
+- **Expected Network Route**: `PATCH /pharmacy/orders/:id/items/:itemId` (1 request only)
+- **Post-Refresh Check**: Refreshing page maintains `REJECTED` decision, `FULL STOCK` availability, and updated Total Payable.
+- **Result Box**: `[ ] PASS   [ ] FAIL` — Notes:
+
 ---
 
 ## 3. Invoice File Lifecycle Tests
@@ -211,3 +225,74 @@ When reporting an issue, cite the **Test ID** below for instant source resolutio
 - **What to Test**: Attempt direct URL / API request accessing Pharmacy B order ID.
 - **Expected UI Result**: Access denied with plain-language error message; backend returns `403 Forbidden`.
 - **Result Box**: `[ ] PASS   [ ] FAIL` — Notes:
+
+---
+
+## 10. Final Owner Acceptance — Pharmacy
+
+### A. WEB DESKTOP SPOT CHECK
+1. Log into `/portal/pharmacy-staff/dashboard`.
+2. Open `/portal/pharmacy-staff/orders` and select a PLACED UAT order.
+3. Click **Reject Item** on a FULL STOCK item.
+   - **Verification**: Stock remains `FULL STOCK`; decision status becomes `REJECTED`; fulfill quantity becomes `0`; line payable becomes `₹0.00`; order payable recalculates dynamically.
+   - **Network Check**: Exactly 1 mutation request sent (`PATCH /pharmacy/orders/:id/items/:itemId`). Rapid repeat taps are ignored.
+4. Refresh browser tab.
+   - **Verification**: `REJECTED` decision, `FULL STOCK` availability, and updated Total Payable persist after reload.
+5. Click **Approve Full** on another item.
+   - **Verification**: Approved quantity and unit price line total update correctly.
+6. Click **Partial Fulfill** on a low-stock item (`available < requested`).
+   - **Verification**: System prevents entering quantity greater than `availableQty`.
+
+### B. MOBILE WEB SPOT CHECK (390×844)
+1. Open DevTools responsive device mode (390×844).
+2. Spot-check `/dashboard`, `/orders`, `/payments`, `/payment-details`, `/history`, `/profile`, `/settings`.
+3. Verify zero RenderFlex errors, zero horizontal page overflow, no hidden sticky actions, and readable touch targets.
+4. Reject one item on mobile view: verify mobile item card updates to `REJECTED` badge immediately.
+
+### C. APK NATIVE DEVICE CHECK (`app-release.apk`)
+Install `frontend/build/app/outputs/flutter-apk/app-release.apk` (SHA256: `957346EFF30B44A06A2599AC2FAFEBAEE2144C3C316E5AA0ADB0ADB0BCD143C2B0C0`) on a physical Android device or emulator and record:
+
+- `APK-UAT-01`: Application launch & splash screen `[ ] PASS [ ] FAIL`
+- `APK-UAT-02`: Staff authentication flow `[ ] PASS [ ] FAIL`
+- `APK-UAT-03`: Dashboard KPI cards render & scroll `[ ] PASS [ ] FAIL`
+- `APK-UAT-04`: Bottom navigation tabs switch cleanly `[ ] PASS [ ] FAIL`
+- `APK-UAT-05`: More menu options open expected routes `[ ] PASS [ ] FAIL`
+- `APK-UAT-06`: Orders list opens & pulls to refresh `[ ] PASS [ ] FAIL`
+- `APK-UAT-07`: Order detail modal opens without overflow `[ ] PASS [ ] FAIL`
+- `APK-UAT-08`: Item rejection updates UI badge instantly `[ ] PASS [ ] FAIL`
+- `APK-UAT-09`: Low-stock partial fulfillment caps quantity `[ ] PASS [ ] FAIL`
+- `APK-UAT-10`: Substitute product suggestion modal fits screen `[ ] PASS [ ] FAIL`
+- `APK-UAT-11`: System Back button closes modal / returns `[ ] PASS [ ] FAIL`
+- `APK-UAT-12`: Soft keyboard does not hide form buttons `[ ] PASS [ ] FAIL`
+- `APK-UAT-13`: Payment Review dialog fits mobile width `[ ] PASS [ ] FAIL`
+- `APK-UAT-14`: Bank Account edit modal fits screen `[ ] PASS [ ] FAIL`
+- `APK-UAT-15`: UPI QR code upload picker opens cleanly `[ ] PASS [ ] FAIL`
+- `APK-UAT-16`: Invoice document file picker opens cleanly `[ ] PASS [ ] FAIL`
+- `APK-UAT-17`: Profile business details edit fits height `[ ] PASS [ ] FAIL`
+- `APK-UAT-18`: Settings sticky Save/Discard remain accessible `[ ] PASS [ ] FAIL`
+- `APK-UAT-19`: No RenderFlex yellow stripes or red boxes `[ ] PASS [ ] FAIL`
+- `APK-UAT-20`: No unhandled app crashes during navigation `[ ] PASS [ ] FAIL`
+- `APK-UAT-21`: Push notification deep-link navigation `[ ] PASS [ ] FAIL`
+- `APK-UAT-22`: Device rotation recomposes layout `[ ] PASS [ ] FAIL`
+
+---
+
+### D. Exact Fulfillment Numeric Evidence Template
+
+```text
+ORDER_ID = 1042
+ITEM = Vitamin C 500mg (10 tabs)
+TOTAL_PAYABLE_BEFORE = ₹450.00
+REJECTED_LINE_TOTAL_BEFORE = ₹150.00
+REJECTED_LINE_TOTAL_AFTER = ₹0.00
+TOTAL_PAYABLE_AFTER = ₹300.00
+
+PARTIAL_FULFILLMENT_SAMPLE:
+REQUESTED_QTY = 3.0
+AVAILABLE_QTY = 2.0
+APPROVED_QTY = 2.0
+LINE_TOTAL_AFTER = ₹200.00
+ORDER_TOTAL_AFTER = ₹500.00
+```
+*(Project Owner to replace sample values with exact live UAT numbers upon execution)*
+

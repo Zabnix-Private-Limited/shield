@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import '../../../../shared/services/notification_permission_coordinator.dart';
 import '../../../agent/appointments/presentation/screens/agent_appointments_screen.dart';
 import '../../../agent/customers/presentation/screens/agent_customers_screen.dart';
 import '../../../agent/dashboard/presentation/screens/agent_dashboard_screen.dart';
@@ -190,6 +191,14 @@ class _PortalShellState extends State<PortalShell> {
         _portalData = portal;
         _sectionData = data;
         _isLoading = false;
+      });
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        Future.delayed(const Duration(milliseconds: 1200), () {
+          if (mounted) {
+            NotificationPermissionCoordinator.instance
+                .maybeShowPrePermissionPrompt(context);
+          }
+        });
       });
     } catch (e) {
       if (!mounted) return;
