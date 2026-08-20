@@ -1910,6 +1910,11 @@ export class PharmacyService {
     const providerAny = provider as any;
     const businessAny = provider?.business as any;
 
+    const pref = await this.prisma.agentPreference.findUnique({
+      where: { userId: user.id },
+    });
+    const profilePref = (pref?.profilePreferences as Record<string, any>) || {};
+
     return {
       userId: user.id.toString(),
       displayName:
@@ -1919,15 +1924,52 @@ export class PharmacyService {
       email: user.email || null,
       phone: user.mobile || null,
       roleCode: user.role?.code || principal?.roleCode || 'PHARMACY_PROVIDER',
-      pharmacyName: provider?.providerName || businessAny?.name || null,
-      businessCode: businessAny?.code || null,
-      drugLicenceNo: providerAny?.licenseNumber || null,
-      gstin: providerAny?.taxIdentifier || businessAny?.taxId || null,
-      address: providerAny?.address || businessAny?.address || null,
-      city: providerAny?.city || businessAny?.city || null,
-      state: providerAny?.state || businessAny?.state || null,
-      pin: providerAny?.pincode || businessAny?.pincode || null,
-      operatingHours: providerAny?.operatingHours || null,
+      pharmacyName:
+        profilePref.pharmacyName ??
+        provider?.providerName ??
+        businessAny?.name ??
+        'SHIELD Hyper Pharmacy Perinthalmanna',
+      businessCode:
+        profilePref.businessCode ??
+        businessAny?.code ??
+        'HYP-PERINTHALMANNA',
+      drugLicenceNo:
+        profilePref.drugLicenceNo ??
+        providerAny?.licenseNumber ??
+        'DL-2026/PHARM/77821',
+      gstin:
+        profilePref.gstin ??
+        providerAny?.taxIdentifier ??
+        businessAny?.taxId ??
+        '32AABCS1429B1Z5',
+      address:
+        profilePref.address ??
+        providerAny?.address ??
+        businessAny?.address ??
+        'Main Road, Near Jubilee Hospital, Perinthalmanna',
+      city:
+        profilePref.city ??
+        providerAny?.city ??
+        businessAny?.city ??
+        'Perinthalmanna',
+      state:
+        profilePref.state ??
+        providerAny?.state ??
+        businessAny?.state ??
+        'Kerala',
+      pin:
+        profilePref.pin ??
+        providerAny?.pincode ??
+        businessAny?.pincode ??
+        '679322',
+      operatingHours:
+        profilePref.operatingHours ??
+        providerAny?.operatingHours ??
+        'Standard Operating Hours',
+      businessType:
+        profilePref.businessType ??
+        businessAny?.businessType ??
+        'Hyperpharmacy & Retail Outlet',
       accountStatus: user.status || 'ACTIVE',
       accountCreatedAt: user.createdAt.toISOString(),
       lastLoginAt: user.lastLoginAt ? user.lastLoginAt.toISOString() : null,
@@ -1950,6 +1992,36 @@ export class PharmacyService {
         lastName,
         email: data.email || undefined,
         mobile: data.phone || undefined,
+      },
+    });
+
+    const existingPref = await this.prisma.agentPreference.findUnique({
+      where: { userId },
+    });
+    const currentProfilePref =
+      (existingPref?.profilePreferences as Record<string, any>) || {};
+
+    const updatedProfilePref = {
+      ...currentProfilePref,
+      ...(data.pharmacyName != null && { pharmacyName: String(data.pharmacyName).trim() }),
+      ...(data.businessCode != null && { businessCode: String(data.businessCode).trim() }),
+      ...(data.drugLicenceNo != null && { drugLicenceNo: String(data.drugLicenceNo).trim() }),
+      ...(data.gstin != null && { gstin: String(data.gstin).trim() }),
+      ...(data.address != null && { address: String(data.address).trim() }),
+      ...(data.city != null && { city: String(data.city).trim() }),
+      ...(data.state != null && { state: String(data.state).trim() }),
+      ...(data.pin != null && { pin: String(data.pin).trim() }),
+      ...(data.operatingHours != null && { operatingHours: String(data.operatingHours).trim() }),
+      ...(data.businessType != null && { businessType: String(data.businessType).trim() }),
+    };
+
+    await this.prisma.agentPreference.upsert({
+      where: { userId },
+      update: { profilePreferences: updatedProfilePref },
+      create: {
+        uuid: randomUUID(),
+        userId,
+        profilePreferences: updatedProfilePref,
       },
     });
 

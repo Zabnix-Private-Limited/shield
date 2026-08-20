@@ -323,19 +323,15 @@ class PharmacyProfileSkeleton extends StatelessWidget {
             const Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(flex: 3, child: PharmacySkeletonBlock(height: 380)),
+                Expanded(flex: 1, child: PharmacySkeletonBlock(height: 380)),
                 SizedBox(width: 16),
-                Expanded(flex: 4, child: PharmacySkeletonBlock(height: 380)),
-                SizedBox(width: 16),
-                Expanded(flex: 3, child: PharmacySkeletonBlock(height: 380)),
+                Expanded(flex: 2, child: PharmacySkeletonBlock(height: 380)),
               ],
             )
           else ...[
-            const PharmacySkeletonBlock(height: 180),
+            const PharmacySkeletonBlock(height: 200),
             const SizedBox(height: 16),
-            const PharmacySkeletonBlock(height: 220),
-            const SizedBox(height: 16),
-            const PharmacySkeletonBlock(height: 180),
+            const PharmacySkeletonBlock(height: 260),
           ],
         ],
       ),

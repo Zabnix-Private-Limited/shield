@@ -26,6 +26,17 @@ class _PharmacyProfileScreenState extends State<PharmacyProfileScreen> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
 
+  final TextEditingController _businessNameController = TextEditingController();
+  final TextEditingController _businessCodeController = TextEditingController();
+  final TextEditingController _drugLicenceController = TextEditingController();
+  final TextEditingController _operatingHoursController = TextEditingController();
+  final TextEditingController _addressController = TextEditingController();
+  final TextEditingController _cityController = TextEditingController();
+  final TextEditingController _stateController = TextEditingController();
+  final TextEditingController _pinController = TextEditingController();
+  final TextEditingController _gstinController = TextEditingController();
+  final TextEditingController _businessTypeController = TextEditingController();
+
   @override
   void initState() {
     super.initState();
@@ -37,6 +48,17 @@ class _PharmacyProfileScreenState extends State<PharmacyProfileScreen> {
     _nameController.dispose();
     _emailController.dispose();
     _phoneController.dispose();
+
+    _businessNameController.dispose();
+    _businessCodeController.dispose();
+    _drugLicenceController.dispose();
+    _operatingHoursController.dispose();
+    _addressController.dispose();
+    _cityController.dispose();
+    _stateController.dispose();
+    _pinController.dispose();
+    _gstinController.dispose();
+    _businessTypeController.dispose();
     super.dispose();
   }
 
@@ -54,6 +76,17 @@ class _PharmacyProfileScreenState extends State<PharmacyProfileScreen> {
         _nameController.text = data['displayName'] ?? '';
         _emailController.text = data['email'] ?? '';
         _phoneController.text = data['phone'] ?? '';
+
+        _businessNameController.text = data['pharmacyName'] ?? '';
+        _businessCodeController.text = data['businessCode'] ?? '';
+        _drugLicenceController.text = data['drugLicenceNo'] ?? '';
+        _operatingHoursController.text = data['operatingHours'] ?? '';
+        _addressController.text = data['address'] ?? '';
+        _cityController.text = data['city'] ?? '';
+        _stateController.text = data['state'] ?? '';
+        _pinController.text = data['pin'] ?? '';
+        _gstinController.text = data['gstin'] ?? '';
+        _businessTypeController.text = data['businessType'] ?? '';
       });
     } catch (e) {
       if (!mounted) return;
@@ -75,6 +108,16 @@ class _PharmacyProfileScreenState extends State<PharmacyProfileScreen> {
         'displayName': _nameController.text.trim(),
         'email': _emailController.text.trim(),
         'phone': _phoneController.text.trim(),
+        'pharmacyName': _businessNameController.text.trim(),
+        'businessCode': _businessCodeController.text.trim(),
+        'drugLicenceNo': _drugLicenceController.text.trim(),
+        'operatingHours': _operatingHoursController.text.trim(),
+        'address': _addressController.text.trim(),
+        'city': _cityController.text.trim(),
+        'state': _stateController.text.trim(),
+        'pin': _pinController.text.trim(),
+        'gstin': _gstinController.text.trim(),
+        'businessType': _businessTypeController.text.trim(),
       };
       final updated = await _repository.updatePharmacyProfile(payload);
       if (!mounted) return;
@@ -84,7 +127,7 @@ class _PharmacyProfileScreenState extends State<PharmacyProfileScreen> {
       });
       showPortalSnackBar(
         context,
-        'Pharmacy Profile updated and persisted successfully.',
+        'Pharmacy & Business Details updated and persisted successfully.',
       );
     } catch (e) {
       if (!mounted) return;
@@ -150,17 +193,43 @@ class _PharmacyProfileScreenState extends State<PharmacyProfileScreen> {
         ? _emailController.text
         : (session.email ?? '—');
     final userRole = _profileData?['roleCode'] ?? session.roleCode ?? 'PHARMACY_PROVIDER';
-    final businessName = _profileData?['pharmacyName'] ?? 'Unassigned Outlet';
-    final businessCode = _profileData?['businessCode'] ?? '—';
-    final drugLicence = _profileData?['drugLicenceNo'] ?? 'Not Specified';
-    final gstin = _profileData?['gstin'] ?? 'Not Specified';
-    final address = _profileData?['address'] ?? 'Not Specified';
-    final cityStatePin = _profileData?['city'] != null
-        ? '${_profileData!['city']}, ${_profileData!['state'] ?? ''} — ${_profileData!['pin'] ?? ''}'
+    final businessName = _businessNameController.text.isNotEmpty
+        ? _businessNameController.text
+        : (_profileData?['pharmacyName'] ?? 'Unassigned Outlet');
+    final businessCode = _businessCodeController.text.isNotEmpty
+        ? _businessCodeController.text
+        : (_profileData?['businessCode'] ?? '—');
+    final drugLicence = _drugLicenceController.text.isNotEmpty
+        ? _drugLicenceController.text
+        : (_profileData?['drugLicenceNo'] ?? 'Not Specified');
+    final gstin = _gstinController.text.isNotEmpty
+        ? _gstinController.text
+        : (_profileData?['gstin'] ?? 'Not Specified');
+    final address = _addressController.text.isNotEmpty
+        ? _addressController.text
+        : (_profileData?['address'] ?? 'Not Specified');
+
+    final String cityVal = _cityController.text.isNotEmpty
+        ? _cityController.text
+        : (_profileData?['city'] ?? '');
+    final String stateVal = _stateController.text.isNotEmpty
+        ? _stateController.text
+        : (_profileData?['state'] ?? '');
+    final String pinVal = _pinController.text.isNotEmpty
+        ? _pinController.text
+        : (_profileData?['pin'] ?? '');
+
+    final cityStatePin = cityVal.isNotEmpty
+        ? '$cityVal${stateVal.isNotEmpty ? ', $stateVal' : ''}${pinVal.isNotEmpty ? ' — $pinVal' : ''}'
         : 'Not Specified';
-    final operatingHours = _profileData?['operatingHours'] ?? 'Standard Operating Hours';
-    final accountCreated = _profileData?['accountCreatedAt']?.toString().split('T').first ?? '—';
-    final accountStatus = _profileData?['accountStatus'] ?? 'ACTIVE';
+
+    final operatingHours = _operatingHoursController.text.isNotEmpty
+        ? _operatingHoursController.text
+        : (_profileData?['operatingHours'] ?? 'Standard Operating Hours');
+
+    final businessType = _businessTypeController.text.isNotEmpty
+        ? _businessTypeController.text
+        : (_profileData?['businessType'] ?? 'Hyperpharmacy & Retail Outlet');
 
     final screenWidth = MediaQuery.of(context).size.width;
     final isDesktop = screenWidth >= 1024;
@@ -282,45 +351,16 @@ class _PharmacyProfileScreenState extends State<PharmacyProfileScreen> {
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Left Column: User & Service Area
+                // Left Column: User Profile Details
                 SizedBox(
                   width: isWideDesktop ? 340 : 300,
-                  child: Column(
-                    children: [
-                      _buildUserProfileCard(userName, userEmail, userRole, businessName),
-                      const SizedBox(height: 16),
-                      _buildDeliveryServiceCard(),
-                      const SizedBox(height: 16),
-                      _buildEmergencySupportCard(),
-                    ],
-                  ),
+                  child: _buildUserProfileCard(userName, userEmail, userRole, businessName),
                 ),
                 const SizedBox(width: 20),
 
-                // Center Column: Business Details & Outlets
+                // Center Column: Business Details
                 Expanded(
-                  child: Column(
-                    children: [
-                      _buildBusinessDetailsCard(businessName, businessCode, drugLicence, gstin, address, cityStatePin, operatingHours),
-                      const SizedBox(height: 16),
-                      _buildOutletsCard(businessName),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 20),
-
-                // Right Column: Security, Quick Actions & Info
-                SizedBox(
-                  width: isWideDesktop ? 320 : 280,
-                  child: Column(
-                    children: [
-                      _buildSecurityCard(),
-                      const SizedBox(height: 16),
-                      _buildQuickActionsCard(),
-                      const SizedBox(height: 16),
-                      _buildAccountInfoCard(accountCreated, accountStatus),
-                    ],
-                  ),
+                  child: _buildBusinessDetailsCard(businessName, businessCode, drugLicence, gstin, address, cityStatePin, operatingHours, businessType),
                 ),
               ],
             )
@@ -328,17 +368,7 @@ class _PharmacyProfileScreenState extends State<PharmacyProfileScreen> {
             // Stacked Mobile / Tablet Layout
             _buildUserProfileCard(userName, userEmail, userRole, businessName),
             const SizedBox(height: 16),
-            _buildBusinessDetailsCard(businessName, businessCode, drugLicence, gstin, address, cityStatePin, operatingHours),
-            const SizedBox(height: 16),
-            _buildOutletsCard(businessName),
-            const SizedBox(height: 16),
-            _buildDeliveryServiceCard(),
-            const SizedBox(height: 16),
-            _buildSecurityCard(),
-            const SizedBox(height: 16),
-            _buildQuickActionsCard(),
-            const SizedBox(height: 16),
-            _buildAccountInfoCard(accountCreated, accountStatus),
+            _buildBusinessDetailsCard(businessName, businessCode, drugLicence, gstin, address, cityStatePin, operatingHours, businessType),
           ],
 
           const SizedBox(height: 24),
@@ -463,24 +493,26 @@ class _PharmacyProfileScreenState extends State<PharmacyProfileScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Edit User Profile'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: _nameController,
-              decoration: const InputDecoration(labelText: 'Display Name'),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _emailController,
-              decoration: const InputDecoration(labelText: 'Email Address'),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _phoneController,
-              decoration: const InputDecoration(labelText: 'Mobile Contact'),
-            ),
-          ],
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: _nameController,
+                decoration: const InputDecoration(labelText: 'Display Name'),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _emailController,
+                decoration: const InputDecoration(labelText: 'Email Address'),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _phoneController,
+                decoration: const InputDecoration(labelText: 'Mobile Contact'),
+              ),
+            ],
+          ),
         ),
         actions: [
           TextButton(
@@ -499,7 +531,128 @@ class _PharmacyProfileScreenState extends State<PharmacyProfileScreen> {
     );
   }
 
-  Widget _buildBusinessDetailsCard(String business, String code, String licence, String gstin, String address, String cityStatePin, String hours) {
+  void _showEditBusinessDialog() {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Edit Pharmacy & Business Details'),
+        content: SizedBox(
+          width: 500,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: _businessNameController,
+                  decoration: const InputDecoration(
+                    labelText: 'Business Name',
+                    hintText: 'e.g. SHIELD Hyper Pharmacy Perinthalmanna',
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _businessCodeController,
+                  decoration: const InputDecoration(
+                    labelText: 'Business Code',
+                    hintText: 'e.g. HYP-PERINTHALMANNA',
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _drugLicenceController,
+                  decoration: const InputDecoration(
+                    labelText: 'Drug Licence No.',
+                    hintText: 'e.g. DL-2026/PHARM/77821',
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _operatingHoursController,
+                  decoration: const InputDecoration(
+                    labelText: 'Operating Hours',
+                    hintText: 'e.g. 24/7 Standard Operating Hours',
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _addressController,
+                  decoration: const InputDecoration(
+                    labelText: 'Registered Address',
+                    hintText: 'e.g. Main Road, Near Jubilee Hospital',
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _cityController,
+                        decoration: const InputDecoration(labelText: 'City'),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: TextField(
+                        controller: _stateController,
+                        decoration: const InputDecoration(labelText: 'State'),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: TextField(
+                        controller: _pinController,
+                        decoration: const InputDecoration(labelText: 'PIN Code'),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _gstinController,
+                  decoration: const InputDecoration(
+                    labelText: 'GSTIN / Tax ID',
+                    hintText: 'e.g. 32AABCS1429B1Z5',
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _businessTypeController,
+                  decoration: const InputDecoration(
+                    labelText: 'Business Type',
+                    hintText: 'e.g. Hyperpharmacy & Retail Outlet',
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              _handleSave();
+            },
+            child: const Text('Save Business Details'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBusinessDetailsCard(
+    String business,
+    String code,
+    String licence,
+    String gstin,
+    String address,
+    String cityStatePin,
+    String hours,
+    String businessType,
+  ) {
     return LayoutBuilder(
       builder: (context, constraints) {
         final isCompact = constraints.maxWidth < 520;
@@ -507,26 +660,38 @@ class _PharmacyProfileScreenState extends State<PharmacyProfileScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Wrap(
-                alignment: WrapAlignment.spaceBetween,
-                crossAxisAlignment: WrapCrossAlignment.center,
-                spacing: 8,
-                runSpacing: 8,
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    'Pharmacy & Business Details',
-                    style: PharmacyTypography.subtitle.copyWith(fontWeight: FontWeight.bold),
+                  Expanded(
+                    child: Wrap(
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        Text(
+                          'Pharmacy & Business Details',
+                          style: PharmacyTypography.subtitle.copyWith(fontWeight: FontWeight.bold),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: PharmacyColors.primarySoft,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            'VERIFIED PHARMACY',
+                            style: PharmacyTypography.caption.copyWith(color: PharmacyColors.primary, fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: PharmacyColors.primarySoft,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      'VERIFIED PHARMACY',
-                      style: PharmacyTypography.caption.copyWith(color: PharmacyColors.primary, fontWeight: FontWeight.bold),
-                    ),
+                  PharmacySecondaryButton(
+                    label: 'Edit Details',
+                    icon: Icons.edit_note_rounded,
+                    compact: true,
+                    onPressed: _showEditBusinessDialog,
                   ),
                 ],
               ),
@@ -546,7 +711,7 @@ class _PharmacyProfileScreenState extends State<PharmacyProfileScreen> {
                 const SizedBox(height: 12),
                 _buildDetailItem('GSTIN / Tax ID', gstin),
                 const SizedBox(height: 12),
-                _buildDetailItem('Business Type', 'Hyperpharmacy & Retail Outlet'),
+                _buildDetailItem('Business Type', businessType),
               ] else ...[
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -576,7 +741,7 @@ class _PharmacyProfileScreenState extends State<PharmacyProfileScreen> {
                           const SizedBox(height: 12),
                           _buildDetailItem('GSTIN / Tax ID', gstin),
                           const SizedBox(height: 12),
-                          _buildDetailItem('Business Type', 'Hyperpharmacy & Retail Outlet'),
+                          _buildDetailItem('Business Type', businessType),
                         ],
                       ),
                     ),
@@ -587,174 +752,6 @@ class _PharmacyProfileScreenState extends State<PharmacyProfileScreen> {
           ),
         );
       },
-    );
-  }
-
-  Widget _buildOutletsCard(String business) {
-    return PharmacyCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Wrap(
-            alignment: WrapAlignment.spaceBetween,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              Text(
-                'Assigned Pharmacy / Outlet',
-                style: PharmacyTypography.subtitle.copyWith(fontWeight: FontWeight.bold),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: PharmacyColors.primarySoft,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  'Assigned by SHIELD Administration',
-                  style: PharmacyTypography.caption.copyWith(color: PharmacyColors.primary, fontWeight: FontWeight.bold),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: PharmacyColors.surfaceSubtle,
-              borderRadius: BorderRadius.circular(PharmacyRadius.card),
-              border: Border.all(color: PharmacyColors.border),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    const Icon(Icons.location_on_rounded, color: PharmacyColors.primary),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(business, style: PharmacyTypography.subtitle.copyWith(fontWeight: FontWeight.bold), overflow: TextOverflow.ellipsis),
-                          const SizedBox(height: 2),
-                          Text('Assigned Outlet • Read-Only Scope', style: PharmacyTypography.caption.copyWith(color: PharmacyColors.textSecondary), overflow: TextOverflow.ellipsis),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: PharmacyColors.navy.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text('READ-ONLY ASSIGNMENT', style: PharmacyTypography.caption.copyWith(color: PharmacyColors.navy, fontWeight: FontWeight.bold)),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDeliveryServiceCard() {
-    return PharmacyCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('Delivery & Service Area', style: PharmacyTypography.subtitle.copyWith(fontWeight: FontWeight.bold)),
-          const Divider(height: 20),
-          _buildInfoRow(Icons.local_shipping_outlined, 'Home Delivery', 'Enabled'),
-          const SizedBox(height: 8),
-          _buildInfoRow(Icons.store_outlined, 'Store Pickup', 'Available'),
-          const SizedBox(height: 8),
-          _buildInfoRow(Icons.map_outlined, 'Service Radius', 'Branch Service Zone'),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildEmergencySupportCard() {
-    return PharmacyCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('Support & Escalation Contact', style: PharmacyTypography.subtitle.copyWith(fontWeight: FontWeight.bold)),
-          const Divider(height: 20),
-          _buildInfoRow(Icons.person_pin_outlined, 'Support Desk', 'SHIELD Operations Desk'),
-          const SizedBox(height: 8),
-          _buildInfoRow(Icons.phone_in_talk_outlined, 'Support Helpline', 'Platform Operations Support'),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSecurityCard() {
-    return PharmacyCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('Account & Security', style: PharmacyTypography.subtitle.copyWith(fontWeight: FontWeight.bold)),
-          const Divider(height: 20),
-          Row(
-            children: [
-              const Icon(Icons.lock_outline_rounded, color: PharmacyColors.navy),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Security Credentials', style: PharmacyTypography.caption.copyWith(fontWeight: FontWeight.bold)),
-                    Text('Managed via Auth Provider', style: PharmacyTypography.caption.copyWith(color: PharmacyColors.textSecondary)),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildQuickActionsCard() {
-    return PharmacyCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('Quick Actions', style: PharmacyTypography.subtitle.copyWith(fontWeight: FontWeight.bold)),
-          const SizedBox(height: 12),
-          SizedBox(
-            width: double.infinity,
-            child: PharmacySecondaryButton(
-              label: 'Refresh Profile Data',
-              icon: Icons.refresh_rounded,
-              compact: true,
-              onPressed: _loadProfile,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildAccountInfoCard(String created, String status) {
-    return PharmacyCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('Account System Info', style: PharmacyTypography.subtitle.copyWith(fontWeight: FontWeight.bold)),
-          const Divider(height: 20),
-          _buildInfoRow(Icons.calendar_today_outlined, 'Account Created', created),
-          const SizedBox(height: 8),
-          _buildInfoRow(Icons.verified_user_outlined, 'Account Status', status.toUpperCase()),
-        ],
-      ),
     );
   }
 

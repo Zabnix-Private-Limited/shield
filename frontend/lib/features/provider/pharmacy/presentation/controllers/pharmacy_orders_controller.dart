@@ -19,6 +19,26 @@ class PharmacyOrdersController extends ChangeNotifier {
 
   bool get isLoading => _isLoading;
   String? get error => _error;
+  String get friendlyError {
+    if (_error == null || _error!.isEmpty || _error == 'null') {
+      return 'Unable to process request right now. Please try again.';
+    }
+    final err = _error!;
+    if (err.contains('DioException') || err.contains('SocketException') || err.contains('Failed host lookup')) {
+      return 'Network connection issue. Please check your internet connection.';
+    }
+    if (err.contains('401') || err.contains('403')) {
+      return 'Session expired or permission denied. Please re-authenticate.';
+    }
+    if (err.contains('404')) {
+      return 'Selected order or item could not be found.';
+    }
+    if (err.contains('500')) {
+      return 'Server error occurred while processing order fulfillment. Please retry.';
+    }
+    return err.replaceAll(RegExp(r'^Exception:\s*'), '').replaceAll(RegExp(r'^DioException.*:\s*'), '');
+  }
+
   String get activeStatusFilter => _activeStatusFilter;
   String get searchQuery => _searchQuery;
   PharmacyOrdersSummary? get summary => _summary;
@@ -122,7 +142,10 @@ class PharmacyOrdersController extends ChangeNotifier {
     double? substituteUnitPrice,
     String? decisionReason,
   }) async {
-    if (_updatingOrderIds.contains(orderId)) return false;
+    if (_updatingOrderIds.contains(orderId)) {
+      _error = 'Fulfillment update already in progress. Please wait a moment.';
+      return false;
+    }
     _updatingOrderIds.add(orderId);
     notifyListeners();
 

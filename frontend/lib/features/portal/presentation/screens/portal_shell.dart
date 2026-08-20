@@ -1048,30 +1048,49 @@ class _RoleContent extends StatelessWidget {
       );
     }
 
-    return CustomScrollView(
-      physics: const BouncingScrollPhysics(),
-      slivers: [
-        SliverToBoxAdapter(
-          child: AppPageFrame(
-            maxWidth: portal.role == SHIELDRole.pharmacyStaff ? 1600 : 1240,
+    final maxWidth =
+        portal.role == SHIELDRole.pharmacyStaff ? 1600.0 : 1240.0;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // Pinned Top Header Bar (Sticky at the top)
+        Container(
+          color: AppColors.lightGray,
+          padding: EdgeInsets.fromLTRB(
+            AppResponsive.horizontalPadding(context),
+            16,
+            AppResponsive.horizontalPadding(context),
+            12,
+          ),
+          child: Center(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(maxWidth: maxWidth),
+              child: _PortalHeader(
+                portal: portal,
+                section: section,
+                onSidebarToggle: onSidebarToggle,
+                isSidebarExpanded: isSidebarExpanded,
+              ),
+            ),
+          ),
+        ),
+        const Divider(height: 1, thickness: 1, color: AppColors.divider),
+        // Scrollable Middle Workspace Content
+        Expanded(
+          child: SingleChildScrollView(
+            physics: const BouncingScrollPhysics(),
             padding: EdgeInsets.fromLTRB(
               AppResponsive.horizontalPadding(context),
-              20,
+              16,
               AppResponsive.horizontalPadding(context),
               24,
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _PortalHeader(
-                  portal: portal,
-                  section: section,
-                  onSidebarToggle: onSidebarToggle,
-                  isSidebarExpanded: isSidebarExpanded,
-                ),
-                const SizedBox(height: 20),
-                content,
-              ],
+            child: Center(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(maxWidth: maxWidth),
+                child: content,
+              ),
             ),
           ),
         ),

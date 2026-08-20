@@ -54,11 +54,15 @@ class _PharmacyFulfillmentDetailViewState
   }
 
   void _showSubstituteModal(BuildContext context, PharmacyOrderItem item) {
-    final nameController = TextEditingController(text: '${item.name} Alt');
-    final priceController =
-        TextEditingController(text: (item.unitPrice * 0.9).toStringAsFixed(2));
+    final nameController = TextEditingController(
+      text: item.substituteName ?? '${item.name} Alt',
+    );
+    final priceController = TextEditingController(
+      text: (item.substituteUnitPrice ?? (item.unitPrice * 0.9)).toStringAsFixed(2),
+    );
     final reasonController = TextEditingController(
-        text: 'Original brand unavailable; therapeutically equivalent substitute offered.');
+      text: item.decisionReason ?? 'Original brand unavailable; therapeutically equivalent substitute offered.',
+    );
 
     showDialog(
       context: context,
@@ -119,7 +123,7 @@ class _PharmacyFulfillmentDetailViewState
                 context,
                 success
                     ? 'Substitute "${nameController.text.trim()}" saved for ${item.name}.'
-                    : 'Failed to save substitute: ${PharmacyOrdersController.instance.error}',
+                    : 'Could not save substitute: ${PharmacyOrdersController.instance.friendlyError}',
               );
             },
           ),
@@ -178,7 +182,7 @@ class _PharmacyFulfillmentDetailViewState
                 context,
                 success
                     ? 'Partial quantity ($qty) approved for ${item.name}.'
-                    : 'Failed to update item: ${PharmacyOrdersController.instance.error}',
+                    : 'Could not update item: ${PharmacyOrdersController.instance.friendlyError}',
               );
             },
           ),
@@ -188,99 +192,335 @@ class _PharmacyFulfillmentDetailViewState
   }
 
   Widget _buildFulfillmentItemTile(BuildContext context, PharmacyOrderModel order, PharmacyOrderItem item, bool isUpdating) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Expanded(
-              child: Text(item.name,
-                  style: PharmacyTypography.subtitle
-                      .copyWith(fontWeight: FontWeight.bold)),
-            ),
-            PharmacyStatusChip(status: item.stockStatus),
-          ],
+    final decision = item.decisionStatus.toUpperCase();
+    final isRejected = decision == 'REJECTED';
+    final isSubstituted = decision == 'SUBSTITUTED';
+    final isPartial = decision == 'PARTIAL';
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: isRejected
+            ? PharmacyColors.danger.withValues(alpha: 0.04)
+            : isSubstituted
+                ? Colors.indigo.withValues(alpha: 0.04)
+                : isPartial
+                    ? Colors.orange.withValues(alpha: 0.04)
+                    : PharmacyColors.canvas,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: isRejected
+              ? PharmacyColors.danger.withValues(alpha: 0.3)
+              : isSubstituted
+                  ? Colors.indigo.withValues(alpha: 0.3)
+                  : isPartial
+                      ? Colors.orange.withValues(alpha: 0.3)
+                      : PharmacyColors.border,
         ),
-        const SizedBox(height: 6),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-                'Req: ${item.quantity.toStringAsFixed(0)} • Avail: ${item.availableQuantity.toStringAsFixed(0)} • Unit: ₹${item.unitPrice.toStringAsFixed(2)}',
-                style: PharmacyTypography.caption),
-            Text('Total: ₹${item.lineTotal.toStringAsFixed(2)}',
-                style: PharmacyTypography.subtitle.copyWith(
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Text(
+                  item.name,
+                  style: PharmacyTypography.subtitle.copyWith(
                     fontWeight: FontWeight.bold,
-                    color: PharmacyColors.navy)),
-          ],
-        ),
-        const SizedBox(height: 8),
-        Wrap(
-          spacing: 8,
-          runSpacing: 6,
-          children: [
-            PharmacySecondaryButton(
-              label: 'Approve Full',
-              compact: true,
-              icon: Icons.check_circle_outline,
-              onPressed: () async {
-                final success = await PharmacyOrdersController.instance.updateOrderItemFulfillment(
-                  orderId: widget.order.id,
-                  itemId: item.id,
-                  fulfillQuantity: item.quantity,
-                  stockStatus: 'FULL_STOCK',
-                  decisionStatus: 'APPROVED',
-                  decisionReason: 'Fully stock approved by pharmacist.',
-                );
-                if (!context.mounted) return;
-                showPortalSnackBar(
-                  context,
-                  success
-                      ? 'Full quantity approved for ${item.name}.'
-                      : 'Failed to approve item: ${PharmacyOrdersController.instance.error}',
-                );
-              },
-            ),
-            if (item.availableQuantity < item.quantity &&
-                item.availableQuantity > 0)
-              PharmacySecondaryButton(
-                label: 'Partial Fulfill',
-                compact: true,
-                icon: Icons.remove_circle_outline,
-                onPressed: () => _showPartialFulfillModal(context, item),
+                    decoration: isRejected ? TextDecoration.lineThrough : null,
+                    color: isRejected ? PharmacyColors.textSecondary : PharmacyColors.text,
+                  ),
+                ),
               ),
-            PharmacySecondaryButton(
-              label: 'Suggest Substitute',
-              compact: true,
-              icon: Icons.swap_horiz_rounded,
-              onPressed: () => _showSubstituteModal(context, item),
+              PharmacyStatusChip(status: item.stockStatus),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Req: ${item.quantity.toStringAsFixed(0)} • Avail: ${item.availableQuantity.toStringAsFixed(0)} • Unit: ₹${item.unitPrice.toStringAsFixed(2)}',
+                style: PharmacyTypography.caption,
+              ),
+              Text(
+                isRejected ? '₹0.00 (Rejected)' : 'Total: ₹${item.lineTotal.toStringAsFixed(2)}',
+                style: PharmacyTypography.subtitle.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: isRejected ? PharmacyColors.danger : PharmacyColors.navy,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+
+          // State-specific Decision Banners & Actions
+          if (isRejected) ...[
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: PharmacyColors.danger.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.cancel_rounded, color: PharmacyColors.danger, size: 18),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Item Rejected from Fulfillment',
+                          style: PharmacyTypography.caption.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: PharmacyColors.danger,
+                          ),
+                        ),
+                        if (item.decisionReason != null && item.decisionReason!.isNotEmpty)
+                          Text(
+                            'Reason: ${item.decisionReason}',
+                            style: PharmacyTypography.caption.copyWith(fontSize: 11),
+                          ),
+                      ],
+                    ),
+                  ),
+                  PharmacySecondaryButton(
+                    label: 'Change Decision',
+                    compact: true,
+                    icon: Icons.refresh_rounded,
+                    onPressed: isUpdating
+                        ? null
+                        : () async {
+                            final success = await PharmacyOrdersController.instance.updateOrderItemFulfillment(
+                              orderId: widget.order.id,
+                              itemId: item.id,
+                              fulfillQuantity: item.quantity,
+                              stockStatus: 'FULL_STOCK',
+                              decisionStatus: 'APPROVED',
+                              decisionReason: 'Decision reset by pharmacist.',
+                            );
+                            if (!context.mounted) return;
+                            showPortalSnackBar(
+                              context,
+                              success
+                                  ? '${item.name} decision reset to Approved.'
+                                  : 'Could not reset decision: ${PharmacyOrdersController.instance.friendlyError}',
+                            );
+                          },
+                  ),
+                ],
+              ),
             ),
-            PharmacyDangerButton(
-              label: 'Reject Item',
-              compact: true,
-              icon: Icons.cancel_outlined,
-              onPressed: () async {
-                final success = await PharmacyOrdersController.instance.updateOrderItemFulfillment(
-                  orderId: widget.order.id,
-                  itemId: item.id,
-                  fulfillQuantity: 0,
-                  stockStatus: 'OUT_OF_STOCK',
-                  decisionStatus: 'REJECTED',
-                  decisionReason: 'Item unavailable or out of stock.',
-                );
-                if (!context.mounted) return;
-                showPortalSnackBar(
-                  context,
-                  success
-                      ? '${item.name} rejected from order fulfillment.'
-                      : 'Failed to reject item: ${PharmacyOrdersController.instance.error}',
-                );
-              },
+          ] else if (isSubstituted) ...[
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: Colors.indigo.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.swap_horiz_rounded, color: Colors.indigo, size: 18),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Substitute Offered: ${item.substituteName ?? "Alternative Item"}',
+                          style: PharmacyTypography.caption.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.indigo,
+                          ),
+                        ),
+                      ),
+                      Text(
+                        '₹${(item.substituteUnitPrice ?? item.unitPrice).toStringAsFixed(2)} / unit',
+                        style: PharmacyTypography.caption.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.indigo.shade800,
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (item.decisionReason != null && item.decisionReason!.isNotEmpty) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      'Note: ${item.decisionReason}',
+                      style: PharmacyTypography.caption.copyWith(fontSize: 11),
+                    ),
+                  ],
+                  const SizedBox(height: 8),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      PharmacySecondaryButton(
+                        label: 'Edit Substitute',
+                        compact: true,
+                        icon: Icons.edit_outlined,
+                        onPressed: isUpdating ? null : () => _showSubstituteModal(context, item),
+                      ),
+                      const SizedBox(width: 8),
+                      PharmacySecondaryButton(
+                        label: 'Reset Decision',
+                        compact: true,
+                        icon: Icons.refresh_rounded,
+                        onPressed: isUpdating
+                            ? null
+                            : () async {
+                                final success = await PharmacyOrdersController.instance.updateOrderItemFulfillment(
+                                  orderId: widget.order.id,
+                                  itemId: item.id,
+                                  fulfillQuantity: item.quantity,
+                                  stockStatus: 'FULL_STOCK',
+                                  decisionStatus: 'APPROVED',
+                                  decisionReason: 'Substitute cleared by pharmacist.',
+                                );
+                                if (!context.mounted) return;
+                                showPortalSnackBar(
+                                  context,
+                                  success
+                                      ? 'Substitute cleared for ${item.name}.'
+                                      : 'Could not reset decision: ${PharmacyOrdersController.instance.friendlyError}',
+                                );
+                              },
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ] else if (isPartial) ...[
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: Colors.orange.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.remove_circle_outline, color: Colors.orange.shade900, size: 18),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Partial Quantity Approved: ${item.fulfillQuantity.toStringAsFixed(0)} / ${item.quantity.toStringAsFixed(0)} Units',
+                          style: PharmacyTypography.caption.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.orange.shade900,
+                          ),
+                        ),
+                        if (item.decisionReason != null && item.decisionReason!.isNotEmpty)
+                          Text(
+                            'Reason: ${item.decisionReason}',
+                            style: PharmacyTypography.caption.copyWith(fontSize: 11),
+                          ),
+                      ],
+                    ),
+                  ),
+                  PharmacySecondaryButton(
+                    label: 'Change Decision',
+                    compact: true,
+                    icon: Icons.refresh_rounded,
+                    onPressed: isUpdating
+                        ? null
+                        : () async {
+                            final success = await PharmacyOrdersController.instance.updateOrderItemFulfillment(
+                              orderId: widget.order.id,
+                              itemId: item.id,
+                              fulfillQuantity: item.quantity,
+                              stockStatus: 'FULL_STOCK',
+                              decisionStatus: 'APPROVED',
+                              decisionReason: 'Full quantity restored by pharmacist.',
+                            );
+                            if (!context.mounted) return;
+                            showPortalSnackBar(
+                              context,
+                              success
+                                  ? 'Full quantity restored for ${item.name}.'
+                                  : 'Could not reset decision: ${PharmacyOrdersController.instance.friendlyError}',
+                            );
+                          },
+                  ),
+                ],
+              ),
+            ),
+          ] else ...[
+            Wrap(
+              spacing: 8,
+              runSpacing: 6,
+              children: [
+                PharmacySecondaryButton(
+                  label: 'Approve Full',
+                  compact: true,
+                  icon: Icons.check_circle_outline,
+                  onPressed: isUpdating
+                      ? null
+                      : () async {
+                          final success = await PharmacyOrdersController.instance.updateOrderItemFulfillment(
+                            orderId: widget.order.id,
+                            itemId: item.id,
+                            fulfillQuantity: item.quantity,
+                            stockStatus: 'FULL_STOCK',
+                            decisionStatus: 'APPROVED',
+                            decisionReason: 'Fully stock approved by pharmacist.',
+                          );
+                          if (!context.mounted) return;
+                          showPortalSnackBar(
+                            context,
+                            success
+                                ? 'Full quantity approved for ${item.name}.'
+                                : 'Could not approve item: ${PharmacyOrdersController.instance.friendlyError}',
+                          );
+                        },
+                ),
+                if (item.availableQuantity < item.quantity && item.availableQuantity > 0)
+                  PharmacySecondaryButton(
+                    label: 'Partial Fulfill',
+                    compact: true,
+                    icon: Icons.remove_circle_outline,
+                    onPressed: isUpdating ? null : () => _showPartialFulfillModal(context, item),
+                  ),
+                PharmacySecondaryButton(
+                  label: 'Suggest Substitute',
+                  compact: true,
+                  icon: Icons.swap_horiz_rounded,
+                  onPressed: isUpdating ? null : () => _showSubstituteModal(context, item),
+                ),
+                PharmacyDangerButton(
+                  label: 'Reject Item',
+                  compact: true,
+                  icon: Icons.cancel_outlined,
+                  onPressed: isUpdating
+                      ? null
+                      : () async {
+                          final success = await PharmacyOrdersController.instance.updateOrderItemFulfillment(
+                            orderId: widget.order.id,
+                            itemId: item.id,
+                            fulfillQuantity: 0,
+                            stockStatus: 'OUT_OF_STOCK',
+                            decisionStatus: 'REJECTED',
+                            decisionReason: 'Item unavailable or out of stock.',
+                          );
+                          if (!context.mounted) return;
+                          showPortalSnackBar(
+                            context,
+                            success
+                                ? '${item.name} rejected from order fulfillment.'
+                                : 'Could not reject item: ${PharmacyOrdersController.instance.friendlyError}',
+                          );
+                        },
+                ),
+              ],
             ),
           ],
-        ),
-      ],
+        ],
+      ),
     );
   }
 
