@@ -14751,3 +14751,8 @@ SHIELD Pharmacy - Pop-over Detail Modal & Profile Business Details Persistence
 - History Completed filter rendered and called the canonical status endpoint with HTTP 200.
 - A providerId=999999 tampering attempt could not override the assigned pharmacy queue.
 - Updated final UAT report; second/unassigned identity and lawful payment fixture remain externally unavailable.
+
+## 118. Owner-Executed Final Pharmacy UAT Fixture Handoff
+- Added minimal idempotent final fixture SQL and a read-only verifier for the previously blocked payment/membership and provider-isolation UAT evidence.
+- The SQL uses current-schema membership ACTIVE, issued card, active wallet, active UPI method, PENDING intents, and user.branch_business_id contracts only.
+- No database query that writes state, Prisma DDL, or current_schema.md modification was performed.
