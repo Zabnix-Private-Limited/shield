@@ -14639,3 +14639,18 @@ SHIELD Pharmacy - Pop-over Detail Modal & Profile Business Details Persistence
 ### Safety
 - All mutations used supported APIs and clearly prefixed UAT orders only.
 - No direct database operation and no non-UAT record mutation occurred.
+## 105. Pharmacy Confirmation State Frontend Contract Fix
+**Timestamp:** 2026-08-21 14:27:00 IST
+
+### Frontend Files
+- `frontend/lib/features/provider/pharmacy/domain/models/pharmacy_order_model.dart`
+  - Corrected the confirmation-state mapper to honor the backend's explicit `customerConfirmationRequested` field as well as its legacy snapshot projection.
+  - This removes the stale UI action after a persisted confirmation request.
+
+### Live Evidence Before Fix
+- Fresh queue and detail APIs for `INV-UAT-PLACED-5` both returned `customerConfirmationRequested=true` and `customerConfirmationStatus=PENDING`.
+- The old model ignored the explicit response field, causing a stale “Request Customer Confirmation” action.
+
+### Verification
+- `flutter analyze frontend/lib/features/provider/pharmacy/domain/models/pharmacy_order_model.dart`: no issues found.
+- `git diff --check` passed.

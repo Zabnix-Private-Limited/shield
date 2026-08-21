@@ -209,7 +209,8 @@ class PharmacyOrderModel {
           ? DateTime.tryParse(billingSnap['invoiceSentAt'].toString())
           : null,
       customerConfirmationRequested:
-          billingSnap['customerConfirmationRequested'] == true,
+          billingSnap['customerConfirmationRequested'] == true ||
+          json['customerConfirmationRequested'] == true,
       totalAmount: (json['totalAmount'] as num?)?.toDouble() ?? 0.0,
       payableAmount: (json['payableAmount'] as num?)?.toDouble() ?? 0.0,
       submittedAt: parsedDate,
