@@ -938,6 +938,10 @@ export class PharmacyService {
       deliveryAddress: snapshot.deliveryAddress ?? null,
       customerNotes: snapshot.customerNotes ?? null,
       pharmacistNotes: snapshot.pharmacistNotes ?? null,
+      customerConfirmationRequested:
+        snapshot.customerConfirmationRequested === true,
+      customerConfirmationStatus:
+        snapshot.customerConfirmationStatus ?? null,
       cancellationReason: snapshot.cancellationReason ?? null,
       totalAmount,
       payableAmount,
@@ -1744,6 +1748,12 @@ export class PharmacyService {
       orderId,
       principal,
     );
+
+    const existingSnapshot =
+      (purchase.billingSnapshot as Record<string, any>) || {};
+    if (existingSnapshot.customerConfirmationRequested === true) {
+      return this.getPharmacyOrderDetail(orderId, principal);
+    }
 
     const confirmationReason = reason || 'Substitution or partial fulfillment confirmation required.';
     const requesterId = principal?.userId ? BigInt(principal.userId) : null;

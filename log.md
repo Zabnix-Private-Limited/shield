@@ -14585,3 +14585,20 @@ SHIELD Pharmacy - Pop-over Detail Modal & Profile Business Details Persistence
 
 ### Remaining UAT Risks
 - Deployment propagation and an authenticated UI execution of this new button remain to be checked on the live UAT order.
+## 101. Pharmacy Customer Confirmation Idempotency and Projection Fix
+**Timestamp:** 2026-08-21 13:48:00 IST
+
+### Backend Files
+- `backend/src/pharmacy/pharmacy.service.ts`
+  - UAT exposed that a successful confirmation request was persisted but omitted from the fulfillment response, leaving the UI action available for a repeat click.
+  - Added the confirmation request/status fields to the provider-safe fulfillment projection.
+  - Made repeated confirmation requests idempotent: a previously requested order returns its current detail without inserting another request.
+
+### Live UAT Evidence
+- Executed one permitted UI write on `INV-UAT-PLACED-5` / order `25`.
+- `POST /pharmacy/orders/25/request-customer-confirmation` returned HTTP 201 with zero browser console errors.
+- Follow-up projection/idempotency correction is queued for deploy; no non-UAT records were changed.
+
+### Verification
+- `backend`: `npx tsc --noEmit` passed.
+- `git diff --check` passed.
