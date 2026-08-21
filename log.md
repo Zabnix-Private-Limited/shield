@@ -14534,3 +14534,20 @@ SHIELD Pharmacy - Pop-over Detail Modal & Profile Business Details Persistence
 ### Verification
 - `backend`: `npx tsc --noEmit` passed.
 - `current_schema.md`: unmodified. Live re-test follows Git deployment.
+## 98. Pharmacy Live UAT — Payment-Destination Lifecycle Evidence
+- **Timestamp**: 2026-08-21 00:00:00 IST
+- **Developer**: Codex
+- **Scope**: Authorized live UAT restricted to UAT-labelled Pharmacy payment destinations.
+
+### UPI Lifecycle
+- Created UPI id `8`: `shield.uat@upi`, initially labelled `SHIELD UAT Pharmacy`.
+- Updated label to `SHIELD UAT Pharmacy — Verified`, toggled inactive, toggled active, set it primary, and confirmed on a fresh authenticated GET that it remains active and primary.
+
+### Bank Lifecycle
+- Created UAT-only bank id `9`: `SHIELD UAT Bank` / `UAT Test Bank` / masked `0123` / IFSC `UATB0000123`.
+- Updated it to `SHIELD UAT Bank — Verified`, toggled inactive then active, and confirmed fresh-read persistence.
+- The UAT bank was deliberately not made primary because doing so would demote the existing non-UAT primary bank destination.
+
+### Safety
+- No non-UAT payment destination was edited, deactivated, deleted, or made non-primary.
+- `current_schema.md`: unmodified.
