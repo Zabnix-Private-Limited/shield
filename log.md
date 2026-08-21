@@ -14505,3 +14505,18 @@ SHIELD Pharmacy - Pop-over Detail Modal & Profile Business Details Persistence
 - `backend`: `npx tsc --noEmit` passed.
 - `current_schema.md`: unmodified.
 - No direct database write or migration. Live re-test follows Git deployment.
+## 96. Pharmacy Live UAT — Fulfillment Guard, Restoration, and Partial Evidence
+- **Timestamp**: 2026-08-21 00:00:00 IST
+- **Developer**: Codex
+- **Scope**: Authorized live UAT using only `INV-UAT-*` records and the supported Pharmacy API.
+
+### Live Evidence
+- `INV-UAT-PLACED-3` item `317`: one full approval completed by `PATCH /pharmacy/orders/23/items/317` with HTTP 200.
+- `INV-UAT-PLACED-4` item `321`: rejection completed by `PATCH /pharmacy/orders/24/items/321` with HTTP 200; persisted `FULL_STOCK`, `REJECTED`, approved quantity `0`, rejected quantity `2`, line total `0`, and reason.
+- Pre-deploy invalid `3-of-2` mutation against `INV-UAT-PLACED-5` demonstrated the missing server guard. After deployment of `c641d3f`, the same request returned HTTP 400.
+- The affected UAT item `325` was restored through the supported endpoint to `FULL_STOCK/APPROVED`, `2-of-2`.
+- `INV-UAT-PLACED-5` item `326` was then validly partially fulfilled through the supported endpoint: `LOW_STOCK/PARTIAL`, `5` approved, `5` rejected, ₹75 line total, ₹425 order payable. A fresh authenticated order read confirmed persistence.
+
+### Safety
+- No non-UAT order, customer, payment, provider assignment, or payment destination was mutated.
+- `current_schema.md`: unmodified.
