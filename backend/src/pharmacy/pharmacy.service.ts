@@ -937,6 +937,7 @@ export class PharmacyService {
         : null,
       deliveryAddress: snapshot.deliveryAddress ?? null,
       customerNotes: snapshot.customerNotes ?? null,
+      pharmacistNotes: snapshot.pharmacistNotes ?? null,
       cancellationReason: snapshot.cancellationReason ?? null,
       totalAmount,
       payableAmount,
@@ -1616,6 +1617,11 @@ export class PharmacyService {
     });
     if (!purchase) throw new NotFoundException('Order not found.');
 
+    await this.providerScopeService.assertProviderCanAccessPurchase(
+      orderId,
+      principal,
+    );
+
     const interval = repeatIntervalDays ?? 30;
     const actorId = principal?.userId ? BigInt(principal.userId) : null;
 
@@ -1655,6 +1661,11 @@ export class PharmacyService {
       where: { id: orderId },
     });
     if (!purchase) throw new NotFoundException('Order not found.');
+
+    await this.providerScopeService.assertProviderCanAccessPurchase(
+      orderId,
+      principal,
+    );
 
     const authorId = principal?.userId ? BigInt(principal.userId) : null;
 

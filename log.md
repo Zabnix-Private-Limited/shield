@@ -14520,3 +14520,17 @@ SHIELD Pharmacy - Pop-over Detail Modal & Profile Business Details Persistence
 ### Safety
 - No non-UAT order, customer, payment, provider assignment, or payment destination was mutated.
 - `current_schema.md`: unmodified.
+## 97. Pharmacy Order-Level Scope and Note-Projection Fix
+- **Timestamp**: 2026-08-21 00:00:00 IST
+- **Developer**: Codex
+- **Scope**: Pharmacy-only backend correction discovered by authorized UAT.
+
+### Backend Files
+- `backend/src/pharmacy/pharmacy.service.ts`: Added the latest `pharmacistNotes` from the billing snapshot to the Pharmacy order projection. Added provider-scope assertions before chronic-tag and pharmacist-note writes.
+
+### Why
+- Live UAT proved a chronic mutation persisted but a saved pharmacist note was absent from the read contract. The two order-level mutations also needed the same fail-closed provider ownership check as item fulfillment.
+
+### Verification
+- `backend`: `npx tsc --noEmit` passed.
+- `current_schema.md`: unmodified. Live re-test follows Git deployment.
