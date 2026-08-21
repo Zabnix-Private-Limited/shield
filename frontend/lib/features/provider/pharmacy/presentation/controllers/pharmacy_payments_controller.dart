@@ -22,7 +22,8 @@ class PharmacyPaymentsController extends ChangeNotifier {
   String get activeStatus => _activeStatus;
   String get searchQuery => _searchQuery;
   List<PharmacyPaymentRequestModel> get payments => _payments;
-  PharmacyPaymentRequestModel? get selectedPaymentDetail => _selectedPaymentDetail;
+  PharmacyPaymentRequestModel? get selectedPaymentDetail =>
+      _selectedPaymentDetail;
   bool get isEmpty => _payments.isEmpty;
 
   bool isMutating(String id) => _mutatingIds.contains(id);
@@ -123,7 +124,7 @@ class PharmacyPaymentsController extends ChangeNotifier {
     required String paymentChannel,
     String? referenceNumber,
     String? customerNotes,
-    bool autoApprove = true,
+    bool autoApprove = false,
   }) async {
     _isLoading = true;
     _error = null;

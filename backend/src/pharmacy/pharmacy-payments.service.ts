@@ -43,6 +43,7 @@ export class PharmacyPaymentsService {
 
   private async getPaymentVerificationSettings(providerId: bigint): Promise<{
     requireUtrProof: boolean;
+    mandatoryManualVerification: boolean;
   }> {
     try {
       const rows = await this.prisma.$queryRawUnsafe<any[]>(
@@ -52,10 +53,12 @@ export class PharmacyPaymentsService {
       const settings = rows?.[0]?.settings as Record<string, unknown> | undefined;
       return {
         requireUtrProof: settings?.requireUtrProof !== false,
+        mandatoryManualVerification:
+          settings?.mandatoryManualVerification !== false,
       };
     } catch {
       // Failing closed retains the documented default until the settings table is available.
-      return { requireUtrProof: true };
+      return { requireUtrProof: true, mandatoryManualVerification: true };
     }
   }
 
@@ -584,7 +587,12 @@ export class PharmacyPaymentsService {
       }
     }
 
-    const isAutoApprove = dto.autoApprove ?? false;
+    // A counter entry is still a payment record, not proof of receipt.  When
+    // the provider requires manual verification, it must remain pending until
+    // the explicit approval action performs the ledger credit.
+    const isAutoApprove =
+      (dto.autoApprove ?? false) &&
+      !paymentVerification.mandatoryManualVerification;
     const initialStatus = isAutoApprove ? 'APPROVED' : 'PENDING';
     const now = new Date();
     const refNum =

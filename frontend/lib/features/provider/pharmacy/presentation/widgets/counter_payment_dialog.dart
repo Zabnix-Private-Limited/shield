@@ -9,10 +9,7 @@ import 'package:shield/shared/widgets/portal_support.dart';
 class CounterPaymentDialog extends StatefulWidget {
   final VoidCallback onSaved;
 
-  const CounterPaymentDialog({
-    super.key,
-    required this.onSaved,
-  });
+  const CounterPaymentDialog({super.key, required this.onSaved});
 
   @override
   State<CounterPaymentDialog> createState() => _CounterPaymentDialogState();
@@ -21,8 +18,11 @@ class CounterPaymentDialog extends StatefulWidget {
 class _CounterPaymentDialogState extends State<CounterPaymentDialog> {
   final _controller = PharmacyPaymentsController.instance;
 
-  final TextEditingController _customerSearchController = TextEditingController();
-  final TextEditingController _amountController = TextEditingController(text: '10000.00');
+  final TextEditingController _customerSearchController =
+      TextEditingController();
+  final TextEditingController _amountController = TextEditingController(
+    text: '10000.00',
+  );
   final TextEditingController _referenceController = TextEditingController();
   final TextEditingController _notesController = TextEditingController();
 
@@ -32,7 +32,6 @@ class _CounterPaymentDialogState extends State<CounterPaymentDialog> {
 
   String _selectedChannel = 'CASH';
   final String _selectedPurpose = 'Wallet Recharge';
-  bool _autoApprove = true;
   bool _isSubmitting = false;
 
   @override
@@ -117,18 +116,16 @@ class _CounterPaymentDialogState extends State<CounterPaymentDialog> {
       paymentChannel: _selectedChannel,
       referenceNumber: _referenceController.text.trim(),
       customerNotes: notes,
-      autoApprove: _autoApprove,
+      autoApprove: false,
     );
 
     if (mounted) {
       setState(() => _isSubmitting = false);
       if (success) {
         final custName = _selectedCustomer?['name'] ?? 'Member';
-        final bonus = amount * 0.10;
-        final totalCredit = amount + bonus;
         showPortalSnackBar(
           context,
-          'Accepted Wallet Recharge of ₹${amount.toStringAsFixed(2)} (+ ₹${bonus.toStringAsFixed(2)} Bonus = ₹${totalCredit.toStringAsFixed(2)} Credited) for $custName!',
+          'Recharge of ₹${amount.toStringAsFixed(2)} recorded for $custName and sent for manual verification. No wallet credit is applied until approval.',
           type: PortalToastType.success,
         );
         widget.onSaved();
@@ -159,7 +156,7 @@ class _CounterPaymentDialogState extends State<CounterPaymentDialog> {
                 color: Colors.black12,
                 blurRadius: 24,
                 offset: Offset(0, 10),
-              )
+              ),
             ],
           ),
           child: Column(
@@ -212,8 +209,10 @@ class _CounterPaymentDialogState extends State<CounterPaymentDialog> {
                       ),
                     ),
                     IconButton(
-                      icon: const Icon(Icons.close_rounded,
-                          color: PharmacyColors.textSecondary),
+                      icon: const Icon(
+                        Icons.close_rounded,
+                        color: PharmacyColors.textSecondary,
+                      ),
                       onPressed: () => Navigator.pop(context),
                     ),
                   ],
@@ -239,7 +238,9 @@ class _CounterPaymentDialogState extends State<CounterPaymentDialog> {
                           ),
                           Container(
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 10, vertical: 4),
+                              horizontal: 10,
+                              vertical: 4,
+                            ),
                             decoration: BoxDecoration(
                               color: PharmacyColors.primarySoft,
                               borderRadius: BorderRadius.circular(20),
@@ -274,28 +275,35 @@ class _CounterPaymentDialogState extends State<CounterPaymentDialog> {
                         decoration: InputDecoration(
                           hintText:
                               'Search member by name, mobile, or customer code...',
-                          prefixIcon: const Icon(Icons.search_rounded,
-                              color: PharmacyColors.textSecondary),
+                          prefixIcon: const Icon(
+                            Icons.search_rounded,
+                            color: PharmacyColors.textSecondary,
+                          ),
                           suffixIcon: _isSearchingCustomers
                               ? const Padding(
                                   padding: EdgeInsets.all(12),
                                   child: SizedBox(
                                     width: 16,
                                     height: 16,
-                                    child:
-                                        CircularProgressIndicator(strokeWidth: 2),
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
                                   ),
                                 )
                               : null,
                           contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 14, vertical: 10),
+                            horizontal: 14,
+                            vertical: 10,
+                          ),
                           filled: true,
                           fillColor: PharmacyColors.canvas,
                           border: OutlineInputBorder(
-                            borderRadius:
-                                BorderRadius.circular(PharmacyRadius.field),
-                            borderSide:
-                                const BorderSide(color: PharmacyColors.border),
+                            borderRadius: BorderRadius.circular(
+                              PharmacyRadius.field,
+                            ),
+                            borderSide: const BorderSide(
+                              color: PharmacyColors.border,
+                            ),
                           ),
                         ),
                       ),
@@ -307,19 +315,22 @@ class _CounterPaymentDialogState extends State<CounterPaymentDialog> {
                           constraints: const BoxConstraints(maxHeight: 140),
                           decoration: BoxDecoration(
                             color: PharmacyColors.canvas,
-                            borderRadius:
-                                BorderRadius.circular(PharmacyRadius.field),
+                            borderRadius: BorderRadius.circular(
+                              PharmacyRadius.field,
+                            ),
                             border: Border.all(color: PharmacyColors.border),
                           ),
                           child: ListView.separated(
                             shrinkWrap: true,
                             itemCount: _customerSearchResults.length,
-                            separatorBuilder: (_, __) => const Divider(height: 1),
+                            separatorBuilder: (_, __) =>
+                                const Divider(height: 1),
                             itemBuilder: (ctx, idx) {
                               final cust = _customerSearchResults[idx];
                               final isSelected =
                                   _selectedCustomer?['id'] == cust['id'];
-                              final isMember = cust['isMembershipHolder'] != false;
+                              final isMember =
+                                  cust['isMembershipHolder'] != false;
                               return ListTile(
                                 dense: true,
                                 title: Row(
@@ -338,12 +349,15 @@ class _CounterPaymentDialogState extends State<CounterPaymentDialog> {
                                     const SizedBox(width: 8),
                                     Container(
                                       padding: const EdgeInsets.symmetric(
-                                          horizontal: 6, vertical: 2),
+                                        horizontal: 6,
+                                        vertical: 2,
+                                      ),
                                       decoration: BoxDecoration(
                                         color: isMember
                                             ? PharmacyColors.primarySoft
-                                            : PharmacyColors.warning
-                                                .withValues(alpha: 0.1),
+                                            : PharmacyColors.warning.withValues(
+                                                alpha: 0.1,
+                                              ),
                                         borderRadius: BorderRadius.circular(4),
                                         border: Border.all(
                                           color: isMember
@@ -372,8 +386,11 @@ class _CounterPaymentDialogState extends State<CounterPaymentDialog> {
                                   style: PharmacyTypography.caption,
                                 ),
                                 trailing: isSelected
-                                    ? const Icon(Icons.check_circle_rounded,
-                                        color: PharmacyColors.primary, size: 18)
+                                    ? const Icon(
+                                        Icons.check_circle_rounded,
+                                        color: PharmacyColors.primary,
+                                        size: 18,
+                                      )
                                     : null,
                                 onTap: () {
                                   if (!isMember) {
@@ -395,17 +412,25 @@ class _CounterPaymentDialogState extends State<CounterPaymentDialog> {
                         const SizedBox(height: 8),
                         Container(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 12, vertical: 8),
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
                           decoration: BoxDecoration(
-                            color: PharmacyColors.primarySoft.withValues(alpha: 0.5),
-                            borderRadius:
-                                BorderRadius.circular(PharmacyRadius.field),
+                            color: PharmacyColors.primarySoft.withValues(
+                              alpha: 0.5,
+                            ),
+                            borderRadius: BorderRadius.circular(
+                              PharmacyRadius.field,
+                            ),
                             border: Border.all(color: PharmacyColors.primary),
                           ),
                           child: Row(
                             children: [
-                              const Icon(Icons.card_membership_rounded,
-                                  color: PharmacyColors.primary, size: 18),
+                              const Icon(
+                                Icons.card_membership_rounded,
+                                color: PharmacyColors.primary,
+                                size: 18,
+                              ),
                               const SizedBox(width: 8),
                               Expanded(
                                 child: Text(
@@ -416,8 +441,11 @@ class _CounterPaymentDialogState extends State<CounterPaymentDialog> {
                                   ),
                                 ),
                               ),
-                              const Icon(Icons.check_circle_rounded,
-                                  color: PharmacyColors.primary, size: 16),
+                              const Icon(
+                                Icons.check_circle_rounded,
+                                color: PharmacyColors.primary,
+                                size: 16,
+                              ),
                             ],
                           ),
                         ),
@@ -488,7 +516,8 @@ class _CounterPaymentDialogState extends State<CounterPaymentDialog> {
                               controller: _amountController,
                               keyboardType:
                                   const TextInputType.numberWithOptions(
-                                      decimal: true),
+                                    decimal: true,
+                                  ),
                               style: PharmacyTypography.h2.copyWith(
                                 color: PharmacyColors.navy,
                                 fontWeight: FontWeight.bold,
@@ -503,9 +532,11 @@ class _CounterPaymentDialogState extends State<CounterPaymentDialog> {
                                 fillColor: PharmacyColors.canvas,
                                 border: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(
-                                      PharmacyRadius.field),
+                                    PharmacyRadius.field,
+                                  ),
                                   borderSide: const BorderSide(
-                                      color: PharmacyColors.border),
+                                    color: PharmacyColors.border,
+                                  ),
                                 ),
                               ),
                             ),
@@ -518,11 +549,15 @@ class _CounterPaymentDialogState extends State<CounterPaymentDialog> {
                       SingleChildScrollView(
                         scrollDirection: Axis.horizontal,
                         child: Row(
-                          children: [10000, 20000, 30000, 50000, 100000].map((amt) {
+                          children: [10000, 20000, 30000, 50000, 100000].map((
+                            amt,
+                          ) {
                             return Padding(
                               padding: const EdgeInsets.only(right: 6),
                               child: ActionChip(
-                                label: Text('₹${(amt / 1000).toStringAsFixed(0)}k'),
+                                label: Text(
+                                  '₹${(amt / 1000).toStringAsFixed(0)}k',
+                                ),
                                 labelStyle: PharmacyTypography.caption.copyWith(
                                   color: PharmacyColors.primaryHover,
                                   fontWeight: FontWeight.w600,
@@ -530,13 +565,16 @@ class _CounterPaymentDialogState extends State<CounterPaymentDialog> {
                                 backgroundColor: PharmacyColors.primarySoft,
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(
-                                      PharmacyRadius.chip),
+                                    PharmacyRadius.chip,
+                                  ),
                                   side: const BorderSide(
-                                      color: PharmacyColors.primary),
+                                    color: PharmacyColors.primary,
+                                  ),
                                 ),
                                 onPressed: () {
-                                  _amountController.text =
-                                      amt.toDouble().toStringAsFixed(2);
+                                  _amountController.text = amt
+                                      .toDouble()
+                                      .toStringAsFixed(2);
                                 },
                               ),
                             );
@@ -555,9 +593,12 @@ class _CounterPaymentDialogState extends State<CounterPaymentDialog> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text('Receipt / Ref #',
-                                    style: PharmacyTypography.caption
-                                        .copyWith(fontWeight: FontWeight.bold)),
+                                Text(
+                                  'Receipt / Ref #',
+                                  style: PharmacyTypography.caption.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
                                 const SizedBox(height: 6),
                                 TextField(
                                   controller: _referenceController,
@@ -566,12 +607,16 @@ class _CounterPaymentDialogState extends State<CounterPaymentDialog> {
                                     filled: true,
                                     fillColor: PharmacyColors.canvas,
                                     contentPadding: const EdgeInsets.symmetric(
-                                        horizontal: 12, vertical: 10),
+                                      horizontal: 12,
+                                      vertical: 10,
+                                    ),
                                     border: OutlineInputBorder(
                                       borderRadius: BorderRadius.circular(
-                                          PharmacyRadius.field),
+                                        PharmacyRadius.field,
+                                      ),
                                       borderSide: const BorderSide(
-                                          color: PharmacyColors.border),
+                                        color: PharmacyColors.border,
+                                      ),
                                     ),
                                   ),
                                 ),
@@ -583,18 +628,26 @@ class _CounterPaymentDialogState extends State<CounterPaymentDialog> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text('Payment Purpose',
-                                    style: PharmacyTypography.caption
-                                        .copyWith(fontWeight: FontWeight.bold)),
+                                Text(
+                                  'Payment Purpose',
+                                  style: PharmacyTypography.caption.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
                                 const SizedBox(height: 6),
                                 Container(
                                   padding: const EdgeInsets.symmetric(
-                                      horizontal: 12, vertical: 11),
+                                    horizontal: 12,
+                                    vertical: 11,
+                                  ),
                                   decoration: BoxDecoration(
                                     color: PharmacyColors.primarySoft,
                                     borderRadius: BorderRadius.circular(
-                                        PharmacyRadius.field),
-                                    border: Border.all(color: PharmacyColors.primary),
+                                      PharmacyRadius.field,
+                                    ),
+                                    border: Border.all(
+                                      color: PharmacyColors.primary,
+                                    ),
                                   ),
                                   child: Row(
                                     children: [
@@ -607,10 +660,12 @@ class _CounterPaymentDialogState extends State<CounterPaymentDialog> {
                                       Expanded(
                                         child: Text(
                                           'Wallet Recharge',
-                                          style: PharmacyTypography.caption.copyWith(
-                                            fontWeight: FontWeight.bold,
-                                            color: PharmacyColors.primaryHover,
-                                          ),
+                                          style: PharmacyTypography.caption
+                                              .copyWith(
+                                                fontWeight: FontWeight.bold,
+                                                color:
+                                                    PharmacyColors.primaryHover,
+                                              ),
                                         ),
                                       ),
                                     ],
@@ -624,9 +679,12 @@ class _CounterPaymentDialogState extends State<CounterPaymentDialog> {
                       const SizedBox(height: 14),
 
                       // Notes
-                      Text('Internal Notes / Remarks',
-                          style: PharmacyTypography.caption
-                              .copyWith(fontWeight: FontWeight.bold)),
+                      Text(
+                        'Internal Notes / Remarks',
+                        style: PharmacyTypography.caption.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                       const SizedBox(height: 6),
                       TextField(
                         controller: _notesController,
@@ -638,51 +696,54 @@ class _CounterPaymentDialogState extends State<CounterPaymentDialog> {
                           fillColor: PharmacyColors.canvas,
                           contentPadding: const EdgeInsets.all(12),
                           border: OutlineInputBorder(
-                            borderRadius:
-                                BorderRadius.circular(PharmacyRadius.field),
-                            borderSide:
-                                const BorderSide(color: PharmacyColors.border),
+                            borderRadius: BorderRadius.circular(
+                              PharmacyRadius.field,
+                            ),
+                            borderSide: const BorderSide(
+                              color: PharmacyColors.border,
+                            ),
                           ),
                         ),
                       ),
                       const SizedBox(height: 16),
 
-                      // Instant Verification Switch
+                      // Manual-verification notice
                       Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 14, vertical: 10),
+                          horizontal: 14,
+                          vertical: 10,
+                        ),
                         decoration: BoxDecoration(
                           color: PharmacyColors.canvas,
-                          borderRadius:
-                              BorderRadius.circular(PharmacyRadius.field),
+                          borderRadius: BorderRadius.circular(
+                            PharmacyRadius.field,
+                          ),
                           border: Border.all(color: PharmacyColors.border),
                         ),
                         child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Row(
-                              children: [
-                                const Icon(Icons.verified_user_rounded,
-                                    color: PharmacyColors.primary, size: 20),
-                                const SizedBox(width: 10),
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text('Instant Verification & Credit',
-                                        style: PharmacyTypography.body.copyWith(
-                                            fontWeight: FontWeight.bold)),
-                                    Text(
-                                        'Instantly approve payment and credit customer wallet ledger',
-                                        style: PharmacyTypography.tiny),
-                                  ],
-                                ),
-                              ],
+                            const Icon(
+                              Icons.verified_user_rounded,
+                              color: PharmacyColors.primary,
+                              size: 20,
                             ),
-                            Switch(
-                              value: _autoApprove,
-                              activeThumbColor: PharmacyColors.primary,
-                              onChanged: (val) =>
-                                  setState(() => _autoApprove = val),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Manual verification required',
+                                    style: PharmacyTypography.body.copyWith(
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  Text(
+                                    'The payment stays pending until a staff approval explicitly credits the wallet ledger.',
+                                    style: PharmacyTypography.tiny,
+                                  ),
+                                ],
+                              ),
                             ),
                           ],
                         ),
@@ -700,9 +761,7 @@ class _CounterPaymentDialogState extends State<CounterPaymentDialog> {
                   borderRadius: BorderRadius.vertical(
                     bottom: Radius.circular(PharmacyRadius.card),
                   ),
-                  border: Border(
-                    top: BorderSide(color: PharmacyColors.border),
-                  ),
+                  border: Border(top: BorderSide(color: PharmacyColors.border)),
                 ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.end,
@@ -714,8 +773,8 @@ class _CounterPaymentDialogState extends State<CounterPaymentDialog> {
                     const SizedBox(width: 12),
                     PharmacyPrimaryButton(
                       label: _isSubmitting
-                          ? 'Recording...'
-                          : 'Confirm & Record Payment',
+                          ? 'Submitting...'
+                          : 'Submit for Verification',
                       icon: Icons.check_circle_rounded,
                       onPressed: _isSubmitting ? null : _submitCounterPayment,
                     ),
@@ -771,8 +830,8 @@ class _CounterPaymentDialogState extends State<CounterPaymentDialog> {
                   isValidMultiple
                       ? '🎁 10% Extra Bonus Credit Applied!'
                       : (amount < 10000
-                          ? 'Minimum wallet recharge amount is ₹10,000'
-                          : 'Recharge amount must be in multiples of ₹10,000'),
+                            ? 'Minimum wallet recharge amount is ₹10,000'
+                            : 'Recharge amount must be in multiples of ₹10,000'),
                   style: PharmacyTypography.caption.copyWith(
                     fontWeight: FontWeight.bold,
                     color: isValidMultiple
@@ -863,8 +922,9 @@ class _CounterPaymentDialogState extends State<CounterPaymentDialog> {
                 : PharmacyColors.canvas,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color:
-                  isSelected ? PharmacyColors.primary : PharmacyColors.border,
+              color: isSelected
+                  ? PharmacyColors.primary
+                  : PharmacyColors.border,
               width: isSelected ? 1.8 : 1.0,
             ),
           ),
