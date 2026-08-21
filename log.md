@@ -14691,3 +14691,17 @@ SHIELD Pharmacy - Pop-over Detail Modal & Profile Business Details Persistence
 - `backend`: `npx tsc --noEmit` passed.
 - `git diff --check` passed.
 - No data mutation occurred in this source fix.
+## 109. Pharmacy Invoice Full Write-Path Live UAT
+**Timestamp:** 2026-08-21 14:06:00 IST
+
+### Live UAT Evidence
+- Used the generated blank UAT PNG fixture `output/playwright/pharmacy-confirmation-final-ui.png` only on `INV-UAT-ACCEPTED-1` / order `26`.
+- Initial generic multipart upload was correctly rejected with HTTP 400 because its MIME type was unspecified; no invoice was created.
+- Re-submitted with explicit `image/png`: upload succeeded.
+- Authenticated invoice stream returned HTTP 200, `Content-Type: image/png`, private cache-control, and inline filename.
+- Re-uploaded the fixture to verify replacement, removed it, and verified its authenticated stream returned HTTP 404.
+- Uploaded the final fixture again and sent it twice. Fresh order detail returns the filename, authenticated invoice route, and persisted `invoiceSentAt`; duplicate send returned success without changing the sent state.
+
+### Safety
+- No direct database operation was used.
+- Only clearly prefixed UAT order `INV-UAT-ACCEPTED-1` was mutated.
