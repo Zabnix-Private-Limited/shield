@@ -14741,3 +14741,8 @@ SHIELD Pharmacy - Pop-over Detail Modal & Profile Business Details Persistence
 
 ## 115. Pharmacy Counter Pending-Credit Copy Correction
 - Changed pre-approval bonus panel copy to distinguish wallet cash credit after approval from the 10% company promotional benefit. Flutter analyzer passed; commit 01fcb97 pushed; hosted re-test pending propagation.
+
+## 116. Pharmacy Hosted Confirmation and Responsive Matrix
+- Re-tested deployed customer-confirmation UI: INV-UAT-PLACED-5 displays pending confirmation after reload.
+- Verified chronic/substitution setting guards with live HTTP 400 and restored settings.
+- Captured all seven routes across the required phone, landscape, tablet, and desktop viewport matrix. Financial fixture, provider-identity, and complete offline-feedback gates remain open.

@@ -10,20 +10,23 @@ Authenticated Pharmacy workspace only: Dashboard, Orders, Payments, Payment Deta
 - UAT Orders verified full approval, rejection, partial fulfillment, substitution UI/data persistence, chronic tagging, internal notes, pickup-delivery prevention, terminal-status protection, invoice upload/view/replace/delete/send, and customer-confirmation API idempotency.
 - UAT Payment Details verified UPI and bank CRUD/toggle operations and the UAT UPI QR upload, authenticated image read, removal, and re-upload lifecycle.
 - Settings negative paths were verified for partial fulfillment, partial dispatch, home delivery, store pickup, invoice requirement, and customer confirmation.
+- Hosted Orders now visibly replaces the confirmation action with `Customer confirmation request is pending.` for `INV-UAT-PLACED-5`; the state also survived a reload and order re-selection.
+- `enableChronicTagging=false` and `suggestSubstitutes=false` were each proven by a live HTTP 400 against `INV-UAT-PLACED-5`, then immediately restored.
+- All seven routes were captured at 360x800, 390x844, 430x932, 844x390, 768x1024, 1024x768, 1366x768, 1440x900, and 1920x1080. No clipping was found in the inspected mobile, landscape, tablet, or desktop captures.
 - Source checks: affected Flutter analyzer checks passed with no issues. Backend TypeScript passed before the narrow final payment-settings extension; the subsequent check was accidentally invoked from the frontend directory and is not counted as proof.
 
 ## Fixed during UAT
 
-- Mandatory manual verification now prevents counter auto-approval and ledger credit while enabled; the counter dialog submits for verification rather than presenting instant wallet credit.
+- Mandatory manual verification now prevents counter auto-approval and ledger credit while enabled; the deployed counter dialog submits for verification. Its pre-approval panel now distinguishes the wallet cash credit after approval from the visible company promotional benefit.
 - Provider payment scope is fail-closed, UTR proof is enforced by provider setting, confirmation state is correctly mapped, and invoice metadata is projected in order detail.
 
 ## Release gates — FAIL / unresolved
 
-1. **Hosted frontend deployment propagation:** the hosted counter-payment dialog still displays the pre-fix instant-credit UI after hard reload. The source commits are pushed, but hosted re-test cannot pass until the current frontend bundle is live.
-2. **Financial approval/rejection/ledger lifecycle:** both approved seed scripts were inspected. The two UAT PENDING intents resolve to live customers marked `Non-Member (Wellness Only)`. No eligible active SHIELD Privilege Card UAT fixture exists, so approval/rejection, exact-once ledger assertions, and benefit-visibility assertions were not lawfully executed.
-3. **Substitution product ID:** one UAT substitution persists as a name/price with `substituteProductId: null`, because the live catalog projection supplies no product ID. This does not satisfy a product-ID-required substitution contract.
-4. **Complete viewport matrix and owner mobile UAT:** the two representative desktop/narrow widths passed; the requested 360/430, tablet, 1366/1920 matrices and physical-device UAT remain outstanding.
-5. **Provider-isolation proof:** server-side provider scope is fail-closed, but no second assigned/unassigned Pharmacy fixture identity was available for a live cross-scope proof.
+1. **Financial approval/rejection/ledger lifecycle:** both approved seed scripts were inspected. The two UAT PENDING intents resolve to live customers marked `Non-Member (Wellness Only)`. No eligible active SHIELD Privilege Card UAT fixture exists, so approval/rejection, exact-once ledger assertions, and benefit-visibility assertions were not lawfully executed.
+2. **Substitution product ID:** one UAT substitution persists as a name/price with `substituteProductId: null`, because the live catalog projection supplies no product ID. This does not satisfy a product-ID-required substitution contract.
+3. **Offline feedback:** a simulated Payments API 503 preserved loaded content and exposed no raw UI transport string, but visible retry/status feedback was not conclusively captured for all seven routes.
+4. **Provider-isolation proof:** server-side provider scope is fail-closed, but no second assigned/unassigned Pharmacy fixture identity was available for a live cross-scope proof.
+5. **Owner device acceptance:** browser viewport coverage is complete, but physical-device UAT remains owner acceptance work.
 
 ## Safety record
 
@@ -35,4 +38,5 @@ Only clearly UAT-prefixed orders and payment methods were changed. No direct dat
 - `output/playwright/pharmacy-*-390.png`
 - `output/playwright/pharmacy-counter-dialog-deployment-check.png`
 - `output/playwright/pharmacy-confirmation-hard-reload.png`
-
+- `output/playwright/pharmacy-order-confirmation-persisted-after-reload.png`
+- `output/playwright/pharmacy-*-360.png`, `pharmacy-*-430.png`, `pharmacy-*-844x390.png`, `pharmacy-*-768x1024.png`, `pharmacy-*-1024x768.png`, `pharmacy-*-1366x768.png`, and `pharmacy-*-1920x1080.png`
