@@ -1516,6 +1516,11 @@ export class PharmacyService {
       throw new NotFoundException('Order item not found.');
     }
 
+    await this.providerScopeService.assertProviderCanAccessPurchase(
+      orderId,
+      principal,
+    );
+
     const approvedQty = payload.fulfillQuantity != null ? Number(payload.fulfillQuantity) : Number(item.quantity);
     const dispatchedQty = payload.dispatchedQuantity != null ? Number(payload.dispatchedQuantity) : 0;
     const rejectedQty = payload.rejectedQuantity != null ? Number(payload.rejectedQuantity) : Math.max(0, Number(item.quantity) - approvedQty);
@@ -1524,6 +1529,25 @@ export class PharmacyService {
     const decisionStatus = payload.decisionStatus ?? 'APPROVED';
     const actorId = principal?.userId ? BigInt(principal.userId) : null;
     const authPrice = payload.substituteUnitPrice != null ? Number(payload.substituteUnitPrice) : Number(item.unitPrice);
+
+    if (!Number.isFinite(approvedQty) || approvedQty < 0 || approvedQty > Number(item.quantity)) {
+      throw new BadRequestException('Approved quantity must be between zero and the requested quantity.');
+    }
+    if (!Number.isFinite(dispatchedQty) || dispatchedQty < 0 || dispatchedQty > approvedQty) {
+      throw new BadRequestException('Dispatched quantity cannot exceed the approved quantity.');
+    }
+    if (!Number.isFinite(rejectedQty) || rejectedQty < 0 || approvedQty + rejectedQty !== Number(item.quantity)) {
+      throw new BadRequestException('Approved and rejected quantities must equal the requested quantity.');
+    }
+    if (stockStatus === 'OUT_OF_STOCK' && approvedQty !== 0) {
+      throw new BadRequestException('Out-of-stock items cannot have an approved quantity.');
+    }
+    if (decisionStatus === 'REJECTED' && approvedQty !== 0) {
+      throw new BadRequestException('Rejected items must have zero approved quantity.');
+    }
+    if (decisionStatus === 'PARTIAL' && (approvedQty <= 0 || approvedQty >= Number(item.quantity))) {
+      throw new BadRequestException('Partial fulfillment must approve a quantity greater than zero and less than the requested quantity.');
+    }
 
     // 1. Transactionally write item fulfillment decision to purchase_item_fulfillments
     await this.prisma.$executeRawUnsafe(

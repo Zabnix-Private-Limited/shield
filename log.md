@@ -14490,3 +14490,18 @@ SHIELD Pharmacy - Pop-over Detail Modal & Profile Business Details Persistence
 ### Verification
 - Affected-file `flutter analyze`: **No issues found**.
 - Live re-test/deployment: pending Git deployment propagation.
+## 95. Pharmacy Fulfillment Boundary Hardening — UAT Discovery
+- **Timestamp**: 2026-08-21 00:00:00 IST
+- **Developer**: Codex
+- **Scope**: Pharmacy-only backend safety fix discovered during authorized UAT.
+
+### Backend Files
+- `backend/src/pharmacy/pharmacy.service.ts`: `updateOrderItemFulfillment` now asserts the active provider can access the purchase before any write. It rejects non-finite, negative, over-requested, or inconsistent approved/rejected/dispatched quantities; blocks approved quantities for out-of-stock/rejected items; and enforces a true partial range.
+
+### Why
+- The prior mutation path accepted client-provided quantities and stock semantics without server validation and performed its write before provider scope was asserted. That failed the required low-stock/over-quantity guard and was unsafe for cross-provider direct requests.
+
+### Verification
+- `backend`: `npx tsc --noEmit` passed.
+- `current_schema.md`: unmodified.
+- No direct database write or migration. Live re-test follows Git deployment.
