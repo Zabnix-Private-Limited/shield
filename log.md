@@ -14602,3 +14602,15 @@ SHIELD Pharmacy - Pop-over Detail Modal & Profile Business Details Persistence
 ### Verification
 - `backend`: `npx tsc --noEmit` passed.
 - `git diff --check` passed.
+## 102. Pharmacy Payments Provider Isolation Fail-Closed Fix
+**Timestamp:** 2026-08-21 14:03:00 IST
+
+### Backend Files
+- `backend/src/pharmacy/pharmacy-payments.service.ts`
+  - Removed the unsafe first-active-Pharmacy fallback from payment workspace resolution.
+  - Pharmacy payment operations now use the shared assigned-Pharmacy resolver, so missing or unassigned Pharmacy context fails closed rather than exposing another provider's records.
+
+### Verification
+- `backend`: `npx tsc --noEmit` passed.
+- `git diff --check` passed.
+- No UAT or non-UAT data was mutated by this source correction.

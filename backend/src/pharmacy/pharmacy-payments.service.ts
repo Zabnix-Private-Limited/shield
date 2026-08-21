@@ -26,37 +26,8 @@ export class PharmacyPaymentsService {
   private async getPharmacyProviderId(
     principal?: ShieldPrincipal,
   ): Promise<bigint> {
-    const scope = this.providerScopeService.resolveWorkspaceScope(
-      principal,
-      {},
-    );
-    let provider: any = null;
-
-    if (scope.providerId) {
-      provider = await this.prisma.serviceProvider.findFirst({
-        where: { id: scope.providerId, providerType: 'PHARMACY' },
-      });
-    } else if (scope.businessId) {
-      provider = await this.prisma.serviceProvider.findFirst({
-        where: { businessId: scope.businessId, providerType: 'PHARMACY' },
-      });
-    }
-
-    if (!provider) {
-      provider =
-        (await this.prisma.serviceProvider.findFirst({
-          where: { providerType: 'PHARMACY', status: 'ACTIVE' },
-        })) ??
-        (await this.prisma.serviceProvider.findFirst({
-          where: { providerType: 'PHARMACY' },
-        }));
-    }
-
-    if (!provider) {
-      throw new NotFoundException(
-        'Active pharmacy service provider context not found or tenant scope missing.',
-      );
-    }
+    const { provider } =
+      await this.providerScopeService.resolveAssignedPharmacy(principal);
     return provider.id;
   }
 
