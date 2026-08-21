@@ -149,7 +149,8 @@ class _PortalShellState extends State<PortalShell> {
         if (!authSession.isInitialized) {
           await authSession.initialize();
         }
-        final isPharmacyRole = authSession.roleCode == 'PHARMACY_PROVIDER' ||
+        final isPharmacyRole =
+            authSession.roleCode == 'PHARMACY_PROVIDER' ||
             authSession.homeRole == SHIELDRole.pharmacyStaff ||
             widget.role == SHIELDRole.pharmacyStaff;
         try {
@@ -289,9 +290,7 @@ class _PortalShellState extends State<PortalShell> {
         appBar: AppBar(
           title: Row(
             mainAxisSize: MainAxisSize.min,
-            children: [
-              Flexible(child: Text(portal.role.label)),
-            ],
+            children: [Flexible(child: Text(portal.role.label))],
           ),
         ),
         body: Center(
@@ -415,8 +414,10 @@ class _PharmacyPortalResponsiveShell extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             ListTile(
-              leading: const Icon(Icons.account_balance_wallet_outlined,
-                  color: AppColors.shieldNavy),
+              leading: const Icon(
+                Icons.account_balance_wallet_outlined,
+                color: AppColors.shieldNavy,
+              ),
               title: const Text('Payment Details'),
               onTap: () {
                 Navigator.pop(ctx);
@@ -424,8 +425,10 @@ class _PharmacyPortalResponsiveShell extends StatelessWidget {
               },
             ),
             ListTile(
-              leading: const Icon(Icons.history_rounded,
-                  color: AppColors.shieldNavy),
+              leading: const Icon(
+                Icons.history_rounded,
+                color: AppColors.shieldNavy,
+              ),
               title: const Text('Order History'),
               onTap: () {
                 Navigator.pop(ctx);
@@ -433,8 +436,10 @@ class _PharmacyPortalResponsiveShell extends StatelessWidget {
               },
             ),
             ListTile(
-              leading: const Icon(Icons.person_outline_rounded,
-                  color: AppColors.shieldNavy),
+              leading: const Icon(
+                Icons.person_outline_rounded,
+                color: AppColors.shieldNavy,
+              ),
               title: const Text('My Profile'),
               onTap: () {
                 Navigator.pop(ctx);
@@ -442,8 +447,10 @@ class _PharmacyPortalResponsiveShell extends StatelessWidget {
               },
             ),
             ListTile(
-              leading: const Icon(Icons.settings_outlined,
-                  color: AppColors.shieldNavy),
+              leading: const Icon(
+                Icons.settings_outlined,
+                color: AppColors.shieldNavy,
+              ),
               title: const Text('Settings'),
               onTap: () {
                 Navigator.pop(ctx);
@@ -453,7 +460,10 @@ class _PharmacyPortalResponsiveShell extends StatelessWidget {
             const Divider(),
             ListTile(
               leading: const Icon(Icons.logout_rounded, color: Colors.red),
-              title: const Text('Sign Out', style: TextStyle(color: Colors.red)),
+              title: const Text(
+                'Sign Out',
+                style: TextStyle(color: Colors.red),
+              ),
               onTap: () async {
                 Navigator.pop(ctx);
                 await InternalAuthSession.instance.clearSession();
@@ -487,7 +497,8 @@ class _PharmacyPortalResponsiveShell extends StatelessWidget {
     final mediaWidth = MediaQuery.of(context).size.width;
     final isLandscape =
         MediaQuery.of(context).orientation == Orientation.landscape;
-    final isPharmacy = portal.role == SHIELDRole.pharmacyStaff ||
+    final isPharmacy =
+        portal.role == SHIELDRole.pharmacyStaff ||
         InternalAuthSession.instance.roleCode == 'PHARMACY_PROVIDER';
 
     // 1. Desktop Mode (width >= 1024): Fixed Sidebar + Scrollable Workspace
@@ -524,15 +535,15 @@ class _PharmacyPortalResponsiveShell extends StatelessWidget {
           NavigationRail(
             selectedIndex: selectedRailIndex,
             backgroundColor: AppColors.white,
-            selectedIconTheme:
-                IconThemeData(color: PharmacyColors.primary),
+            selectedIconTheme: IconThemeData(color: PharmacyColors.primary),
             selectedLabelTextStyle: const TextStyle(
               color: PharmacyColors.primary,
               fontWeight: FontWeight.bold,
               fontSize: 12,
             ),
-            unselectedIconTheme:
-                const IconThemeData(color: AppColors.shieldNavy),
+            unselectedIconTheme: const IconThemeData(
+              color: AppColors.shieldNavy,
+            ),
             unselectedLabelTextStyle: const TextStyle(
               color: AppColors.shieldNavy,
               fontSize: 12,
@@ -907,9 +918,12 @@ class _RoleContent extends StatelessWidget {
     final isCustomerStoreChange =
         portal.role == SHIELDRole.customer && section.key == 'store-change';
     final isAgentRole = portal.role == SHIELDRole.agent;
-    final isPharmacyRole = portal.role == SHIELDRole.pharmacyStaff ||
+    final isPharmacyRole =
+        portal.role == SHIELDRole.pharmacyStaff ||
         (portal.role == SHIELDRole.provider &&
-            portal.sections.any((s) => s.key == 'orders' || s.key == 'payments'));
+            portal.sections.any(
+              (s) => s.key == 'orders' || s.key == 'payments',
+            ));
     final isProviderRole = portal.role == SHIELDRole.provider;
     final isAdminRole = portal.role == SHIELDRole.superAdmin;
     final isCardUtilization =
@@ -1057,8 +1071,7 @@ class _RoleContent extends StatelessWidget {
       );
     }
 
-    final maxWidth =
-        portal.role == SHIELDRole.pharmacyStaff ? 1600.0 : 1240.0;
+    final maxWidth = portal.role == SHIELDRole.pharmacyStaff ? 1440.0 : 1240.0;
 
     final isPhoneHeader = MediaQuery.sizeOf(context).width < 600;
     return Column(
@@ -1108,7 +1121,10 @@ class _RoleContent extends StatelessWidget {
     );
   }
 
-  Widget _buildPharmacyModuleContent(BuildContext context, PortalSectionData section) {
+  Widget _buildPharmacyModuleContent(
+    BuildContext context,
+    PortalSectionData section,
+  ) {
     switch (section.rendererKey ?? section.moduleId ?? section.key) {
       case 'orders':
         return const PharmacyOrdersScreen();
@@ -1266,8 +1282,8 @@ class _RoleRailNav extends StatelessWidget {
     Widget buildTile(PortalSectionData section) {
       final isActive = section.key == activeSectionKey;
       final icon = _portalSectionIcon(section.iconKey ?? section.key);
-      final targetRoute = section.route ??
-          '/portal/${portal.role.routeKey}/${section.key}';
+      final targetRoute =
+          section.route ?? '/portal/${portal.role.routeKey}/${section.key}';
       final tile = InkWell(
         borderRadius: BorderRadius.circular(16),
         onTap: () => context.go(targetRoute),
@@ -1415,7 +1431,9 @@ class _RoleRailNav extends StatelessWidget {
                             const SizedBox(height: 2),
                             Text(
                               portal.regionLabel,
-                              style: AppTypography.tiny.copyWith(color: AppColors.gray),
+                              style: AppTypography.tiny.copyWith(
+                                color: AppColors.gray,
+                              ),
                               overflow: TextOverflow.ellipsis,
                             ),
                           ],
@@ -1474,12 +1492,25 @@ class _PortalHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isPhone = MediaQuery.sizeOf(context).width < 600;
+    final pharmacyTitles = <String, String>{
+      'dashboard': 'Dashboard',
+      'orders': 'Orders',
+      'payments': 'Payments',
+      'payment-details': 'Payment Details',
+      'history': 'Order History',
+      'profile': 'Profile',
+      'settings': 'Settings',
+    };
+    final isPharmacyWorkspace = portal.role == SHIELDRole.pharmacyStaff;
+    final displayTitle = isPharmacyWorkspace
+        ? (pharmacyTitles[section.key] ?? section.title)
+        : section.title;
     if (isPhone) {
       return Container(
         height: 44,
         alignment: Alignment.centerLeft,
         child: Text(
-          section.title,
+          displayTitle,
           style: AppTypography.h2.copyWith(
             fontSize: 22,
             fontWeight: FontWeight.w700,
@@ -1490,14 +1521,19 @@ class _PortalHeader extends StatelessWidget {
     }
 
     final rawDisplayName = InternalAuthSession.instance.displayName?.trim();
-    final staffDisplayName = (rawDisplayName != null &&
+    final staffDisplayName =
+        (rawDisplayName != null &&
             rawDisplayName.isNotEmpty &&
             rawDisplayName != 'Admin Bypass User')
         ? rawDisplayName
         : null;
+    final actualRole = InternalAuthSession.instance.roleCode;
+    final workspaceRoleLabel = actualRole == 'ADMIN' && isPharmacyWorkspace
+        ? 'Administrator • Pharmacy workspace'
+        : portal.role.label;
     final headerEyebrow = staffDisplayName != null
-        ? '$staffDisplayName • ${portal.role.label}'
-        : 'SHIELD Platform • ${portal.role.label}';
+        ? '$staffDisplayName • $workspaceRoleLabel'
+        : 'SHIELD Platform • $workspaceRoleLabel';
 
     return Row(
       children: [
@@ -1545,7 +1581,7 @@ class _PortalHeader extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 4),
-              Text(section.title, style: AppTypography.h2),
+              Text(displayTitle, style: AppTypography.h2),
               const SizedBox(height: 4),
               Text(
                 portal.headline,
@@ -1574,11 +1610,7 @@ class _CustomerPortalNav extends StatelessWidget {
 
   static const List<MapEntry<String, List<String>>> _groups = [
     MapEntry('Main', ['dashboard', 'membership', 'wallet', 'rewards']),
-    MapEntry('Healthcare', [
-      'services',
-      'appointments',
-      'documents',
-    ]),
+    MapEntry('Healthcare', ['services', 'appointments', 'documents']),
     MapEntry('Commerce', ['orders']),
     MapEntry('Engagement', ['referrals', 'activity', 'notifications']),
     MapEntry('Account', ['profile', 'settings']),
@@ -1986,21 +2018,30 @@ class _AdminPortalNav extends StatelessWidget {
                         }
                         return Tooltip(message: section.title, child: tile);
                       }),
-                      if (!isCollapsedRail && portal.role == SHIELDRole.pharmacyStaff) ...[
+                      if (!isCollapsedRail &&
+                          portal.role == SHIELDRole.pharmacyStaff) ...[
                         const SizedBox(height: 16),
                         Container(
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
                             color: PharmacyColors.primarySoft,
                             borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: PharmacyColors.primary.withValues(alpha: 0.3)),
+                            border: Border.all(
+                              color: PharmacyColors.primary.withValues(
+                                alpha: 0.3,
+                              ),
+                            ),
                           ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Row(
                                 children: [
-                                  const Icon(Icons.help_outline_rounded, size: 16, color: PharmacyColors.primary),
+                                  const Icon(
+                                    Icons.help_outline_rounded,
+                                    size: 16,
+                                    color: PharmacyColors.primary,
+                                  ),
                                   const SizedBox(width: 6),
                                   Text(
                                     'Need help?',
@@ -2014,7 +2055,9 @@ class _AdminPortalNav extends StatelessWidget {
                               const SizedBox(height: 4),
                               Text(
                                 'Contact SHIELD Pharmacy Support 24/7',
-                                style: AppTypography.tiny.copyWith(color: PharmacyColors.textSecondary),
+                                style: AppTypography.tiny.copyWith(
+                                  color: PharmacyColors.textSecondary,
+                                ),
                               ),
                             ],
                           ),
@@ -4137,7 +4180,9 @@ class _CustomerProfilePortalViewState
                       children: [
                         CircleAvatar(
                           radius: 20,
-                          backgroundColor: AppColors.white.withValues(alpha: 0.16),
+                          backgroundColor: AppColors.white.withValues(
+                            alpha: 0.16,
+                          ),
                           child: Text(
                             _initials(customer),
                             style: AppTypography.body.copyWith(

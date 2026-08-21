@@ -9,6 +9,7 @@ import 'package:shield/features/provider/pharmacy/presentation/widgets/upi_payme
 import 'package:shield/features/provider/pharmacy/presentation/widgets/payment_method_form_sheet.dart';
 import 'package:shield/features/provider/pharmacy/presentation/widgets/pharmacy_components.dart';
 import 'package:shield/features/provider/pharmacy/presentation/widgets/pharmacy_skeletons.dart';
+import 'package:shield/features/provider/pharmacy/presentation/pharmacy_error_message.dart';
 
 class PharmacyPaymentDetailsScreen extends StatefulWidget {
   const PharmacyPaymentDetailsScreen({super.key});
@@ -162,7 +163,10 @@ class _PharmacyPaymentDetailsScreenState
                 ),
               ),
               IconButton(
-                icon: const Icon(Icons.refresh_rounded, color: PharmacyColors.navy),
+                icon: const Icon(
+                  Icons.refresh_rounded,
+                  color: PharmacyColors.navy,
+                ),
                 tooltip: 'Refresh Payment Details',
                 onPressed: () => _controller.loadPaymentDetails(),
               ),
@@ -179,14 +183,28 @@ class _PharmacyPaymentDetailsScreenState
             child: Center(
               child: Column(
                 children: [
-                  const Icon(Icons.error_outline_rounded,
-                      size: 44, color: PharmacyColors.danger),
+                  const Icon(
+                    Icons.error_outline_rounded,
+                    size: 44,
+                    color: PharmacyColors.danger,
+                  ),
                   const SizedBox(height: 10),
-                  Text('Unable to load payment details',
-                      style: PharmacyTypography.subtitle
-                          .copyWith(fontWeight: FontWeight.bold)),
+                  Text(
+                    'Unable to load payment details',
+                    style: PharmacyTypography.subtitle.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                   const SizedBox(height: 4),
-                  Text(error, style: PharmacyTypography.caption),
+                  Text(
+                    pharmacyFriendlyErrorMessage(
+                      error,
+                      fallback:
+                          "Payment details couldn't be loaded. Please try again.",
+                    ),
+                    style: PharmacyTypography.caption,
+                    textAlign: TextAlign.center,
+                  ),
                   const SizedBox(height: 14),
                   PharmacyPrimaryButton(
                     label: 'Retry Loading',
@@ -202,13 +220,17 @@ class _PharmacyPaymentDetailsScreenState
             child: Center(
               child: Column(
                 children: [
-                  const Icon(Icons.account_balance_wallet_outlined,
-                      size: 56, color: PharmacyColors.textTertiary),
+                  const Icon(
+                    Icons.account_balance_wallet_outlined,
+                    size: 56,
+                    color: PharmacyColors.textTertiary,
+                  ),
                   const SizedBox(height: 12),
                   Text(
                     'No payment details configured yet',
-                    style: PharmacyTypography.subtitle
-                        .copyWith(fontWeight: FontWeight.bold),
+                    style: PharmacyTypography.subtitle.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                   const SizedBox(height: 4),
                   Text(
@@ -242,9 +264,12 @@ class _PharmacyPaymentDetailsScreenState
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('Bank Accounts',
-                  style: PharmacyTypography.subtitle
-                      .copyWith(fontWeight: FontWeight.bold)),
+              Text(
+                'Bank Accounts',
+                style: PharmacyTypography.subtitle.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
               PharmacyPrimaryButton(
                 label: 'Add Bank Account',
                 compact: true,
@@ -255,8 +280,10 @@ class _PharmacyPaymentDetailsScreenState
           ),
           const SizedBox(height: 10),
           if (bankAccounts.isEmpty) ...[
-            Text('No bank accounts configured.',
-                style: PharmacyTypography.caption),
+            Text(
+              'No bank accounts configured.',
+              style: PharmacyTypography.caption,
+            ),
           ] else ...[
             ...bankAccounts.map(
               (b) => BankAccountCard(
@@ -275,9 +302,12 @@ class _PharmacyPaymentDetailsScreenState
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('UPI Details & QR Codes',
-                  style: PharmacyTypography.subtitle
-                      .copyWith(fontWeight: FontWeight.bold)),
+              Text(
+                'UPI Details & QR Codes',
+                style: PharmacyTypography.subtitle.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
               PharmacyPrimaryButton(
                 label: 'Add UPI ID',
                 compact: true,
@@ -288,8 +318,10 @@ class _PharmacyPaymentDetailsScreenState
           ),
           const SizedBox(height: 10),
           if (upiMethods.isEmpty) ...[
-            Text('No UPI details configured.',
-                style: PharmacyTypography.caption),
+            Text(
+              'No UPI details configured.',
+              style: PharmacyTypography.caption,
+            ),
           ] else ...[
             ...upiMethods.map(
               (u) => UpiPaymentCard(

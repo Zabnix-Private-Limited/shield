@@ -9,6 +9,7 @@ import 'package:shield/features/provider/pharmacy/presentation/widgets/pharmacy_
 import 'package:shield/features/provider/pharmacy/presentation/widgets/pharmacy_status_chip.dart';
 import 'package:shield/features/provider/pharmacy/presentation/widgets/pharmacy_fulfillment_detail_view.dart';
 import 'package:shield/features/provider/pharmacy/presentation/widgets/pharmacy_skeletons.dart';
+import 'package:shield/features/provider/pharmacy/presentation/pharmacy_error_message.dart';
 
 class PharmacyOrdersScreen extends StatefulWidget {
   const PharmacyOrdersScreen({super.key});
@@ -89,10 +90,7 @@ class _PharmacyOrdersScreenState extends State<PharmacyOrdersScreen> {
         insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
         child: Center(
           child: ConstrainedBox(
-            constraints: const BoxConstraints(
-              maxWidth: 860,
-              maxHeight: 780,
-            ),
+            constraints: const BoxConstraints(maxWidth: 860, maxHeight: 780),
             child: Container(
               clipBehavior: Clip.antiAlias,
               decoration: BoxDecoration(
@@ -129,8 +127,7 @@ class _PharmacyOrdersScreenState extends State<PharmacyOrdersScreen> {
             if (count > 0) ...[
               const SizedBox(width: 6),
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
                   color: isSelected
                       ? PharmacyColors.primary
@@ -151,18 +148,14 @@ class _PharmacyOrdersScreenState extends State<PharmacyOrdersScreen> {
         selected: isSelected,
         selectedColor: PharmacyColors.primarySoft,
         labelStyle: PharmacyTypography.caption.copyWith(
-          color: isSelected
-              ? PharmacyColors.primaryHover
-              : PharmacyColors.text,
+          color: isSelected ? PharmacyColors.primaryHover : PharmacyColors.text,
           fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
         ),
         backgroundColor: PharmacyColors.canvas,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(PharmacyRadius.chip),
           side: BorderSide(
-            color: isSelected
-                ? PharmacyColors.primary
-                : PharmacyColors.border,
+            color: isSelected ? PharmacyColors.primary : PharmacyColors.border,
           ),
         ),
         onSelected: (_) => _controller.setStatusFilter(value),
@@ -176,8 +169,8 @@ class _PharmacyOrdersScreenState extends State<PharmacyOrdersScreen> {
     final orders = _controller.orders;
     final isLoading = _controller.isLoading;
     final error = _controller.error;
-    final selectedOrder = _controller.selectedOrder ??
-        (orders.isNotEmpty ? orders.first : null);
+    final selectedOrder =
+        _controller.selectedOrder ?? (orders.isNotEmpty ? orders.first : null);
     final screenWidth = MediaQuery.of(context).size.width;
     final isWideDesktop = screenWidth >= 1200;
 
@@ -199,35 +192,41 @@ class _PharmacyOrdersScreenState extends State<PharmacyOrdersScreen> {
                       decoration: InputDecoration(
                         hintText:
                             'Search order #, customer name, phone, or items...',
-                        prefixIcon: const Icon(Icons.search_rounded,
-                            color: PharmacyColors.textSecondary),
+                        prefixIcon: const Icon(
+                          Icons.search_rounded,
+                          color: PharmacyColors.textSecondary,
+                        ),
                         suffixIcon: _searchController.text.isNotEmpty
                             ? IconButton(
-                                icon: const Icon(Icons.clear_rounded,
-                                    size: 18),
+                                icon: const Icon(Icons.clear_rounded, size: 18),
                                 onPressed: () {
                                   _searchController.clear();
                                   _controller.setSearchQuery('');
                                 },
                               )
                             : null,
-                        contentPadding:
-                            const EdgeInsets.symmetric(vertical: 10),
+                        contentPadding: const EdgeInsets.symmetric(
+                          vertical: 10,
+                        ),
                         filled: true,
                         fillColor: PharmacyColors.canvas,
                         border: OutlineInputBorder(
-                          borderRadius:
-                              BorderRadius.circular(PharmacyRadius.field),
-                          borderSide:
-                              const BorderSide(color: PharmacyColors.border),
+                          borderRadius: BorderRadius.circular(
+                            PharmacyRadius.field,
+                          ),
+                          borderSide: const BorderSide(
+                            color: PharmacyColors.border,
+                          ),
                         ),
                       ),
                     ),
                   ),
                   const SizedBox(width: 12),
                   IconButton(
-                    icon: const Icon(Icons.refresh_rounded,
-                        color: PharmacyColors.navy),
+                    icon: const Icon(
+                      Icons.refresh_rounded,
+                      color: PharmacyColors.navy,
+                    ),
                     tooltip: 'Refresh Orders Queue',
                     onPressed: () => _controller.loadOrders(),
                   ),
@@ -239,13 +238,37 @@ class _PharmacyOrdersScreenState extends State<PharmacyOrdersScreen> {
                 scrollDirection: Axis.horizontal,
                 child: Row(
                   children: [
-                    _buildFilterChip('All Orders', 'ALL', summary?.totalCount ?? 0),
+                    _buildFilterChip(
+                      'All Orders',
+                      'ALL',
+                      summary?.totalCount ?? 0,
+                    ),
                     _buildFilterChip('New', 'NEW', summary?.newCount ?? 0),
-                    _buildFilterChip('Accepted', 'ACCEPTED', summary?.acceptedCount ?? 0),
-                    _buildFilterChip('Preparing', 'PREPARING', summary?.preparingCount ?? 0),
-                    _buildFilterChip('Ready for Pickup', 'READY_FOR_PICKUP', summary?.readyCount ?? 0),
-                    _buildFilterChip('Out for Delivery', 'OUT_FOR_DELIVERY', summary?.deliveryCount ?? 0),
-                    _buildFilterChip('Chronic Orders', 'CHRONIC', summary?.chronicCount ?? 0),
+                    _buildFilterChip(
+                      'Accepted',
+                      'ACCEPTED',
+                      summary?.acceptedCount ?? 0,
+                    ),
+                    _buildFilterChip(
+                      'Preparing',
+                      'PREPARING',
+                      summary?.preparingCount ?? 0,
+                    ),
+                    _buildFilterChip(
+                      'Ready for Pickup',
+                      'READY_FOR_PICKUP',
+                      summary?.readyCount ?? 0,
+                    ),
+                    _buildFilterChip(
+                      'Out for Delivery',
+                      'OUT_FOR_DELIVERY',
+                      summary?.deliveryCount ?? 0,
+                    ),
+                    _buildFilterChip(
+                      'Chronic Orders',
+                      'CHRONIC',
+                      summary?.chronicCount ?? 0,
+                    ),
                   ],
                 ),
               ),
@@ -262,14 +285,27 @@ class _PharmacyOrdersScreenState extends State<PharmacyOrdersScreen> {
             child: Center(
               child: Column(
                 children: [
-                  const Icon(Icons.error_outline_rounded,
-                      size: 44, color: PharmacyColors.danger),
+                  const Icon(
+                    Icons.error_outline_rounded,
+                    size: 44,
+                    color: PharmacyColors.danger,
+                  ),
                   const SizedBox(height: 10),
-                  Text('Unable to load orders queue',
-                      style: PharmacyTypography.subtitle
-                          .copyWith(fontWeight: FontWeight.bold)),
+                  Text(
+                    'Unable to load orders queue',
+                    style: PharmacyTypography.subtitle.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                   const SizedBox(height: 4),
-                  Text(error, style: PharmacyTypography.caption),
+                  Text(
+                    pharmacyFriendlyErrorMessage(
+                      error,
+                      fallback: "Orders couldn't be loaded. Please try again.",
+                    ),
+                    style: PharmacyTypography.caption,
+                    textAlign: TextAlign.center,
+                  ),
                   const SizedBox(height: 14),
                   PharmacyPrimaryButton(
                     label: 'Retry',
@@ -282,8 +318,7 @@ class _PharmacyOrdersScreenState extends State<PharmacyOrdersScreen> {
         ] else if (orders.isEmpty) ...[
           const PharmacyEmptyState(
             title: 'No orders found',
-            subtitle:
-                'No orders match the selected filter or search query.',
+            subtitle: 'No orders match the selected filter or search query.',
             icon: Icons.assignment_outlined,
           ),
         ] else ...[
@@ -313,8 +348,7 @@ class _PharmacyOrdersScreenState extends State<PharmacyOrdersScreen> {
                                   width: isSelected ? 2.0 : 1.0,
                                 ),
                                 child: InkWell(
-                                  onTap: () =>
-                                      _controller.selectOrder(order),
+                                  onTap: () => _controller.selectOrder(order),
                                   child: Column(
                                     crossAxisAlignment:
                                         CrossAxisAlignment.start,
@@ -327,11 +361,13 @@ class _PharmacyOrdersScreenState extends State<PharmacyOrdersScreen> {
                                             order.orderNumber,
                                             style: PharmacyTypography.subtitle
                                                 .copyWith(
-                                                    fontWeight:
-                                                        FontWeight.bold),
+                                                  fontWeight: FontWeight.bold,
+                                                ),
                                           ),
                                           PharmacyStatusChip(
-                                              status: order.status, compact: true),
+                                            status: order.status,
+                                            compact: true,
+                                          ),
                                         ],
                                       ),
                                       const SizedBox(height: 6),
@@ -340,7 +376,8 @@ class _PharmacyOrdersScreenState extends State<PharmacyOrdersScreen> {
                                             'Walk-in Customer',
                                         style: PharmacyTypography.caption
                                             .copyWith(
-                                                color: PharmacyColors.text),
+                                              color: PharmacyColors.text,
+                                            ),
                                       ),
                                       const SizedBox(height: 4),
                                       Row(
@@ -355,10 +392,9 @@ class _PharmacyOrdersScreenState extends State<PharmacyOrdersScreen> {
                                             '₹ ${order.payableAmount.toStringAsFixed(2)}',
                                             style: PharmacyTypography.caption
                                                 .copyWith(
-                                                    fontWeight:
-                                                        FontWeight.bold,
-                                                    color: PharmacyColors
-                                                        .navy),
+                                                  fontWeight: FontWeight.bold,
+                                                  color: PharmacyColors.navy,
+                                                ),
                                           ),
                                         ],
                                       ),
@@ -377,7 +413,8 @@ class _PharmacyOrdersScreenState extends State<PharmacyOrdersScreen> {
                         child: selectedOrder != null
                             ? PharmacyFulfillmentDetailView(
                                 order: selectedOrder,
-                                onPopOver: () => _openPopOverOrderDetail(selectedOrder),
+                                onPopOver: () =>
+                                    _openPopOverOrderDetail(selectedOrder),
                               )
                             : const PharmacyEmptyState(
                                 title: 'Select an order',
@@ -411,18 +448,19 @@ class _PharmacyOrdersScreenState extends State<PharmacyOrdersScreen> {
                                 children: [
                                   Text(
                                     order.orderNumber,
-                                    style: PharmacyTypography.subtitle
-                                        .copyWith(fontWeight: FontWeight.bold),
+                                    style: PharmacyTypography.subtitle.copyWith(
+                                      fontWeight: FontWeight.bold,
+                                    ),
                                   ),
                                   PharmacyStatusChip(status: order.status),
                                 ],
                               ),
                               const SizedBox(height: 6),
                               Text(
-                                order.customer?.fullName ??
-                                    'Walk-in Customer',
-                                style: PharmacyTypography.caption
-                                    .copyWith(color: PharmacyColors.text),
+                                order.customer?.fullName ?? 'Walk-in Customer',
+                                style: PharmacyTypography.caption.copyWith(
+                                  color: PharmacyColors.text,
+                                ),
                               ),
                               const SizedBox(height: 4),
                               Row(
@@ -436,8 +474,9 @@ class _PharmacyOrdersScreenState extends State<PharmacyOrdersScreen> {
                                   Text(
                                     '₹ ${order.payableAmount.toStringAsFixed(2)}',
                                     style: PharmacyTypography.caption.copyWith(
-                                        fontWeight: FontWeight.bold,
-                                        color: PharmacyColors.navy),
+                                      fontWeight: FontWeight.bold,
+                                      color: PharmacyColors.navy,
+                                    ),
                                   ),
                                 ],
                               ),

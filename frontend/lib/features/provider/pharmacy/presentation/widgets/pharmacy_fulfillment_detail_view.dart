@@ -34,8 +34,9 @@ class _PharmacyFulfillmentDetailViewState
   void initState() {
     super.initState();
     _isChronic = widget.order.isChronic;
-    _notesController =
-        TextEditingController(text: widget.order.pharmacistNotes ?? '');
+    _notesController = TextEditingController(
+      text: widget.order.pharmacistNotes ?? '',
+    );
     PharmacyOrdersController.instance.addListener(_onControllerUpdate);
   }
 
@@ -61,22 +62,33 @@ class _PharmacyFulfillmentDetailViewState
     super.dispose();
   }
 
-  void _showSubstituteModal(BuildContext context, String orderId, PharmacyOrderItem item) {
+  void _showSubstituteModal(
+    BuildContext context,
+    String orderId,
+    PharmacyOrderItem item,
+  ) {
     final nameController = TextEditingController(
       text: item.substituteName ?? '${item.name} Alt',
     );
     final priceController = TextEditingController(
-      text: (item.substituteUnitPrice ?? (item.unitPrice * 0.9)).toStringAsFixed(2),
+      text: (item.substituteUnitPrice ?? (item.unitPrice * 0.9))
+          .toStringAsFixed(2),
     );
     final reasonController = TextEditingController(
-      text: item.decisionReason ?? 'Original brand unavailable; therapeutically equivalent substitute offered.',
+      text:
+          item.decisionReason ??
+          'Original brand unavailable; therapeutically equivalent substitute offered.',
     );
 
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text('Suggest Substitute for ${item.name}',
-            style: PharmacyTypography.subtitle.copyWith(fontWeight: FontWeight.bold)),
+        title: Text(
+          'Suggest Substitute for ${item.name}',
+          style: PharmacyTypography.subtitle.copyWith(
+            fontWeight: FontWeight.bold,
+          ),
+        ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -117,15 +129,18 @@ class _PharmacyFulfillmentDetailViewState
             compact: true,
             onPressed: () async {
               Navigator.pop(ctx);
-              final subPrice = double.tryParse(priceController.text.trim()) ?? (item.unitPrice * 0.9);
-              final success = await PharmacyOrdersController.instance.updateOrderItemFulfillment(
-                orderId: orderId,
-                itemId: item.id,
-                decisionStatus: 'SUBSTITUTED',
-                substituteName: nameController.text.trim(),
-                substituteUnitPrice: subPrice,
-                decisionReason: reasonController.text.trim(),
-              );
+              final subPrice =
+                  double.tryParse(priceController.text.trim()) ??
+                  (item.unitPrice * 0.9);
+              final success = await PharmacyOrdersController.instance
+                  .updateOrderItemFulfillment(
+                    orderId: orderId,
+                    itemId: item.id,
+                    decisionStatus: 'SUBSTITUTED',
+                    substituteName: nameController.text.trim(),
+                    substituteUnitPrice: subPrice,
+                    decisionReason: reasonController.text.trim(),
+                  );
               if (!context.mounted) return;
               showPortalSnackBar(
                 context,
@@ -140,16 +155,25 @@ class _PharmacyFulfillmentDetailViewState
     );
   }
 
-  void _showPartialFulfillModal(BuildContext context, String orderId, PharmacyOrderItem item) {
+  void _showPartialFulfillModal(
+    BuildContext context,
+    String orderId,
+    PharmacyOrderItem item,
+  ) {
     final qtyController = TextEditingController(
-      text: (item.availableQuantity > 0 ? item.availableQuantity : 1).toStringAsFixed(0),
+      text: (item.availableQuantity > 0 ? item.availableQuantity : 1)
+          .toStringAsFixed(0),
     );
 
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text('Partial Fulfillment for ${item.name}',
-            style: PharmacyTypography.subtitle.copyWith(fontWeight: FontWeight.bold)),
+        title: Text(
+          'Partial Fulfillment for ${item.name}',
+          style: PharmacyTypography.subtitle.copyWith(
+            fontWeight: FontWeight.bold,
+          ),
+        ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -177,14 +201,16 @@ class _PharmacyFulfillmentDetailViewState
             onPressed: () async {
               Navigator.pop(ctx);
               final qty = double.tryParse(qtyController.text.trim()) ?? 1.0;
-              final success = await PharmacyOrdersController.instance.updateOrderItemFulfillment(
-                orderId: orderId,
-                itemId: item.id,
-                fulfillQuantity: qty,
-                stockStatus: 'LOW_STOCK',
-                decisionStatus: 'PARTIAL',
-                decisionReason: 'Partial quantity fulfilled due to stock availability.',
-              );
+              final success = await PharmacyOrdersController.instance
+                  .updateOrderItemFulfillment(
+                    orderId: orderId,
+                    itemId: item.id,
+                    fulfillQuantity: qty,
+                    stockStatus: 'LOW_STOCK',
+                    decisionStatus: 'PARTIAL',
+                    decisionReason:
+                        'Partial quantity fulfilled due to stock availability.',
+                  );
               if (!context.mounted) return;
               showPortalSnackBar(
                 context,
@@ -199,7 +225,268 @@ class _PharmacyFulfillmentDetailViewState
     );
   }
 
-  Widget _buildFulfillmentItemTile(BuildContext context, PharmacyOrderModel order, PharmacyOrderItem item, bool isUpdating) {
+  Widget _buildOrderContextFields(
+    BuildContext context,
+    PharmacyOrderModel order,
+  ) {
+    final customer = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Customer Details',
+          style: PharmacyTypography.caption.copyWith(
+            fontWeight: FontWeight.bold,
+            color: PharmacyColors.textSecondary,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          order.customer?.fullName ?? 'Walk-in Customer',
+          style: PharmacyTypography.subtitle.copyWith(
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        if (order.customer?.mobile.isNotEmpty ?? false)
+          Text(
+            'Phone: ${order.customer!.mobile}',
+            style: PharmacyTypography.caption,
+          ),
+      ],
+    );
+    final fulfillment = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Fulfillment Preference',
+          style: PharmacyTypography.caption.copyWith(
+            fontWeight: FontWeight.bold,
+            color: PharmacyColors.textSecondary,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          order.displayFulfillment,
+          style: PharmacyTypography.subtitle.copyWith(
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        if (order.isHomeDelivery && order.deliveryAddress != null)
+          Text(
+            'Address: ${order.deliveryAddress}',
+            style: PharmacyTypography.caption,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+      ],
+    );
+    final chronic = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Chronic Order',
+          style: PharmacyTypography.caption.copyWith(
+            fontWeight: FontWeight.bold,
+            color: PharmacyColors.textSecondary,
+          ),
+        ),
+        Switch(
+          value: _isChronic,
+          activeTrackColor: PharmacyColors.primary,
+          onChanged: (value) async {
+            setState(() => _isChronic = value);
+            final success = await PharmacyOrdersController.instance
+                .toggleChronicOrder(orderId: order.id, isChronic: value);
+            if (!context.mounted) return;
+            showPortalSnackBar(
+              context,
+              success
+                  ? (value
+                        ? 'Order tagged as Chronic Refill Order.'
+                        : 'Chronic tag removed.')
+                  : 'Could not update chronic status. Please try again.',
+            );
+          },
+        ),
+      ],
+    );
+    return LayoutBuilder(
+      builder: (context, constraints) => constraints.maxWidth < 600
+          ? Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                customer,
+                const SizedBox(height: 16),
+                fulfillment,
+                const SizedBox(height: 16),
+                chronic,
+              ],
+            )
+          : Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(child: customer),
+                Expanded(child: fulfillment),
+                chronic,
+              ],
+            ),
+    );
+  }
+
+  Widget _buildNotesCard(PharmacyOrderModel order) => PharmacyCard(
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Pharmacist Notes & Remarks',
+          style: PharmacyTypography.subtitle.copyWith(
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 8),
+        TextField(
+          controller: _notesController,
+          minLines: 4,
+          maxLines: 6,
+          decoration: InputDecoration(
+            hintText:
+                'Enter internal fulfillment notes, storage instructions, or customer remarks...',
+            hintStyle: PharmacyTypography.caption,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: BorderSide(color: PharmacyColors.border),
+            ),
+            contentPadding: const EdgeInsets.all(12),
+          ),
+        ),
+        const SizedBox(height: 12),
+        PharmacySecondaryButton(
+          label: 'Save Notes',
+          compact: true,
+          icon: Icons.save_outlined,
+          onPressed: () async {
+            final success = await PharmacyOrdersController.instance
+                .savePharmacistNotes(
+                  orderId: order.id,
+                  notes: _notesController.text.trim(),
+                );
+            if (!mounted) return;
+            showPortalSnackBar(
+              context,
+              success
+                  ? 'Pharmacist notes saved.'
+                  : 'Could not save notes. Please try again.',
+            );
+          },
+        ),
+      ],
+    ),
+  );
+
+  Widget _buildInvoiceCard(PharmacyOrderModel order) => PharmacyCard(
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Bill & Invoice Management',
+          style: PharmacyTypography.subtitle.copyWith(
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 12),
+        if (order.invoiceFileName != null) ...[
+          Row(
+            children: [
+              const Icon(
+                Icons.picture_as_pdf_rounded,
+                color: PharmacyColors.primary,
+                size: 28,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  order.invoiceFileName!,
+                  style: PharmacyTypography.caption.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              IconButton(
+                icon: const Icon(
+                  Icons.delete_outline_rounded,
+                  size: 18,
+                  color: PharmacyColors.danger,
+                ),
+                tooltip: 'Remove invoice',
+                onPressed: () async {
+                  final success = await PharmacyOrdersController.instance
+                      .removeOrderInvoice(orderId: order.id);
+                  if (!mounted) return;
+                  showPortalSnackBar(
+                    context,
+                    success
+                        ? 'Invoice file removed.'
+                        : 'Could not remove invoice. Please try again.',
+                  );
+                },
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+        ],
+        PharmacySecondaryButton(
+          label: order.invoiceFileName == null
+              ? 'Upload Bill / Invoice'
+              : 'Replace Invoice File',
+          compact: true,
+          icon: Icons.upload_file_rounded,
+          onPressed: () async {
+            final file = await pickPrescriptionFile();
+            if (file == null) return;
+            final success = await PharmacyOrdersController.instance
+                .uploadOrderInvoiceFile(
+                  orderId: order.id,
+                  bytes: file.bytes,
+                  fileName: file.name,
+                );
+            if (!mounted) return;
+            showPortalSnackBar(
+              context,
+              success
+                  ? 'Invoice "${file.name}" uploaded successfully.'
+                  : 'Could not upload invoice. Please try again.',
+            );
+          },
+        ),
+        const SizedBox(height: 8),
+        PharmacyPrimaryButton(
+          label: 'Send Invoice',
+          compact: true,
+          icon: Icons.send_rounded,
+          onPressed: order.invoiceFileName == null
+              ? null
+              : () async {
+                  final success = await PharmacyOrdersController.instance
+                      .sendOrderInvoice(orderId: order.id);
+                  if (!mounted) return;
+                  showPortalSnackBar(
+                    context,
+                    success
+                        ? 'Invoice sent to customer notification channel.'
+                        : 'Could not send invoice. Please try again.',
+                  );
+                },
+        ),
+      ],
+    ),
+  );
+
+  Widget _buildFulfillmentItemTile(
+    BuildContext context,
+    PharmacyOrderModel order,
+    PharmacyOrderItem item,
+    bool isUpdating,
+  ) {
     final decision = item.decisionStatus.toUpperCase();
     final isRejected = decision == 'REJECTED';
     final isSubstituted = decision == 'SUBSTITUTED';
@@ -211,19 +498,19 @@ class _PharmacyFulfillmentDetailViewState
         color: isRejected
             ? PharmacyColors.danger.withValues(alpha: 0.04)
             : isSubstituted
-                ? Colors.indigo.withValues(alpha: 0.04)
-                : isPartial
-                    ? Colors.orange.withValues(alpha: 0.04)
-                    : PharmacyColors.canvas,
+            ? Colors.indigo.withValues(alpha: 0.04)
+            : isPartial
+            ? Colors.orange.withValues(alpha: 0.04)
+            : PharmacyColors.canvas,
         borderRadius: BorderRadius.circular(10),
         border: Border.all(
           color: isRejected
               ? PharmacyColors.danger.withValues(alpha: 0.3)
               : isSubstituted
-                  ? Colors.indigo.withValues(alpha: 0.3)
-                  : isPartial
-                      ? Colors.orange.withValues(alpha: 0.3)
-                      : PharmacyColors.border,
+              ? Colors.indigo.withValues(alpha: 0.3)
+              : isPartial
+              ? Colors.orange.withValues(alpha: 0.3)
+              : PharmacyColors.border,
         ),
       ),
       child: Column(
@@ -238,7 +525,9 @@ class _PharmacyFulfillmentDetailViewState
                   style: PharmacyTypography.subtitle.copyWith(
                     fontWeight: FontWeight.bold,
                     decoration: isRejected ? TextDecoration.lineThrough : null,
-                    color: isRejected ? PharmacyColors.textSecondary : PharmacyColors.text,
+                    color: isRejected
+                        ? PharmacyColors.textSecondary
+                        : PharmacyColors.text,
                   ),
                 ),
               ),
@@ -254,10 +543,14 @@ class _PharmacyFulfillmentDetailViewState
                 style: PharmacyTypography.caption,
               ),
               Text(
-                isRejected ? '₹0.00 (Rejected)' : 'Total: ₹${item.lineTotal.toStringAsFixed(2)}',
+                isRejected
+                    ? '₹0.00 (Rejected)'
+                    : 'Total: ₹${item.lineTotal.toStringAsFixed(2)}',
                 style: PharmacyTypography.subtitle.copyWith(
                   fontWeight: FontWeight.bold,
-                  color: isRejected ? PharmacyColors.danger : PharmacyColors.navy,
+                  color: isRejected
+                      ? PharmacyColors.danger
+                      : PharmacyColors.navy,
                 ),
               ),
             ],
@@ -274,7 +567,11 @@ class _PharmacyFulfillmentDetailViewState
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.cancel_rounded, color: PharmacyColors.danger, size: 18),
+                  const Icon(
+                    Icons.cancel_rounded,
+                    color: PharmacyColors.danger,
+                    size: 18,
+                  ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Column(
@@ -287,10 +584,13 @@ class _PharmacyFulfillmentDetailViewState
                             color: PharmacyColors.danger,
                           ),
                         ),
-                        if (item.decisionReason != null && item.decisionReason!.isNotEmpty)
+                        if (item.decisionReason != null &&
+                            item.decisionReason!.isNotEmpty)
                           Text(
                             'Reason: ${item.decisionReason}',
-                            style: PharmacyTypography.caption.copyWith(fontSize: 11),
+                            style: PharmacyTypography.caption.copyWith(
+                              fontSize: 11,
+                            ),
                           ),
                       ],
                     ),
@@ -302,14 +602,17 @@ class _PharmacyFulfillmentDetailViewState
                     onPressed: isUpdating
                         ? null
                         : () async {
-                            final success = await PharmacyOrdersController.instance.updateOrderItemFulfillment(
-                              orderId: order.id,
-                              itemId: item.id,
-                              fulfillQuantity: item.quantity,
-                              stockStatus: 'FULL_STOCK',
-                              decisionStatus: 'APPROVED',
-                              decisionReason: 'Decision reset by pharmacist.',
-                            );
+                            final success = await PharmacyOrdersController
+                                .instance
+                                .updateOrderItemFulfillment(
+                                  orderId: order.id,
+                                  itemId: item.id,
+                                  fulfillQuantity: item.quantity,
+                                  stockStatus: 'FULL_STOCK',
+                                  decisionStatus: 'APPROVED',
+                                  decisionReason:
+                                      'Decision reset by pharmacist.',
+                                );
                             if (!context.mounted) return;
                             showPortalSnackBar(
                               context,
@@ -334,7 +637,11 @@ class _PharmacyFulfillmentDetailViewState
                 children: [
                   Row(
                     children: [
-                      const Icon(Icons.swap_horiz_rounded, color: Colors.indigo, size: 18),
+                      const Icon(
+                        Icons.swap_horiz_rounded,
+                        color: Colors.indigo,
+                        size: 18,
+                      ),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
@@ -354,7 +661,8 @@ class _PharmacyFulfillmentDetailViewState
                       ),
                     ],
                   ),
-                  if (item.decisionReason != null && item.decisionReason!.isNotEmpty) ...[
+                  if (item.decisionReason != null &&
+                      item.decisionReason!.isNotEmpty) ...[
                     const SizedBox(height: 2),
                     Text(
                       'Note: ${item.decisionReason}',
@@ -369,7 +677,10 @@ class _PharmacyFulfillmentDetailViewState
                         label: 'Edit Substitute',
                         compact: true,
                         icon: Icons.edit_outlined,
-                        onPressed: isUpdating ? null : () => _showSubstituteModal(context, order.id, item),
+                        onPressed: isUpdating
+                            ? null
+                            : () =>
+                                  _showSubstituteModal(context, order.id, item),
                       ),
                       const SizedBox(width: 8),
                       PharmacySecondaryButton(
@@ -379,14 +690,17 @@ class _PharmacyFulfillmentDetailViewState
                         onPressed: isUpdating
                             ? null
                             : () async {
-                                final success = await PharmacyOrdersController.instance.updateOrderItemFulfillment(
-                                  orderId: order.id,
-                                  itemId: item.id,
-                                  fulfillQuantity: item.quantity,
-                                  stockStatus: 'FULL_STOCK',
-                                  decisionStatus: 'APPROVED',
-                                  decisionReason: 'Substitute cleared by pharmacist.',
-                                );
+                                final success = await PharmacyOrdersController
+                                    .instance
+                                    .updateOrderItemFulfillment(
+                                      orderId: order.id,
+                                      itemId: item.id,
+                                      fulfillQuantity: item.quantity,
+                                      stockStatus: 'FULL_STOCK',
+                                      decisionStatus: 'APPROVED',
+                                      decisionReason:
+                                          'Substitute cleared by pharmacist.',
+                                    );
                                 if (!context.mounted) return;
                                 showPortalSnackBar(
                                   context,
@@ -410,7 +724,11 @@ class _PharmacyFulfillmentDetailViewState
               ),
               child: Row(
                 children: [
-                  Icon(Icons.remove_circle_outline, color: Colors.orange.shade900, size: 18),
+                  Icon(
+                    Icons.remove_circle_outline,
+                    color: Colors.orange.shade900,
+                    size: 18,
+                  ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Column(
@@ -423,10 +741,13 @@ class _PharmacyFulfillmentDetailViewState
                             color: Colors.orange.shade900,
                           ),
                         ),
-                        if (item.decisionReason != null && item.decisionReason!.isNotEmpty)
+                        if (item.decisionReason != null &&
+                            item.decisionReason!.isNotEmpty)
                           Text(
                             'Reason: ${item.decisionReason}',
-                            style: PharmacyTypography.caption.copyWith(fontSize: 11),
+                            style: PharmacyTypography.caption.copyWith(
+                              fontSize: 11,
+                            ),
                           ),
                       ],
                     ),
@@ -438,14 +759,17 @@ class _PharmacyFulfillmentDetailViewState
                     onPressed: isUpdating
                         ? null
                         : () async {
-                            final success = await PharmacyOrdersController.instance.updateOrderItemFulfillment(
-                              orderId: order.id,
-                              itemId: item.id,
-                              fulfillQuantity: item.quantity,
-                              stockStatus: 'FULL_STOCK',
-                              decisionStatus: 'APPROVED',
-                              decisionReason: 'Full quantity restored by pharmacist.',
-                            );
+                            final success = await PharmacyOrdersController
+                                .instance
+                                .updateOrderItemFulfillment(
+                                  orderId: order.id,
+                                  itemId: item.id,
+                                  fulfillQuantity: item.quantity,
+                                  stockStatus: 'FULL_STOCK',
+                                  decisionStatus: 'APPROVED',
+                                  decisionReason:
+                                      'Full quantity restored by pharmacist.',
+                                );
                             if (!context.mounted) return;
                             showPortalSnackBar(
                               context,
@@ -470,14 +794,17 @@ class _PharmacyFulfillmentDetailViewState
                   onPressed: isUpdating
                       ? null
                       : () async {
-                          final success = await PharmacyOrdersController.instance.updateOrderItemFulfillment(
-                            orderId: order.id,
-                            itemId: item.id,
-                            fulfillQuantity: item.quantity,
-                            stockStatus: 'FULL_STOCK',
-                            decisionStatus: 'APPROVED',
-                            decisionReason: 'Fully stock approved by pharmacist.',
-                          );
+                          final success = await PharmacyOrdersController
+                              .instance
+                              .updateOrderItemFulfillment(
+                                orderId: order.id,
+                                itemId: item.id,
+                                fulfillQuantity: item.quantity,
+                                stockStatus: 'FULL_STOCK',
+                                decisionStatus: 'APPROVED',
+                                decisionReason:
+                                    'Fully stock approved by pharmacist.',
+                              );
                           if (!context.mounted) return;
                           showPortalSnackBar(
                             context,
@@ -487,18 +814,24 @@ class _PharmacyFulfillmentDetailViewState
                           );
                         },
                 ),
-                if (item.availableQuantity < item.quantity && item.availableQuantity > 0)
+                if (item.availableQuantity < item.quantity &&
+                    item.availableQuantity > 0)
                   PharmacySecondaryButton(
                     label: 'Partial Fulfill',
                     compact: true,
                     icon: Icons.remove_circle_outline,
-                    onPressed: isUpdating ? null : () => _showPartialFulfillModal(context, order.id, item),
+                    onPressed: isUpdating
+                        ? null
+                        : () =>
+                              _showPartialFulfillModal(context, order.id, item),
                   ),
                 PharmacySecondaryButton(
                   label: 'Suggest Substitute',
                   compact: true,
                   icon: Icons.swap_horiz_rounded,
-                  onPressed: isUpdating ? null : () => _showSubstituteModal(context, order.id, item),
+                  onPressed: isUpdating
+                      ? null
+                      : () => _showSubstituteModal(context, order.id, item),
                 ),
                 PharmacyDangerButton(
                   label: 'Reject Item',
@@ -507,14 +840,17 @@ class _PharmacyFulfillmentDetailViewState
                   onPressed: isUpdating
                       ? null
                       : () async {
-                          final success = await PharmacyOrdersController.instance.updateOrderItemFulfillment(
-                            orderId: order.id,
-                            itemId: item.id,
-                            fulfillQuantity: 0,
-                            stockStatus: item.stockStatus,
-                            decisionStatus: 'REJECTED',
-                            decisionReason: 'Item rejected from order fulfillment by pharmacist.',
-                          );
+                          final success = await PharmacyOrdersController
+                              .instance
+                              .updateOrderItemFulfillment(
+                                orderId: order.id,
+                                itemId: item.id,
+                                fulfillQuantity: 0,
+                                stockStatus: item.stockStatus,
+                                decisionStatus: 'REJECTED',
+                                decisionReason:
+                                    'Item rejected from order fulfillment by pharmacist.',
+                              );
                           if (!context.mounted) return;
                           showPortalSnackBar(
                             context,
@@ -534,13 +870,14 @@ class _PharmacyFulfillmentDetailViewState
 
   @override
   Widget build(BuildContext context) {
-    final order = (PharmacyOrdersController.instance.selectedOrder?.id ==
-                widget.order.id
+    final order =
+        (PharmacyOrdersController.instance.selectedOrder?.id == widget.order.id
             ? PharmacyOrdersController.instance.selectedOrder
             : null) ??
         widget.order;
-    final isUpdating =
-        PharmacyOrdersController.instance.isOrderUpdating(order.id);
+    final isUpdating = PharmacyOrdersController.instance.isOrderUpdating(
+      order.id,
+    );
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -581,7 +918,10 @@ class _PharmacyFulfillmentDetailViewState
                       children: [
                         if (widget.onPopOver != null)
                           IconButton(
-                            icon: const Icon(Icons.open_in_full_rounded, size: 20),
+                            icon: const Icon(
+                              Icons.open_in_full_rounded,
+                              size: 20,
+                            ),
                             tooltip: 'Expand in Pop-over Modal',
                             onPressed: widget.onPopOver,
                           ),
@@ -595,76 +935,7 @@ class _PharmacyFulfillmentDetailViewState
                   ],
                 ),
                 const Divider(height: 24),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('Customer Details',
-                              style: PharmacyTypography.caption.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                  color: PharmacyColors.textSecondary)),
-                          const SizedBox(height: 4),
-                          Text(order.customer?.fullName ?? 'Walk-in Customer',
-                              style: PharmacyTypography.subtitle
-                                  .copyWith(fontWeight: FontWeight.bold)),
-                          if (order.customer?.mobile.isNotEmpty ?? false)
-                            Text('Phone: ${order.customer!.mobile}',
-                                style: PharmacyTypography.caption),
-                        ],
-                      ),
-                    ),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('Fulfillment Preference',
-                              style: PharmacyTypography.caption.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                  color: PharmacyColors.textSecondary)),
-                          const SizedBox(height: 4),
-                          Text(order.displayFulfillment,
-                              style: PharmacyTypography.subtitle
-                                  .copyWith(fontWeight: FontWeight.bold)),
-                          if (order.isHomeDelivery &&
-                              order.deliveryAddress != null)
-                            Text('Address: ${order.deliveryAddress}',
-                                style: PharmacyTypography.caption,
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis),
-                        ],
-                      ),
-                    ),
-                    Column(
-                      children: [
-                        Text('Chronic Order',
-                            style: PharmacyTypography.caption.copyWith(
-                                fontWeight: FontWeight.bold,
-                                color: PharmacyColors.textSecondary)),
-                        Switch(
-                          value: _isChronic,
-                          activeTrackColor: PharmacyColors.primary,
-                          onChanged: (val) async {
-                            setState(() => _isChronic = val);
-                            final success = await PharmacyOrdersController.instance.toggleChronicOrder(
-                              orderId: widget.order.id,
-                              isChronic: val,
-                            );
-                            if (!context.mounted) return;
-                            showPortalSnackBar(
-                              context,
-                              success
-                                  ? (val ? 'Order tagged as Chronic Refill Order.' : 'Chronic tag removed.')
-                                  : 'Failed to update chronic status: ${PharmacyOrdersController.instance.error}',
-                            );
-                          },
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
+                _buildOrderContextFields(context, order),
               ],
             ),
           ),
@@ -684,11 +955,16 @@ class _PharmacyFulfillmentDetailViewState
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text('Per-Item Fulfillment & Stock Verification',
-                              style: PharmacyTypography.subtitle
-                                  .copyWith(fontWeight: FontWeight.bold)),
-                          Text('${order.items.length} items',
-                              style: PharmacyTypography.caption),
+                          Text(
+                            'Per-Item Fulfillment & Stock Verification',
+                            style: PharmacyTypography.subtitle.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          Text(
+                            '${order.items.length} items',
+                            style: PharmacyTypography.caption,
+                          ),
                         ],
                       ),
                       const SizedBox(height: 12),
@@ -704,11 +980,19 @@ class _PharmacyFulfillmentDetailViewState
                           shrinkWrap: true,
                           physics: const NeverScrollableScrollPhysics(),
                           itemCount: order.items.length,
-                          separatorBuilder: (_, __) => const Divider(height: 20),
+                          separatorBuilder: (_, __) =>
+                              const Divider(height: 20),
                           itemBuilder: (ctx, index) {
                             final item = order.items[index];
-                            final isItemUpdating = PharmacyOrdersController.instance.isItemUpdating(order.id, item.id);
-                            return _buildFulfillmentItemTile(context, order, item, isItemUpdating);
+                            final isItemUpdating = PharmacyOrdersController
+                                .instance
+                                .isItemUpdating(order.id, item.id);
+                            return _buildFulfillmentItemTile(
+                              context,
+                              order,
+                              item,
+                              isItemUpdating,
+                            );
                           },
                         ),
                       ],
@@ -717,169 +1001,26 @@ class _PharmacyFulfillmentDetailViewState
                 ),
                 const SizedBox(height: 16),
 
-                IntrinsicHeight(
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Expanded(
-                        child: PharmacyCard(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                LayoutBuilder(
+                  builder: (context, constraints) => constraints.maxWidth < 600
+                      ? Column(
+                          children: [
+                            _buildNotesCard(order),
+                            const SizedBox(height: 16),
+                            _buildInvoiceCard(order),
+                          ],
+                        )
+                      : IntrinsicHeight(
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
-                              Text('Pharmacist Notes & Remarks',
-                                  style: PharmacyTypography.subtitle
-                                      .copyWith(fontWeight: FontWeight.bold)),
-                              const SizedBox(height: 8),
-                              Expanded(
-                                child: TextField(
-                                  controller: _notesController,
-                                  maxLines: null,
-                                  expands: true,
-                                  decoration: InputDecoration(
-                                    hintText:
-                                        'Enter internal fulfillment notes, storage instructions, or customer remarks...',
-                                    hintStyle: PharmacyTypography.caption,
-                                    border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(8),
-                                      borderSide: BorderSide(color: PharmacyColors.border),
-                                    ),
-                                    contentPadding: const EdgeInsets.all(12),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(height: 12),
-                              PharmacySecondaryButton(
-                                label: 'Save Notes',
-                                compact: true,
-                                icon: Icons.save_outlined,
-                                onPressed: () async {
-                                  final success = await PharmacyOrdersController.instance.savePharmacistNotes(
-                                    orderId: widget.order.id,
-                                    notes: _notesController.text.trim(),
-                                  );
-                                  if (!context.mounted) return;
-                                  showPortalSnackBar(
-                                    context,
-                                    success
-                                        ? 'Pharmacist notes saved.'
-                                        : 'Failed to save notes: ${PharmacyOrdersController.instance.error}',
-                                  );
-                                },
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 16),
+                              Expanded(child: _buildNotesCard(order)),
+                              const SizedBox(width: 16),
 
-                      Expanded(
-                        child: PharmacyCard(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text('Bill & Invoice Management',
-                                  style: PharmacyTypography.subtitle
-                                      .copyWith(fontWeight: FontWeight.bold)),
-                              const SizedBox(height: 12),
-                              if (order.invoiceFileName != null) ...[
-                                Container(
-                                  padding: const EdgeInsets.all(10),
-                                  decoration: BoxDecoration(
-                                    color: PharmacyColors.primary.withValues(alpha: 0.05),
-                                    borderRadius: BorderRadius.circular(8),
-                                    border: Border.all(color: PharmacyColors.primary.withValues(alpha: 0.2)),
-                                  ),
-                                  child: Row(
-                                    children: [
-                                      const Icon(Icons.picture_as_pdf_rounded,
-                                          color: PharmacyColors.primary, size: 28),
-                                      const SizedBox(width: 10),
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            Text(order.invoiceFileName!,
-                                                style: PharmacyTypography.caption.copyWith(
-                                                    fontWeight: FontWeight.bold),
-                                                overflow: TextOverflow.ellipsis),
-                                            if (order.invoiceSentAt != null)
-                                              Text(
-                                                'Sent: ${order.invoiceSentAt!.day}/${order.invoiceSentAt!.month} ${order.invoiceSentAt!.hour}:${order.invoiceSentAt!.minute.toString().padLeft(2, '0')}',
-                                                style: PharmacyTypography.caption.copyWith(fontSize: 10),
-                                              ),
-                                          ],
-                                        ),
-                                      ),
-                                      IconButton(
-                                        icon: const Icon(Icons.delete_outline_rounded,
-                                            size: 18, color: PharmacyColors.danger),
-                                        onPressed: () async {
-                                          final success = await PharmacyOrdersController.instance.removeOrderInvoice(
-                                            orderId: widget.order.id,
-                                          );
-                                          if (!context.mounted) return;
-                                          showPortalSnackBar(
-                                            context,
-                                            success
-                                                ? 'Invoice file removed.'
-                                                : 'Failed to remove invoice: ${PharmacyOrdersController.instance.error}',
-                                          );
-                                        },
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                const SizedBox(height: 10),
-                              ],
-                              PharmacySecondaryButton(
-                                label: order.invoiceFileName == null
-                                    ? 'Upload Bill / Invoice'
-                                    : 'Replace Invoice File',
-                                compact: true,
-                                icon: Icons.upload_file_rounded,
-                                onPressed: () async {
-                                  final file = await pickPrescriptionFile();
-                                  if (file == null) return;
-                                  final success = await PharmacyOrdersController.instance.uploadOrderInvoiceFile(
-                                    orderId: widget.order.id,
-                                    bytes: file.bytes,
-                                    fileName: file.name,
-                                  );
-                                  if (!context.mounted) return;
-                                  showPortalSnackBar(
-                                    context,
-                                    success
-                                        ? 'Invoice "${file.name}" uploaded successfully.'
-                                        : 'Failed to upload invoice: ${PharmacyOrdersController.instance.error}',
-                                  );
-                                },
-                              ),
-                              const SizedBox(height: 8),
-                              PharmacyPrimaryButton(
-                                label: 'Send Invoice',
-                                compact: true,
-                                icon: Icons.send_rounded,
-                                onPressed: order.invoiceFileName == null
-                                    ? null
-                                    : () async {
-                                        final success = await PharmacyOrdersController.instance.sendOrderInvoice(
-                                          orderId: widget.order.id,
-                                        );
-                                        if (!context.mounted) return;
-                                        showPortalSnackBar(
-                                          context,
-                                          success
-                                              ? 'Invoice sent to customer notification channel.'
-                                              : 'Failed to send invoice: ${PharmacyOrdersController.instance.error}',
-                                        );
-                                      },
-                              ),
+                              Expanded(child: _buildInvoiceCard(order)),
                             ],
                           ),
                         ),
-                      ),
-                    ],
-                  ),
                 ),
               ],
             ),
@@ -891,21 +1032,31 @@ class _PharmacyFulfillmentDetailViewState
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
           child: PharmacyCard(
             color: PharmacyColors.surfaceSubtle,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            child: Wrap(
+              spacing: 16,
+              runSpacing: 12,
+              alignment: WrapAlignment.spaceBetween,
+              crossAxisAlignment: WrapCrossAlignment.center,
               children: [
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Total Payable: ₹ ${order.payableAmount.toStringAsFixed(2)}',
-                        style: PharmacyTypography.h3),
-                    Text('Payment Status: ${order.paymentStatus}',
-                        style: PharmacyTypography.caption),
+                    Text(
+                      'Total Payable: ₹ ${order.payableAmount.toStringAsFixed(2)}',
+                      style: PharmacyTypography.h3,
+                    ),
+                    Text(
+                      'Payment Status: ${order.paymentStatus}',
+                      style: PharmacyTypography.caption,
+                    ),
                   ],
                 ),
                 if (isUpdating)
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 8,
+                    ),
                     decoration: BoxDecoration(
                       color: PharmacyColors.primary.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(8),
@@ -913,7 +1064,11 @@ class _PharmacyFulfillmentDetailViewState
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.sync_rounded, size: 16, color: PharmacyColors.primary),
+                        const Icon(
+                          Icons.sync_rounded,
+                          size: 16,
+                          color: PharmacyColors.primary,
+                        ),
                         const SizedBox(width: 6),
                         Text(
                           'Updating fulfillment state...',
@@ -925,16 +1080,29 @@ class _PharmacyFulfillmentDetailViewState
                       ],
                     ),
                   )
-                else if (['COMPLETED', 'DELIVERED', 'COLLECTED', 'CANCELLED', 'REJECTED'].contains(order.status.toUpperCase()))
+                else if ([
+                  'COMPLETED',
+                  'DELIVERED',
+                  'COLLECTED',
+                  'CANCELLED',
+                  'REJECTED',
+                ].contains(order.status.toUpperCase()))
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 8,
+                    ),
                     decoration: BoxDecoration(
-                      color: (order.status == 'CANCELLED' || order.status == 'REJECTED')
+                      color:
+                          (order.status == 'CANCELLED' ||
+                              order.status == 'REJECTED')
                           ? PharmacyColors.danger.withValues(alpha: 0.1)
                           : PharmacyColors.primary.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(
-                        color: (order.status == 'CANCELLED' || order.status == 'REJECTED')
+                        color:
+                            (order.status == 'CANCELLED' ||
+                                order.status == 'REJECTED')
                             ? PharmacyColors.danger.withValues(alpha: 0.3)
                             : PharmacyColors.primary.withValues(alpha: 0.3),
                       ),
@@ -943,11 +1111,14 @@ class _PharmacyFulfillmentDetailViewState
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(
-                          (order.status == 'CANCELLED' || order.status == 'REJECTED')
+                          (order.status == 'CANCELLED' ||
+                                  order.status == 'REJECTED')
                               ? Icons.cancel_outlined
                               : Icons.check_circle_outline,
                           size: 16,
-                          color: (order.status == 'CANCELLED' || order.status == 'REJECTED')
+                          color:
+                              (order.status == 'CANCELLED' ||
+                                  order.status == 'REJECTED')
                               ? PharmacyColors.danger
                               : PharmacyColors.primary,
                         ),
@@ -955,7 +1126,9 @@ class _PharmacyFulfillmentDetailViewState
                         Text(
                           'Order Status: ${order.status} (Terminal State)',
                           style: PharmacyTypography.caption.copyWith(
-                            color: (order.status == 'CANCELLED' || order.status == 'REJECTED')
+                            color:
+                                (order.status == 'CANCELLED' ||
+                                    order.status == 'REJECTED')
                                 ? PharmacyColors.danger
                                 : PharmacyColors.primary,
                             fontWeight: FontWeight.bold,
@@ -967,6 +1140,7 @@ class _PharmacyFulfillmentDetailViewState
                 else
                   Wrap(
                     spacing: 10,
+                    runSpacing: 10,
                     children: [
                       if (order.status == 'PLACED' ||
                           order.status == 'SUBMITTED' ||
@@ -975,10 +1149,12 @@ class _PharmacyFulfillmentDetailViewState
                           label: 'Approve Order',
                           icon: Icons.check_circle_rounded,
                           onPressed: () async {
-                            final success = await PharmacyOrdersController.instance.updateOrderStatus(
-                              orderId: order.id,
-                              nextStatus: 'ACCEPTED',
-                            );
+                            final success = await PharmacyOrdersController
+                                .instance
+                                .updateOrderStatus(
+                                  orderId: order.id,
+                                  nextStatus: 'ACCEPTED',
+                                );
                             if (!context.mounted) return;
                             showPortalSnackBar(
                               context,
@@ -993,10 +1169,12 @@ class _PharmacyFulfillmentDetailViewState
                           label: 'Start Preparing',
                           icon: Icons.hourglass_top_rounded,
                           onPressed: () async {
-                            final success = await PharmacyOrdersController.instance.updateOrderStatus(
-                              orderId: order.id,
-                              nextStatus: 'PREPARING',
-                            );
+                            final success = await PharmacyOrdersController
+                                .instance
+                                .updateOrderStatus(
+                                  orderId: order.id,
+                                  nextStatus: 'PREPARING',
+                                );
                             if (!context.mounted) return;
                             showPortalSnackBar(
                               context,
@@ -1018,10 +1196,12 @@ class _PharmacyFulfillmentDetailViewState
                             final next = order.isHomeDelivery
                                 ? 'OUT_FOR_DELIVERY'
                                 : 'READY_FOR_PICKUP';
-                            final success = await PharmacyOrdersController.instance.updateOrderStatus(
-                              orderId: order.id,
-                              nextStatus: next,
-                            );
+                            final success = await PharmacyOrdersController
+                                .instance
+                                .updateOrderStatus(
+                                  orderId: order.id,
+                                  nextStatus: next,
+                                );
                             if (!context.mounted) return;
                             showPortalSnackBar(
                               context,
@@ -1037,10 +1217,12 @@ class _PharmacyFulfillmentDetailViewState
                           label: 'Mark Order Completed',
                           icon: Icons.task_alt_rounded,
                           onPressed: () async {
-                            final success = await PharmacyOrdersController.instance.updateOrderStatus(
-                              orderId: order.id,
-                              nextStatus: 'COMPLETED',
-                            );
+                            final success = await PharmacyOrdersController
+                                .instance
+                                .updateOrderStatus(
+                                  orderId: order.id,
+                                  nextStatus: 'COMPLETED',
+                                );
                             if (!context.mounted) return;
                             showPortalSnackBar(
                               context,
@@ -1057,11 +1239,13 @@ class _PharmacyFulfillmentDetailViewState
                           label: 'Reject Order',
                           icon: Icons.cancel_outlined,
                           onPressed: () async {
-                            final success = await PharmacyOrdersController.instance.updateOrderStatus(
-                              orderId: order.id,
-                              nextStatus: 'CANCELLED',
-                              cancellationReason: 'Rejected by Pharmacy',
-                            );
+                            final success = await PharmacyOrdersController
+                                .instance
+                                .updateOrderStatus(
+                                  orderId: order.id,
+                                  nextStatus: 'CANCELLED',
+                                  cancellationReason: 'Rejected by Pharmacy',
+                                );
                             if (!context.mounted) return;
                             showPortalSnackBar(
                               context,

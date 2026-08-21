@@ -10,6 +10,7 @@ import 'package:shield/features/provider/pharmacy/presentation/widgets/payment_r
 import 'package:shield/features/provider/pharmacy/presentation/widgets/pharmacy_components.dart';
 import 'package:shield/features/provider/pharmacy/presentation/widgets/pharmacy_status_chip.dart';
 import 'package:shield/features/provider/pharmacy/presentation/widgets/pharmacy_skeletons.dart';
+import 'package:shield/features/provider/pharmacy/presentation/pharmacy_error_message.dart';
 
 class PharmacyPaymentsScreen extends StatefulWidget {
   const PharmacyPaymentsScreen({super.key});
@@ -122,7 +123,10 @@ class _PharmacyPaymentsScreenState extends State<PharmacyPaymentsScreen> {
                     ),
                     const SizedBox(width: 8),
                     IconButton(
-                      icon: const Icon(Icons.refresh_rounded, color: PharmacyColors.navy),
+                      icon: const Icon(
+                        Icons.refresh_rounded,
+                        color: PharmacyColors.navy,
+                      ),
                       tooltip: 'Refresh Payments',
                       onPressed: () => _controller.loadPayments(),
                     ),
@@ -157,7 +161,10 @@ class _PharmacyPaymentsScreenState extends State<PharmacyPaymentsScreen> {
                         ),
                         const SizedBox(width: 8),
                         IconButton(
-                          icon: const Icon(Icons.refresh_rounded, color: PharmacyColors.navy),
+                          icon: const Icon(
+                            Icons.refresh_rounded,
+                            color: PharmacyColors.navy,
+                          ),
                           tooltip: 'Refresh Payments',
                           onPressed: () => _controller.loadPayments(),
                         ),
@@ -169,31 +176,68 @@ class _PharmacyPaymentsScreenState extends State<PharmacyPaymentsScreen> {
               const SizedBox(height: 14),
 
               // Payment Summary Cards Banner
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
+              if (isPhone)
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    _buildSummaryCard(
+                      icon: Icons.pending_actions_rounded,
+                      color: PharmacyColors.warning,
+                      label: 'Pending Verification',
+                      value: '$pendingCount Payments',
+                    ),
+                    _buildSummaryCard(
+                      icon: Icons.verified_rounded,
+                      color: PharmacyColors.primary,
+                      label: 'Verified & Approved',
+                      value: '$approvedCount Payments',
+                    ),
+                    _buildSummaryCard(
+                      icon: Icons.point_of_sale_rounded,
+                      color: PharmacyColors.navy,
+                      label: 'Counter Receipts',
+                      value: 'Walk-in Active',
+                    ),
+                  ],
+                )
+              else
+                Row(
                   children: [
                     Container(
-                      width: isPhone ? 160 : null,
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 10,
+                      ),
                       decoration: BoxDecoration(
                         color: PharmacyColors.warning.withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: PharmacyColors.warning.withValues(alpha: 0.4)),
+                        border: Border.all(
+                          color: PharmacyColors.warning.withValues(alpha: 0.4),
+                        ),
                       ),
                       child: Row(
                         children: [
-                          const Icon(Icons.pending_actions_rounded,
-                              color: PharmacyColors.warning, size: 20),
+                          const Icon(
+                            Icons.pending_actions_rounded,
+                            color: PharmacyColors.warning,
+                            size: 20,
+                          ),
                           const SizedBox(width: 10),
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text('Pending Verification', style: PharmacyTypography.tiny),
-                              Text('$pendingCount Payments',
-                                  style: PharmacyTypography.caption.copyWith(
-                                      fontWeight: FontWeight.bold,
-                                      color: PharmacyColors.navy)),
+                              Text(
+                                'Pending Verification',
+                                style: PharmacyTypography.tiny,
+                              ),
+                              Text(
+                                '$pendingCount Payments',
+                                style: PharmacyTypography.caption.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  color: PharmacyColors.navy,
+                                ),
+                              ),
                             ],
                           ),
                         ],
@@ -201,26 +245,39 @@ class _PharmacyPaymentsScreenState extends State<PharmacyPaymentsScreen> {
                     ),
                     const SizedBox(width: 12),
                     Container(
-                      width: isPhone ? 160 : null,
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 10,
+                      ),
                       decoration: BoxDecoration(
                         color: PharmacyColors.primarySoft,
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: PharmacyColors.primary.withValues(alpha: 0.4)),
+                        border: Border.all(
+                          color: PharmacyColors.primary.withValues(alpha: 0.4),
+                        ),
                       ),
                       child: Row(
                         children: [
-                          const Icon(Icons.verified_rounded,
-                              color: PharmacyColors.primary, size: 20),
+                          const Icon(
+                            Icons.verified_rounded,
+                            color: PharmacyColors.primary,
+                            size: 20,
+                          ),
                           const SizedBox(width: 10),
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text('Verified & Approved', style: PharmacyTypography.tiny),
-                              Text('$approvedCount Payments',
-                                  style: PharmacyTypography.caption.copyWith(
-                                      fontWeight: FontWeight.bold,
-                                      color: PharmacyColors.navy)),
+                              Text(
+                                'Verified & Approved',
+                                style: PharmacyTypography.tiny,
+                              ),
+                              Text(
+                                '$approvedCount Payments',
+                                style: PharmacyTypography.caption.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  color: PharmacyColors.navy,
+                                ),
+                              ),
                             ],
                           ),
                         ],
@@ -228,8 +285,10 @@ class _PharmacyPaymentsScreenState extends State<PharmacyPaymentsScreen> {
                     ),
                     const SizedBox(width: 12),
                     Container(
-                      width: isPhone ? 160 : null,
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 10,
+                      ),
                       decoration: BoxDecoration(
                         color: PharmacyColors.canvas,
                         borderRadius: BorderRadius.circular(12),
@@ -237,17 +296,26 @@ class _PharmacyPaymentsScreenState extends State<PharmacyPaymentsScreen> {
                       ),
                       child: Row(
                         children: [
-                          const Icon(Icons.point_of_sale_rounded,
-                              color: PharmacyColors.navy, size: 20),
+                          const Icon(
+                            Icons.point_of_sale_rounded,
+                            color: PharmacyColors.navy,
+                            size: 20,
+                          ),
                           const SizedBox(width: 10),
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text('Counter Receipts', style: PharmacyTypography.tiny),
-                              Text('Walk-in Active',
-                                  style: PharmacyTypography.caption.copyWith(
-                                      fontWeight: FontWeight.bold,
-                                      color: PharmacyColors.navy)),
+                              Text(
+                                'Counter Receipts',
+                                style: PharmacyTypography.tiny,
+                              ),
+                              Text(
+                                'Walk-in Active',
+                                style: PharmacyTypography.caption.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  color: PharmacyColors.navy,
+                                ),
+                              ),
                             ],
                           ),
                         ],
@@ -255,7 +323,6 @@ class _PharmacyPaymentsScreenState extends State<PharmacyPaymentsScreen> {
                     ),
                   ],
                 ),
-              ),
               const SizedBox(height: 14),
 
               // Search Field
@@ -263,9 +330,12 @@ class _PharmacyPaymentsScreenState extends State<PharmacyPaymentsScreen> {
                 controller: _searchController,
                 onChanged: _onSearchChanged,
                 decoration: InputDecoration(
-                  hintText: 'Search customer name, phone, code or UTR reference...',
-                  prefixIcon: const Icon(Icons.search_rounded,
-                      color: PharmacyColors.textSecondary),
+                  hintText:
+                      'Search customer name, phone, code or UTR reference...',
+                  prefixIcon: const Icon(
+                    Icons.search_rounded,
+                    color: PharmacyColors.textSecondary,
+                  ),
                   suffixIcon: _searchController.text.isNotEmpty
                       ? IconButton(
                           icon: const Icon(Icons.clear_rounded, size: 18),
@@ -287,39 +357,33 @@ class _PharmacyPaymentsScreenState extends State<PharmacyPaymentsScreen> {
               const SizedBox(height: 12),
 
               // Status Filter Chips
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  children: ['ALL', 'PENDING', 'APPROVED', 'REJECTED'].map((st) {
-                    final isSel = activeStatus == st;
-                    return Padding(
-                      padding: const EdgeInsets.only(right: 8),
-                      child: ChoiceChip(
-                        label: Text(st),
-                        selected: isSel,
-                        selectedColor: PharmacyColors.primarySoft,
-                        labelStyle: PharmacyTypography.caption.copyWith(
-                          color: isSel
-                              ? PharmacyColors.primaryHover
-                              : PharmacyColors.text,
-                          fontWeight:
-                              isSel ? FontWeight.bold : FontWeight.normal,
-                        ),
-                        backgroundColor: PharmacyColors.canvas,
-                        shape: RoundedRectangleBorder(
-                          borderRadius:
-                              BorderRadius.circular(PharmacyRadius.chip),
-                          side: BorderSide(
-                            color: isSel
-                                ? PharmacyColors.primary
-                                : PharmacyColors.border,
-                          ),
-                        ),
-                        onSelected: (_) => _controller.setActiveStatus(st),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: ['ALL', 'PENDING', 'APPROVED', 'REJECTED'].map((st) {
+                  final isSel = activeStatus == st;
+                  return ChoiceChip(
+                    label: Text(st),
+                    selected: isSel,
+                    selectedColor: PharmacyColors.primarySoft,
+                    labelStyle: PharmacyTypography.caption.copyWith(
+                      color: isSel
+                          ? PharmacyColors.primaryHover
+                          : PharmacyColors.text,
+                      fontWeight: isSel ? FontWeight.bold : FontWeight.normal,
+                    ),
+                    backgroundColor: PharmacyColors.canvas,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(PharmacyRadius.chip),
+                      side: BorderSide(
+                        color: isSel
+                            ? PharmacyColors.primary
+                            : PharmacyColors.border,
                       ),
-                    );
-                  }).toList(),
-                ),
+                    ),
+                    onSelected: (_) => _controller.setActiveStatus(st),
+                  );
+                }).toList(),
               ),
             ],
           ),
@@ -335,14 +399,28 @@ class _PharmacyPaymentsScreenState extends State<PharmacyPaymentsScreen> {
             child: Center(
               child: Column(
                 children: [
-                  const Icon(Icons.error_outline_rounded,
-                      size: 44, color: PharmacyColors.danger),
+                  const Icon(
+                    Icons.error_outline_rounded,
+                    size: 44,
+                    color: PharmacyColors.danger,
+                  ),
                   const SizedBox(height: 10),
-                  Text('Unable to load payment requests',
-                      style: PharmacyTypography.subtitle
-                          .copyWith(fontWeight: FontWeight.bold)),
+                  Text(
+                    'Unable to load payment requests',
+                    style: PharmacyTypography.subtitle.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                   const SizedBox(height: 4),
-                  Text(error, style: PharmacyTypography.caption),
+                  Text(
+                    pharmacyFriendlyErrorMessage(
+                      error,
+                      fallback:
+                          "Payments couldn't be loaded. Please try again.",
+                    ),
+                    style: PharmacyTypography.caption,
+                    textAlign: TextAlign.center,
+                  ),
                   const SizedBox(height: 14),
                   PharmacyPrimaryButton(
                     label: 'Retry Loading',
@@ -401,8 +479,9 @@ class _PharmacyPaymentsScreenState extends State<PharmacyPaymentsScreen> {
                                 children: [
                                   Text(
                                     p.customerName,
-                                    style: PharmacyTypography.subtitle
-                                        .copyWith(fontWeight: FontWeight.bold),
+                                    style: PharmacyTypography.subtitle.copyWith(
+                                      fontWeight: FontWeight.bold,
+                                    ),
                                   ),
                                   Text(
                                     'Ref/UTR: ${p.referenceNumber.isNotEmpty ? p.referenceNumber : 'N/A'}',
@@ -422,8 +501,10 @@ class _PharmacyPaymentsScreenState extends State<PharmacyPaymentsScreen> {
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text('Payment Amount',
-                                  style: PharmacyTypography.tiny),
+                              Text(
+                                'Payment Amount',
+                                style: PharmacyTypography.tiny,
+                              ),
                               Text(
                                 '₹ ${p.amount.toStringAsFixed(2)}',
                                 style: PharmacyTypography.h3,
@@ -433,8 +514,10 @@ class _PharmacyPaymentsScreenState extends State<PharmacyPaymentsScreen> {
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.end,
                             children: [
-                              Text('Payment Channel',
-                                  style: PharmacyTypography.tiny),
+                              Text(
+                                'Payment Channel',
+                                style: PharmacyTypography.tiny,
+                              ),
                               Text(
                                 p.paymentChannel.replaceAll('_', ' '),
                                 style: PharmacyTypography.caption.copyWith(
@@ -457,7 +540,9 @@ class _PharmacyPaymentsScreenState extends State<PharmacyPaymentsScreen> {
                             style: PharmacyTypography.caption,
                           ),
                           PharmacyPrimaryButton(
-                            label: p.isPending ? 'Review & Verify' : 'View Details',
+                            label: p.isPending
+                                ? 'Review & Verify'
+                                : 'View Details',
                             compact: true,
                             icon: Icons.rate_review_outlined,
                             onPressed: () => _openReviewSheet(p),
@@ -472,6 +557,51 @@ class _PharmacyPaymentsScreenState extends State<PharmacyPaymentsScreen> {
           ),
         ],
       ],
+    );
+  }
+
+  Widget _buildSummaryCard({
+    required IconData icon,
+    required Color color,
+    required String label,
+    required String value,
+  }) {
+    return SizedBox(
+      width: 160,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.10),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: color.withValues(alpha: 0.32)),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, color: color, size: 20),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    style: PharmacyTypography.tiny,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  Text(
+                    value,
+                    style: PharmacyTypography.caption.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: PharmacyColors.navy,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

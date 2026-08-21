@@ -14461,3 +14461,21 @@ SHIELD Pharmacy - Pop-over Detail Modal & Profile Business Details Persistence
 ### Safety
 - Network was restored online after offline simulation.
 - No production data was created, changed, approved, rejected, uploaded, or deleted.
+## 93. Pharmacy Live-UAT Defect Rectification — Responsive, Identity, Error and Loading Slice
+- **Timestamp**: 2026-08-21 00:00:00 IST
+- **Developer**: Codex
+- **Scope**: Pharmacy-only remediation of the nine confirmed live UAT defects before authorized UAT mutations. No database writes, migrations, or non-Pharmacy UI changes.
+
+### Frontend Files
+- `frontend/lib/features/provider/pharmacy/presentation/pharmacy_error_message.dart`: Added a shared safe error mapper for offline, timeout, access, missing-record, conflict, and server failures. Raw Dio/XHR diagnostics are never rendered to Pharmacy users.
+- `frontend/lib/features/provider/pharmacy/presentation/screens/pharmacy_payments_screen.dart`: Changed phone summary/filter composition to wrapping controls so all summary cards and `ALL`, `PENDING`, `APPROVED`, and `REJECTED` filters remain reachable.
+- `frontend/lib/features/provider/pharmacy/presentation/screens/pharmacy_order_history_screen.dart`: Changed status and date filter rows to wrapping controls; all required status and date choices are retained without offscreen clipping.
+- `frontend/lib/features/provider/pharmacy/presentation/screens/pharmacy_orders_screen.dart` and `pharmacy_fulfillment_detail_view.dart`: Added safe error presentation and responsive stacked context/notes/invoice sections plus wrapping sticky actions for narrow order-detail sheets.
+- `frontend/lib/features/provider/pharmacy/presentation/controllers/pharmacy_orders_controller.dart`: Loads summary and queue concurrently rather than serially, removing one avoidable pre-render request wait.
+- `frontend/lib/features/portal/presentation/screens/portal_shell.dart`: Uses canonical Pharmacy page titles on phone, including full `Payment Details`, and aligns Pharmacy content width to the Design System 1440px maximum. Admin sessions operating a Pharmacy workspace are explicitly labelled as such.
+- `frontend/lib/shared/widgets/global_role_dropdown.dart`: Resolves an authenticated `ADMIN` session truthfully instead of displaying it as Pharmacist while it is operating the Pharmacy UAT workspace.
+
+### Verification
+- `flutter analyze` on all affected Pharmacy/shared shell files: **No issues found (0 errors, 0 warnings)**.
+- `current_schema.md`: unmodified.
+- Live deployment and re-UAT remain pending this implementation slice.

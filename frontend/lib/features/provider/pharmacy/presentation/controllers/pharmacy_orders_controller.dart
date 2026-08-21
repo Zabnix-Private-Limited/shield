@@ -25,7 +25,9 @@ class PharmacyOrdersController extends ChangeNotifier {
       return 'Unable to process request right now. Please try again.';
     }
     final err = _error!;
-    if (err.contains('DioException') || err.contains('SocketException') || err.contains('Failed host lookup')) {
+    if (err.contains('DioException') ||
+        err.contains('SocketException') ||
+        err.contains('Failed host lookup')) {
       return 'Network connection issue. Please check your internet connection.';
     }
     if (err.contains('401') || err.contains('403')) {
@@ -37,7 +39,9 @@ class PharmacyOrdersController extends ChangeNotifier {
     if (err.contains('500')) {
       return 'Server error occurred while processing order fulfillment. Please retry.';
     }
-    return err.replaceAll(RegExp(r'^Exception:\s*'), '').replaceAll(RegExp(r'^DioException.*:\s*'), '');
+    return err
+        .replaceAll(RegExp(r'^Exception:\s*'), '')
+        .replaceAll(RegExp(r'^DioException.*:\s*'), '');
   }
 
   String get activeStatusFilter => _activeStatusFilter;
@@ -48,7 +52,8 @@ class PharmacyOrdersController extends ChangeNotifier {
 
   bool isOrderUpdating(String orderId) => _updatingOrderIds.contains(orderId);
   bool isItemUpdating(String orderId, String itemId) =>
-      _updatingItemKeys.contains('$orderId:$itemId') || _updatingOrderIds.contains(orderId);
+      _updatingItemKeys.contains('$orderId:$itemId') ||
+      _updatingOrderIds.contains(orderId);
 
   void selectOrder(PharmacyOrderModel? order) {
     _selectedOrder = order;
@@ -72,14 +77,15 @@ class PharmacyOrdersController extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final summaryResult = await _repository.fetchSummary();
-      _summary = summaryResult;
-
-      final ordersResult = await _repository.fetchOrders(
-        status: _activeStatusFilter,
-        query: _searchQuery,
-      );
-      _orders = ordersResult;
+      final results = await Future.wait<Object>([
+        _repository.fetchSummary(),
+        _repository.fetchOrders(
+          status: _activeStatusFilter,
+          query: _searchQuery,
+        ),
+      ]);
+      _summary = results[0] as PharmacyOrdersSummary;
+      _orders = results[1] as List<PharmacyOrderModel>;
       _isLoading = false;
       notifyListeners();
     } catch (e) {
@@ -251,9 +257,7 @@ class PharmacyOrdersController extends ChangeNotifier {
     }
   }
 
-  Future<bool> removeOrderInvoice({
-    required String orderId,
-  }) async {
+  Future<bool> removeOrderInvoice({required String orderId}) async {
     if (_updatingOrderIds.contains(orderId)) return false;
     _updatingOrderIds.add(orderId);
     notifyListeners();
@@ -271,9 +275,7 @@ class PharmacyOrdersController extends ChangeNotifier {
     }
   }
 
-  Future<bool> sendOrderInvoice({
-    required String orderId,
-  }) async {
+  Future<bool> sendOrderInvoice({required String orderId}) async {
     if (_updatingOrderIds.contains(orderId)) return false;
     _updatingOrderIds.add(orderId);
     notifyListeners();
@@ -291,4 +293,3 @@ class PharmacyOrdersController extends ChangeNotifier {
     }
   }
 }
-

@@ -9,6 +9,7 @@ import 'package:shield/features/provider/pharmacy/presentation/widgets/pharmacy_
 import 'package:shield/features/provider/pharmacy/presentation/widgets/pharmacy_order_history_detail_sheet.dart';
 import 'package:shield/features/provider/pharmacy/presentation/widgets/pharmacy_components.dart';
 import 'package:shield/features/provider/pharmacy/presentation/widgets/pharmacy_skeletons.dart';
+import 'package:shield/features/provider/pharmacy/presentation/pharmacy_error_message.dart';
 
 class PharmacyOrderHistoryScreen extends StatefulWidget {
   const PharmacyOrderHistoryScreen({super.key});
@@ -94,10 +95,7 @@ class _PharmacyOrderHistoryScreenState
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          'Order History Log',
-                          style: PharmacyTypography.h2,
-                        ),
+                        Text('Order History Log', style: PharmacyTypography.h2),
                         const SizedBox(height: 4),
                         Text(
                           'Terminal historical records of completed, cancelled, and rejected pharmacy orders.',
@@ -107,7 +105,10 @@ class _PharmacyOrderHistoryScreenState
                     ),
                   ),
                   IconButton(
-                    icon: const Icon(Icons.refresh_rounded, color: PharmacyColors.navy),
+                    icon: const Icon(
+                      Icons.refresh_rounded,
+                      color: PharmacyColors.navy,
+                    ),
                     tooltip: 'Refresh Order History',
                     onPressed: () => _controller.loadHistory(),
                   ),
@@ -121,8 +122,10 @@ class _PharmacyOrderHistoryScreenState
                 onChanged: _onSearchChanged,
                 decoration: InputDecoration(
                   hintText: 'Search order #, customer name, mobile or code...',
-                  prefixIcon: const Icon(Icons.search_rounded,
-                      color: PharmacyColors.textSecondary),
+                  prefixIcon: const Icon(
+                    Icons.search_rounded,
+                    color: PharmacyColors.textSecondary,
+                  ),
                   suffixIcon: _searchController.text.isNotEmpty
                       ? IconButton(
                           icon: const Icon(Icons.clear_rounded, size: 18),
@@ -144,22 +147,16 @@ class _PharmacyOrderHistoryScreenState
               const SizedBox(height: 12),
 
               // Status Filter Chips
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  children: [
-                    'ALL_HISTORY',
-                    'COMPLETED',
-                    'CANCELLED',
-                    'REJECTED',
-                  ].map((st) {
-                    final isSel = activeStatus == st;
-                    final label = st == 'ALL_HISTORY'
-                        ? 'All History'
-                        : st.replaceAll('_', ' ');
-                    return Padding(
-                      padding: const EdgeInsets.only(right: 8),
-                      child: ChoiceChip(
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: ['ALL_HISTORY', 'COMPLETED', 'CANCELLED', 'REJECTED']
+                    .map((st) {
+                      final isSel = activeStatus == st;
+                      final label = st == 'ALL_HISTORY'
+                          ? 'All History'
+                          : st.replaceAll('_', ' ');
+                      return ChoiceChip(
                         label: Text(label),
                         selected: isSel,
                         selectedColor: PharmacyColors.primarySoft,
@@ -167,13 +164,15 @@ class _PharmacyOrderHistoryScreenState
                           color: isSel
                               ? PharmacyColors.primaryHover
                               : PharmacyColors.text,
-                          fontWeight:
-                              isSel ? FontWeight.bold : FontWeight.normal,
+                          fontWeight: isSel
+                              ? FontWeight.bold
+                              : FontWeight.normal,
                         ),
                         backgroundColor: PharmacyColors.canvas,
                         shape: RoundedRectangleBorder(
-                          borderRadius:
-                              BorderRadius.circular(PharmacyRadius.chip),
+                          borderRadius: BorderRadius.circular(
+                            PharmacyRadius.chip,
+                          ),
                           side: BorderSide(
                             color: isSel
                                 ? PharmacyColors.primary
@@ -181,31 +180,29 @@ class _PharmacyOrderHistoryScreenState
                           ),
                         ),
                         onSelected: (_) => _controller.setActiveStatus(st),
-                      ),
-                    );
-                  }).toList(),
-                ),
+                      );
+                    })
+                    .toList(),
               ),
               const SizedBox(height: 8),
 
               // Date Preset Chips
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  children: [
-                    'ALL_TIME',
-                    'TODAY',
-                    'LAST_7_DAYS',
-                    'LAST_30_DAYS',
-                    'THIS_MONTH',
-                  ].map((dt) {
-                    final isSel = activeDatePreset == dt;
-                    final label = dt == 'ALL_TIME'
-                        ? 'All Time'
-                        : dt.replaceAll('_', ' ');
-                    return Padding(
-                      padding: const EdgeInsets.only(right: 8),
-                      child: ChoiceChip(
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children:
+                    [
+                      'ALL_TIME',
+                      'TODAY',
+                      'LAST_7_DAYS',
+                      'LAST_30_DAYS',
+                      'THIS_MONTH',
+                    ].map((dt) {
+                      final isSel = activeDatePreset == dt;
+                      final label = dt == 'ALL_TIME'
+                          ? 'All Time'
+                          : dt.replaceAll('_', ' ');
+                      return ChoiceChip(
                         label: Text(label),
                         selected: isSel,
                         selectedColor: PharmacyColors.navy,
@@ -214,10 +211,8 @@ class _PharmacyOrderHistoryScreenState
                         ),
                         visualDensity: VisualDensity.compact,
                         onSelected: (_) => _controller.setActiveDatePreset(dt),
-                      ),
-                    );
-                  }).toList(),
-                ),
+                      );
+                    }).toList(),
               ),
             ],
           ),
@@ -237,32 +232,46 @@ class _PharmacyOrderHistoryScreenState
                     Text('Total Order Value', style: PharmacyTypography.tiny),
                     Text(
                       '₹ ${summary.completedOrderValue.toStringAsFixed(2)}',
-                      style: PharmacyTypography.subtitle
-                          .copyWith(fontWeight: FontWeight.bold),
+                      style: PharmacyTypography.subtitle.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ],
                 ),
-                Container(height: 24, width: 1, color: PharmacyColors.borderStrong),
+                Container(
+                  height: 24,
+                  width: 1,
+                  color: PharmacyColors.borderStrong,
+                ),
                 Column(
                   children: [
                     Text('Completed Orders', style: PharmacyTypography.tiny),
                     Text(
                       '${summary.totalCompletedCount}',
                       style: PharmacyTypography.subtitle.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: PharmacyColors.primaryHover),
+                        fontWeight: FontWeight.bold,
+                        color: PharmacyColors.primaryHover,
+                      ),
                     ),
                   ],
                 ),
-                Container(height: 24, width: 1, color: PharmacyColors.borderStrong),
+                Container(
+                  height: 24,
+                  width: 1,
+                  color: PharmacyColors.borderStrong,
+                ),
                 Column(
                   children: [
-                    Text('Cancelled / Rejected', style: PharmacyTypography.tiny),
+                    Text(
+                      'Cancelled / Rejected',
+                      style: PharmacyTypography.tiny,
+                    ),
                     Text(
                       '${summary.totalCancelledCount + summary.totalRejectedCount}',
                       style: PharmacyTypography.subtitle.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: PharmacyColors.danger),
+                        fontWeight: FontWeight.bold,
+                        color: PharmacyColors.danger,
+                      ),
                     ),
                   ],
                 ),
@@ -281,14 +290,28 @@ class _PharmacyOrderHistoryScreenState
             child: Center(
               child: Column(
                 children: [
-                  const Icon(Icons.error_outline_rounded,
-                      size: 44, color: PharmacyColors.danger),
+                  const Icon(
+                    Icons.error_outline_rounded,
+                    size: 44,
+                    color: PharmacyColors.danger,
+                  ),
                   const SizedBox(height: 10),
-                  Text('Unable to load order history',
-                      style: PharmacyTypography.subtitle
-                          .copyWith(fontWeight: FontWeight.bold)),
+                  Text(
+                    'Unable to load order history',
+                    style: PharmacyTypography.subtitle.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                   const SizedBox(height: 4),
-                  Text(error, style: PharmacyTypography.caption),
+                  Text(
+                    pharmacyFriendlyErrorMessage(
+                      error,
+                      fallback:
+                          "Order history couldn't be loaded. Please try again.",
+                    ),
+                    style: PharmacyTypography.caption,
+                    textAlign: TextAlign.center,
+                  ),
                   const SizedBox(height: 14),
                   PharmacyPrimaryButton(
                     label: 'Retry Loading',

@@ -70,14 +70,19 @@ class GlobalRoleDropdown extends StatelessWidget {
     if (path.contains('/portal/agent')) {
       return options[1];
     }
-    if (path.contains('/portal/provider') || path.contains('/portal/pharmacy-staff')) {
+    if (path.contains('/portal/provider') ||
+        path.contains('/portal/pharmacy-staff')) {
       final currentRole = InternalAuthSession.instance.roleCode;
+      if (currentRole == 'ADMIN') {
+        return options[4];
+      }
       if (currentRole == 'LAB_PROVIDER') {
         return options[3];
       }
       return options[2];
     }
-    if (path.contains('/portal/super-admin') || path.contains('/portal/admin')) {
+    if (path.contains('/portal/super-admin') ||
+        path.contains('/portal/admin')) {
       return options[4];
     }
     return options[0];
@@ -160,7 +165,11 @@ class GlobalRoleDropdown extends StatelessWidget {
               ),
               if (isSelected) ...[
                 const Spacer(),
-                const Icon(Icons.check_rounded, size: 18, color: AppColors.shieldNavy),
+                const Icon(
+                  Icons.check_rounded,
+                  size: 18,
+                  color: AppColors.shieldNavy,
+                ),
               ],
             ],
           ),
