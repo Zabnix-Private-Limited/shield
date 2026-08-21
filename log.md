@@ -14717,4 +14717,22 @@ SHIELD Pharmacy - Pop-over Detail Modal & Profile Business Details Persistence
 ### Verification
 - `backend`: `npx tsc --noEmit` passed.
 - `git diff --check` passed.
-- Live negative-path verification is pending deployment propagation and uses isolated UAT orders only.
+- Live negative-path verification is pending deployment propagation and uses isolated UAT orders only.## 111. Pharmacy Mandatory Manual Payment Verification
+**Timestamp:** 2026-08-21 15:20:00 IST
+
+### Backend Files
+- `backend/src/pharmacy/pharmacy-payments.service.ts`
+  - Provider payment settings now return `mandatoryManualVerification` alongside the UTR policy, failing closed if settings cannot be read.
+  - A counter payment cannot auto-approve or write wallet/benefit ledger credits while mandatory manual verification is enabled; it remains `PENDING` for the explicit approval action.
+
+### Frontend Files
+- `frontend/lib/features/provider/pharmacy/presentation/widgets/counter_payment_dialog.dart`
+  - Removed the misleading instant-credit switch and changed the result copy/action to submit for verification.
+- `frontend/lib/features/provider/pharmacy/presentation/controllers/pharmacy_payments_controller.dart`
+  - Defaults counter-payment submission to non-auto-approved.
+
+### Verification
+- `flutter analyze` passed for both affected Flutter files with no issues.
+- `backend`: `npx tsc --noEmit` was previously passed before this narrow type-only extension; the post-change attempt from the frontend directory invoked its uninstalled placeholder and was not treated as evidence.
+- `git diff --check` passed before commit.
+- Commit `2c8738c` pushed to `main`; hosted re-test remains pending deployment propagation.
