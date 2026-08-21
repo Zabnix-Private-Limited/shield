@@ -1301,6 +1301,24 @@ export class PharmacyService {
 
     // Server-Side Guard: Mandatory Invoice before Dispatch / Ready status based on Pharmacy Settings
     if (['READY', 'READY_FOR_PICKUP', 'DISPATCHED', 'OUT_FOR_DELIVERY', 'DELIVERY', 'COMPLETED'].includes(normalizedStatus)) {
+      const hasConfirmationSensitiveDecision = purchase.purchaseItems.some(
+        (item) => {
+          const decision = String(
+            (item.metadata as Record<string, unknown> | null)?.decisionStatus ??
+                '',
+          ).toUpperCase();
+          return decision === 'PARTIAL' || decision === 'SUBSTITUTED';
+        },
+      );
+      if (
+        settings.substitutions?.requireCustomerConfirmation &&
+        hasConfirmationSensitiveDecision &&
+        snapshot.customerConfirmationStatus !== 'CONFIRMED'
+      ) {
+        throw new BadRequestException(
+          'Customer confirmation is required before making a partial or substituted order ready or dispatching it.',
+        );
+      }
       if (settings.orderWorkflow?.requireInvoiceBeforeDispatch) {
         const invoices = await this.prisma.$queryRawUnsafe<any[]>(
           `SELECT id FROM "order_invoices" WHERE "purchase_id" = $1 LIMIT 1`,

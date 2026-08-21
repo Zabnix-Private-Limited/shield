@@ -14667,3 +14667,15 @@ SHIELD Pharmacy - Pop-over Detail Modal & Profile Business Details Persistence
 ### Safety
 - Requests were routed through supported Pharmacy APIs only.
 - All target orders were `INV-UAT-*`; all rejected attempts left those orders unchanged.
+## 107. Customer Confirmation Settings Enforcement
+**Timestamp:** 2026-08-21 14:42:00 IST
+
+### Backend Files
+- `backend/src/pharmacy/pharmacy.service.ts`
+  - Added an authoritative transition guard for partial/substituted orders when `requireCustomerConfirmation` is enabled.
+  - Such orders cannot move to ready, dispatch, delivery, or completion until their confirmation state is `CONFIRMED`; a pending request is deliberately not treated as approval.
+
+### Verification
+- `backend`: `npx tsc --noEmit` passed.
+- `git diff --check` passed.
+- No data mutation occurred in this source fix.
