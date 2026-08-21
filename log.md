@@ -14627,3 +14627,15 @@ SHIELD Pharmacy - Pop-over Detail Modal & Profile Business Details Persistence
 - `backend`: `npx tsc --noEmit` passed.
 - `git diff --check` passed.
 - No data mutation occurred.
+## 104. Pharmacy Settings Live Negative-Path UAT
+**Timestamp:** 2026-08-21 14:21:00 IST
+
+### Live UAT Evidence
+- Read and recorded the existing Pharmacy settings through `GET /pharmacy/settings`.
+- Temporarily set `allowPartialFulfillment=false` through the supported settings API, attempted a partial decision on isolated `INV-UAT-ACCEPTED-1` item `133`, and received the expected HTTP 400.
+- Restored the complete original settings payload through the same API; a fresh read confirmed `allowPartialFulfillment=true`.
+- Fresh `GET /pharmacy/orders/25` confirms persisted `customerConfirmationRequested=true` and `customerConfirmationStatus=PENDING` for `INV-UAT-PLACED-5`.
+
+### Safety
+- All mutations used supported APIs and clearly prefixed UAT orders only.
+- No direct database operation and no non-UAT record mutation occurred.
