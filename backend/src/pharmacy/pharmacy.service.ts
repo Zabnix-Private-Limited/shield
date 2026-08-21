@@ -564,6 +564,15 @@ export class PharmacyService {
 
     const customerNotes = String(data.customerNotes ?? '').trim() || undefined;
 
+    const providerSettingsRows = await this.prisma.$queryRawUnsafe<any[]>(
+      `SELECT "settings" FROM "pharmacy_provider_settings" WHERE "provider_id" = $1 LIMIT 1`,
+      data.providerId,
+    );
+    const providerSettings =
+      (providerSettingsRows?.[0]?.settings as Record<string, unknown>) ?? {};
+    const initialOrderStatus =
+      providerSettings.autoAcceptOrders === true ? 'ACCEPTED' : 'PLACED';
+
     let source = (data.orderSource ?? '').trim().toUpperCase();
     if (!source) {
       if (data.documentId) {
@@ -727,7 +736,7 @@ export class PharmacyService {
             providerId: data.providerId,
             invoiceNumber,
             purchaseKind,
-            orderStatus: 'PLACED',
+            orderStatus: initialOrderStatus,
             paymentStatus: 'PENDING',
             totalAmount: calculatedTotal,
             discountAmount: 0,
@@ -1221,7 +1230,6 @@ export class PharmacyService {
       ? String(snapshot.fulfillmentPreference).toUpperCase()
       : null;
     const settings = await this.getPharmacySettings(principal);
-
     if (
       fulfillmentPref === 'HOME_DELIVERY' &&
       !settings.deliveryPickup?.enableHomeDelivery
@@ -1613,6 +1621,14 @@ export class PharmacyService {
 
     const settings = await this.getPharmacySettings(principal);
     if (
+      decisionStatus === 'SUBSTITUTED' &&
+      !settings.substitutions?.suggestSubstitutes
+    ) {
+      throw new BadRequestException(
+        'Substitute suggestions are disabled in Pharmacy Settings for this provider.',
+      );
+    }
+    if (
       decisionStatus === 'PARTIAL' &&
       !settings.partialFulfillment?.allowPartialFulfillment
     ) {
@@ -1701,6 +1717,13 @@ export class PharmacyService {
       orderId,
       principal,
     );
+
+    const settings = await this.getPharmacySettings(principal);
+    if (isChronic && !settings.chronic?.enableChronicTagging) {
+      throw new BadRequestException(
+        'Chronic order tagging is disabled in Pharmacy Settings for this provider.',
+      );
+    }
 
     const interval = repeatIntervalDays ?? 30;
     const actorId = principal?.userId ? BigInt(principal.userId) : null;

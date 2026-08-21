@@ -14705,3 +14705,16 @@ SHIELD Pharmacy - Pop-over Detail Modal & Profile Business Details Persistence
 ### Safety
 - No direct database operation was used.
 - Only clearly prefixed UAT order `INV-UAT-ACCEPTED-1` was mutated.
+## 110. Pharmacy Operational Settings Write-Point Enforcement
+**Timestamp:** 2026-08-21 14:58:00 IST
+
+### Backend Files
+- `backend/src/pharmacy/pharmacy.service.ts`
+  - `autoAcceptOrders` now determines the initial status for newly created Pharmacy customer orders.
+  - `suggestSubstitutes=false` rejects a substitute fulfillment decision server-side.
+  - `enableChronicTagging=false` rejects a request to mark an order chronic server-side.
+
+### Verification
+- `backend`: `npx tsc --noEmit` passed.
+- `git diff --check` passed.
+- Live negative-path verification is pending deployment propagation and uses isolated UAT orders only.
