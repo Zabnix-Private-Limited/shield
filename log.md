@@ -14746,3 +14746,8 @@ SHIELD Pharmacy - Pop-over Detail Modal & Profile Business Details Persistence
 - Re-tested deployed customer-confirmation UI: INV-UAT-PLACED-5 displays pending confirmation after reload.
 - Verified chronic/substitution setting guards with live HTTP 400 and restored settings.
 - Captured all seven routes across the required phone, landscape, tablet, and desktop viewport matrix. Financial fixture, provider-identity, and complete offline-feedback gates remain open.
+
+## 117. Pharmacy History and Provider Parameter UAT
+- History Completed filter rendered and called the canonical status endpoint with HTTP 200.
+- A providerId=999999 tampering attempt could not override the assigned pharmacy queue.
+- Updated final UAT report; second/unassigned identity and lawful payment fixture remain externally unavailable.

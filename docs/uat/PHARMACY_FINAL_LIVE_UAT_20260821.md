@@ -12,6 +12,8 @@ Authenticated Pharmacy workspace only: Dashboard, Orders, Payments, Payment Deta
 - Settings negative paths were verified for partial fulfillment, partial dispatch, home delivery, store pickup, invoice requirement, and customer confirmation.
 - Hosted Orders now visibly replaces the confirmation action with `Customer confirmation request is pending.` for `INV-UAT-PLACED-5`; the state also survived a reload and order re-selection.
 - `enableChronicTagging=false` and `suggestSubstitutes=false` were each proven by a live HTTP 400 against `INV-UAT-PLACED-5`, then immediately restored.
+- History rendered terminal UAT records after settlement, and its Completed filter issued `GET /pharmacy/orders/history?page=1&pageSize=20&status=COMPLETED` with HTTP 200.
+- A non-mutating `providerId=999999` queue-parameter tampering attempt returned the same first eight order IDs and total as the ordinary assigned-provider queue; the parameter cannot override assigned scope.
 - All seven routes were captured at 360x800, 390x844, 430x932, 844x390, 768x1024, 1024x768, 1366x768, 1440x900, and 1920x1080. No clipping was found in the inspected mobile, landscape, tablet, or desktop captures.
 - Source checks: affected Flutter analyzer checks passed with no issues. Backend TypeScript passed before the narrow final payment-settings extension; the subsequent check was accidentally invoked from the frontend directory and is not counted as proof.
 
