@@ -794,7 +794,6 @@ class _CounterPaymentDialogState extends State<CounterPaymentDialog> {
     final isValidMultiple = isValidMin && (amount.truncate() % 10000 == 0);
 
     final bonusAmount = amount * 0.10;
-    final totalWalletCredit = amount + bonusAmount;
 
     return Container(
       margin: const EdgeInsets.only(top: 10),
@@ -828,7 +827,7 @@ class _CounterPaymentDialogState extends State<CounterPaymentDialog> {
               Expanded(
                 child: Text(
                   isValidMultiple
-                      ? '🎁 10% Extra Bonus Credit Applied!'
+                      ? '🎁 10% promotional benefit after approval'
                       : (amount < 10000
                             ? 'Minimum wallet recharge amount is ₹10,000'
                             : 'Recharge amount must be in multiples of ₹10,000'),
@@ -863,7 +862,7 @@ class _CounterPaymentDialogState extends State<CounterPaymentDialog> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  '10% Extra Bonus Credit:',
+                  'Company promotional benefit (10%):',
                   style: PharmacyTypography.tiny.copyWith(
                     color: PharmacyColors.primary,
                     fontWeight: FontWeight.bold,
@@ -883,14 +882,14 @@ class _CounterPaymentDialogState extends State<CounterPaymentDialog> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'Total Credited to Wallet:',
+                  'Wallet cash credit after approval:',
                   style: PharmacyTypography.caption.copyWith(
                     fontWeight: FontWeight.bold,
                     color: PharmacyColors.navy,
                   ),
                 ),
                 Text(
-                  '₹${totalWalletCredit.toStringAsFixed(2)}',
+                  '₹${amount.toStringAsFixed(2)}',
                   style: PharmacyTypography.body.copyWith(
                     fontWeight: FontWeight.bold,
                     color: PharmacyColors.primary,
