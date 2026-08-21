@@ -14614,3 +14614,16 @@ SHIELD Pharmacy - Pop-over Detail Modal & Profile Business Details Persistence
 - `backend`: `npx tsc --noEmit` passed.
 - `git diff --check` passed.
 - No UAT or non-UAT data was mutated by this source correction.
+## 103. Pharmacy Manual Payment UTR Proof Enforcement
+**Timestamp:** 2026-08-21 14:15:00 IST
+
+### Backend Files
+- `backend/src/pharmacy/pharmacy-payments.service.ts`
+  - Enforced the Pharmacy `requireUtrProof` policy before a non-cash manual recharge intent is created.
+  - Bank transfer, UPI, counter UPI, agent payment, and card POS now require a UTR/payment reference/POS receipt when the policy is enabled; cash remains valid without an artificial UTR.
+  - Retained a fail-closed default if the provider settings projection is unavailable.
+
+### Verification
+- `backend`: `npx tsc --noEmit` passed.
+- `git diff --check` passed.
+- No data mutation occurred.

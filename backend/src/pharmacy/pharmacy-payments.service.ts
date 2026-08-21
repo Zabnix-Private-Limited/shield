@@ -41,6 +41,24 @@ export class PharmacyPaymentsService {
     return full || 'Customer';
   }
 
+  private async getPaymentVerificationSettings(providerId: bigint): Promise<{
+    requireUtrProof: boolean;
+  }> {
+    try {
+      const rows = await this.prisma.$queryRawUnsafe<any[]>(
+        `SELECT "settings" FROM "pharmacy_provider_settings" WHERE "provider_id" = $1 LIMIT 1`,
+        providerId,
+      );
+      const settings = rows?.[0]?.settings as Record<string, unknown> | undefined;
+      return {
+        requireUtrProof: settings?.requireUtrProof !== false,
+      };
+    } catch {
+      // Failing closed retains the documented default until the settings table is available.
+      return { requireUtrProof: true };
+    }
+  }
+
   getBusinessDayInterval(
     timeZone = 'Asia/Kolkata',
     now = new Date(),
@@ -467,6 +485,9 @@ export class PharmacyPaymentsService {
     principal?: ShieldPrincipal,
   ) {
     const providerId = await this.getPharmacyProviderId(principal);
+    const paymentVerification = await this.getPaymentVerificationSettings(
+      providerId,
+    );
     if (!dto.customerId?.trim()) {
       throw new BadRequestException('Customer ID is required.');
     }
@@ -478,6 +499,23 @@ export class PharmacyPaymentsService {
     if (Math.floor(dto.amount) % 10000 !== 0) {
       throw new BadRequestException(
         'Wallet recharge amount must be in multiples of ₹10,000 (e.g. ₹10,000, ₹20,000, ₹30,000).',
+      );
+    }
+
+    const requiresReference = [
+      'BANK_TRANSFER',
+      'UPI',
+      'COUNTER_UPI',
+      'PAID_THROUGH_AGENT',
+      'CARD_POS',
+    ].includes(dto.paymentChannel);
+    if (
+      paymentVerification.requireUtrProof &&
+      requiresReference &&
+      !dto.referenceNumber?.trim()
+    ) {
+      throw new BadRequestException(
+        'A UTR, payment reference, or POS receipt number is required for this payment channel.',
       );
     }
 
