@@ -14410,3 +14410,54 @@ SHIELD Pharmacy - Pop-over Detail Modal & Profile Business Details Persistence
 - Database writes/migrations: None.
 - `backend`: `npx tsc --noEmit` passed.
 - Runtime/browser UAT remains owner-executed and was not performed.
+## 91. Live Pharmacy Portal UAT — Route, Responsive, and Read-Only Workflow Evidence
+- **Timestamp**: 2026-08-21 00:00:00 IST
+- **Developer**: Codex
+- **Scope**: Live UAT restricted to the seven Pharmacy Staff routes only. No customer, Agent, Admin, or non-Pharmacy routes were exercised.
+
+### Verified Live Routes and Backend Reads
+- `/portal/pharmacy-staff/dashboard` -> `GET /pharmacy/dashboard` returned 200.
+- `/portal/pharmacy-staff/orders` -> `GET /pharmacy/orders/summary` and `GET /pharmacy/orders?status=ALL&page=1&pageSize=25` returned 200.
+- `/portal/pharmacy-staff/payments` -> `GET /pharmacy/payments?status=ALL` returned 200.
+- `/portal/pharmacy-staff/payment-details` -> `GET /pharmacy/payment-details` and authenticated UPI QR stream returned 200.
+- `/portal/pharmacy-staff/history` -> `GET /pharmacy/orders/history?page=1&pageSize=20&status=ALL_HISTORY` returned 200.
+- `/portal/pharmacy-staff/profile` -> `GET /pharmacy/profile` returned 200.
+- `/portal/pharmacy-staff/settings` -> `GET /pharmacy/settings` returned 200.
+- Browser console: no errors observed during the covered route loads and safe interactions.
+
+### Verified Safe Interactions
+- Dashboard `View All Orders` navigated to the canonical Orders route and loaded the queue.
+- Payments `PENDING` filter requested `/pharmacy/payments?status=PENDING` and returned 200.
+- Orders `NEW` filter requested `/pharmacy/orders?status=NEW&page=1&pageSize=25` and returned 200.
+- Orders search requested `/pharmacy/orders?status=NEW&page=1&pageSize=25&query=INV-UAT-PLACED-2` and returned 200.
+- Desktop and 390x844 mobile screenshots were captured for every Pharmacy route under `output/playwright/`.
+
+### UAT Findings
+- **FAIL — Mobile Payments**: KPI/filter content clips horizontally; `Verified & Approved` and `REJECTED` are not fully visible at 390px.
+- **FAIL — Mobile Payment Details header**: the shared header displays `P: Details` rather than the complete page title.
+- **FAIL — Mobile History**: status/date filters clip rather than adapting to a sheet, wrap, or another mobile control.
+- **FAIL — Role identity consistency**: shell identifies the session as Pharmacist while Profile displays Zabnix Admin / ADMIN.
+- **FAIL — Production data presentation**: Payment Details displays the visibly poor label `dsafsd@upi` and secondary text `sdds`; this fails the reference-quality / non-technical usability bar.
+- **OBSERVATION — Orders loading**: queue initially stayed in skeleton state despite successful 200 responses, then settled after several seconds.
+- **Reference comparison**: visual tokens and responsive bottom navigation are broadly present, but the above mobile clipping, title truncation, role inconsistency, and data-quality display prevent reference-complete acceptance.
+
+### Deliberately Not Executed
+- No approval/rejection, counter-payment acceptance, wallet credit, upload/remove invoice or QR, payment-method mutation, profile save, or settings save was submitted. Those are production-affecting writes and require explicit isolated UAT-data authorization.
+- No database migration or direct database write was performed.
+## 92. Live Pharmacy UAT Extension — Offline State and Mobile Order Detail
+- **Timestamp**: 2026-08-21 00:00:00 IST
+- **Developer**: Codex
+- **Scope**: Additional non-destructive live Pharmacy UAT only.
+
+### Additional Verified Behavior
+- Dashboard `View All Orders`, Orders filters/search, and Payments filters were exercised without writes and requested their expected backend routes successfully.
+- Mobile Orders opens the fulfillment detail as a bottom sheet without invoking any fulfillment action.
+
+### Additional UAT Failures
+- **Offline Payments error state**: deliberately simulating offline network displayed raw `DioException` / `XMLHttpRequest` diagnostic text. This violates the Pharmacy design requirement for concise, actionable user-facing errors.
+- **Mobile Order Detail header**: `Fulfillment Preference` and `Chronic Order` run together without adequate spacing at 390px.
+- **Mobile Order Detail sticky actions**: the action bar clips the destructive action at the right edge, making it partially inaccessible.
+
+### Safety
+- Network was restored online after offline simulation.
+- No production data was created, changed, approved, rejected, uploaded, or deleted.
