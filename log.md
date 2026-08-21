@@ -14654,3 +14654,16 @@ SHIELD Pharmacy - Pop-over Detail Modal & Profile Business Details Persistence
 ### Verification
 - `flutter analyze frontend/lib/features/provider/pharmacy/domain/models/pharmacy_order_model.dart`: no issues found.
 - `git diff --check` passed.
+## 106. Pharmacy Settings Enforcement Live UAT — Delivery, Dispatch, and Invoice Guards
+**Timestamp:** 2026-08-21 14:35:00 IST
+
+### Live UAT Evidence
+- Temporarily disabled `enableHomeDelivery`; `INV-UAT-ACCEPTED-1` home-delivery order transition was rejected with HTTP 400. Restored immediately.
+- Temporarily disabled `enableStorePickup`; `INV-UAT-ACCEPTED-2` pickup order transition was rejected with HTTP 400. Restored immediately.
+- Temporarily disabled `allowPartialDispatch`; an isolated partial-dispatch item request was rejected with HTTP 400. Restored immediately.
+- With the existing invoice requirement enabled, an invoice-free UAT order transition to `READY` was rejected with HTTP 400.
+- Fresh settings read confirmed restored values: home delivery, store pickup, and partial dispatch enabled; invoice-before-dispatch enabled.
+
+### Safety
+- Requests were routed through supported Pharmacy APIs only.
+- All target orders were `INV-UAT-*`; all rejected attempts left those orders unchanged.
