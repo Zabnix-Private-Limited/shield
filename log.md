@@ -14756,3 +14756,6 @@ SHIELD Pharmacy - Pop-over Detail Modal & Profile Business Details Persistence
 - Added minimal idempotent final fixture SQL and a read-only verifier for the previously blocked payment/membership and provider-isolation UAT evidence.
 - The SQL uses current-schema membership ACTIVE, issued card, active wallet, active UPI method, PENDING intents, and user.branch_business_id contracts only.
 - No database query that writes state, Prisma DDL, or current_schema.md modification was performed.
+
+## 119. Final UAT Report Owner Fixture Reference
+- Updated the final Pharmacy UAT report with the exact owner-only fixture and verifier paths, expected synthetic entities, and Firebase test-identity binding limitation.

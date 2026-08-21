@@ -30,6 +30,15 @@ Authenticated Pharmacy workspace only: Dashboard, Orders, Payments, Payment Deta
 4. **Provider-isolation proof:** server-side provider scope is fail-closed, but no second assigned/unassigned Pharmacy fixture identity was available for a live cross-scope proof.
 5. **Owner device acceptance:** browser viewport coverage is complete, but physical-device UAT remains owner acceptance work.
 
+## Owner fixture handoff — 2026-08-21
+
+The live Pharmacy customer search confirms `UAT-PHARMACY-FINAL-CUSTOMER` does not yet exist. To unblock only the final payment and identity-security cases, the owner must run the idempotent fixture script and then the read-only verifier:
+
+- `backend/prisma/demo-seeds/20260821_pharmacy_final_uat_fixtures.sql`
+- `backend/prisma/demo-seeds/20260821_pharmacy_final_uat_fixtures_verify.sql`
+
+The fixture establishes a synthetic active UAT member with an issued card, active wallet, three `PENDING` UPI recharge intents (₹10,000/₹20,000/₹30,000), and primary/secondary/unassigned Pharmacy staff database identities. It does not provide Firebase test authentication credentials; the owner must bind/use the appropriate authorized test identities before the live isolation checks.
+
 ## Safety record
 
 Only clearly UAT-prefixed orders and payment methods were changed. No direct database writes, migrations, schema changes, or non-UAT payment destination changes were made.
