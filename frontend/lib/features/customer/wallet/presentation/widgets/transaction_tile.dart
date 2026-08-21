@@ -29,7 +29,7 @@ class TransactionTile extends StatelessWidget {
         ),
         status: transaction.status ?? _displayType(transaction.ledgerEntryType),
         highlights: [
-          'Cash Wallet shows CASH-ledger entries only.',
+          'Cash and SHIELD benefit entries are displayed separately.',
           if (transaction.referenceType?.trim().isNotEmpty == true)
             'Reference: ${transaction.referenceType}${transaction.referenceId?.trim().isNotEmpty == true ? ' · ${transaction.referenceId}' : ''}',
         ],
@@ -123,8 +123,11 @@ class _LedgerBadge extends StatelessWidget {
   }
 }
 
-String _ledgerLabel(String ledgerType) =>
-    ledgerType == 'CASH' ? 'cash wallet' : ledgerType.toLowerCase();
+String _ledgerLabel(String ledgerType) => switch (ledgerType) {
+  'CASH' => 'cash wallet',
+  'BENEFIT' || 'SHIELD_BENEFIT' => 'SHIELD benefit',
+  _ => ledgerType.toLowerCase(),
+};
 
 String _displayType(String value) => value
     .toLowerCase()

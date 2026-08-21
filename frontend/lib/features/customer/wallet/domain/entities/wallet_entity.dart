@@ -54,13 +54,13 @@ class BenefitSummaryEntity {
     required this.benefitsUsed,
     required this.grantedTotal,
     required this.appliedTotal,
-    required this.hiddenRemaining,
+    required this.availableBalance,
   });
 
   final double benefitsUsed;
   final double grantedTotal;
   final double appliedTotal;
-  final double hiddenRemaining;
+  final double availableBalance;
 }
 
 class WalletStatisticsEntity {

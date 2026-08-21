@@ -11,7 +11,7 @@ import {
 } from '../pricing/pricing.types';
 
 type WalletViewOptions = {
-  includeHiddenBenefit?: boolean;
+  includeBenefitLedger?: boolean;
 };
 
 @Injectable()
@@ -42,7 +42,7 @@ export class WalletService {
       status: wallet.status,
       cashWallet: summary.cashWallet,
       rewardPoints: summary.rewardPoints,
-      ...(options.includeHiddenBenefit
+      ...(options.includeBenefitLedger
         ? {
             shieldBenefitLedger: summary.shieldBenefit,
           }
@@ -113,7 +113,7 @@ export class WalletService {
         benefitsUsed: summary.shieldBenefit.appliedTotal,
         grantedTotal: summary.shieldBenefit.granted,
         appliedTotal: summary.shieldBenefit.appliedTotal,
-        hiddenRemaining: summary.shieldBenefit.remaining,
+        availableBalance: summary.shieldBenefit.remaining,
       },
       recentTransactions: transactions.map((txn) => ({
         id: txn.id.toString(),
@@ -206,7 +206,7 @@ export class WalletService {
       },
     });
 
-    const bonusAmount = Number((normalizedAmount * 0.10).toFixed(2));
+    const bonusAmount = Number((normalizedAmount * 0.1).toFixed(2));
     if (bonusAmount > 0) {
       await this.prisma.cashWalletTransaction.create({
         data: {
@@ -428,30 +428,42 @@ export class WalletService {
     const dateFilter = this.buildDateFilter(filters);
     const limit = Math.min(Math.max(filters.limit ?? 100, 1), 100);
 
-    const [cashTransactions, rewardTransactions] = await Promise.all([
-      this.prisma.cashWalletTransaction.findMany({
-        where: {
-          walletId,
-          ...(filters.type
-            ? { transactionType: filters.type.toUpperCase() }
-            : {}),
-          ...(dateFilter ? { createdAt: dateFilter } : {}),
-        },
-        orderBy: { createdAt: 'desc' },
-        take: limit,
-      }),
-      this.prisma.rewardPointTransaction.findMany({
-        where: {
-          walletId,
-          ...(filters.type
-            ? { transactionType: filters.type.toUpperCase() }
-            : {}),
-          ...(dateFilter ? { createdAt: dateFilter } : {}),
-        },
-        orderBy: { createdAt: 'desc' },
-        take: limit,
-      }),
-    ]);
+    const [cashTransactions, rewardTransactions, benefitTransactions] =
+      await Promise.all([
+        this.prisma.cashWalletTransaction.findMany({
+          where: {
+            walletId,
+            ...(filters.type
+              ? { transactionType: filters.type.toUpperCase() }
+              : {}),
+            ...(dateFilter ? { createdAt: dateFilter } : {}),
+          },
+          orderBy: { createdAt: 'desc' },
+          take: limit,
+        }),
+        this.prisma.rewardPointTransaction.findMany({
+          where: {
+            walletId,
+            ...(filters.type
+              ? { transactionType: filters.type.toUpperCase() }
+              : {}),
+            ...(dateFilter ? { createdAt: dateFilter } : {}),
+          },
+          orderBy: { createdAt: 'desc' },
+          take: limit,
+        }),
+        this.prisma.benefitLedgerTransaction.findMany({
+          where: {
+            walletId,
+            ...(filters.type
+              ? { transactionType: filters.type.toUpperCase() }
+              : {}),
+            ...(dateFilter ? { createdAt: dateFilter } : {}),
+          },
+          orderBy: { createdAt: 'desc' },
+          take: limit,
+        }),
+      ]);
 
     const splitTransactions = [
       ...cashTransactions.map((txn) => ({
@@ -475,6 +487,16 @@ export class WalletService {
         referenceId: txn.referenceId,
         status: txn.status,
         actionCode: txn.actionCode,
+      })),
+      ...benefitTransactions.map((txn) => ({
+        ledger: 'SHIELD_BENEFIT',
+        id: txn.id,
+        transactionType: txn.transactionType,
+        amount: Number(txn.amount || 0),
+        remarks: txn.remarks,
+        createdAt: txn.createdAt,
+        referenceType: txn.referenceType,
+        referenceId: txn.referenceId,
       })),
     ].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
 

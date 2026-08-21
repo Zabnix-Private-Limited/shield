@@ -92,10 +92,7 @@ export class ReferralService {
     return this.rewardQualifiedReferral(qualified.id, args.performedBy);
   }
 
-  async rejectReferral(args: {
-    referredCustomerId: bigint;
-    reason: string;
-  }) {
+  async rejectReferral(args: { referredCustomerId: bigint; reason: string }) {
     const event = await this.prisma.referralRewardEvent.findUnique({
       where: { referredCustomerId: args.referredCustomerId },
     });
@@ -143,7 +140,7 @@ export class ReferralService {
         orderBy: { createdAt: 'desc' },
       }),
       this.walletService.getWalletByCustomerId(customerId, {
-        includeHiddenBenefit: false,
+        includeBenefitLedger: false,
       }),
       this.prisma.customer.count({
         where: { referredById: customerId },
@@ -159,8 +156,9 @@ export class ReferralService {
       customerId: customer.id,
       referralCode: customer.referralCode,
       directReferrals: children,
-      totalReferrals: events.filter((event) => event.referrerCustomerId === customerId)
-        .length,
+      totalReferrals: events.filter(
+        (event) => event.referrerCustomerId === customerId,
+      ).length,
       availablePoints: balances.rewardPoints.available,
       redeemedPoints: balances.rewardPoints.redeemed,
       earnedPoints: balances.rewardPoints.earned,
@@ -283,7 +281,7 @@ export class ReferralService {
 
     const walletSummary = await this.walletService
       .getWalletByCustomerId(customerId, {
-        includeHiddenBenefit: false,
+        includeBenefitLedger: false,
       })
       .catch(() => null);
 
@@ -295,12 +293,17 @@ export class ReferralService {
 
     return {
       customerId: customer.id.toString(),
-      name: [customer.firstName, customer.lastName].filter(Boolean).join(' ').trim(),
+      name: [customer.firstName, customer.lastName]
+        .filter(Boolean)
+        .join(' ')
+        .trim(),
       registrationDate: customer.createdAt,
       active: customer.status === 'ACTIVE',
       cashWallet: walletSummary?.cashWallet.available ?? 0,
       rewardPoints: walletSummary?.rewardPoints.available ?? 0,
-      children: await Promise.all(children.map((child) => this.buildTree(child.id))),
+      children: await Promise.all(
+        children.map((child) => this.buildTree(child.id)),
+      ),
     };
   }
 }

@@ -48,7 +48,7 @@ export class WalletController {
     const data = await this.walletService.getWalletByCustomerId(
       BigInt(customerId),
       {
-        includeHiddenBenefit: principal?.roleCode === 'ADMIN',
+        includeBenefitLedger: true,
       },
     );
     return {

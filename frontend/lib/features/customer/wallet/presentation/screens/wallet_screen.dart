@@ -116,7 +116,10 @@ class _CustomerWalletScreenState extends State<CustomerWalletScreen> {
             }
 
             final visibleTransactions = wallet.recentTransactions.where((txn) {
-              if (txn.subLedgerType != 'CASH') return false;
+              if (txn.subLedgerType != 'CASH' &&
+                  txn.subLedgerType != 'BENEFIT') {
+                return false;
+              }
               return switch (_selectedTransactionFilter) {
                 'CREDITS' => txn.isCredit,
                 'DEBITS' => !txn.isCredit,
@@ -136,6 +139,7 @@ class _CustomerWalletScreenState extends State<CustomerWalletScreen> {
                   _WalletHero(
                     status: wallet.status,
                     cashBalance: wallet.cashWallet.available,
+                    benefitBalance: wallet.benefitSummary.availableBalance,
                     creditAvailable: wallet.statistics.creditAvailable,
                     monthlySpend: wallet.statistics.monthlySpend,
                     rewardCredits: wallet.statistics.rewardCredits,
@@ -458,6 +462,7 @@ class _WalletHero extends StatelessWidget {
   const _WalletHero({
     required this.status,
     required this.cashBalance,
+    required this.benefitBalance,
     required this.creditAvailable,
     required this.monthlySpend,
     required this.rewardCredits,
@@ -465,6 +470,7 @@ class _WalletHero extends StatelessWidget {
 
   final String status;
   final double cashBalance;
+  final double benefitBalance;
   final double creditAvailable;
   final double monthlySpend;
   final double rewardCredits;
@@ -517,7 +523,7 @@ class _WalletHero extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           Text(
-            'Cash and reward points are visible here. Internal SHIELD benefit support is applied behind the scenes and is never shown as spendable wallet balance.',
+            'Cash, reward points, and company-funded SHIELD benefits are shown separately.',
             style: AppTypography.small.copyWith(
               color: AppColors.white.withValues(alpha: 0.84),
             ),
@@ -547,6 +553,14 @@ class _WalletHero extends StatelessWidget {
                     secondary:
                         '${AppDisplayFormatters.formatCurrencyString(monthlySpend.toStringAsFixed(2))} spent this cycle',
                   ),
+                  _HeroStatBlock(
+                    width: itemWidth,
+                    label: 'SHIELD benefit',
+                    value: AppDisplayFormatters.formatCurrencyString(
+                      benefitBalance.toStringAsFixed(2),
+                    ),
+                    secondary: 'Company-funded promotional credit',
+                  ),
                 ],
               );
             },
@@ -559,6 +573,17 @@ class _WalletHero extends StatelessWidget {
             ),
             caption: 'Customer-visible CASH available for eligible use',
             icon: Icons.currency_rupee,
+            dark: true,
+          ),
+          const SizedBox(height: 12),
+          BalanceCard(
+            title: 'Available SHIELD benefit',
+            value: AppDisplayFormatters.formatCurrencyString(
+              benefitBalance.toStringAsFixed(2),
+            ),
+            caption:
+                'Company-funded promotional credit, kept separate from cash',
+            icon: Icons.volunteer_activism_outlined,
             dark: true,
           ),
           const SizedBox(height: 12),

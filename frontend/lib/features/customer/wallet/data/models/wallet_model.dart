@@ -53,8 +53,8 @@ class WalletModel extends CustomerWalletEntity {
         appliedTotal: _asDouble(
           (json['benefitSummary'] as Map?)?['appliedTotal'],
         ),
-        hiddenRemaining: _asDouble(
-          (json['benefitSummary'] as Map?)?['hiddenRemaining'],
+        availableBalance: _asDouble(
+          (json['benefitSummary'] as Map?)?['availableBalance'],
         ),
       ),
       recentTransactions: recentTransactions,
@@ -96,7 +96,7 @@ class WalletModel extends CustomerWalletEntity {
         'benefitsUsed': benefitSummary.benefitsUsed,
         'grantedTotal': benefitSummary.grantedTotal,
         'appliedTotal': benefitSummary.appliedTotal,
-        'hiddenRemaining': benefitSummary.hiddenRemaining,
+        'availableBalance': benefitSummary.availableBalance,
       },
       'recentTransactions': recentTransactions
           .map(

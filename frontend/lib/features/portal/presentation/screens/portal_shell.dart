@@ -1060,6 +1060,7 @@ class _RoleContent extends StatelessWidget {
     final maxWidth =
         portal.role == SHIELDRole.pharmacyStaff ? 1600.0 : 1240.0;
 
+    final isPhoneHeader = MediaQuery.sizeOf(context).width < 600;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -1068,9 +1069,9 @@ class _RoleContent extends StatelessWidget {
           color: AppColors.lightGray,
           padding: EdgeInsets.fromLTRB(
             AppResponsive.horizontalPadding(context),
-            16,
+            isPhoneHeader ? 4 : 16,
             AppResponsive.horizontalPadding(context),
-            12,
+            isPhoneHeader ? 4 : 12,
           ),
           child: Center(
             child: ConstrainedBox(
@@ -1472,6 +1473,22 @@ class _PortalHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isPhone = MediaQuery.sizeOf(context).width < 600;
+    if (isPhone) {
+      return Container(
+        height: 44,
+        alignment: Alignment.centerLeft,
+        child: Text(
+          section.title,
+          style: AppTypography.h2.copyWith(
+            fontSize: 22,
+            fontWeight: FontWeight.w700,
+            color: AppColors.shieldNavy,
+          ),
+        ),
+      );
+    }
+
     final rawDisplayName = InternalAuthSession.instance.displayName?.trim();
     final staffDisplayName = (rawDisplayName != null &&
             rawDisplayName.isNotEmpty &&

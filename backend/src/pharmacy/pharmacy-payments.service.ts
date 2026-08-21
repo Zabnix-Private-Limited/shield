@@ -8,7 +8,10 @@ import { StorageService } from '../storage/storage.service';
 import { TimelineService } from '../timeline/timeline.service';
 import { ProviderScopeService } from '../auth/provider-scope.service';
 import { ShieldPrincipal } from '../auth/auth.types';
-import { RejectPaymentDto, SubmitManualPaymentDto } from './dto/pharmacy-payments.dto';
+import {
+  RejectPaymentDto,
+  SubmitManualPaymentDto,
+} from './dto/pharmacy-payments.dto';
 import { randomUUID } from 'crypto';
 
 @Injectable()
@@ -20,8 +23,13 @@ export class PharmacyPaymentsService {
     private readonly providerScopeService: ProviderScopeService,
   ) {}
 
-  private async getPharmacyProviderId(principal?: ShieldPrincipal): Promise<bigint> {
-    const scope = this.providerScopeService.resolveWorkspaceScope(principal, {});
+  private async getPharmacyProviderId(
+    principal?: ShieldPrincipal,
+  ): Promise<bigint> {
+    const scope = this.providerScopeService.resolveWorkspaceScope(
+      principal,
+      {},
+    );
     let provider: any = null;
 
     if (scope.providerId) {
@@ -52,7 +60,9 @@ export class PharmacyPaymentsService {
     return provider.id;
   }
 
-  private formatCustomerName(c?: { firstName?: string | null; lastName?: string | null } | null): string {
+  private formatCustomerName(
+    c?: { firstName?: string | null; lastName?: string | null } | null,
+  ): string {
     if (!c) return 'Customer';
     const first = c.firstName?.trim() || '';
     const last = c.lastName?.trim() || '';
@@ -60,7 +70,10 @@ export class PharmacyPaymentsService {
     return full || 'Customer';
   }
 
-  getBusinessDayInterval(timeZone = 'Asia/Kolkata', now = new Date()): { startUtc: Date; endUtc: Date } {
+  getBusinessDayInterval(
+    timeZone = 'Asia/Kolkata',
+    now = new Date(),
+  ): { startUtc: Date; endUtc: Date } {
     const formatter = new Intl.DateTimeFormat('en-CA', {
       timeZone,
       year: 'numeric',
@@ -87,7 +100,18 @@ export class PharmacyPaymentsService {
 
     const pharmacyDomainWhere = {
       providerId,
-      purchaseKind: { in: ['PRESCRIPTION', 'PHARMACY_PRESCRIPTION', 'MANUAL_ITEMS', 'WELLNESS', 'CUSTOMER_ORDER', 'PHARMACY', 'GENERAL', 'REFILL'] },
+      purchaseKind: {
+        in: [
+          'PRESCRIPTION',
+          'PHARMACY_PRESCRIPTION',
+          'MANUAL_ITEMS',
+          'WELLNESS',
+          'CUSTOMER_ORDER',
+          'PHARMACY',
+          'GENERAL',
+          'REFILL',
+        ],
+      },
     };
 
     const [
@@ -116,7 +140,9 @@ export class PharmacyPaymentsService {
       this.prisma.purchase.count({
         where: {
           ...pharmacyDomainWhere,
-          orderStatus: { in: ['ACCEPTED', 'REVIEWING', 'PREPARING', 'PROCESSING'] },
+          orderStatus: {
+            in: ['ACCEPTED', 'REVIEWING', 'PREPARING', 'PROCESSING'],
+          },
         },
       }),
       // Ready Orders
@@ -207,10 +233,21 @@ export class PharmacyPaymentsService {
       // Recent Orders (5)
       this.prisma.purchase.findMany({
         where: pharmacyDomainWhere,
-        orderBy: [{ orderStatusUpdatedAt: 'desc' }, { purchaseDate: 'desc' }, { id: 'desc' }],
+        orderBy: [
+          { orderStatusUpdatedAt: 'desc' },
+          { purchaseDate: 'desc' },
+          { id: 'desc' },
+        ],
         take: 5,
         include: {
-          customer: { select: { firstName: true, lastName: true, mobile: true, customerCode: true } },
+          customer: {
+            select: {
+              firstName: true,
+              lastName: true,
+              mobile: true,
+              customerCode: true,
+            },
+          },
         },
       }),
       // Recent Payments (5)
@@ -219,7 +256,14 @@ export class PharmacyPaymentsService {
         orderBy: { createdAt: 'desc' },
         take: 5,
         include: {
-          customer: { select: { firstName: true, lastName: true, mobile: true, customerCode: true } },
+          customer: {
+            select: {
+              firstName: true,
+              lastName: true,
+              mobile: true,
+              customerCode: true,
+            },
+          },
         },
       }),
     ]);
@@ -231,7 +275,9 @@ export class PharmacyPaymentsService {
         ready: readyOrdersCount,
         delivery: deliveryOrdersCount,
         completedToday: completedTodayCount,
-        orderValueToday: Number(completedTodayAggregate._sum?.payableAmount || 0),
+        orderValueToday: Number(
+          completedTodayAggregate._sum?.payableAmount || 0,
+        ),
       },
       payments: {
         pendingVerification: pendingPaymentsCount,
@@ -281,7 +327,9 @@ export class PharmacyPaymentsService {
         { customer: { firstName: { contains: search, mode: 'insensitive' } } },
         { customer: { lastName: { contains: search, mode: 'insensitive' } } },
         { customer: { mobile: { contains: search, mode: 'insensitive' } } },
-        { customer: { customerCode: { contains: search, mode: 'insensitive' } } },
+        {
+          customer: { customerCode: { contains: search, mode: 'insensitive' } },
+        },
       ];
     }
 
@@ -289,7 +337,14 @@ export class PharmacyPaymentsService {
       where,
       orderBy: [{ createdAt: 'desc' }],
       include: {
-        customer: { select: { firstName: true, lastName: true, mobile: true, customerCode: true } },
+        customer: {
+          select: {
+            firstName: true,
+            lastName: true,
+            mobile: true,
+            customerCode: true,
+          },
+        },
       },
     });
 
@@ -297,7 +352,9 @@ export class PharmacyPaymentsService {
     for (const p of intents) {
       let proofUrl: string | undefined;
       if (p.proofStoragePath) {
-        proofUrl = (await this.storageService.createDownloadUrl(p.proofStoragePath)) || undefined;
+        proofUrl =
+          (await this.storageService.createDownloadUrl(p.proofStoragePath)) ||
+          undefined;
       }
 
       paymentItems.push({
@@ -328,7 +385,13 @@ export class PharmacyPaymentsService {
       where: { id, providerId },
       include: {
         customer: {
-          select: { id: true, firstName: true, lastName: true, mobile: true, customerCode: true },
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            mobile: true,
+            customerCode: true,
+          },
         },
         wallet: true,
       },
@@ -342,7 +405,10 @@ export class PharmacyPaymentsService {
 
     let proofUrl: string | undefined;
     if (intent.proofStoragePath) {
-      proofUrl = (await this.storageService.createDownloadUrl(intent.proofStoragePath)) || undefined;
+      proofUrl =
+        (await this.storageService.createDownloadUrl(
+          intent.proofStoragePath,
+        )) || undefined;
     }
 
     return {
@@ -369,16 +435,17 @@ export class PharmacyPaymentsService {
     await this.getPharmacyProviderId(principal);
     const q = (query || '').trim();
 
-    const whereCondition = q.length > 0
-      ? {
-          OR: [
-            { firstName: { contains: q, mode: 'insensitive' as const } },
-            { lastName: { contains: q, mode: 'insensitive' as const } },
-            { mobile: { contains: q } },
-            { customerCode: { contains: q, mode: 'insensitive' as const } },
-          ],
-        }
-      : {};
+    const whereCondition =
+      q.length > 0
+        ? {
+            OR: [
+              { firstName: { contains: q, mode: 'insensitive' as const } },
+              { lastName: { contains: q, mode: 'insensitive' as const } },
+              { mobile: { contains: q } },
+              { customerCode: { contains: q, mode: 'insensitive' as const } },
+            ],
+          }
+        : {};
 
     const customers = await this.prisma.customer.findMany({
       where: whereCondition,
@@ -392,16 +459,19 @@ export class PharmacyPaymentsService {
         customerCode: true,
         wallet: { select: { id: true } },
         shieldCard: { select: { id: true, cardNumber: true, status: true } },
-        membership: { select: { id: true, membershipNumber: true, status: true } },
+        membership: {
+          select: {
+            id: true,
+            membershipNumber: true,
+            status: true,
+            expiryDate: true,
+          },
+        },
       },
     });
 
     return customers.map((c) => {
-      const isMember = !!(
-        c.customerCode ||
-        (c.shieldCard && c.shieldCard.status === 'ACTIVE') ||
-        (c.membership && c.membership.status === 'ACTIVE')
-      );
+      const isMember = this.hasActiveRechargeEligibility(c);
 
       return {
         id: c.id.toString(),
@@ -430,7 +500,9 @@ export class PharmacyPaymentsService {
       throw new BadRequestException('Customer ID is required.');
     }
     if (!dto.amount || dto.amount < 10000) {
-      throw new BadRequestException('Minimum wallet recharge amount is ₹10,000.');
+      throw new BadRequestException(
+        'Minimum wallet recharge amount is ₹10,000.',
+      );
     }
     if (Math.floor(dto.amount) % 10000 !== 0) {
       throw new BadRequestException(
@@ -452,15 +524,17 @@ export class PharmacyPaymentsService {
       throw new NotFoundException('Customer record not found.');
     }
 
-    const isMembershipHolder = !!(
-      customer.customerCode ||
-      (customer.shieldCard && customer.shieldCard.status === 'ACTIVE') ||
-      (customer.membership && customer.membership.status === 'ACTIVE')
-    );
+    const isMembershipHolder = this.hasActiveRechargeEligibility(customer);
 
     if (!isMembershipHolder) {
       throw new BadRequestException(
-        'Wallet recharge is restricted strictly to SHIELD Privilege Card members. Non-member app users can only purchase wellness products directly from customer interfaces.',
+        'Wallet recharge requires an active, unexpired SHIELD membership and an issued or active SHIELD Privilege Card. A customer code alone is not sufficient.',
+      );
+    }
+
+    if (customer.wallet && customer.wallet.status !== 'ACTIVE') {
+      throw new BadRequestException(
+        'Wallet recharge is unavailable because this customer wallet is not active.',
       );
     }
 
@@ -477,7 +551,9 @@ export class PharmacyPaymentsService {
 
     let destinationSnapshot: any = null;
     if (dto.paymentMethodId?.trim()) {
-      const method = await (this.prisma as any).serviceProviderPaymentMethod.findFirst({
+      const method = await (
+        this.prisma as any
+      ).serviceProviderPaymentMethod.findFirst({
         where: {
           id: BigInt(dto.paymentMethodId.trim()),
           providerId,
@@ -490,7 +566,9 @@ export class PharmacyPaymentsService {
           methodType: method.methodType,
           bankName: method.bankName,
           accountHolderName: method.accountHolderName,
-          accountNumber: method.accountNumber ? `•••• ${method.accountNumber.slice(-4)}` : undefined,
+          accountNumber: method.accountNumber
+            ? `•••• ${method.accountNumber.slice(-4)}`
+            : undefined,
           ifscCode: method.ifscCode,
           upiId: method.upiId,
         };
@@ -500,7 +578,9 @@ export class PharmacyPaymentsService {
     const isAutoApprove = dto.autoApprove ?? false;
     const initialStatus = isAutoApprove ? 'APPROVED' : 'PENDING';
     const now = new Date();
-    const refNum = dto.referenceNumber?.trim() || `RCP-PHARM-${Date.now().toString().slice(-6)}`;
+    const refNum =
+      dto.referenceNumber?.trim() ||
+      `RCP-PHARM-${Date.now().toString().slice(-6)}`;
 
     const created = await this.prisma.walletRechargeIntent.create({
       data: {
@@ -508,21 +588,26 @@ export class PharmacyPaymentsService {
         customerId,
         walletId: wallet.id,
         providerId,
-        paymentMethodId: dto.paymentMethodId ? BigInt(dto.paymentMethodId) : undefined,
+        paymentMethodId: dto.paymentMethodId
+          ? BigInt(dto.paymentMethodId)
+          : undefined,
         paymentChannel: dto.paymentChannel || 'CASH',
         referenceNumber: refNum,
         amount: dto.amount,
         idempotencyKey: `MANUAL-${randomUUID()}`,
         status: initialStatus,
         destinationSnapshot,
-        reviewedBy: isAutoApprove && principal?.userId ? BigInt(principal.userId) : undefined,
+        reviewedBy:
+          isAutoApprove && principal?.userId
+            ? BigInt(principal.userId)
+            : undefined,
         reviewedAt: isAutoApprove ? now : undefined,
         creditedAt: isAutoApprove ? now : undefined,
       },
     });
 
     if (isAutoApprove) {
-      const bonusAmount = Number((dto.amount * 0.10).toFixed(2));
+      const bonusAmount = Number((dto.amount * 0.1).toFixed(2));
 
       await this.prisma.cashWalletTransaction.create({
         data: {
@@ -550,13 +635,13 @@ export class PharmacyPaymentsService {
       });
 
       // 10% Extra Bonus Credit Entry
-      await this.prisma.walletTransaction.create({
+      await this.prisma.benefitLedgerTransaction.create({
         data: {
           uuid: randomUUID(),
           walletId: wallet.id,
           transactionType: 'RECHARGE',
-          subLedgerType: 'REWARD_POINTS',
           amount: bonusAmount,
+          serviceType: 'PHARMACY',
           referenceType: 'COUNTER_PAYMENT_BONUS',
           referenceId: created.id,
           remarks: `10% Extra Promotional Bonus Credit for ₹${dto.amount} Counter Wallet Recharge.`,
@@ -565,14 +650,16 @@ export class PharmacyPaymentsService {
     }
 
     await this.timelineService.recordAuditLog({
-      action: isAutoApprove ? 'COUNTER_PAYMENT_ACCEPTED' : 'MANUAL_PAYMENT_SUBMITTED',
+      action: isAutoApprove
+        ? 'COUNTER_PAYMENT_ACCEPTED'
+        : 'MANUAL_PAYMENT_SUBMITTED',
       entityType: 'WALLET_RECHARGE_INTENT',
       entityId: created.id,
       userId: principal?.userId ? BigInt(principal.userId) : undefined,
       newData: {
         amount: dto.amount,
-        bonusAmount: Number((dto.amount * 0.10).toFixed(2)),
-        totalCredit: Number((dto.amount * 1.10).toFixed(2)),
+        bonusAmount: Number((dto.amount * 0.1).toFixed(2)),
+        totalCredit: Number((dto.amount * 1.1).toFixed(2)),
         paymentChannel: dto.paymentChannel,
         referenceNumber: refNum,
         providerId: providerId.toString(),
@@ -584,8 +671,8 @@ export class PharmacyPaymentsService {
       id: created.id.toString(),
       uuid: created.uuid,
       amount: Number(created.amount),
-      bonusAmount: Number((dto.amount * 0.10).toFixed(2)),
-      totalCredit: Number((dto.amount * 1.10).toFixed(2)),
+      bonusAmount: Number((dto.amount * 0.1).toFixed(2)),
+      totalCredit: Number((dto.amount * 1.1).toFixed(2)),
       paymentChannel: created.paymentChannel,
       status: created.status,
       referenceNumber: refNum,
@@ -630,11 +717,13 @@ export class PharmacyPaymentsService {
       });
 
       if (!intent) {
-        throw new NotFoundException('Payment request not found after state claim.');
+        throw new NotFoundException(
+          'Payment request not found after state claim.',
+        );
       }
 
       const baseAmount = Number(intent.amount);
-      const bonusAmount = Number((baseAmount * 0.10).toFixed(2));
+      const bonusAmount = Number((baseAmount * 0.1).toFixed(2));
 
       // 2. Create dynamic wallet ledger entry (Cash Wallet & Main Wallet Transactions)
       await tx.cashWalletTransaction.create({
@@ -663,13 +752,13 @@ export class PharmacyPaymentsService {
       });
 
       // 10% Extra Bonus Credit Entry
-      await tx.walletTransaction.create({
+      await tx.benefitLedgerTransaction.create({
         data: {
           uuid: randomUUID(),
           walletId: intent.walletId,
           transactionType: 'RECHARGE',
-          subLedgerType: 'REWARD_POINTS',
           amount: bonusAmount,
+          serviceType: 'PHARMACY',
           referenceType: 'MANUAL_RECHARGE_BONUS',
           referenceId: id,
           remarks: `10% Extra Promotional Bonus Credit for ₹${baseAmount} Wallet Recharge Approval.`,
@@ -767,5 +856,24 @@ export class PharmacyPaymentsService {
         reviewedAt: now,
       };
     });
+  }
+
+  private hasActiveRechargeEligibility(customer: {
+    shieldCard?: { status?: string | null } | null;
+    membership?: { status?: string | null; expiryDate?: Date | null } | null;
+  }) {
+    const membership = customer.membership;
+    const card = customer.shieldCard;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const hasActiveMembership =
+      membership?.status?.toUpperCase() === 'ACTIVE' &&
+      (!membership.expiryDate || membership.expiryDate >= today);
+    const hasIssuedCard = ['ISSUED', 'ACTIVE'].includes(
+      card?.status?.toUpperCase() ?? '',
+    );
+
+    return hasActiveMembership && hasIssuedCard;
   }
 }

@@ -317,9 +317,9 @@ class PharmacyProfileSkeleton extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const PharmacySkeletonBlock(height: 80),
-          const SizedBox(height: 16),
-          if (isDesktop)
+          if (isDesktop) ...[
+            const PharmacySkeletonBlock(height: 80),
+            const SizedBox(height: 16),
             const Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -327,11 +327,11 @@ class PharmacyProfileSkeleton extends StatelessWidget {
                 SizedBox(width: 16),
                 Expanded(flex: 2, child: PharmacySkeletonBlock(height: 380)),
               ],
-            )
-          else ...[
-            const PharmacySkeletonBlock(height: 200),
+            ),
+          ] else ...[
+            const PharmacySkeletonBlock(height: 180),
             const SizedBox(height: 16),
-            const PharmacySkeletonBlock(height: 260),
+            const PharmacySkeletonBlock(height: 220),
           ],
         ],
       ),
@@ -350,9 +350,9 @@ class PharmacySettingsSkeleton extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const PharmacySkeletonBlock(height: 80),
-          const SizedBox(height: 16),
           if (isDesktop) ...[
+            const PharmacySkeletonBlock(height: 80),
+            const SizedBox(height: 16),
             const Row(
               children: [
                 Expanded(child: PharmacySkeletonBlock(height: 180)),
@@ -373,11 +373,9 @@ class PharmacySettingsSkeleton extends StatelessWidget {
               ],
             ),
           ] else ...[
-            const PharmacySkeletonBlock(height: 160),
+            const PharmacySkeletonBlock(height: 140),
             const SizedBox(height: 16),
-            const PharmacySkeletonBlock(height: 160),
-            const SizedBox(height: 16),
-            const PharmacySkeletonBlock(height: 160),
+            const PharmacySkeletonBlock(height: 140),
           ],
         ],
       ),

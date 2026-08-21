@@ -89,6 +89,8 @@ class _PharmacyPaymentsScreenState extends State<PharmacyPaymentsScreen> {
     final pendingCount = payments.where((p) => p.isPending).length;
     final approvedCount = payments.where((p) => p.isApproved).length;
 
+    final isPhone = MediaQuery.sizeOf(context).width < 600;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -98,49 +100,81 @@ class _PharmacyPaymentsScreenState extends State<PharmacyPaymentsScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Payment Verification & Counter Acceptance',
-                          style: PharmacyTypography.h2,
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Review customer bank transfers and UPI receipts, or record walk-in counter payments in real time.',
-                          style: PharmacyTypography.caption,
-                        ),
-                      ],
-                    ),
-                  ),
-                  Row(
-                    children: [
-                      PharmacyPrimaryButton(
+              if (isPhone) ...[
+                Text(
+                  'Payment Verification & Counter Acceptance',
+                  style: PharmacyTypography.h2.copyWith(fontSize: 18),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Review customer bank transfers and UPI receipts, or record walk-in counter payments in real time.',
+                  style: PharmacyTypography.caption,
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: PharmacyPrimaryButton(
                         label: '+ Accept Counter Payment',
                         icon: Icons.point_of_sale_rounded,
                         onPressed: _openCounterPaymentDialog,
                       ),
-                      const SizedBox(width: 8),
-                      IconButton(
-                        icon: const Icon(Icons.refresh_rounded, color: PharmacyColors.navy),
-                        tooltip: 'Refresh Payments',
-                        onPressed: () => _controller.loadPayments(),
+                    ),
+                    const SizedBox(width: 8),
+                    IconButton(
+                      icon: const Icon(Icons.refresh_rounded, color: PharmacyColors.navy),
+                      tooltip: 'Refresh Payments',
+                      onPressed: () => _controller.loadPayments(),
+                    ),
+                  ],
+                ),
+              ] else ...[
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Payment Verification & Counter Acceptance',
+                            style: PharmacyTypography.h2,
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Review customer bank transfers and UPI receipts, or record walk-in counter payments in real time.',
+                            style: PharmacyTypography.caption,
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
-                ],
-              ),
+                    ),
+                    Row(
+                      children: [
+                        PharmacyPrimaryButton(
+                          label: '+ Accept Counter Payment',
+                          icon: Icons.point_of_sale_rounded,
+                          onPressed: _openCounterPaymentDialog,
+                        ),
+                        const SizedBox(width: 8),
+                        IconButton(
+                          icon: const Icon(Icons.refresh_rounded, color: PharmacyColors.navy),
+                          tooltip: 'Refresh Payments',
+                          onPressed: () => _controller.loadPayments(),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ],
               const SizedBox(height: 14),
 
               // Payment Summary Cards Banner
-              Row(
-                children: [
-                  Expanded(
-                    child: Container(
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: [
+                    Container(
+                      width: isPhone ? 160 : null,
                       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                       decoration: BoxDecoration(
                         color: PharmacyColors.warning.withValues(alpha: 0.12),
@@ -165,10 +199,9 @@ class _PharmacyPaymentsScreenState extends State<PharmacyPaymentsScreen> {
                         ],
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Container(
+                    const SizedBox(width: 12),
+                    Container(
+                      width: isPhone ? 160 : null,
                       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                       decoration: BoxDecoration(
                         color: PharmacyColors.primarySoft,
@@ -193,10 +226,9 @@ class _PharmacyPaymentsScreenState extends State<PharmacyPaymentsScreen> {
                         ],
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Container(
+                    const SizedBox(width: 12),
+                    Container(
+                      width: isPhone ? 160 : null,
                       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                       decoration: BoxDecoration(
                         color: PharmacyColors.canvas,
@@ -221,8 +253,8 @@ class _PharmacyPaymentsScreenState extends State<PharmacyPaymentsScreen> {
                         ],
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
               const SizedBox(height: 14),
 
