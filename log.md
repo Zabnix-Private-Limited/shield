@@ -14679,3 +14679,15 @@ SHIELD Pharmacy - Pop-over Detail Modal & Profile Business Details Persistence
 - `backend`: `npx tsc --noEmit` passed.
 - `git diff --check` passed.
 - No data mutation occurred in this source fix.
+## 108. Pharmacy Invoice Metadata Detail Projection
+**Timestamp:** 2026-08-21 14:53:00 IST
+
+### Backend Files
+- `backend/src/pharmacy/pharmacy.service.ts`
+  - Added provider-safe invoice metadata to Pharmacy order-detail responses: filename, authenticated invoice-file route, and sent timestamp.
+  - The invoice lifecycle UI can now render the persisted upload/replacement/send state returned by its authoritative endpoint.
+
+### Verification
+- `backend`: `npx tsc --noEmit` passed.
+- `git diff --check` passed.
+- No data mutation occurred in this source fix.

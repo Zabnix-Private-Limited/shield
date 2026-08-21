@@ -952,6 +952,25 @@ export class PharmacyService {
     };
   }
 
+  private async addInvoiceMetadata(
+    orderId: bigint,
+    projection: Record<string, any>,
+  ): Promise<Record<string, any>> {
+    const invoices = await this.prisma.$queryRawUnsafe<any[]>(
+      `SELECT "file_name", "sent_at" FROM "order_invoices" WHERE "purchase_id" = $1 ORDER BY "id" DESC LIMIT 1`,
+      orderId,
+    );
+    const invoice = invoices?.[0];
+    return {
+      ...projection,
+      invoiceFileName: invoice?.file_name ?? null,
+      invoiceUrl: invoice
+        ? `/pharmacy/orders/${orderId.toString()}/invoice/file`
+        : null,
+      invoiceSentAt: invoice?.sent_at ?? null,
+    };
+  }
+
   async listPharmacyOrders(options?: {
     status?: string;
     source?: string;
@@ -1133,7 +1152,10 @@ export class PharmacyService {
       throw new NotFoundException(`Order with ID ${orderId} not found.`);
     }
 
-    return this.pharmacyFulfillmentProjection(purchase);
+    return this.addInvoiceMetadata(
+      orderId,
+      this.pharmacyFulfillmentProjection(purchase),
+    );
   }
 
   async updateOrderStatus(
