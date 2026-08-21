@@ -14551,3 +14551,20 @@ SHIELD Pharmacy - Pop-over Detail Modal & Profile Business Details Persistence
 ### Safety
 - No non-UAT payment destination was edited, deactivated, deleted, or made non-primary.
 - `current_schema.md`: unmodified.
+## 99. Pharmacy Settings Enforcement and Customer-Confirmation Scope Hardening
+**Timestamp:** 2026-08-21 13:20:00 IST
+
+### Backend Files
+- `backend/src/pharmacy/pharmacy.service.ts`
+  - Enforced provider settings server-side for home-delivery and store-pickup order flows, partial fulfillment, and partial dispatch. These checks are authoritative and cannot be bypassed through a Flutter client or direct API caller.
+  - Preserved the existing invoice-before-ready/dispatch guard while resolving settings once per status transition.
+  - Added provider-scope authorization to customer-confirmation requests and now projects `customerConfirmationStatus: PENDING` into the order snapshot for an auditable workflow state.
+
+### Verification
+- `backend`: `npx tsc --noEmit` passed.
+- `git diff --check` passed.
+- No migration, direct database write, or non-UAT record mutation was performed.
+
+### Remaining UAT Risks
+- Live toggle-negative-path verification cannot change shared provider settings because the approved UAT scope permits only clearly prefixed test records.
+- Pending financial approval/rejection still requires a valid UAT active member and a legal UAT `PENDING` recharge intent; none has been found without touching non-UAT data.

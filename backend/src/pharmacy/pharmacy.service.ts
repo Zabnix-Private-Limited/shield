@@ -1194,6 +1194,24 @@ export class PharmacyService {
     const fulfillmentPref = snapshot.fulfillmentPreference
       ? String(snapshot.fulfillmentPreference).toUpperCase()
       : null;
+    const settings = await this.getPharmacySettings(principal);
+
+    if (
+      fulfillmentPref === 'HOME_DELIVERY' &&
+      !settings.deliveryPickup?.enableHomeDelivery
+    ) {
+      throw new BadRequestException(
+        'Home delivery is currently disabled in Pharmacy Settings for this provider.',
+      );
+    }
+    if (
+      fulfillmentPref === 'COLLECT_FROM_PHARMACY' &&
+      !settings.deliveryPickup?.enableStorePickup
+    ) {
+      throw new BadRequestException(
+        'Store pickup is currently disabled in Pharmacy Settings for this provider.',
+      );
+    }
 
     // Fulfillment-specific restriction: pickup orders cannot transition to delivery
     if (
@@ -1279,7 +1297,6 @@ export class PharmacyService {
 
     // Server-Side Guard: Mandatory Invoice before Dispatch / Ready status based on Pharmacy Settings
     if (['READY', 'READY_FOR_PICKUP', 'DISPATCHED', 'OUT_FOR_DELIVERY', 'DELIVERY', 'COMPLETED'].includes(normalizedStatus)) {
-      const settings = await this.getPharmacySettings(principal);
       if (settings.orderWorkflow?.requireInvoiceBeforeDispatch) {
         const invoices = await this.prisma.$queryRawUnsafe<any[]>(
           `SELECT id FROM "order_invoices" WHERE "purchase_id" = $1 LIMIT 1`,
@@ -1550,6 +1567,25 @@ export class PharmacyService {
       throw new BadRequestException('Partial fulfillment must approve a quantity greater than zero and less than the requested quantity.');
     }
 
+    const settings = await this.getPharmacySettings(principal);
+    if (
+      decisionStatus === 'PARTIAL' &&
+      !settings.partialFulfillment?.allowPartialFulfillment
+    ) {
+      throw new BadRequestException(
+        'Partial fulfillment is disabled in Pharmacy Settings for this provider.',
+      );
+    }
+    if (
+      dispatchedQty > 0 &&
+      dispatchedQty < approvedQty &&
+      !settings.partialFulfillment?.allowPartialDispatch
+    ) {
+      throw new BadRequestException(
+        'Partial dispatch is disabled in Pharmacy Settings for this provider.',
+      );
+    }
+
     // 1. Transactionally write item fulfillment decision to purchase_item_fulfillments
     await this.prisma.$executeRawUnsafe(
       `INSERT INTO "purchase_item_fulfillments" ("purchase_item_id", "approved_quantity", "dispatched_quantity", "remaining_quantity", "rejected_quantity", "stock_status", "decision_status", "decision_reason", "decision_actor_id", "authoritative_price", "updated_at")
@@ -1704,6 +1740,11 @@ export class PharmacyService {
     });
     if (!purchase) throw new NotFoundException('Order not found.');
 
+    await this.providerScopeService.assertProviderCanAccessPurchase(
+      orderId,
+      principal,
+    );
+
     const confirmationReason = reason || 'Substitution or partial fulfillment confirmation required.';
     const requesterId = principal?.userId ? BigInt(principal.userId) : null;
 
@@ -1721,6 +1762,7 @@ export class PharmacyService {
     const updatedSnap = {
       ...currentSnap,
       customerConfirmationRequested: true,
+      customerConfirmationStatus: 'PENDING',
       confirmationReason,
       confirmationRequestedAt: new Date().toISOString(),
     };
