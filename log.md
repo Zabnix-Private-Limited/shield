@@ -14479,3 +14479,14 @@ SHIELD Pharmacy - Pop-over Detail Modal & Profile Business Details Persistence
 - `flutter analyze` on all affected Pharmacy/shared shell files: **No issues found (0 errors, 0 warnings)**.
 - `current_schema.md`: unmodified.
 - Live deployment and re-UAT remain pending this implementation slice.
+## 94. Pharmacy Mobile Header Canonical-Title Follow-up
+- **Timestamp**: 2026-08-21 00:00:00 IST
+- **Developer**: Codex
+- **Scope**: Pharmacy shared-header follow-up after live re-test.
+
+### Frontend Files
+- `frontend/lib/features/portal/presentation/screens/portal_shell.dart`: Strengthened the phone title resolver to derive canonical Pharmacy titles from backend section key, module id, renderer id, and supplied title. This addresses abbreviated backend metadata such as `P: Details` without changing non-Pharmacy portals.
+
+### Verification
+- Affected-file `flutter analyze`: **No issues found**.
+- Live re-test/deployment: pending Git deployment propagation.

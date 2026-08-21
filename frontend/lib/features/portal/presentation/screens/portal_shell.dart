@@ -1492,18 +1492,30 @@ class _PortalHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isPhone = MediaQuery.sizeOf(context).width < 600;
-    final pharmacyTitles = <String, String>{
-      'dashboard': 'Dashboard',
-      'orders': 'Orders',
-      'payments': 'Payments',
-      'payment-details': 'Payment Details',
-      'history': 'Order History',
-      'profile': 'Profile',
-      'settings': 'Settings',
-    };
     final isPharmacyWorkspace = portal.role == SHIELDRole.pharmacyStaff;
-    final displayTitle = isPharmacyWorkspace
-        ? (pharmacyTitles[section.key] ?? section.title)
+    final pharmacyIdentity = [
+      section.key,
+      section.moduleId ?? '',
+      section.rendererKey ?? '',
+      section.title,
+    ].join(' ').toLowerCase();
+    final displayTitle = !isPharmacyWorkspace
+        ? section.title
+        : pharmacyIdentity.contains('payment') &&
+              pharmacyIdentity.contains('detail')
+        ? 'Payment Details'
+        : pharmacyIdentity.contains('history')
+        ? 'Order History'
+        : pharmacyIdentity.contains('dashboard')
+        ? 'Dashboard'
+        : pharmacyIdentity.contains('order')
+        ? 'Orders'
+        : pharmacyIdentity.contains('payment')
+        ? 'Payments'
+        : pharmacyIdentity.contains('profile')
+        ? 'Profile'
+        : pharmacyIdentity.contains('setting')
+        ? 'Settings'
         : section.title;
     if (isPhone) {
       return Container(
