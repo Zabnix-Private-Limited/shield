@@ -40,7 +40,9 @@ class PharmacyOrdersRepository {
     }
 
     return itemsList
-        .map((item) => PharmacyOrderModel.fromJson(item as Map<String, dynamic>))
+        .map(
+          (item) => PharmacyOrderModel.fromJson(item as Map<String, dynamic>),
+        )
         .toList();
   }
 
@@ -55,9 +57,7 @@ class PharmacyOrdersRepository {
     required String status,
     String? cancellationReason,
   }) async {
-    final payload = <String, dynamic>{
-      'status': status,
-    };
+    final payload = <String, dynamic>{'status': status};
     if (cancellationReason != null && cancellationReason.trim().isNotEmpty) {
       payload['cancellationReason'] = cancellationReason.trim();
     }
@@ -88,7 +88,8 @@ class PharmacyOrdersRepository {
         if (stockStatus != null) 'stockStatus': stockStatus,
         if (decisionStatus != null) 'decisionStatus': decisionStatus,
         if (substituteName != null) 'substituteName': substituteName,
-        if (substituteUnitPrice != null) 'substituteUnitPrice': substituteUnitPrice,
+        if (substituteUnitPrice != null)
+          'substituteUnitPrice': substituteUnitPrice,
         if (decisionReason != null) 'decisionReason': decisionReason,
       },
     );
@@ -105,7 +106,8 @@ class PharmacyOrdersRepository {
       '/pharmacy/orders/$orderId/chronic',
       data: {
         'isChronic': isChronic,
-        if (repeatIntervalDays != null) 'repeatIntervalDays': repeatIntervalDays,
+        if (repeatIntervalDays != null)
+          'repeatIntervalDays': repeatIntervalDays,
       },
     );
     final data = response.data['data'] as Map<String, dynamic>;
@@ -119,6 +121,20 @@ class PharmacyOrdersRepository {
     final response = await ApiService.dio.post(
       '/pharmacy/orders/$orderId/notes',
       data: {'notes': notes},
+    );
+    final data = response.data['data'] as Map<String, dynamic>;
+    return PharmacyOrderModel.fromJson(data);
+  }
+
+  Future<PharmacyOrderModel> requestCustomerConfirmation({
+    required String orderId,
+    String? reason,
+  }) async {
+    final response = await ApiService.dio.post(
+      '/pharmacy/orders/$orderId/request-customer-confirmation',
+      data: {
+        if (reason != null && reason.trim().isNotEmpty) 'reason': reason.trim(),
+      },
     );
     final data = response.data['data'] as Map<String, dynamic>;
     return PharmacyOrderModel.fromJson(data);
@@ -151,9 +167,7 @@ class PharmacyOrdersRepository {
     return PharmacyOrderModel.fromJson(data);
   }
 
-  Future<PharmacyOrderModel> sendOrderInvoice({
-    required String orderId,
-  }) async {
+  Future<PharmacyOrderModel> sendOrderInvoice({required String orderId}) async {
     final response = await ApiService.dio.post(
       '/pharmacy/orders/$orderId/send-invoice',
     );
@@ -166,7 +180,9 @@ class PharmacyOrdersRepository {
     return response.data['data'] as Map<String, dynamic>;
   }
 
-  Future<Map<String, dynamic>> updatePharmacyProfile(Map<String, dynamic> payload) async {
+  Future<Map<String, dynamic>> updatePharmacyProfile(
+    Map<String, dynamic> payload,
+  ) async {
     final response = await ApiService.dio.patch(
       '/pharmacy/profile',
       data: payload,
@@ -179,7 +195,9 @@ class PharmacyOrdersRepository {
     return response.data['data'] as Map<String, dynamic>;
   }
 
-  Future<Map<String, dynamic>> updatePharmacySettings(Map<String, dynamic> payload) async {
+  Future<Map<String, dynamic>> updatePharmacySettings(
+    Map<String, dynamic> payload,
+  ) async {
     final response = await ApiService.dio.patch(
       '/pharmacy/settings',
       data: payload,

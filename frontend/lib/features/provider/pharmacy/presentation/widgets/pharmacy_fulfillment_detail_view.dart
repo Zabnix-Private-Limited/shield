@@ -378,6 +378,41 @@ class _PharmacyFulfillmentDetailViewState
             );
           },
         ),
+        if (!order.customerConfirmationRequested &&
+            order.items.any((item) {
+              final decision = item.decisionStatus.toUpperCase();
+              return decision == 'PARTIAL' || decision == 'SUBSTITUTED';
+            })) ...[
+          const SizedBox(height: 8),
+          PharmacyPrimaryButton(
+            label: 'Request Customer Confirmation',
+            compact: true,
+            icon: Icons.mark_email_unread_outlined,
+            onPressed: () async {
+              final success = await PharmacyOrdersController.instance
+                  .requestCustomerConfirmation(
+                    orderId: order.id,
+                    reason:
+                        'Confirmation required for a partial fulfillment or substitute.',
+                  );
+              if (!mounted) return;
+              showPortalSnackBar(
+                context,
+                success
+                    ? 'Customer confirmation request recorded.'
+                    : 'Could not request confirmation: ${PharmacyOrdersController.instance.friendlyError}',
+              );
+            },
+          ),
+        ] else if (order.customerConfirmationRequested) ...[
+          const SizedBox(height: 8),
+          Text(
+            'Customer confirmation request is pending.',
+            style: PharmacyTypography.caption.copyWith(
+              color: PharmacyColors.textSecondary,
+            ),
+          ),
+        ],
       ],
     ),
   );

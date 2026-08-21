@@ -14568,3 +14568,20 @@ SHIELD Pharmacy - Pop-over Detail Modal & Profile Business Details Persistence
 ### Remaining UAT Risks
 - Live toggle-negative-path verification cannot change shared provider settings because the approved UAT scope permits only clearly prefixed test records.
 - Pending financial approval/rejection still requires a valid UAT active member and a legal UAT `PENDING` recharge intent; none has been found without touching non-UAT data.
+## 100. Pharmacy Customer Confirmation UI Write-Path Completion
+**Timestamp:** 2026-08-21 13:32:00 IST
+
+### Frontend Files
+- `frontend/lib/features/provider/pharmacy/data/pharmacy_orders_repository.dart`
+- `frontend/lib/features/provider/pharmacy/presentation/controllers/pharmacy_orders_controller.dart`
+- `frontend/lib/features/provider/pharmacy/presentation/widgets/pharmacy_fulfillment_detail_view.dart`
+  - Connected the existing scoped customer-confirmation API to the Pharmacy order-detail UI through repository and controller layers.
+  - Partial/substituted orders now present a real “Request Customer Confirmation” action, persist its state, and display a pending-state acknowledgement after success.
+
+### Verification
+- `flutter analyze` on the three affected Pharmacy files: no issues found.
+- `backend`: `npx tsc --noEmit` passed.
+- `git diff --check` passed.
+
+### Remaining UAT Risks
+- Deployment propagation and an authenticated UI execution of this new button remain to be checked on the live UAT order.

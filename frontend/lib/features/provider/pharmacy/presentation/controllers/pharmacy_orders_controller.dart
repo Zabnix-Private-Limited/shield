@@ -231,6 +231,31 @@ class PharmacyOrdersController extends ChangeNotifier {
     }
   }
 
+  Future<bool> requestCustomerConfirmation({
+    required String orderId,
+    String? reason,
+  }) async {
+    if (_updatingOrderIds.contains(orderId)) return false;
+    _updatingOrderIds.add(orderId);
+    notifyListeners();
+
+    try {
+      final updated = await _repository.requestCustomerConfirmation(
+        orderId: orderId,
+        reason: reason,
+      );
+      _updateLocalOrder(orderId, updated);
+      _error = null;
+      return true;
+    } catch (e) {
+      _error = e.toString();
+      return false;
+    } finally {
+      _updatingOrderIds.remove(orderId);
+      notifyListeners();
+    }
+  }
+
   Future<bool> uploadOrderInvoiceFile({
     required String orderId,
     required List<int> bytes,
